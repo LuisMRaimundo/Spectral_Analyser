@@ -1,0 +1,49 @@
+{
+  "batch_analysis_config": {
+    "description": "Configuration file for batch audio analysis. Use the heuristic weight guidance below (or auto_extract) for your instrument collection.",
+    "version": "1.0.0",
+    
+    "weight_mode": "auto_extract",
+    "comment_weight_mode": "Options: 'auto_extract' (extract weights per file from actual energy) or 'fixed' (use fixed weights for all files)",
+    
+    "fixed_weights": {
+      "harmonic_weight": 0.90,
+      "inharmonic_weight": 0.10,
+      "comment": "Only used if weight_mode is 'fixed'. For musical instruments, typical ranges: harmonic 0.85-0.95, inharmonic 0.05-0.15"
+    },
+    
+    "heuristic_weight_guidance": {
+      "recommended_for_musical_instruments": {
+        "harmonic_weight": 0.90,
+        "inharmonic_weight": 0.10,
+        "reasoning": "For stable musical notes from instruments (piano, violin, trumpet, etc.), harmonic energy typically dominates (85-95%). Fixed weights of 0.90/0.10 provide consistent comparison across files while allowing some variation for different instrument types."
+      },
+      "recommended_for_percussion": {
+        "harmonic_weight": 0.50,
+        "inharmonic_weight": 0.50,
+        "reasoning": "Percussive sounds have more balanced harmonic/inharmonic content. Use 0.50/0.50 for drums, cymbals, etc."
+      },
+      "recommended_for_mixed_collection": {
+        "harmonic_weight": 0.85,
+        "inharmonic_weight": 0.15,
+        "reasoning": "For mixed collections (instruments + percussion), use intermediate weights. Auto-extract mode is recommended for mixed collections."
+      }
+    },
+    
+    "analysis_parameters": {
+      "harmonic_tolerance": 0.02,
+      "use_90_tier": true,
+      "use_adaptive_tolerance": true,
+      "window": "blackmanharris",
+      "sample_rate": 44100
+    },
+    
+    "output_settings": {
+      "save_individual_results": true,
+      "save_summary_excel": true,
+      "save_statistics_report": true,
+      "generate_plots": true
+    }
+  }
+}
+

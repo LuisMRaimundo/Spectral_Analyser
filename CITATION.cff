@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: "SoundSpectrAnalyse"
+message: "If you refer to this software or its methodology, cite it as below. No licence for reuse is granted by this citation file."
+type: software
+authors:
+  - family-names: "Raimundo"
+    given-names: "Luís"
+version: "0.1.0-validated"
+date-released: "2026-05-15"
+repository-code: "https://github.com/LuisMRaimundo/SoundSpectrAnalyse"
+abstract: "Private research software for spectral, density, dissonance, and publication-clean export analysis of instrumental sound data."
+license: "NOASSERTION"

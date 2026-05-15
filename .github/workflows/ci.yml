@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install system libraries (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsndfile1 ffmpeg
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: STFT reference gate
+        run: python scripts/validate_stft_reference.py
+      - name: Runtime stack fingerprint smoke
+        run: python -c "from runtime_versions import runtime_stack_fingerprint; print(runtime_stack_fingerprint())"
+      - name: Run full test suite
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          mkdir -p test-results
+          python -m pytest tests -v --junitxml=test-results/junit.xml --tb=short
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.python-version }}
+          path: test-results/*.xml

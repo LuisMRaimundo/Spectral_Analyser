@@ -1,0 +1,109 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "soundspectranalyse"
+version = "3.7.0"
+description = "Advanced spectral analysis tool for acoustic research with harmonic-order-aware spectral processing"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Scientific Research Use"}
+authors = [
+    {name = "Research Team", email = "research@example.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "numpy>=1.21.0,<2.0.0",
+    "pandas>=1.3.0,<3.0.0",
+    "scipy>=1.7.0,<2.0.0",
+    "librosa>=0.9.0,<1.0.0",
+    "soundfile>=0.10.0,<1.0.0",
+    "numba>=0.56.0,<0.60.0",
+    "scikit-learn>=1.0.0,<2.0.0",
+    "umap-learn>=0.5.0,<1.0.0",
+    "PyQt5>=5.15.0,<6.0.0",
+    "matplotlib>=3.5.0,<4.0.0",
+    "seaborn>=0.12.0,<1.0.0",
+    "plotly>=5.0.0,<6.0.0",
+    "openpyxl>=3.0.0,<4.0.0",
+    "xlsxwriter>=3.0.0,<4.0.0",
+    "requests>=2.28.0,<3.0.0",
+    "python-dotenv>=0.19.0,<1.0.0",
+    "pydub>=0.25.0,<1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0,<8.0.0",
+    "psutil>=5.9.0,<6.0.0",
+    "pytest-cov>=3.0.0,<4.0.0",
+    "coverage>=6.0.0,<8.0.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.950",
+]
+
+[project.scripts]
+# Canonical CLI: full batch → empirical H–I–S → per-note → compiled pipeline (same as python run_orchestrator.py). Windows run.bat is separate: pipeline_orchestrator_gui.py (Tk).
+soundspectranalyse = "run_orchestrator:main"
+# Former PyQt entry; main.py now forwards to pipeline_orchestrator_integrated.py --gui (Tk).
+soundspectranalyse-legacy-gui = "main:main"
+
+[tool.setuptools]
+# Flat layout: top-level modules (no src/ package); avoids invalid `packages = ["."]`
+py-modules = [
+    "acoustic_data_analysis_suite",
+    "audio_utils",
+    "compile_metrics",
+    "constants",
+    "data_integrity",
+    "density",
+    "dissonance_export",
+    "dissonance_models",
+    "energy_accounting",
+    "export_paths",
+    "gui_model_weight_policy",
+    "harmonic_alignment",
+    "harmonic_validation",
+    "interface",
+    "log_config",
+    "main",
+    "peak_component_counts",
+    "proc_audio",
+    "public_audio_identifiers",
+    "publication_metric_columns",
+    "result_cache",
+    "runtime_versions",
+    "pipeline_orchestrator_integrated",
+    "pipeline_orchestrator_gui",
+    "run_orchestrator",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+# Custom markers. Registering them silences the
+# ``PytestUnknownMarkWarning`` and gives consumers a stable contract for
+# selecting / deselecting test subsets. See ``TESTING.md`` for the full
+# policy and how to run the slow tests on demand.
+markers = [
+    "slow: tests that are computationally expensive or unsuitable for the default fast suite",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
