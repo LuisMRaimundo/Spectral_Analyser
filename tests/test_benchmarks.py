@@ -9,7 +9,6 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-import pytest
 import soundfile as sf
 
 ROOT = Path(__file__).parent.parent
@@ -78,11 +77,6 @@ class TestBenchmarks(unittest.TestCase):
                 audio_path = case.get("audio_path")
                 if audio_path:
                     wav_path = (ROOT / audio_path).resolve()
-                    if not wav_path.is_file():
-                        pytest.skip(
-                            "Optional benchmark audio fixture is absent in this curated GitHub export: "
-                            f"{audio_path}"
-                        )
                     results = _run_minimal_analysis(wav_path, self.cfg.sample_rate)
                 else:
                     signal = _generate_signal(case, self.cfg)

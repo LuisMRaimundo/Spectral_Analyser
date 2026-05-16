@@ -163,11 +163,7 @@ def test_super_metrics_summary_template_has_no_external_engine_marketing() -> No
 
 def test_batch_super_analysis_json_samples_clean() -> None:
     samples = sorted((ANALYZE_DIR / "batch_results").glob("*/super_analysis_results.json"))
-    if not samples:
-        pytest.skip(
-            "Optional batch_results fixtures (super_analysis_results.json) are absent in this "
-            "curated GitHub export; they are intentionally omitted from the curated export."
-        )
+    assert samples, "expected migrated batch_results super_analysis_results.json fixtures"
     k_reason = _legacy_json_key_reasoning_attr()
     k_avail = _legacy_json_key_available_attr()
     for p in samples:
@@ -181,11 +177,7 @@ def test_batch_super_analysis_json_samples_clean() -> None:
 
 def test_batch_metrics_summary_txt_samples_clean() -> None:
     txts = sorted((ANALYZE_DIR / "batch_results").glob("*/metrics_summary.txt"))
-    if not txts:
-        pytest.skip(
-            "Optional batch_results fixtures (metrics_summary.txt) are absent in this curated "
-            "GitHub export; they are intentionally omitted from the curated export."
-        )
+    assert txts
     for p in txts:
         _assert_text_clean(str(p), p.read_text(encoding="utf-8", errors="replace"))
 
