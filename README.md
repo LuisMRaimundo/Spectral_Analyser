@@ -105,7 +105,7 @@ The research workbook is written for **Microsoft Excel compatibility**: it does 
 
 The full **`compiled_density_metrics.xlsx`** remains the complete technical and audit export; **`compiled_density_metrics_research.xlsx`** is the recommended workbook for analysis, plotting, and thesis-ready tables.
 
-On **`Spectral_Density_Metrics`**, the research export adds **`density_weighted_sum_cdm_mean`** = \((\texttt{density\_weighted\_sum} + \texttt{Combined Density Metric}) / 2\) and applies soft column highlights (blue / yellow / lavender) to **`density_weighted_sum`**, **`Combined Density Metric`**, and that mean ÔÇö for side-by-side reading only; normative definitions are in **`docs/DENSITY_EXPORT_SCHEMA.md`** ┬ºR.
+On **`Spectral_Density_Metrics`**, the research export adds **`density_weighted_sum_cdm_mean`** = \((\texttt{density\_weighted\_sum} + \texttt{Combined Density Metric}) / 2\) and applies soft column highlights (blue / yellow / lavender) to **`density_weighted_sum`**, **`Combined Density Metric`**, and that mean — for side-by-side reading only; normative definitions are in **`docs/DENSITY_EXPORT_SCHEMA.md`** §R.
 
 **Per-note legacy sheet (Stage 1):** each **`spectral_analysis.xlsx`** also writes **`Legacy_Density_Metrics`** (SDM, FDM, CDM, `Density Metric`) so compile can populate **`Weighted Combined Metric`** on diagnostic sheets. v6 does **not** restore the v5 spectral-masking checkbox; masking stays off in the physical workflow.
 
@@ -123,3 +123,11 @@ Continuous integration runs the full `tests/` suite on Ubuntu (`.github/workflow
 ## Windows installer (optional)
 
 Build scripts for a standalone Windows app (no Python on the end user's PC) live in **[`Windows installer/`](Windows%20installer/)**. See **`Windows installer/README.md`** for `Build-All.ps1`, PyInstaller output, and optional Inno Setup. Built `.exe` / `.zip` files are **not** stored in git — use [GitHub Releases](https://github.com/LuisMRaimundo/SoundSpectrAnalyse/releases) to distribute them.
+
+## Acknowledgements
+
+This project was developed by **Luís Raimundo** with the support and funding of the **Fundação para a Ciência e a Tecnologia (FCT)** and **Universidade NOVA de Lisboa**.
+
+**Funding DOI:** [https://doi.org/10.54499/2020.08817.BD](https://doi.org/10.54499/2020.08817.BD)
+
+The author also gratefully acknowledges **Isabel Pires** for her support throughout the development of this work.
