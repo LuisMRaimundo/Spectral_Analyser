@@ -85,7 +85,7 @@ These columns are populated at **compile time** from per-note spectrum sheets an
 | `weight_function` | Harmonic band \(D_H\) (typical) |
 |-------------------|----------------------------------|
 | `linear` | \(\sum \texttt{Amplitude\_raw}\) on included harmonic rows |
-| `log` | \(\log_{10}(1 + \sum \texttt{Amplitude\_raw})\) |
+| `log` | \(\sum \log_{10}(1 + \texttt{Amplitude\_raw})\) per included row |
 | `sqrt`, `cubic`, … | `density.apply_density_metric` on the masked amplitude vector |
 
 **Weighted sum (May 2026 semantics):**
@@ -122,6 +122,59 @@ Technical bin, candidate-slot, and **residual-row hierarchy** counts. **These ar
 **Hierarchy (invariant tests):** `residual_spectral_row_count` ≥ `nonharmonic_candidate_row_count` ≥ `retained_nonharmonic_peak_candidate_count` = `exported_nonharmonic_peak_candidate_count`. **`peaklist_*` window counts** (`peaklist_harmonic_window_candidate_count`, `peaklist_nonharmonic_window_candidate_count`, `peaklist_low_frequency_window_candidate_count`, `peaklist_total_window_candidate_count`) are **independent** assignment counts — **do not** compare them to the residual hierarchy. **`debug_counts_invariant_status`** should read **`passed`** for normal runs; **`debug_counts_invariant_failures`** must be empty when status is passed.
 
 Legacy column names `harmonic_peak_count` / … may appear here as aliases aligned with candidate-slot semantics.
+
+---
+
+## F1. `Legacy_Density_Metrics` (per-note workbook; default ON)
+
+Exported on **every** **`spectral_analysis.xlsx`** (written by `proc_audio._build_legacy_density_metrics_row` immediately after the slim **`Metrics`** sheet). There is **no** opt-out flag: legacy scalars are always emitted for compile and audit.
+
+| Column | Source (Stage 1) | Role |
+|--------|------------------|------|
+| `Note`, `weight_function` | Row key / GUI compile key | Identifiers |
+| `Density Metric` | `canonical_density_v5_adapted` or `density_metric_value` | v5 harmonic **`apply_density_metric`** sum (alias for back-compat) |
+| `Spectral Density Metric` | `spectral_density_metric_value` | Whole-spectrum legacy density (noise floor + masking path **disabled** when `spectral_masking_enabled=False`) |
+| `Filtered Density Metric` | `filtered_density_metric_value` | Inharmonic / filtered-list **`apply_density_metric`** sum |
+| `Combined Density Metric` | `combined_density_metric_value` | Legacy log / `calculate_combined_density_metric` blend of harmonic + inharmonic legacy scalars |
+| `spectral_masking_enabled` | Always **`False`** in v6 GUI / orchestrator | Documents physical workflow (v5 had an optional masking checkbox; **not** restored in v6) |
+| `legacy_density_export_version` | Constant `"1"` | Sheet schema tag |
+
+**Not on slim `Metrics`:** SDM / FDM / CDM stay off the publication-oriented **`Metrics`** row so **`Density_Metrics`** at compile time remains allow-listed.
+
+**Compile path:** `read_excel_metrics` merges the first row of **`Legacy_Density_Metrics`** (after **`Metrics`**). Values feed **`apply_weighted_combination`** at compile time:
+
+\[
+\text{Weighted Combined Metric} = f\bigl(\alpha \cdot \text{SDM} + \beta \cdot \text{FDM}\bigr)
+\]
+
+with \(\alpha,\beta\) = GUI **model** weights (`model_harmonic_weight` / `model_inharmonic_weight`, H/(H+I)), and \(f\) = compile **`weight_function`** (e.g. `log` → `log1p` of the pre-sum). **This is not** \((\text{DWS}+\text{CDM})/2\) — see §R below.
+
+Compiled columns land on **`Legacy_Compatibility`** and **`Diagnostic_Metrics`**, **never** on **`Density_Metrics`**.
+
+**Re-run requirement:** folders analysed **before** this export was added lack the sheet; re-run Stage 1 (or compile will fall back to copying **`Density Metric`** into missing SDM/FDM and WCM may be misleading).
+
+---
+
+## R. Research export (`compiled_density_metrics_research.xlsx`)
+
+Built read-only by **`tools/export_research_density_workbook.py`** (and automatically after Stage 2 when wired). Does **not** change **`compiled_density_metrics.xlsx`**.
+
+**Merge sources (in order):** `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, **`Legacy_Compatibility`**, `Validation_Metrics`, `Debug_Counts`, `Per_Note_Processing_Metadata`.
+
+**`Spectral_Density_Metrics` sheet — derived column**
+
+\[
+\text{density\_weighted\_sum\_cdm\_mean} = \frac{\text{density\_weighted\_sum} + \text{Combined Density Metric}}{2}
+\]
+
+- **Editorial / exploratory only** — not a canonical acoustic measure (different scales and definitions; CDM often dominates the average numerically).
+- Documented on the research workbook **README** sheet.
+- **Column highlights** (header + data cells, research file only):
+  - `density_weighted_sum` — soft blue (`#D6E4F0`)
+  - `Combined Density Metric` — soft yellow (`#FFF2CC`)
+  - `density_weighted_sum_cdm_mean` — soft lavender (`#E8D5F2`)
+
+Use **`density_weighted_sum`** for v6 compile contract questions; **`Combined Density Metric`** for legacy dynamic contrast; the **mean** when a single plotting column is desired — see **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`** §9.
 
 ---
 

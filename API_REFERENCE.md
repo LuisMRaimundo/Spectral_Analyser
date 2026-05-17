@@ -4,7 +4,7 @@
 **Package version:** 3.7.0 (`soundspectranalyse` in `pyproject.toml`)  
 **Last updated:** May 2026
 
-**Scope:** This page summarises the **classes and modules used by the active pipeline** (`proc_audio.AudioProcessor`, `density.py`, `compile_metrics`, orchestrator). The **primary** public density/fatness scalar for compiled workbooks is **`effective_partial_density`** (participation-ratio on the effective-component power vector — see `docs/DENSITY_EXPORT_SCHEMA.md`). Older metric names (**Density Metric**, **Combined Density Metric**, **Weighted Combined Metric**, **R_norm**, **P_norm**, **D_agn**, **D_harm**) may still appear in wide exports or legacy fixtures; they are **not** the canonical `Density_Metrics` contract.
+**Scope:** This page summarises the **classes and modules used by the active pipeline** (`proc_audio.AudioProcessor`, `density.py`, `compile_metrics`, orchestrator). The **primary** public density/fatness scalar for compiled workbooks is **`effective_partial_density`** (participation-ratio on the effective-component power vector — see `docs/DENSITY_EXPORT_SCHEMA.md`). Older metric names (**Density Metric**, **Combined Density Metric**, **Spectral Density Metric**, **Filtered Density Metric**, **Weighted Combined Metric**, **R_norm**, **P_norm**, **D_agn**, **D_harm**) appear on per-note **`Legacy_Density_Metrics`**, **`Legacy_Compatibility`**, and **`Diagnostic_Metrics`**; they are **not** the canonical `Density_Metrics` contract. Research-only **`density_weighted_sum_cdm_mean`** is documented in **`docs/DENSITY_EXPORT_SCHEMA.md`** §R.
 
 ---
 
@@ -364,7 +364,22 @@ Build **`compiled_density_metrics_research.xlsx`** from an existing compiled wor
 
 - Optional **`--instrument`**, **`--dynamic`**, **`--force-metadata`** (CLI) or equivalent keyword arguments.  
 - Output uses **worksheet AutoFilter** on tabular sheets only—not Excel **Table** XML—so desktop Excel should open without removing table/autofilter features.  
-- See **`README.md`** and **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`** §9.
+- Merges compiled **`Legacy_Compatibility`** so **`Combined Density Metric`** is available when Stage 1 wrote **`Legacy_Density_Metrics`**.  
+- On **`Spectral_Density_Metrics`**: adds **`density_weighted_sum_cdm_mean`** = \((\texttt{density\_weighted\_sum}+\texttt{Combined Density Metric})/2\); soft column highlights on **`density_weighted_sum`**, **`Combined Density Metric`**, and the mean (research workbook only).  
+- See **`README.md`**, **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`** §9, and **`docs/DENSITY_EXPORT_SCHEMA.md`** §R.
+
+### Per-note export: `Legacy_Density_Metrics` (default ON)
+
+Written by **`AudioProcessor._build_legacy_density_metrics_row`** into every **`spectral_analysis.xlsx`**:
+
+| Column | Attribute |
+|--------|-----------|
+| `Density Metric` | `canonical_density_v5_adapted` / `density_metric_value` |
+| `Spectral Density Metric` | `spectral_density_metric_value` |
+| `Filtered Density Metric` | `filtered_density_metric_value` |
+| `Combined Density Metric` | `combined_density_metric_value` |
+
+Merged at compile by **`compile_metrics.read_excel_metrics`**. Feeds **`apply_weighted_combination`** → **`Weighted Combined Metric`** on **`Diagnostic_Metrics`** / **`Legacy_Compatibility`**.
 
 ---
 

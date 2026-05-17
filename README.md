@@ -41,9 +41,9 @@ pip install --upgrade --force-reinstall -r requirements-pins.txt
 | **[docs/MATHEMATICAL_FORMALISATION_VERIFICATION_REPORT_FIRST_PASS.md](docs/MATHEMATICAL_FORMALISATION_VERIFICATION_REPORT_FIRST_PASS.md)** | LaTeX formalisation of six core `density.py` metrics (read-only vs code). |
 | **[docs/formula_extraction/FORMULA_EXTRACTION_INDEX.md](docs/formula_extraction/FORMULA_EXTRACTION_INDEX.md)** | Pass 1–15 **formula-extraction** tables (Python → notation); companion to validation plans and tests. |
 | **[docs/formula_validation/FORMULA_VALIDATION_PLAN_INDEX.md](docs/formula_validation/FORMULA_VALIDATION_PLAN_INDEX.md)** | Pass 1–15 **formula-validation plans** (fixtures and assertions; plans only). |
-| **[VALIDATION_STATUS_812_PASSED_PASSES_1_15.md](docs/validation/VALIDATION_STATUS_812_PASSED_PASSES_1_15.md)** | Recorded pytest counts: full suite **812 passed** (39 skipped, 0 failed); **149** formula-validation tests passed; Passes **1–15** completed. |
-| **[METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md](docs/validation/METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md)** | Methodological note on extraction → validation workflow and limits of what automated checks establish. |
-| **[CODE_FORMULA_TRACEABILITY_TABLE.md](docs/validation/CODE_FORMULA_TRACEABILITY_TABLE.md)** | Optional code ↔ formula traceability (audit / PDF-oriented). |
+| **[VALIDATION_STATUS_812_PASSED_PASSES_1_15.md](VALIDATION_STATUS_812_PASSED_PASSES_1_15.md)** | Recorded pytest counts: full suite **812 passed** (39 skipped, 0 failed); **149** formula-validation tests passed; Passes **1–15** completed. |
+| **[METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md](METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md)** | Methodological note on extraction → validation workflow and limits of what automated checks establish. |
+| **[CODE_FORMULA_TRACEABILITY_TABLE.md](CODE_FORMULA_TRACEABILITY_TABLE.md)** | Optional code ↔ formula traceability (audit / PDF-oriented). |
 | **[docs/COMPUTATIONAL_METRICS_CODE_REVIEW_REPORT.md](docs/COMPUTATIONAL_METRICS_CODE_REVIEW_REPORT.md)** | Project-owned computational code inventory for formalisation / peer review (not a user guide). |
 | **`docs/DENSITY_EXPORT_SCHEMA.md`** | **Authoritative** export schema: `Density_Metrics`, `Per_Note_Processing_Metadata`, dissonance/PCA separation, redaction notes. |
 | **`docs/BATCH_ANALYSIS_AUDIT.md`** | Batch row semantics, H+I+S validation, model weights **H/(H+I)** (optional Phase 1). |
@@ -69,7 +69,7 @@ Older Markdown snapshots (integrated vs Tk `v2_16` notes, external **`split_audi
 python -m pytest tests -v
 ```
 
-**Formula-validation (Passes 1–15):** executable checks under **`tests/formula_validation/`** implement the per-pass validation plans against selected numerical fixtures. As recorded in **[`VALIDATION_STATUS_812_PASSED_PASSES_1_15.md`](docs/validation/VALIDATION_STATUS_812_PASSED_PASSES_1_15.md)**, the formula-validation suite reports **149 passed**, **0 failed**, and the full repository suite **812 passed**, **39 skipped**, **0 failed** for that recorded run. The formula-validation corpus supports **internal consistency** between the documented formulas and the tested Python implementations; it verifies formula/code agreement for those fixtures and **does not**, by itself, prove scientific optimality, universal correctness, or full acoustic validity of the models. See **[`METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md`](docs/validation/METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md)** for scope and limitations.
+**Formula-validation (Passes 1–15):** executable checks under **`tests/formula_validation/`** implement the per-pass validation plans against selected numerical fixtures. As recorded in **`VALIDATION_STATUS_812_PASSED_PASSES_1_15.md`**, the formula-validation suite reports **149 passed**, **0 failed**, and the full repository suite **812 passed**, **39 skipped**, **0 failed** for that recorded run. The formula-validation corpus supports **internal consistency** between the documented formulas and the tested Python implementations; it verifies formula/code agreement for those fixtures and **does not**, by itself, prove scientific optimality, universal correctness, or full acoustic validity of the models. See **`METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md`** for scope and limitations.
 
 ```bash
 python -m pytest tests/formula_validation/ -q
@@ -105,26 +105,10 @@ The research workbook is written for **Microsoft Excel compatibility**: it does 
 
 The full **`compiled_density_metrics.xlsx`** remains the complete technical and audit export; **`compiled_density_metrics_research.xlsx`** is the recommended workbook for analysis, plotting, and thesis-ready tables.
 
+On **`Spectral_Density_Metrics`**, the research export adds **`density_weighted_sum_cdm_mean`** = \((\texttt{density\_weighted\_sum} + \texttt{Combined Density Metric}) / 2\) and applies soft column highlights (blue / yellow / lavender) to **`density_weighted_sum`**, **`Combined Density Metric`**, and that mean — for side-by-side reading only; normative definitions are in **`docs/DENSITY_EXPORT_SCHEMA.md`** §R.
+
+**Per-note legacy sheet (Stage 1):** each **`spectral_analysis.xlsx`** also writes **`Legacy_Density_Metrics`** (SDM, FDM, CDM, `Density Metric`) so compile can populate **`Weighted Combined Metric`** on diagnostic sheets. v6 does **not** restore the v5 spectral-masking checkbox; masking stays off in the physical workflow.
+
 When you run **`run_orchestrator.py`**, **`pipeline_orchestrator_integrated.py`**, or the Tk **`pipeline_orchestrator_gui.py`** pipeline, the research workbook is generated **automatically** after each successful Stage 2 compile (same folder as the compiled workbook). Failures there are logged only and do not fail the acoustic pipeline.
 
 Continuous integration runs the full `tests/` suite on Ubuntu (`.github/workflows/ci.yml`).
-
-## Copyright and use
-
-This repository is proprietary research software.
-
-No open-source licence is granted. All rights are reserved by Luís Raimundo.
-
-Access to this repository does not imply permission to copy, reuse, modify, redistribute, publish, sublicense, incorporate, train on, or derive works from the code, documentation, mathematical formulations, tests, validation reports, data structures, or associated materials.
-
-Authorised users may run the software only for the specific purpose for which access has been granted. Any other use requires prior written permission.
-
-Do not add an open-source licence.
-
-## Acknowledgements
-
-This project was developed by **Luís Raimundo** with the support and funding of the **Fundação para a Ciência e a Tecnologia (FCT)** and **Universidade NOVA de Lisboa**.
-
-**Funding DOI:** `https://doi.org/10.54499/2020.08817.BD`
-
-The author also gratefully acknowledges **Isabel Pires** for her support throughout the development of this work.

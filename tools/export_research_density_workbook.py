@@ -14,6 +14,12 @@ blank headers; duplicate names receive ``_2``, ``_3``, …).
 
 **Metadata CLI:** optional ``--instrument``, ``--dynamic``, and
 ``--force-metadata`` (see ``README.md`` and the research workbook README sheet).
+
+**Spectral_Density_Metrics:** merges ``Legacy_Compatibility`` from the compiled
+workbook; adds ``density_weighted_sum_cdm_mean`` =
+(``density_weighted_sum`` + ``Combined Density Metric``) / 2; applies soft column
+highlights on those three columns (research file only). Normative semantics:
+``docs/DENSITY_EXPORT_SCHEMA.md`` §R.
 """
 
 from __future__ import annotations
@@ -72,6 +78,7 @@ MERGE_SHEETS: Tuple[str, ...] = (
     "Density_Metrics",
     "Canonical_Metrics",
     "Diagnostic_Metrics",
+    "Legacy_Compatibility",
     "Validation_Metrics",
     "Debug_Counts",
     "Per_Note_Processing_Metadata",
@@ -130,6 +137,12 @@ FAIL_FILL = PatternFill("solid", fgColor="FFC7CE")
 NEUTRAL_KPI_FILL = PatternFill("solid", fgColor="E7E6E6")
 MISSING_WARN_FILL = PatternFill("solid", fgColor="F8CBAD")
 F0_FALSE_FILL = PatternFill("solid", fgColor="FFEB9C")
+
+# Research ``Spectral_Density_Metrics`` column highlights (soft fills; header + data).
+RESEARCH_FILL_DENSITY_WEIGHTED_SUM = PatternFill("solid", fgColor="D6E4F0")
+RESEARCH_FILL_COMBINED_DENSITY_METRIC = PatternFill("solid", fgColor="FFF2CC")
+RESEARCH_FILL_DWS_CDM_MEAN = PatternFill("solid", fgColor="E8D5F2")
+RESEARCH_HIGHLIGHT_HEADER_FONT = Font(bold=True, color="1F4E79", size=11)
 
 
 PITCH_CLASS_MAP: Dict[str, int] = {
@@ -811,6 +824,7 @@ def build_spectral_density_metrics(
             "density_metric_raw": _series_or_nan(merged, "density_metric_raw"),
             "density_metric_normalized": _series_or_nan(merged, "density_metric_normalized"),
             "density_weighted_sum": _series_or_nan(merged, "density_weighted_sum"),
+            "Combined Density Metric": _pick_series(merged, "Combined Density Metric"),
             "density_log_weighted": _series_or_nan(merged, "density_log_weighted"),
             "Total sum": _series_or_nan(merged, "Total sum"),
             "effective_partial_density": _series_or_nan(merged, "effective_partial_density"),
@@ -871,6 +885,10 @@ def build_spectral_density_metrics(
             + ", ".join(sorted(norm_warns.keys()))
             + " (constant or all-missing); chart columns set to NaN."
         )
+
+    dws = pd.to_numeric(out["density_weighted_sum"], errors="coerce")
+    cdm = pd.to_numeric(out["Combined Density Metric"], errors="coerce")
+    out["density_weighted_sum_cdm_mean"] = (dws + cdm) / 2.0
 
     out = out.sort_values("MIDI", na_position="last", kind="mergesort")
     return out
@@ -1203,6 +1221,15 @@ def readme_lines(
             "density_weighted_sum:",
             "    Numerically equal to density_metric_raw. Changes when you change the compile weight_function.",
             "    harmonic_amplitude_sum (if present) is a separate linear diagnostic and does not follow that key.",
+            "    Highlighted (soft blue) on Spectral_Density_Metrics.",
+            "",
+            "Combined Density Metric:",
+            "    Legacy Stage-1 combined harmonic/inharmonic scalar (log/expm1 path in proc_audio).",
+            "    Highlighted (soft yellow) on Spectral_Density_Metrics.",
+            "",
+            "density_weighted_sum_cdm_mean:",
+            "    Arithmetic mean (density_weighted_sum + Combined Density Metric) / 2.",
+            "    Highlighted (soft lavender) on Spectral_Density_Metrics.",
             "",
             "Total sum:",
             "    Unweighted sum of per-band D values (D_H + D_I + D_S); diagnostic, not energy-ratio-weighted.",
@@ -1269,6 +1296,15 @@ def readme_lines(
             "density_weighted_sum:",
             "    Numerically equal to density_metric_raw. Changes when you change the compile weight_function.",
             "    harmonic_amplitude_sum (if present) is a separate linear diagnostic and does not follow that key.",
+            "    Highlighted (soft blue) on Spectral_Density_Metrics.",
+            "",
+            "Combined Density Metric:",
+            "    Legacy Stage-1 combined harmonic/inharmonic scalar (log/expm1 path in proc_audio).",
+            "    Highlighted (soft yellow) on Spectral_Density_Metrics.",
+            "",
+            "density_weighted_sum_cdm_mean:",
+            "    Arithmetic mean (density_weighted_sum + Combined Density Metric) / 2.",
+            "    Highlighted (soft lavender) on Spectral_Density_Metrics.",
             "",
             "Total sum:",
             "    Unweighted sum of per-band D values (D_H + D_I + D_S); diagnostic, not energy-ratio-weighted.",
@@ -1402,6 +1438,25 @@ def _write_data_sheet(
         fmt_map[c] = "0.00%"
     _apply_number_formats(ws, list(df.columns), fmt_map)
     _autosize_columns(ws)
+
+
+def _apply_research_column_highlights(
+    ws,
+    column_fills: Sequence[Tuple[str, PatternFill]],
+) -> None:
+    """Soft column fills on ``Spectral_Density_Metrics`` (research workbook only)."""
+    if ws.max_row < 1 or ws.max_column < 1:
+        return
+    hdr = {ws.cell(1, c).value: c for c in range(1, ws.max_column + 1)}
+    for col_name, fill in column_fills:
+        ci = hdr.get(col_name)
+        if ci is None:
+            continue
+        for r in range(1, ws.max_row + 1):
+            cell = ws.cell(r, ci)
+            cell.fill = fill
+            if r == 1:
+                cell.font = RESEARCH_HIGHLIGHT_HEADER_FONT
 
 
 def _apply_sdm_conditional(ws, headers: List[str | None]) -> None:
@@ -1732,6 +1787,8 @@ def build_workbook(
     metric_cols_tuple = (
         "density_metric_raw",
         "density_weighted_sum",
+        "Combined Density Metric",
+        "density_weighted_sum_cdm_mean",
         "density_log_weighted",
         "Total sum",
         "effective_partial_density",
@@ -1757,6 +1814,14 @@ def build_workbook(
     _write_data_sheet(wb, "Spectral_Density_Metrics", sd, ratio_cols, metric_cols_tuple)
     sdm_ws = wb["Spectral_Density_Metrics"]
     hdrs = [sdm_ws.cell(1, c).value for c in range(1, sdm_ws.max_column + 1)]
+    _apply_research_column_highlights(
+        sdm_ws,
+        (
+            ("density_weighted_sum", RESEARCH_FILL_DENSITY_WEIGHTED_SUM),
+            ("Combined Density Metric", RESEARCH_FILL_COMBINED_DENSITY_METRIC),
+            ("density_weighted_sum_cdm_mean", RESEARCH_FILL_DWS_CDM_MEAN),
+        ),
+    )
     _apply_sdm_conditional(sdm_ws, hdrs)
 
     cb_ratios = (

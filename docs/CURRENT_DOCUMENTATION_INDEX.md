@@ -1,6 +1,6 @@
 # Current documentation index
 
-**Last audit:** 2026-05-14 (index + research-export / metrics-report supplement; prior full pass 2026-05-13). **Formula validation:** Passes **1–15** completed in pytest (`tests/formula_validation/`); see **`VALIDATION_STATUS_812_PASSED_PASSES_1_15.md`** and **`METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md`**.  
+**Last audit:** 2026-05-17 (legacy density export + research compromise column / highlights; prior passes 2026-05-14, 2026-05-13). **Formula validation:** Passes **1–15** completed in pytest (`tests/formula_validation/`); see **`VALIDATION_STATUS_812_PASSED_PASSES_1_15.md`** and **`METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md`**.  
 **Pipeline contract (high level):** `proc_audio.AudioProcessor` → per-note `spectral_analysis.xlsx` → `compile_metrics.compile_density_metrics_with_pca` → `compiled_density_metrics.xlsx`  
 **Schema / export version strings:** see per-workbook `Analysis_Metadata` (`ANALYSIS_SCHEMA_VERSION`, `pipeline_contract_version`, `export_schema_version`, etc.) — this index does not duplicate those runtime values.
 
@@ -11,7 +11,7 @@
 | Document | Purpose |
 |----------|---------|
 | [docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md](CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) | **Normative** summary: canonical stages, f0 fields, harmonic interpolation columns, nonharmonic hierarchy, subfundamental vs sub-bass, **per-note component pie filenames and bases** (amplitude-mass vs energy-ratio vs legacy alias), Debug_Counts, missing metrics, audit CLI/tests. |
-| [docs/DENSITY_EXPORT_SCHEMA.md](DENSITY_EXPORT_SCHEMA.md) | **Authoritative** workbook layout: `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Debug_Counts`, PCA/dissonance separation, redaction. **§C.1** documents `density_weighted_sum` / `weight_function` compile semantics (May 2026). |
+| [docs/DENSITY_EXPORT_SCHEMA.md](DENSITY_EXPORT_SCHEMA.md) | **Authoritative** workbook layout: `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Debug_Counts`, PCA/dissonance separation, redaction. **§C.1** — `density_weighted_sum` / `weight_function`; **§F1** — per-note `Legacy_Density_Metrics` (default ON); **§R** — research export mean column and highlights. |
 | [docs/BATCH_ANALYSIS_AUDIT.md](BATCH_ANALYSIS_AUDIT.md) | Batch / `SuperAudioAnalyzer` **optional Phase 1** semantics and H+I+S handoff (read banner at top). |
 | [docs/BATCH_ANALYSIS_FIELD_MAP.md](BATCH_ANALYSIS_FIELD_MAP.md) | Short column map for `batch_summary.xlsx` and related identifiers. |
 | [README.md](../README.md) | Install, entry points, documentation table, tests. |
@@ -33,7 +33,7 @@
 **Validation tools (cite as engineering artefacts):**
 
 - `tools/audit_compiled_workbook.py` — compiled workbook invariant audit.  
-- `tools/export_research_density_workbook.py` — post-process `compiled_density_metrics.xlsx` into a reduced **research** workbook (`compiled_density_metrics_research.xlsx`) for plotting and thesis tables; does not alter compilation or the source workbook. Optional CLI metadata: `--instrument`, `--dynamic`, `--force-metadata`. Uses **worksheet `AutoFilter` only** (no formal Excel **Table** / `xl/tables/table*.xml`) so Microsoft Excel opens without repair prompts; README/Dashboard sheets are not filtered.  
+- `tools/export_research_density_workbook.py` — post-process `compiled_density_metrics.xlsx` into a reduced **research** workbook (`compiled_density_metrics_research.xlsx`) for plotting and thesis tables; merges `Legacy_Compatibility`; adds `density_weighted_sum_cdm_mean` and soft column highlights on `Spectral_Density_Metrics`. Does not alter compilation or the source workbook. Optional CLI metadata: `--instrument`, `--dynamic`, `--force-metadata`. Uses **worksheet `AutoFilter` only** (no formal Excel **Table** / `xl/tables/table*.xml`) so Microsoft Excel opens without repair prompts; README/Dashboard sheets are not filtered.  
 - `tests/pipeline_workbook_audit.py`, `tests/test_final_pipeline_invariants.py` — automated checks.
 
 ---

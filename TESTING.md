@@ -132,9 +132,15 @@ After changes to **`tools/export_research_density_workbook.py`** or **`post_comp
 pytest tests/test_research_density_export.py tests/test_post_compile_research_export.py -v
 ```
 
-The suite includes a **zip** check that the output has **no** `xl/tables/*.xml` parts (Excel repair regression guard).
+The suite includes a **zip** check that the output has **no** `xl/tables/*.xml` parts (Excel repair regression guard), tests for **`density_weighted_sum_cdm_mean`** and column highlights, and **`tests/test_legacy_density_export.py`** for **`Legacy_Density_Metrics`** merge / `_build_legacy_density_metrics_row`.
 
-See **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`** §9 and **`README.md`** (research export CLI).
+After changes to **`proc_audio`** legacy export or **`compile_metrics.read_excel_metrics`**:
+
+```bash
+pytest tests/test_legacy_density_export.py -v
+```
+
+See **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`** §9, **`docs/DENSITY_EXPORT_SCHEMA.md`** §F1 / §R, and **`README.md`** (research export CLI).
 
 **Environment-driven integration test** (optional):
 

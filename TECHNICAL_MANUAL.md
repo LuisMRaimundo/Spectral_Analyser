@@ -5,7 +5,7 @@
 **Technical manual revision:** 10.1  
 **Date:** May 2026  
 **Authors:** Senior Software Engineer & Digital Signal Processing (DSP) Specialist  
-**Latest updates:** Manual aligned to **current** export contract (`Density_Metrics` + `docs/DENSITY_EXPORT_SCHEMA.md`); `effective_partial_density` documented as the sole **public** spectral-fatness scalar; Stage‑2 **`density_weighted_sum`** / compile **`weight_function`** semantics summarised in §3.2 (`compile_metrics`) and §5.3 with normative detail in **`docs/DENSITY_EXPORT_SCHEMA.md` §C.1**; legacy `Density Metric` / `Combined` / `R_norm` stack explicitly scoped to internal or wide-sheet outputs; compiled workbook multi-sheet layout; dissonance on separate sheet; **§10.3** documents completed **formula extraction / formula-validation** Passes **1–15** (`tests/formula_validation/`, status **`VALIDATION_STATUS_812_PASSED_PASSES_1_15.md`**).
+**Latest updates:** Manual aligned to **current** export contract (`Density_Metrics` + `docs/DENSITY_EXPORT_SCHEMA.md`); `effective_partial_density` documented as the sole **public** spectral-fatness scalar; Stage‑2 **`density_weighted_sum`** / compile **`weight_function`** semantics summarised in §3.2 (`compile_metrics`) and §5.3 with normative detail in **`docs/DENSITY_EXPORT_SCHEMA.md` §C.1**; **default per-note `Legacy_Density_Metrics`** sheet (SDM/FDM/CDM) and research-export **`density_weighted_sum_cdm_mean`** + column highlights documented in §5.3 and **`docs/DENSITY_EXPORT_SCHEMA.md` §F1 / §R**; legacy `Density Metric` / `Combined` / `R_norm` stack scoped to legacy sheets / diagnostic outputs (not slim `Metrics`); v5 spectral-masking GUI **not** exposed in v6; compiled workbook multi-sheet layout; dissonance on separate sheet; **§10.3** documents completed **formula extraction / formula-validation** Passes **1–15** (`tests/formula_validation/`, status **`VALIDATION_STATUS_812_PASSED_PASSES_1_15.md`**).
 
 > **Architecture notice (scientific pipeline, May 2026):** Normative export contract: **`Density_Metrics`** columns, **`effective_partial_density`**, dissonance on **`Dissonance_Metrics`**, optional PCA sheets, batch **H+I+S** vs model weights **H/(H+I)** / **I/(H+I)**, and GUI policy — **`docs/DENSITY_EXPORT_SCHEMA.md`**, **`docs/BATCH_ANALYSIS_AUDIT.md`**, **`docs/BATCH_ANALYSIS_FIELD_MAP.md`**. Sections on **legacy** amplitude / combined metrics, **masking**, or **PC1/PC2** are labelled explicitly where they are not the publication path. Default physical pipeline: **spectral masking disabled**.
 
@@ -825,7 +825,7 @@ graph TD
   - **Spectral masking:** Default OFF (physical model). Enable only for perceptual masking
   - **Adaptive tolerance:** Enabled by default; scales with 1.5% of frequency
   - **Window-specific parameters:** Kaiser beta and Gaussian std appear only for their windows
-  - **Amplitude weight function (GUI):** combo lists **Linear** first; fresh installs default to **`linear`**. The same key is passed to **Stage 2** compile and sets per-band \(D_H,D_I,D_S\) for **`density_weighted_sum`** / **`density_metric_raw`** (see §3.2 / §5.3 and **`docs/DENSITY_EXPORT_SCHEMA.md` §C.1**). It also changes legacy wide **`Metrics`** outputs via **`apply_density_metric`** (§4.5).
+  - **Amplitude weight function (GUI):** combo lists **Linear** first; fresh installs default to **`linear`**. The same key is passed to **Stage 2** compile and sets per-band \(D_H,D_I,D_S\) for **`density_weighted_sum`** / **`density_metric_raw`** (see §3.2 / §5.3 and **`docs/DENSITY_EXPORT_SCHEMA.md` §C.1**). It also changes legacy **`Legacy_Density_Metrics`** / harmonic **`apply_density_metric`** outputs (§4.5). **Spectral masking** is **not** exposed in the v6 GUI (unlike v5); **`spectral_masking_enabled`** stays **`False`** for the physical pipeline.
 
 ### 3.4 Harmonic spectrum rows, `include_for_density`, and validation caps
 
@@ -999,7 +999,7 @@ $$\text{Noise Floor} = \text{Percentile}_{15}(|X[k]|) \cdot 1.5$$
 
 ### 4.5 Legacy amplitude-weighted metric (`apply_density_metric`; not on `Density_Metrics`)
 
-The following formulas describe **`density.apply_density_metric()`**, still used inside **`proc_audio`** for **legacy / diagnostic** outputs (e.g. wide **`Metrics`** row in `spectral_analysis.xlsx`). They are **not** the **`Density_Metrics`** public contract — see **§4.0**.
+The following formulas describe **`density.apply_density_metric()`**, still used inside **`proc_audio`** for **legacy / diagnostic** outputs (e.g. **`Legacy_Density_Metrics`** and harmonic fields on the slim **`Metrics`** row in `spectral_analysis.xlsx`). They are **not** the **`Density_Metrics`** public contract — see **§4.0**.
 
 The legacy **Density Metric** measures a weighted sum of amplitudes (spectral "richness" in a different sense than \(D_{\mathrm{eff}}\)) — more harmonics with considerable energy increases the sum. It applies **prevent domination** normalisation before weighting.
 
@@ -1434,7 +1434,9 @@ The workbook is written by **`compile_metrics._write_compiled_excel()`**. When t
 
 #### Research workbook (`compiled_density_metrics_research.xlsx`)
 
-Optional **read-only** post-process via **`tools/export_research_density_workbook.py`**: a reduced multi-sheet workbook beside **`compiled_density_metrics.xlsx`** for plotting and thesis tables. It does **not** alter Stage 2 compilation output. For **Microsoft Excel** interoperability, the writer avoids formal **Table** / ListObject XML (`xl/tables/table*.xml`) and uses **worksheet-level AutoFilter** on tabular sheets only; see **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`** §9 and **`README.md`**.
+Optional **read-only** post-process via **`tools/export_research_density_workbook.py`**: a reduced multi-sheet workbook beside **`compiled_density_metrics.xlsx`** for plotting and thesis tables. It does **not** alter Stage 2 compilation output. It merges **`Legacy_Compatibility`** from the compiled workbook, exports **`Combined Density Metric`** on **`Spectral_Density_Metrics`**, computes **`density_weighted_sum_cdm_mean`** = \((\texttt{density\_weighted\_sum}+\texttt{Combined Density Metric})/2\), and applies soft column highlights on those three columns (research file only). For **Microsoft Excel** interoperability, the writer avoids formal **Table** / ListObject XML (`xl/tables/table*.xml`) and uses **worksheet-level AutoFilter** on tabular sheets only; see **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`** §9, **`docs/DENSITY_EXPORT_SCHEMA.md`** §R, and **`README.md`**.
+
+**Per-note legacy export (Stage 1, default ON):** after the slim **`Metrics`** sheet, **`spectral_analysis.xlsx`** always includes **`Legacy_Density_Metrics`** (`Density Metric`, `Spectral Density Metric`, `Filtered Density Metric`, `Combined Density Metric`, `spectral_masking_enabled=False`). Compile **`read_excel_metrics`** merges this sheet so **`Weighted Combined Metric`** uses real SDM/FDM on **`Diagnostic_Metrics`** / **`Legacy_Compatibility`**.
 
 **Backward compatibility:** If the compiled frame does **not** contain the density core, the writer emits a single **`Compiled Metrics`** sheet (plus dissonance / metadata as applicable) instead of the slim **`Density_Metrics`** stack.
 
@@ -1459,11 +1461,11 @@ Optional **read-only** post-process via **`tools/export_research_density_workboo
 
 After pulling an update that changes this formula, **re-run Stage 2 compile** on existing `analysis_results` folders so **`compiled_density_metrics.xlsx`** reflects the new semantics (per-note **`spectral_analysis.xlsx`** files need not be regenerated unless Stage 1 settings changed).
 
-Per-note **`spectral_analysis.xlsx`** still carries a **wide** metrics row with legacy **`Density Metric`**, **`Combined Density Metric`**, **`Spectral Density Metric`**, **`D_agn`**, **`R_norm`**, **`P_norm`**, etc.; compilation **does not** copy those onto **`Density_Metrics`**.
+Per-note **`spectral_analysis.xlsx`** carries legacy SDM/FDM/CDM on the dedicated **`Legacy_Density_Metrics`** sheet (default export); the slim **`Metrics`** sheet holds the v6 canonical row (`canonical_density`, energies, `effective_partial_density`, …). Compilation **does not** copy legacy scalars onto **`Density_Metrics`**.
 
 ### 5.4 Legacy weighted index & wide-frame analytics (non-`Density_Metrics`)
 
-`apply_weighted_index()` may still compute **`Index_Weighted`** from robust-normalised legacy columns (historical “pdf” blend, e.g. 10% **`Density Metric`** + 40% **`D_agn`** + …). **`Weighted Combined Metric`** and optional **t-SNE / UMAP / Isolation Forest** columns can exist on the **wide** in-memory frame or on **`Compiled_Metrics_All`**. None of these are on the **`Density_Metrics`** allow-list.
+`apply_weighted_index()` may still compute **`Index_Weighted`** from robust-normalised legacy columns (historical “pdf” blend, e.g. 10% **`Density Metric`** + 40% **`D_agn`** + …). **`Weighted Combined Metric`** is recomputed at compile from **`Spectral Density Metric`** and **`Filtered Density Metric`** (via per-note **`Legacy_Density_Metrics`** when present) using GUI model weights \(\alpha,\beta\) and compile **`weight_function`** — **not** the research mean \((\text{DWS}+\text{CDM})/2\). Optional **t-SNE / UMAP / Isolation Forest** columns can exist on the **wide** in-memory frame or on **`Compiled_Metrics_All`**. None of these are on the **`Density_Metrics`** allow-list.
 
 ### 5.5 Aggregation logic (current)
 

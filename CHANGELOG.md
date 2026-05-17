@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`Legacy_Density_Metrics` (per-note export, default ON):** every **`spectral_analysis.xlsx`** now includes a dedicated sheet with **`Density Metric`**, **`Spectral Density Metric`**, **`Filtered Density Metric`**, **`Combined Density Metric`**, and **`spectral_masking_enabled`** (`False` — no v5 masking GUI in v6). Stage 2 **`read_excel_metrics`** merges this sheet so **`Weighted Combined Metric`** is recomputed from real SDM/FDM on **`Diagnostic_Metrics`** / **`Legacy_Compatibility`**, not from zero placeholders.
+- **Research workbook (`compiled_density_metrics_research.xlsx`):** **`Spectral_Density_Metrics`** includes **`Combined Density Metric`**, derived **`density_weighted_sum_cdm_mean`** = \((\texttt{density\_weighted\_sum} + \texttt{Combined Density Metric}) / 2\), soft column highlights (blue / yellow / lavender), and merge from compiled **`Legacy_Compatibility`**. Tests: **`tests/test_legacy_density_export.py`**, extended **`tests/test_research_density_export.py`**.
+
 ### Fixed
 
 - **`density_weighted_sum` (Stage 2 compile):** now uses per-band **`harmonic_density_sum` / `inharmonic_density_sum` / `subbass_density_sum`** under the compile **`weight_function`** (same formula as **`density_metric_raw`**), instead of always using linear **`harmonic_amplitude_sum`** × energy ratios. **`harmonic_amplitude_sum`** remains an unchanged linear diagnostic. Tests: **`tests/test_weighted_note_density.py::test_a2_density_weighted_sum_follows_weight_function`**. Docs: **`docs/DENSITY_EXPORT_SCHEMA.md`** §C.1, Pass 14 formula tables, **`metrics_dictionary.json`**, **`Compile_Guide`** text, research export README prose.

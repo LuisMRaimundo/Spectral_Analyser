@@ -62,6 +62,7 @@ def _write_minimal_compiled_workbook(path: Path, *, sparse: bool = False) -> Non
             "source_file_name": ["Clarinet_A4_pp.wav", "Bassoon_D3_mf.wav"],
             "weight_function": ["linear", "linear"],
             "density_weighted_sum": [1.5, 2.5],
+            "Combined Density Metric": [4.0, 8.0],
             "density_log_weighted": [0.1, 0.2],
             "effective_partial_density": [0.4, 0.5],
             "spectral_entropy": [0.7, 0.8],
@@ -129,11 +130,51 @@ def test_spectral_density_metrics_columns(tmp_path: Path) -> None:
         "MIDI",
         "density_metric_raw",
         "density_weighted_sum",
+        "Combined Density Metric",
+        "density_weighted_sum_cdm_mean",
         "Total sum",
         "effective_partial_density",
         "spectral_entropy",
     ):
         assert col in df.columns
+    mean = pd.to_numeric(df["density_weighted_sum_cdm_mean"], errors="coerce")
+    dws = pd.to_numeric(df["density_weighted_sum"], errors="coerce")
+    cdm = pd.to_numeric(df["Combined Density Metric"], errors="coerce")
+    assert np.allclose(mean, (dws + cdm) / 2.0, equal_nan=True)
+
+
+def test_research_workbook_column_highlights(tmp_path: Path) -> None:
+    src = tmp_path / "in.xlsx"
+    dst = tmp_path / "out.xlsx"
+    _write_minimal_compiled_workbook(src)
+    assert _run_export(src, dst).returncode == 0
+    from tools.export_research_density_workbook import (
+        RESEARCH_FILL_COMBINED_DENSITY_METRIC,
+        RESEARCH_FILL_DENSITY_WEIGHTED_SUM,
+        RESEARCH_FILL_DWS_CDM_MEAN,
+    )
+
+    wb = load_workbook(dst)
+    ws = wb["Spectral_Density_Metrics"]
+    hdr = {ws.cell(1, c).value: c for c in range(1, ws.max_column + 1)}
+
+    def _fill_rgb_hex(cell) -> str:
+        col = cell.fill.fgColor
+        if col is None:
+            return ""
+        rgb = getattr(col, "rgb", None) or getattr(getattr(cell.fill, "start_color", None), "rgb", None)
+        if rgb is None:
+            return ""
+        s = str(rgb).upper().replace("FF", "", 1) if str(rgb).upper().startswith("FF") else str(rgb).upper()
+        return s[-6:] if len(s) >= 6 else s
+
+    def fill_for(name: str) -> str:
+        ci = hdr[name]
+        return _fill_rgb_hex(ws.cell(2, ci))
+
+    assert fill_for("density_weighted_sum") == "D6E4F0"
+    assert fill_for("Combined Density Metric") == "FFF2CC"
+    assert fill_for("density_weighted_sum_cdm_mean") == "E8D5F2"
 
 
 def test_component_balance_recomputes(tmp_path: Path) -> None:

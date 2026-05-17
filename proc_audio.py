@@ -8650,6 +8650,28 @@ class AudioProcessor:
 
         return main_metrics
 
+    def _build_legacy_density_metrics_row(self, note: str) -> Dict[str, Any]:
+        """Per-note legacy scalars (SDM / FDM / CDM) for compile WCM and v5 comparison — default export."""
+        _dm = getattr(self, "canonical_density_v5_adapted", None)
+        if _dm is None:
+            _dm = getattr(self, "density_metric_value", None)
+        return {
+            "Note": note,
+            "weight_function": str(getattr(self, "weight_function", "linear") or "linear"),
+            "Density Metric": metric_float_or_nan(_dm),
+            "Spectral Density Metric": metric_float_or_nan(
+                getattr(self, "spectral_density_metric_value", None)
+            ),
+            "Filtered Density Metric": metric_float_or_nan(
+                getattr(self, "filtered_density_metric_value", None)
+            ),
+            "Combined Density Metric": metric_float_or_nan(
+                getattr(self, "combined_density_metric_value", None)
+            ),
+            "spectral_masking_enabled": False,
+            "legacy_density_export_version": "1",
+        }
+
     def _save_spectral_data_to_excel(
         self,
         writer: pd.ExcelWriter,
@@ -9265,6 +9287,23 @@ class AudioProcessor:
             _rest = [c for c in metrics_df.columns if c not in _ordered]
             metrics_df = metrics_df[_ordered + _rest]
             metrics_df.to_excel(writer, sheet_name="Metrics", index=False)
+
+            legacy_row = self._build_legacy_density_metrics_row(note)
+            legacy_df = _pub_df(pd.DataFrame([legacy_row]))
+            _legacy_order = [
+                "Note",
+                "weight_function",
+                "Density Metric",
+                "Spectral Density Metric",
+                "Filtered Density Metric",
+                "Combined Density Metric",
+                "spectral_masking_enabled",
+                "legacy_density_export_version",
+            ]
+            _leg_ord = [c for c in _legacy_order if c in legacy_df.columns]
+            _leg_rest = [c for c in legacy_df.columns if c not in _leg_ord]
+            legacy_df = legacy_df[_leg_ord + _leg_rest]
+            legacy_df.to_excel(writer, sheet_name="Legacy_Density_Metrics", index=False)
 
             self.exported_nonharmonic_peak_candidate_count = int(len(ih_export))
             from debug_counts import (

@@ -11,7 +11,7 @@ This page summarises what the **current code and tests** implement. For column a
 
 | Stage | Component | Output |
 |--------|-----------|--------|
-| **Stage 1 (canonical)** | `proc_audio.AudioProcessor` | Per-note **`spectral_analysis.xlsx`** |
+| **Stage 1 (canonical)** | `proc_audio.AudioProcessor` | Per-note **`spectral_analysis.xlsx`** (slim **`Metrics`** + default **`Legacy_Density_Metrics`**) |
 | **Stage 2 (canonical)** | `compile_metrics.compile_density_metrics_with_pca` | **`compiled_density_metrics.xlsx`** |
 
 **Legacy / diagnostic (not required for the canonical chain):**
@@ -191,17 +191,25 @@ After Stage 2 produces **`compiled_density_metrics.xlsx`**, the optional **resea
 **Semantics**
 
 - Does **not** modify Stage 1/2 numeric pipelines or rewrite the compiled workbook.  
+- Merges **`Legacy_Compatibility`** (among other sheets) so **`Combined Density Metric`** and other legacy columns from per-note **`Legacy_Density_Metrics`** are available when present.  
+- Adds **`density_weighted_sum_cdm_mean`** = \((\texttt{density\_weighted\_sum} + \texttt{Combined Density Metric}) / 2\) on **`Spectral_Density_Metrics`** — an **editorial** blend, not a third canonical density (see **`docs/DENSITY_EXPORT_SCHEMA.md`** §R).  
 - May **infer or override** `Instrument` / `Dynamic` metadata (CLI: `--instrument`, `--dynamic`, `--force-metadata`); see the research workbook **README** sheet.  
 - May **resolve** per-note component chart paths under the compiled workbook’s parent folder when filenames are missing from the source sheet.
 
 **Excel file format**
 
 - Uses **worksheet-level `AutoFilter`** on data sheets only; **no** formal **Table** / ListObject parts (avoids `xl/tables/table*.xml` and Microsoft Excel “repair” prompts). **README** and **Dashboard** sheets are not auto-filtered.  
-- Column headers written from DataFrames are **sanitised** (non-blank names; duplicate bases receive `_2`, `_3`, …).
+- Column headers written from DataFrames are **sanitised** (non-blank names; duplicate bases receive `_2`, `_3`, …).  
+- **`Spectral_Density_Metrics`** only: soft fills on **`density_weighted_sum`** (blue), **`Combined Density Metric`** (yellow), **`density_weighted_sum_cdm_mean`** (lavender) for quick visual separation in thesis tables.
+
+**Legacy density at Stage 1 (context)**
+
+- Every new **`spectral_analysis.xlsx`** includes **`Legacy_Density_Metrics`** (SDM, FDM, CDM, `Density Metric`) so compile can rebuild **`Weighted Combined Metric`** on **`Diagnostic_Metrics`**. v6 does **not** expose the v5 “Enable Spectral Masking” GUI; **`spectral_masking_enabled`** is recorded as **`False`**.
 
 **Further reading**
 
 - **`README.md`** — CLI examples.  
+- **`docs/DENSITY_EXPORT_SCHEMA.md`** §F1, §R — normative sheet and research-column definitions.  
 - **`docs/COMPUTATIONAL_METRICS_CODE_REVIEW_REPORT.md`** — separate read-only survey of project-owned **computational** code (not the Excel exporter).
 
 ---
