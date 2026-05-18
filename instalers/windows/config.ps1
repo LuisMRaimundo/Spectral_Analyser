@@ -1,4 +1,4 @@
-# SoundSpectrAnalyse — Windows easy-install constants
+# SoundSpectrAnalyse — Windows installer constants
 $script:SoundSpectrConfig = @{
     GitHubRepoUrl      = 'https://github.com/LuisMRaimundo/SoundSpectrAnalyse'
     GitHubZipUrl       = 'https://github.com/LuisMRaimundo/SoundSpectrAnalyse/archive/refs/heads/main.zip'

@@ -1,5 +1,5 @@
 @echo off
-title SoundSpectrAnalyse - Easy Installer
+title SoundSpectrAnalyse - Installer
 cd /d "%~dp0"
 
 echo.

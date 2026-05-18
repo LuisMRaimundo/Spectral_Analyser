@@ -6,7 +6,7 @@ APP_DIR="${INSTALL_ROOT}/app"
 VENV_DIR="${INSTALL_ROOT}/venv"
 GITHUB_ZIP="https://github.com/LuisMRaimundo/SoundSpectrAnalyse/archive/refs/heads/main.zip"
 
-echo "=== SoundSpectrAnalyse — Easy install (Linux) ==="
+echo "=== SoundSpectrAnalyse — Installer (Linux) ==="
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "Install Python 3.10+ and python3-tk, e.g.:"

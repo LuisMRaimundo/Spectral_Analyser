@@ -7,7 +7,7 @@ APP_DIR="${INSTALL_ROOT}/app"
 VENV_DIR="${INSTALL_ROOT}/venv"
 GITHUB_ZIP="https://github.com/LuisMRaimundo/SoundSpectrAnalyse/archive/refs/heads/main.zip"
 
-echo "=== SoundSpectrAnalyse — Easy install (macOS) ==="
+echo "=== SoundSpectrAnalyse — Installer (macOS) ==="
 
 find_python() {
   for c in python3.11 python3.10 python3; do

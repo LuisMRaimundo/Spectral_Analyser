@@ -1,97 +1,97 @@
-# SoundSpectrAnalyse — instalação no Windows
+# SoundSpectrAnalyse — Windows installation
 
-**Repositório:** https://github.com/LuisMRaimundo/SoundSpectrAnalyse
-
----
-
-## Instalação para utilizadores (sem Python) — recomendado
-
-### Requisitos
-
-- **Windows 10 ou 11** (64 bits)
-- Ligação à **Internet** (primeira instalação)
-- **Não** é obrigatório ter Python instalado antes
-- **Não** é obrigatório ser administrador (instalação na pasta do utilizador)
-
-### Passo a passo
-
-1. **Obter os ficheiros**
-   - Clone o repositório, ou
-   - Em https://github.com/LuisMRaimundo/SoundSpectrAnalyse clique **Code → Download ZIP**, extraia, e abra a pasta **`instalers\windows`**.
-
-2. **Iniciar a instalação**
-   - Faça **duplo clique** em **`INSTALL.bat`**.
-   - Se o Windows SmartScreen avisar, escolha **Mais informações → Executar mesmo assim** (o script é local e não assinado).
-
-3. **Aguardar**
-   - A janela preta (PowerShell) mostra o progresso.
-   - Na **primeira vez**, o instalador pode:
-     - Instalar **Python 3.11** (se não existir no PC);
-     - Descarregar o projeto do GitHub;
-     - Instalar dezenas de bibliotecas (NumPy, SciPy, librosa, …) — **10 a 25 minutos** é normal.
-   - **Não feche** a janela até aparecer “Done” ou “SUCCESS”.
-
-4. **Abrir o programa**
-   - Use o atalho no **Ambiente de trabalho**: **SoundSpectrAnalyse Orchestrator**, ou
-   - Menu Iniciar → pasta **SoundSpectrAnalyse**.
-
-5. **Utilizar**
-   - Abre-se a interface gráfica (Tk) do pipeline de análise espectral.
-   - Escolha pastas de áudio e parâmetros conforme o manual do projeto.
-
-### Onde fica instalado
-
-| Conteúdo | Localização |
-|----------|-------------|
-| Programa e código | `%LocalAppData%\Programs\SoundSpectrAnalyse\app\` |
-| Python e bibliotecas | `%LocalAppData%\Programs\SoundSpectrAnalyse\venv\` |
-| Registo da instalação | `%LocalAppData%\Programs\SoundSpectrAnalyse\install.log` |
-
-(Caminho típico: `C:\Users\O_SEU_NOME\AppData\Local\Programs\SoundSpectrAnalyse\`)
-
-### Desinstalar
-
-1. Duplo clique em **`UNINSTALL.bat`** (nesta mesma pasta `instalers\windows`).
-2. Remove a pasta de instalação e os atalhos.
-3. **Não** remove o Python (pode ser usado por outros programas).
-
-### Áudio MP3 e outros formatos (opcional)
-
-Alguns formatos precisam do **FFmpeg** no PATH do Windows:
-
-1. Descarregue em https://ffmpeg.org/download.html (versão Windows).
-2. Adicione a pasta `bin` do FFmpeg às variáveis de ambiente **Path**.
-3. Reinicie o SoundSpectrAnalyse.
-
-### Se a instalação falhar
-
-| Problema | O que fazer |
-|----------|-------------|
-| Janela fecha depressa | Abra **`INSTALL.bat`** outra vez e leia as mensagens; ou veja `install.log` (caminho acima). |
-| Erro de Python | Instale manualmente **Python 3.11** em https://www.python.org/downloads/ — marque **“Add python.exe to PATH”** — volte a executar **`INSTALL.bat`**. |
-| Erro de rede | Verifique Internet e firewall; o instalador descarrega o GitHub e pacotes pip. |
-| Erro de pip / pacote | Envie o ficheiro **`install.log`** a quem mantém o software. |
-
-### Instalação mais rápida (já tem o código no PC)
-
-Se na secretária (ou ao lado de `instalers`) existir a pasta **`SoundSpectrAnalyse-main_6`** (ou clone do repositório com `pipeline_orchestrator_gui.py`), o instalador **copia essa pasta** em vez de descarregar do GitHub.
+**Repository:** https://github.com/LuisMRaimundo/SoundSpectrAnalyse
 
 ---
 
-## Instalação avançada — executável portátil (PyInstaller)
+## Standard installation (no prior Python required)
 
-**Apenas para quem já tem Python 3.10/3.11** e dependências instaladas no código-fonte. **Não** recomendado para utilizadores finais.
+### Requirements
+
+- **Windows 10 or 11** (64-bit)
+- **Internet** connection (first install)
+- Python **not** required beforehand
+- Administrator rights **not** required (per-user install)
+
+### Step-by-step
+
+1. **Obtain the installer files**
+   - Clone the repository, or
+   - On https://github.com/LuisMRaimundo/SoundSpectrAnalyse choose **Code → Download ZIP**, extract, and open **`instalers\windows`**.
+
+2. **Start installation**
+   - Double-click **`INSTALL.bat`**.
+   - If Windows SmartScreen appears, choose **More info → Run anyway** (local, unsigned script).
+
+3. **Wait for completion**
+   - A console window shows progress.
+   - On the **first run**, the installer may:
+     - Install **Python 3.11** (if absent);
+     - Download the project from GitHub;
+     - Install scientific libraries (NumPy, SciPy, librosa, …) — **10–25 minutes** is normal.
+   - **Do not close** the window until you see “Done” or “SUCCESS”.
+
+4. **Launch the application**
+   - Desktop shortcut: **SoundSpectrAnalyse Orchestrator**, or
+   - Start menu → **SoundSpectrAnalyse**.
+
+5. **Use the program**
+   - The Tk pipeline orchestrator GUI opens.
+   - Select audio folders and parameters as described in the project documentation.
+
+### Install location
+
+| Item | Path |
+|------|------|
+| Application code | `%LocalAppData%\Programs\SoundSpectrAnalyse\app\` |
+| Python environment | `%LocalAppData%\Programs\SoundSpectrAnalyse\venv\` |
+| Install log | `%LocalAppData%\Programs\SoundSpectrAnalyse\install.log` |
+
+Typical full path: `C:\Users\<YourName>\AppData\Local\Programs\SoundSpectrAnalyse\`
+
+### Uninstall
+
+1. Double-click **`UNINSTALL.bat`** in `instalers\windows`.
+2. Removes the install folder and shortcuts.
+3. Does **not** remove Python (may be used by other software).
+
+### MP3 and other formats (optional)
+
+Some formats require **FFmpeg** on the system PATH:
+
+1. Download from https://ffmpeg.org/download.html (Windows build).
+2. Add the FFmpeg `bin` folder to the **Path** environment variable.
+3. Restart SoundSpectrAnalyse.
+
+### Troubleshooting
+
+| Issue | Action |
+|-------|--------|
+| Window closes immediately | Run **`INSTALL.bat`** again and read messages; or open `install.log` (path above). |
+| Python error | Install **Python 3.11** from https://www.python.org/downloads/ — enable **“Add python.exe to PATH”** — run **`INSTALL.bat`** again. |
+| Network error | Check Internet and firewall; the installer downloads from GitHub and PyPI. |
+| pip / package error | Send **`install.log`** to the software maintainer. |
+
+### Faster install when source is already on disk
+
+If **`SoundSpectrAnalyse-main_6`** (or a clone containing `pipeline_orchestrator_gui.py`) sits on the Desktop next to `instalers`, the installer **copies that tree** instead of downloading from GitHub.
+
+---
+
+## Portable executable (PyInstaller) — developers
+
+For machines that already have Python 3.10/3.11 and project dependencies configured. **Not** recommended for end users.
 
 ```powershell
-cd caminho\para\instalers\windows
+cd path\to\instalers\windows
 .\Build-All.ps1
-# Opcional: .\Build-All.ps1 -SourceRoot "C:\caminho\SoundSpectrAnalyse-main_6"
+# Optional: .\Build-All.ps1 -SourceRoot "C:\path\SoundSpectrAnalyse-main_6"
 ```
 
-| Saída (pasta local `output\`, não vai para o Git) | Descrição |
-|--------------------------------------------------|-----------|
-| `output\app\` | Pasta com `SoundSpectrAnalyse Orchestrator.exe` |
-| `output\SoundSpectrAnalyse-Portable-3.7.0.zip` | Zip para partilhar |
-| `output\SoundSpectrAnalyse-Setup-3.7.0.exe` | Instalador gráfico (requer [Inno Setup 6](https://jrsoftware.org/isinfo.php) para compilar) |
+| Output (local `output\`, not in Git) | Description |
+|--------------------------------------|-------------|
+| `output\app\` | Folder with `SoundSpectrAnalyse Orchestrator.exe` |
+| `output\SoundSpectrAnalyse-Portable-3.7.0.zip` | Zip for distribution |
+| `output\SoundSpectrAnalyse-Setup-3.7.0.exe` | Setup wizard (build requires [Inno Setup 6](https://jrsoftware.org/isinfo.php)) |
 
-O `.exe` PyInstaller é grande (~300 MB) e pode ser bloqueado pelo SmartScreen se não estiver assinado digitalmente.
+PyInstaller builds are large (~300 MB) and may trigger SmartScreen if not code-signed.

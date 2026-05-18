@@ -30,7 +30,7 @@ New-Item -ItemType Directory -Force -Path $InstallRoot | Out-Null
 
 Write-Host ''
 Write-Host '========================================' -ForegroundColor Cyan
-Write-Host '  SoundSpectrAnalyse — Easy Installer' -ForegroundColor Cyan
+Write-Host '  SoundSpectrAnalyse — Installer' -ForegroundColor Cyan
 Write-Host '  ' $cfg.GitHubRepoUrl -ForegroundColor Cyan
 Write-Host '========================================' -ForegroundColor Cyan
 Write-Host ''
@@ -66,7 +66,7 @@ Then tick 'Add python.exe to PATH'.
   Register-Shortcuts -InstallRoot $InstallRoot -AppDir $AppDir -VenvDir $VenvDir
 
   @"
-SoundSpectrAnalyse easy install
+SoundSpectrAnalyse standard install
 Installed: $(Get-Date -Format o)
 Python: $pythonExe
 Repo: $($cfg.GitHubRepoUrl)

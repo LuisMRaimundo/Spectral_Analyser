@@ -1,30 +1,30 @@
-# SoundSpectrAnalyse — instaladores
+# SoundSpectrAnalyse — installers
 
-**Repositório:** https://github.com/LuisMRaimundo/SoundSpectrAnalyse
+**Repository:** https://github.com/LuisMRaimundo/SoundSpectrAnalyse
 
-Esta pasta contém scripts para instalar o **SoundSpectrAnalyse** em utilizadores **sem conhecimentos de Python**. Escolha a pasta do seu sistema operativo:
+This folder contains scripts to install **SoundSpectrAnalyse** for users **without prior Python setup**. Open the folder for your operating system:
 
-| Pasta | Sistema | Instalação recomendada |
-|-------|---------|------------------------|
-| **[`windows/`](windows/)** | Windows 10/11 (64 bits) | Duplo clique em **`INSTALL.bat`** |
-| **[`mac/`](mac/)** | macOS 11 ou superior | Script **`install-easy.sh`** |
-| **[`linux/`](linux/)** | Linux (Ubuntu, Debian, Fedora, …) | Script **`install-easy.sh`** |
+| Folder | System | Recommended entry point |
+|--------|--------|-------------------------|
+| **[`windows/`](windows/)** | Windows 10/11 (64-bit) | Double-click **`INSTALL.bat`** |
+| **[`mac/`](mac/)** | macOS 11 or later | Run **`install-easy.sh`** |
+| **[`linux/`](linux/)** | Linux (Ubuntu, Debian, Fedora, …) | Run **`install-easy.sh`** |
 
-Cada subpasta tem um **README com instruções detalhadas** para esse sistema.
+Each subfolder includes a **README with platform-specific installation instructions**.
 
-## O que a instalação “fácil” faz
+## What the standard installer does
 
-1. Instala ou deteta **Python 3.10 ou 3.11** (no Windows, instala automaticamente se faltar).
-2. Obtém o código a partir de **https://github.com/LuisMRaimundo/SoundSpectrAnalyse** (ramo `main`).
-3. Cria um ambiente isolado e instala as bibliotecas (`requirements.txt`).
-4. Cria um **atalho** para abrir a interface gráfica (**SoundSpectrAnalyse Orchestrator**).
+1. Installs or detects **Python 3.10 or 3.11** (on Windows, installs automatically if missing).
+2. Fetches source from **https://github.com/LuisMRaimundo/SoundSpectrAnalyse** (`main` branch).
+3. Creates an isolated environment and installs libraries from `requirements.txt`.
+4. Adds a **shortcut** to launch the graphical interface (**SoundSpectrAnalyse Orchestrator**).
 
-A primeira instalação pode demorar **10–25 minutos** (download + pacotes científicos). É necessária ligação à Internet.
+The first run may take **10–25 minutes** (download plus scientific packages). An **Internet connection** is required.
 
-## O que não está incluído no Git
+## Not included in Git
 
-Pastas `build/`, `dist/`, `output/` e ficheiros `.exe` / `.zip` / `.dmg` compilados **não** vão para o repositório. Para distribuir binários prontos, use [GitHub Releases](https://github.com/LuisMRaimundo/SoundSpectrAnalyse/releases).
+Folders `build/`, `dist/`, `output/`, and compiled `.exe` / `.zip` / `.dmg` artefacts are **not** committed. To distribute ready-made binaries, use [GitHub Releases](https://github.com/LuisMRaimundo/SoundSpectrAnalyse/releases).
 
-## Instalação avançada (desenvolvedores)
+## Portable builds (developers)
 
-Em cada pasta existem também scripts **PyInstaller** (`Build-All.ps1`, `build-all.sh`) para gerar aplicações “portáteis” sem instalar Python no destino. São mais complexos e **não** são recomendados para utilizadores finais.
+Each platform folder also provides **PyInstaller** scripts (`Build-All.ps1`, `build-all.sh`) to build standalone applications without Python on the target machine. These are intended for **developers** and are not recommended for end users.
