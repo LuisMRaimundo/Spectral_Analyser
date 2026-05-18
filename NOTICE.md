@@ -12,4 +12,4 @@ Access to this repository, whether private or shared, does not imply any licence
 
 Authorised users may run the software only for the specific purpose for which access has been granted. Any other use requires prior written permission.
 
-For permission requests, contact: esmllr@gmail.com
+For permission requests, contact: lmr.2020@outlook.pt
