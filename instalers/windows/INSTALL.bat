@@ -3,7 +3,7 @@ title SoundSpectrAnalyse - Installer
 cd /d "%~dp0"
 
 echo.
-echo  >>> USE THIS FILE FOR NORMAL INSTALL <<<
+echo  *** USE THIS FILE FOR NORMAL INSTALL ***
 echo.
 echo  SoundSpectrAnalyse - automatic setup
 echo  (Python + libraries + shortcuts)
