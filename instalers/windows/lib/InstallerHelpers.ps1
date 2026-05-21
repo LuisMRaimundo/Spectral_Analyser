@@ -245,18 +245,18 @@ function Initialize-PythonVenv {
     if (Test-Path $VenvDir) { Remove-Item -LiteralPath $VenvDir -Recurse -Force }
     & $PythonExe -m venv $VenvDir
     if ($LASTEXITCODE -ne 0) { throw "venv creation failed." }
-    $pip = Join-Path $VenvDir 'Scripts\pip.exe'
+    $venvPython = Join-Path $VenvDir 'Scripts\python.exe'
     $req = Join-Path $AppDir 'requirements.txt'
     if (-not (Test-Path $req)) { throw "Missing requirements.txt in $AppDir" }
     Write-InstallLog "Installing Python packages (may take 10-20 minutes on first run)..."
-    & $pip install --upgrade pip wheel setuptools
+    & $venvPython -m pip install --upgrade pip wheel setuptools
     if ($LASTEXITCODE -ne 0) { throw "pip upgrade failed." }
-    & $pip install -r $req
+    & $venvPython -m pip install -r $req
     if ($LASTEXITCODE -ne 0) { throw "pip install -r requirements.txt failed." }
     $pyproject = Join-Path $AppDir 'pyproject.toml'
     if (Test-Path $pyproject) {
         Write-InstallLog "Installing SoundSpectrAnalyse package (editable)..."
-        & $pip install -e $AppDir
+        & $venvPython -m pip install -e $AppDir
         if ($LASTEXITCODE -ne 0) { Write-InstallLog "pip install -e failed; GUI may still run." 'WARN' }
     }
     Write-InstallLog "Dependencies installed."

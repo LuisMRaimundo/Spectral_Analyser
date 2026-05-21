@@ -5,13 +5,8 @@ title SoundSpectrAnalyse - Install
 set "SRC=%~dp0"
 if not exist "%SRC%SoundSpectrAnalyse Orchestrator.exe" (
   echo.
-  echo  This script is for a pre-built .exe folder ^(developers only^).
-  echo  For normal installation ^(Python + app^), use INSTALL.bat instead:
+  echo  No portable .exe here - starting normal installer ^(INSTALL.bat^)...
   echo.
-  echo    %SRC%INSTALL.bat
-  echo.
-  choice /C YN /M "Run INSTALL.bat now"
-  if errorlevel 2 exit /b 1
   call "%SRC%INSTALL.bat"
   exit /b %ERRORLEVEL%
 )
