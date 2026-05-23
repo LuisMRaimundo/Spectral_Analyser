@@ -141,8 +141,6 @@ if you distribute frozen builds.
 
 ## Acknowledgements
 
-Author: **Luís Raimundo** (ORCID: [https://orcid.org/0009-0005-1890-1519](https://orcid.org/0009-0005-1890-1519)).
-
 This project was developed by **Luís Raimundo** with the support and funding of the **Fundação para a Ciência e a Tecnologia (FCT)** and **Universidade NOVA de Lisboa**.
 
 **Funding DOI:** [https://doi.org/10.54499/2020.08817.BD](https://doi.org/10.54499/2020.08817.BD)
