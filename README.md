@@ -5,7 +5,7 @@ Spectral analysis for acoustic research. **Canonical publication pipeline:** **`
 Optional **batch preprocessing** (`batch_audio_analyzer` / `super_audio_analyzer`) may supply **`batch_summary.xlsx`** for empirical **H+I+S** profiles and **H/(H+I)** model coefficients; it is **not** required for the canonical chain above. Legacy Tk / PyQt entry points remain ancillary.
 
 **Package version:** 3.7.0 (`pyproject.toml`; at runtime: `importlib.metadata.version("soundspectranalyse")`)  
-**Python:** ≥ 3.9  
+**Python:** 3.10 and 3.11 (supported); Python 3.9 is not supported.  
 
 ## Install
 
