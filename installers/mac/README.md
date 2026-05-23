@@ -18,14 +18,14 @@
 ### Step-by-step
 
 1. **Obtain the installer files**
-   - On the Mac, clone the repository or download the GitHub ZIP and open **`instalers/mac`**.
+   - On the Mac, clone the repository or download the GitHub ZIP and open **`installers/mac`**.
 
 2. **Open Terminal**
    - **Finder → Applications → Utilities → Terminal**.
 
 3. **Go to the installer folder**
    ```bash
-   cd ~/Desktop/instalers/mac
+   cd ~/Desktop/installers/mac
    ```
    Adjust the path if you placed the folder elsewhere.
 
@@ -93,7 +93,7 @@ Requires [Homebrew](https://brew.sh).
 For developers with the project Python environment already configured.
 
 ```bash
-cd ~/Desktop/instalers/mac
+cd ~/Desktop/installers/mac
 chmod +x *.sh
 ./build-all.sh
 ```

@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 from typing import Callable, Union, Optional, Dict, Tuple, List, Any, Literal
 import logging
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -379,37 +380,31 @@ class SpectralDensityMetrics:
     @staticmethod
     def physical_spectral_density(amplitudes: np.ndarray,
                                   frequencies: np.ndarray,
-                                  bin_width_hz: Optional[float] = None) -> float:
+                                  bin_width_hz: Optional[float] = None) -> float:  # noqa: ARG001
         """
-        FIX 1 — Effective participation (Hill q=2 / inverse Herfindahl).
+        Computes effective partial density as ``N_eff / N``.
 
-        Background: the previous formulation,
+        This is the Hill diversity index with q = 2 (inverse Herfindahl),
+        normalized by component count N (Hill, 1973; Jost, 2006).
+        It quantifies the effective number of active partials relative to
+        the observed component count.
 
-            density = (Σ A_i² · Δf) / (f_max - f_min)
-            normalized_density = density / Σ A_i²
-                               = Δf / (f_max - f_min)
+        This diverges conceptually from "classical" spectral-density framings
+        associated with Krimphoff et al. (1994) and Peeters et al. (2011),
+        which the previous naming could suggest.
 
-        cancelled the amplitudes entirely — it depended only on
-        ``bin_width_hz`` and the frequency range, not on the spectrum.
-
-        The replacement reports the *effective number of partials*
-        participating in the spectrum, normalised by the actual number of
-        components present. With p_i = A_i² / Σ A_j²:
-
-            N_eff = (Σ p_i)² / Σ p_i²  =  1 / Σ p_i²
-
-        and the score is N_eff / N. Intuitions:
-
-        * single dominant partial  → N_eff ≈ 1,  score ≈ 1/N (low)
-        * N equal partials         → N_eff ≈ N,  score ≈ 1   (high)
-        * skewed distribution      → intermediate value
-
-        ``bin_width_hz`` / ``frequencies`` are kept in the signature for
-        backward compatibility but are no longer used (the value is now
-        independent of bin spacing and FFT size — that was the whole point).
+        See: docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md
+        ("Naming caveat: effective_partial_density vs. classical density").
         """
         if amplitudes is None or amplitudes.size == 0:
             return 0.0
+        if bin_width_hz is not None:
+            warnings.warn(
+                "'bin_width_hz' is deprecated and ignored in physical_spectral_density; "
+                "it will be removed in a 4.x release.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         amp = np.asarray(amplitudes, dtype=float)
         amp = amp[np.isfinite(amp) & (amp > 0.0)]
@@ -476,6 +471,8 @@ class SpectralDensityMetrics:
         else:
             uniformity = 0.0
 
+        # Unconstrained design choice: occupancy/uniformity blend has no direct literature fit yet.
+        # Weights (0.6, 0.4) should be treated as sensitivity-analysis candidates.
         density = 0.6 * occupancy + 0.4 * uniformity
         return float(np.clip(density, 0.0, 1.0))
 
@@ -2750,9 +2747,8 @@ def calculate_combined_density_metric(
             combined = float(np.expm1(combined_log))
             
             return combined
-        except Exception:
-            # Fallback to linear if log fails
-            pass
+        except (ValueError, TypeError, FloatingPointError, ZeroDivisionError) as exc:
+            logger.warning("Falling back to linear combination after log-combination failure: %s", exc)
     
     # Linear combination (fallback or if preserve_dynamic_range=False)
     # Still preserves differences, but may compress very high values

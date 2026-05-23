@@ -5,8 +5,12 @@ type: software
 authors:
   - family-names: "Raimundo"
     given-names: "Luís"
-version: "0.1.0-validated"
+    orcid: "https://orcid.org/0009-0005-1890-1519"
+version: "3.7.0"
 date-released: "2026-05-15"
 repository-code: "https://github.com/LuisMRaimundo/SoundSpectrAnalyse"
 abstract: "Private research software for spectral, density, dissonance, and publication-clean export analysis of instrumental sound data."
 license: "NOASSERTION"
+identifiers:
+  - type: doi
+    value: "10.54499/2020.08817.BD"
