@@ -26,11 +26,11 @@
    **`python3-tk`** is required for the graphical interface.
 
 2. **Obtain the installer files**
-   - Clone the repository or extract the GitHub ZIP and open **`instalers/linux`**.
+   - Clone the repository or extract the GitHub ZIP and open **`installers/linux`**.
 
 3. **Terminal in the installer folder**
    ```bash
-   cd ~/Desktop/instalers/linux
+   cd ~/Desktop/installers/linux
    ```
    Adjust the path as needed.
 
@@ -53,7 +53,7 @@
 
 ```bash
 sudo dnf install -y python3 python3-pip python3-tkinter curl unzip
-cd ~/Desktop/instalers/linux
+cd ~/Desktop/installers/linux
 chmod +x install-easy.sh
 ./install-easy.sh
 ```
@@ -104,7 +104,7 @@ sudo dnf install -y ffmpeg
 For developers with the project Python environment already configured.
 
 ```bash
-cd ~/Desktop/instalers/linux
+cd ~/Desktop/installers/linux
 chmod +x *.sh
 ./build-all.sh
 ```

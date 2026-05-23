@@ -17,12 +17,10 @@
 
 1. **Obtain the installer files**
    - Clone the repository, or
-   - On https://github.com/LuisMRaimundo/SoundSpectrAnalyse choose **Code → Download ZIP**, extract, and open **`instalers\windows`**.
+   - On https://github.com/LuisMRaimundo/SoundSpectrAnalyse choose **Code → Download ZIP**, extract, and open **`installers\windows`**.
 
 2. **Start installation**
-   - Double-click **`INSTALL.bat`** or **`START-HERE.bat`** (same installer).
-   - **Do not** use an old ZIP saved on your PC before May 2026 — download fresh from GitHub (step 1).
-   - **`SoundSpectrAnalyse Orchestrator.exe` is not required** for normal install (that file is only for developer portable builds).
+   - Double-click **`INSTALL.bat`**.
    - If Windows SmartScreen appears, choose **More info → Run anyway** (local, unsigned script).
 
 3. **Wait for completion**
@@ -53,7 +51,7 @@ Typical full path: `C:\Users\<YourName>\AppData\Local\Programs\SoundSpectrAnalys
 
 ### Uninstall
 
-1. Double-click **`UNINSTALL.bat`** in `instalers\windows`.
+1. Double-click **`UNINSTALL.bat`** in `installers\windows`.
 2. Removes the install folder and shortcuts.
 3. Does **not** remove Python (may be used by other software).
 
@@ -69,16 +67,14 @@ Some formats require **FFmpeg** on the system PATH:
 
 | Issue | Action |
 |-------|--------|
-| **Missing .exe** / Build-All.ps1 message | You opened the wrong script or an **old** copy. Use **`INSTALL.bat`** from a **fresh** GitHub download. `Install-SoundSpectrAnalyse.cmd` also forwards to `INSTALL.bat` if no `.exe` is present. |
-| **PowerShell: string missing terminator** | Old installer files (Unicode characters). Re-download the repo from GitHub and run **`INSTALL.bat`** from `instalers\windows`. |
 | Window closes immediately | Run **`INSTALL.bat`** again and read messages; or open `install.log` (path above). |
-| Python error | Install **Python 3.11** from https://www.python.org/downloads/ — enable **Add python.exe to PATH** — run **`INSTALL.bat`** again. |
+| Python error | Install **Python 3.11** from https://www.python.org/downloads/ — enable **“Add python.exe to PATH”** — run **`INSTALL.bat`** again. |
 | Network error | Check Internet and firewall; the installer downloads from GitHub and PyPI. |
 | pip / package error | Send **`install.log`** to the software maintainer. |
 
 ### Faster install when source is already on disk
 
-If **`SoundSpectrAnalyse-main_6`** (or a clone containing `pipeline_orchestrator_gui.py`) sits on the Desktop next to `instalers`, the installer **copies that tree** instead of downloading from GitHub.
+If **`SoundSpectrAnalyse-main_6`** (or a clone containing `pipeline_orchestrator_gui.py`) sits on the Desktop next to `installers`, the installer **copies that tree** instead of downloading from GitHub.
 
 ---
 
@@ -87,7 +83,7 @@ If **`SoundSpectrAnalyse-main_6`** (or a clone containing `pipeline_orchestrator
 For machines that already have Python 3.10/3.11 and project dependencies configured. **Not** recommended for end users.
 
 ```powershell
-cd path\to\instalers\windows
+cd path\to\installers\windows
 .\Build-All.ps1
 # Optional: .\Build-All.ps1 -SourceRoot "C:\path\SoundSpectrAnalyse-main_6"
 ```
