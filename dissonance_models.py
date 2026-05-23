@@ -15,35 +15,51 @@ import math
 import logging
 from functools import lru_cache
 import os
+from pathlib import Path
 import scipy.signal
 
-# Configuração de logging
+# Logging configuration
 logger = logging.getLogger(__name__)
 
-# Constantes globais
+# Global constants
 DEFAULT_PLOT_DPI = 300
 CENTS_PER_OCTAVE = 1200
+HK_G_TABLE_PROVENANCE = (
+    "Hutchinson & Knopoff (1978, Figure 1), g(y) lookup curve; "
+    "visual digitisation; uncalibrated; extracted 2026-05-23; maintainer: Luís Raimundo."
+)
+_HK_G_TABLE_CSV = Path(__file__).resolve().parent / "data" / "hk1978_g_table.csv"
+
+
+def _load_hk_default_g_table() -> list[tuple[float, float]]:
+    """Load the default Hutchinson-Knopoff g(y) table from CSV."""
+    table = np.loadtxt(_HK_G_TABLE_CSV, delimiter=",", comments="#", dtype=float)
+    if table.ndim == 1:
+        table = table.reshape(1, -1)
+    if table.shape[1] != 2:
+        raise ValueError(f"Invalid HK g-table shape: {table.shape}")
+    return [(float(y), float(g)) for y, g in table]
 
 # -----------------------------------------------------------------------------
-# CLASSE BASE
+# BASE CLASS
 # -----------------------------------------------------------------------------
 
 class DissonanceModel(ABC):
-    """Classe base abstrata para modelos de dissonância."""
+    """Abstract base class for dissonance models."""
     
     def __init__(self, name: str, description: str = ""):
         self.name = name
         self.description = description
-        logger.debug(f"Modelo de dissonância inicializado: {name}")
+        logger.debug("Dissonance model initialized: %s", name)
     
     @abstractmethod
     def pure_tones_dissonance(self, f1: float, f2: float, a1: float, a2: float) -> float:
-        """Calcula a dissonância entre dois tons puros (pairwise)."""
+        """Compute dissonance between two pure tones (pairwise)."""
         pass
     
     def total_dissonance(self, partials1: List[Tuple[float, float]], 
                         partials2: List[Tuple[float, float]]) -> float:
-        """Calcula dissonância total (pairwise summation)."""
+        """Compute total dissonance (pairwise summation)."""
         if not partials1 or not partials2:
             return 0.0
         
@@ -59,13 +75,13 @@ class DissonanceModel(ABC):
     
     def same_timbre_dissonance(self, base_partials: List[Tuple[float, float]], 
                               interval: float) -> float:
-        """Calcula dissonância de um timbre deslocado por um intervalo."""
+        """Compute dissonance of a timbre shifted by an interval."""
         if not base_partials: 
             return 0.0
         if interval <= 0:
-            raise ValueError(f"Intervalo deve ser positivo: {interval}")
+            raise ValueError(f"Interval must be positive: {interval}")
         
-        # Implementação padrão para modelos pairwise
+        # Default implementation for pairwise models
         shifted_partials = [(f * interval, a) for f, a in base_partials]
         return self.total_dissonance(base_partials, shifted_partials)
     
@@ -73,7 +89,7 @@ class DissonanceModel(ABC):
                                   min_interval: float = 1.0,
                                   max_interval: float = 2.0,
                                   num_points: int = 100) -> Dict[float, float]:
-        """Calcula a curva de dissonância para um timbre em um intervalo."""
+        """Compute the dissonance curve for a timbre across an interval span."""
         if not partials: return {}
         intervals = np.linspace(min_interval, max_interval, num_points)
         curve = {}
@@ -82,7 +98,7 @@ class DissonanceModel(ABC):
         return curve
     
     def find_local_minima(self, curve: Dict[float, float], sensitivity: float = 0.01) -> List[float]:
-        """Encontra mínimos locais na curva (consonâncias)."""
+        """Find local minima in the curve (consonances)."""
         if not curve: return []
         intervals = sorted(list(curve.keys()))
         minima = []
@@ -102,7 +118,7 @@ class DissonanceModel(ABC):
                                  show_cents: bool = True,
                                  highlight_minima: bool = True,
                                  dpi: int = DEFAULT_PLOT_DPI):
-        """Plota a curva de dissonância."""
+        """Plot the dissonance curve."""
         if not curve: return
         intervals = sorted(list(curve.keys()))
         vals = [curve[i] for i in intervals]
@@ -141,11 +157,47 @@ class DissonanceModel(ABC):
             plt.show()
             plt.close()
 
+    @staticmethod
+    def _pairwise_arrays(
+        freqs: np.ndarray,
+        amps: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Build upper-triangular frequency/amplitude pair arrays."""
+        if freqs.size < 2 or amps.size < 2:
+            empty = np.array([], dtype=float)
+            return empty, empty, empty, empty
+        i_idx, j_idx = np.triu_indices(freqs.size, k=1)
+        return freqs[i_idx], freqs[j_idx], amps[i_idx], amps[j_idx]
+
+    def _pairwise_dissonance_values(
+        self,
+        fi: np.ndarray,
+        fj: np.ndarray,
+        ai: np.ndarray,
+        aj: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Evaluate pairwise dissonance values with narrow exception handling."""
+        values = np.zeros(fi.size, dtype=float)
+        valid_mask = np.ones(fi.size, dtype=bool)
+        for idx, (f1, f2, a1, a2) in enumerate(zip(fi, fj, ai, aj)):
+            try:
+                values[idx] = self.pure_tones_dissonance(f1, f2, a1, a2)
+            except (ValueError, TypeError, ZeroDivisionError, FloatingPointError) as exc:
+                valid_mask[idx] = False
+                values[idx] = 0.0
+                logger.warning(
+                    "Skipping invalid dissonance pair (%s, %s): %s",
+                    f1,
+                    f2,
+                    exc,
+                )
+        return values, valid_mask
+
     def _dissonance_total_and_pairs(self, df: pd.DataFrame) -> tuple[float, int]:
-        """Calcula soma bruta de dissonância pairwise."""
+        """Compute raw pairwise dissonance sum."""
         if df is None or df.empty: return 0.0, 0
         
-        # Preparação segura dos dados
+        # Safe data preparation
         if "Frequency (Hz)" not in df.columns or ("Amplitude" not in df.columns and "Magnitude (dB)" not in df.columns):
             return 0.0, 0
             
@@ -160,15 +212,12 @@ class DissonanceModel(ABC):
         n = len(freqs)
         if n < 2: return 0.0, 0
         
-        total = 0.0
-        n_pairs = 0
-        # Loop otimizado (mas ainda Python puro)
-        for i in range(n - 1):
-            for j in range(i + 1, n):
-                try:
-                    total += self.pure_tones_dissonance(freqs[i], freqs[j], amps[i], amps[j])
-                    n_pairs += 1
-                except: continue
+        fi, fj, ai, aj = self._pairwise_arrays(freqs, amps)
+        if fi.size == 0:
+            return 0.0, 0
+        pair_values, valid_mask = self._pairwise_dissonance_values(fi, fj, ai, aj)
+        total = float(np.sum(pair_values))
+        n_pairs = int(np.sum(valid_mask))
         return total, n_pairs
 
 
@@ -193,7 +242,7 @@ class DissonanceModel(ABC):
 
         dfx = df.copy()
 
-        # amplitude linear
+        # Linear amplitude
         if "Amplitude" not in dfx.columns:
             if "Magnitude (dB)" not in dfx.columns:
                 return 0.0, 0, 0.0
@@ -207,26 +256,22 @@ class DissonanceModel(ABC):
         if n < 2:
             return 0.0, 0, 0.0
 
-        # compensação opcional (proc_audio antigo): amps *= 2/N
+        # Optional compensation (legacy proc_audio): amps *= 2/N
         if apply_amp_compensation:
             N = int(win_length or getattr(self, "win_length", 0) or getattr(self, "n_fft", 0) or 0)
             if N > 0:
                 amps = amps * (2.0 / N)
 
-        total = 0.0
-        n_pairs = 0
-        sum_minamp = 0.0
+        fi, fj, ai, aj = self._pairwise_arrays(freqs, amps)
+        if fi.size == 0:
+            return 0.0, 0, 0.0
+        pair_values, valid_mask = self._pairwise_dissonance_values(fi, fj, ai, aj)
+        min_amplitudes = np.minimum(ai, aj)
+        total = float(np.sum(pair_values))
+        n_pairs = int(np.sum(valid_mask))
+        sum_minamp = float(np.sum(min_amplitudes[valid_mask]))
 
-        for i in range(n - 1):
-            f1 = freqs[i]; a1 = amps[i]
-            for j in range(i + 1, n):
-                f2 = freqs[j]; a2 = amps[j]
-                a_min = a1 if a1 < a2 else a2
-                sum_minamp += a_min
-                total += self.pure_tones_dissonance(f1, f2, a1, a2)
-                n_pairs += 1
-
-        return float(total), int(n_pairs), float(sum_minamp)
+        return total, n_pairs, sum_minamp
 
 
     def calculate_dissonance_metric(
@@ -267,7 +312,7 @@ class DissonanceModel(ABC):
         if mode == "minamp_norm":
             return float(total / sum_minamp) if sum_minamp > 0 else 0.0
 
-        # default/legado
+        # Default legacy behavior
         return float((total / n_pairs) * float(metric_scale))
 
 
@@ -311,36 +356,36 @@ class DissonanceModel(ABC):
 # -----------------------------------------------------------------------------
 
 class SetharesDissonance(DissonanceModel):
-    """Sethares (TTSS, 2.ª ed., 2005) — implementação robusta.
+    """Sethares (TTSS, 2nd ed., 2005) robust implementation.
 
     Elementar (dois parciais):
         d(f1,f2,a1,a2) = min(a1,a2) * gain * (exp(-b1*y) - exp(-b2*y))
         y = s(f1) * (f2 - f1)
         s(f1) = x_star / (s1*f1 + s2)
 
-    Curva de dissonância para um timbre F num intervalo 'interval' (razão):
-      - mode='cross': soma apenas interacções F vs interval·F (comportamento antigo do módulo)
-      - mode='full' : soma sobre o conjunto {F} ∪ {interval·F} (forma do livro)
+    Dissonance curve for timbre F at ratio 'interval':
+      - mode='cross': sum only cross-interactions F vs interval·F (legacy module behaviour)
+      - mode='full' : sum over union {F} ∪ {interval·F} (book form)
 
-    Nota: 'gain' é um reescale global (não altera a forma da curva).
-          Para compatibilidade com a versão antiga (C1=5, C2=-5), use gain=5.0.
+    Note: 'gain' is a global rescale (does not alter curve shape).
+          For compatibility with older scaling (C1=5, C2=-5), use gain=5.0.
     """
 
     def __init__(
         self,
         *,
-        b1: float = 3.5,
-        b2: float = 5.75,
-        x_star: float = 0.24,
-        s1: float = 0.0207,
-        s2: float = 18.96,
+        b1: float = 3.5,      # Sethares (2005, 2nd ed., Eq. 3.8), spectral term coefficient b1.
+        b2: float = 5.75,     # Sethares (2005, 2nd ed., Eq. 3.8), spectral term coefficient b2.
+        x_star: float = 0.24, # Sethares (2005, 2nd ed., Eq. 3.9), critical-band scaling x*.
+        s1: float = 0.0207,   # Sethares (2005, 2nd ed., Eq. 3.9), denominator slope s1.
+        s2: float = 18.96,    # Sethares (2005, 2nd ed., Eq. 3.9), denominator intercept s2.
         gain: float = 1.0,
-        curve_mode: str = "full",          # 'full' (livro) ou 'cross' (legado)
-        subtract_intrinsic: bool = False,  # se True, devolve full - (intrínsecas)
+        curve_mode: str = "full",          # 'full' (book) or 'cross' (legacy)
+        subtract_intrinsic: bool = False,  # if True, return full - intrinsic terms
         metric_mode: str = "mean_pair_scaled",  # 'sum'|'mean_pair'|'mean_pair_scaled'|'minamp_norm'
         metric_scale: float = 10.0,
     ):
-        super().__init__("Sethares-Revised", "Baseado em curvas Plomp-Levelt (Sethares, 2005)")
+        super().__init__("Sethares-Revised", "Based on Plomp-Levelt curves (Sethares, 2005)")
 
         self.b1 = float(b1)
         self.b2 = float(b2)
@@ -355,10 +400,10 @@ class SetharesDissonance(DissonanceModel):
         self.metric_mode = str(metric_mode).strip().lower()
         self.metric_scale = float(metric_scale)
 
-        # Atributos "legados" (não usados internamente; mantidos para evitar confusão em debug)
-        # Versão antiga: min(a1,a2) * (5*exp(-3.51*x) - 5*exp(-5.75*x))
+        # Legacy attributes (unused internally; retained for debug compatibility).
+        # Older expression: min(a1,a2) * (5*exp(-3.51*x) - 5*exp(-5.75*x))
         self.C1, self.C2, self.A1, self.A2 = 1.0, -1.0, -self.b1, -self.b2
-        self.d_star = self.x_star  # naming legado
+        self.d_star = self.x_star  # legacy naming
 
     def _s(self, f1: float) -> float:
         f1 = max(float(f1), 1e-12)
@@ -377,7 +422,7 @@ class SetharesDissonance(DissonanceModel):
         y = self._s(f1) * (f2 - f1)
         d = min(a1, a2) * self.gain * (np.exp(-self.b1 * y) - np.exp(-self.b2 * y))
 
-        # robustez numérica
+        # Numerical robustness
         return float(d) if d > 0.0 else 0.0
 
     def _pairwise_sum(self, partials: List[Tuple[float, float]]) -> float:
@@ -388,27 +433,34 @@ class SetharesDissonance(DissonanceModel):
             return 0.0
         ps.sort(key=lambda x: x[0])
 
-        total = 0.0
-        for i in range(len(ps) - 1):
-            f1, a1 = ps[i]
-            for j in range(i + 1, len(ps)):
-                f2, a2 = ps[j]
-                total += self.pure_tones_dissonance(f1, f2, a1, a2)
-        return float(total)
+        freqs = np.asarray([p[0] for p in ps], dtype=float)
+        amps = np.asarray([p[1] for p in ps], dtype=float)
+        i_idx, j_idx = np.triu_indices(freqs.size, k=1)
+        f1 = freqs[i_idx]
+        f2 = freqs[j_idx]
+        a1 = amps[i_idx]
+        a2 = amps[j_idx]
+        s = self.x_star / (self.s1 * np.maximum(f1, 1e-12) + self.s2)
+        y = s * (f2 - f1)
+        pair_values = np.minimum(a1, a2) * self.gain * (
+            np.exp(-self.b1 * y) - np.exp(-self.b2 * y)
+        )
+        pair_values = np.where(pair_values > 0.0, pair_values, 0.0)
+        return float(np.sum(pair_values))
 
     def same_timbre_dissonance(self, base_partials: List[Tuple[float, float]], interval: float) -> float:
         if not base_partials:
             return 0.0
         if interval <= 0:
-            raise ValueError(f"Intervalo deve ser positivo: {interval}")
+            raise ValueError(f"Interval must be positive: {interval}")
 
         shifted = [(f * interval, a) for (f, a) in base_partials]
 
         if self.curve_mode == "cross":
-            # comportamento legado do módulo: apenas interacções cruzadas
+            # Legacy module behavior: cross-interactions only
             return float(self.total_dissonance(base_partials, shifted))
 
-        # forma do livro: soma sobre {F} ∪ {interval·F}
+        # Book form: sum over {F} ∪ {interval·F}
         full = self._pairwise_sum(base_partials + shifted)
 
         if self.subtract_intrinsic:
@@ -420,13 +472,13 @@ class SetharesDissonance(DissonanceModel):
         return float(full)
 
     def calculate_dissonance_metric(self, df: pd.DataFrame) -> float:
-        """Métrica por nota (para export para Excel).
+        """Per-note metric (for Excel export).
 
         Modos:
           - 'sum'              : Σ d_ij (soma bruta)
           - 'mean_pair'        : média por par = Σ d_ij / n_pairs
-          - 'mean_pair_scaled' : (Σ d_ij / n_pairs) * metric_scale  [compatível com o default do módulo]
-          - 'minamp_norm'      : Σ d_ij / Σ min(a_i,a_j)  (robusto a escala global de amplitude)
+          - 'mean_pair_scaled' : (Σ d_ij / n_pairs) * metric_scale [module-default compatible]
+          - 'minamp_norm'      : Σ d_ij / Σ min(a_i,a_j) (robust to global amplitude scale)
         """
         if df is None or df.empty:
             return 0.0
@@ -469,57 +521,29 @@ class SetharesDissonance(DissonanceModel):
         if self.metric_mode == "minamp_norm":
             return float(total / sum_minamp) if sum_minamp > 0 else 0.0
 
-        # default: compatível com o módulo (≈0–10)
+        # Default module-compatible behavior (≈0–10)
         return float((total / n_pairs) * self.metric_scale)
 
 class HutchinsonKnopoffDissonance(DissonanceModel):
     """
-    Hutchinson & Knopoff (1978), conforme eqs. (1)-(3) no texto fornecido.
+    Hutchinson & Knopoff (1978), following eqs. (1)-(3).
 
-    NOTA CRÍTICA (do próprio "Data"):
-    - g(y) NÃO é dado por fórmula analítica; é fornecido como curva (Fig. 1) e
-      é usado via "table look-up". Portanto, este código exige uma tabela g_table.
+    CRITICAL NOTE:
+    - g(y) is not provided as an analytical formula; it is supplied as a lookup
+      curve (Figure 1), so this implementation requires a g_table.
     """
 
-    # Default g_table based on typical values from Hutchinson & Knopoff (1978) Figure 1
-    # Approximate values covering the range y in [0, 1.2]
-    DEFAULT_G_TABLE = [
-        (0.0, 0.0),
-        (0.05, 0.15),
-        (0.1, 0.30),
-        (0.15, 0.45),
-        (0.2, 0.55),
-        (0.25, 0.60),
-        (0.3, 0.65),
-        (0.35, 0.68),
-        (0.4, 0.70),
-        (0.45, 0.68),
-        (0.5, 0.65),
-        (0.55, 0.60),
-        (0.6, 0.55),
-        (0.65, 0.48),
-        (0.7, 0.40),
-        (0.75, 0.32),
-        (0.8, 0.25),
-        (0.85, 0.18),
-        (0.9, 0.12),
-        (0.95, 0.07),
-        (1.0, 0.04),
-        (1.05, 0.02),
-        (1.1, 0.01),
-        (1.15, 0.005),
-        (1.2, 0.0),
-    ]
+    DEFAULT_G_TABLE = _load_hk_default_g_table()
 
     def __init__(self, g_table=None):
-        super().__init__("Hutchinson-Knopoff", "CBW( f̄ ) e g(y) por look-up (1978)")
-        # g_table: lista de pontos [(y0,g0), (y1,g1), ...] cobrindo tipicamente [0, 1.2]
-        # If not provided, use default table based on typical values from Figure 1
+        super().__init__("Hutchinson-Knopoff", "CBW( f̄ ) and g(y) lookup (1978)")
+        # g_table: list of points [(y0,g0), (y1,g1), ...] typically spanning [0, 1.2]
+        # If omitted, use the default CSV table.
         self.g_table = sorted(g_table) if g_table else sorted(self.DEFAULT_G_TABLE)
 
     @staticmethod
     def cbw(f_bar: float) -> float:
-        # CBW = 1.72 * (f̄)^0.65  (Fig. 2; ajuste empírico)
+        # CBW = 1.72 * (f̄)^0.65 (Fig. 2; empirical fit)
         return 1.72 * (f_bar ** 0.65)
 
     def g(self, y: float) -> float:
@@ -535,12 +559,12 @@ class HutchinsonKnopoffDissonance(DissonanceModel):
         ys = np.array([p[0] for p in self.g_table], dtype=float)
         gs = np.array([p[1] for p in self.g_table], dtype=float)
 
-        # Interpolação linear (table look-up)
-        # (assume que a tabela cobre o intervalo relevante; fora dele já tratámos com y<=0 ou y>1.2)
+        # Linear interpolation (table look-up).
+        # Assumes the table covers relevant y; out-of-range is handled above.
         return float(np.interp(y, ys, gs))
 
     def pure_tones_dissonance(self, f1: float, f2: float, a1: float, a2: float) -> float:
-        # Eq. (1) com normalização N = A1^2 + A2^2
+        # Eq. (1) with normalization N = A1^2 + A2^2
         denom = (a1 * a1) + (a2 * a2)
         if denom <= 0.0:
             return 0.0
@@ -555,12 +579,12 @@ class HutchinsonKnopoffDissonance(DissonanceModel):
 
     def total_dissonance(self, partials1, partials2) -> float:
         """
-        Implementa a eq. (3) sobre o conjunto total de componentes do som composto:
+        Implements eq. (3) over all components of the composite sound:
             D = [ (1/2) Σ_i Σ_j Ai Aj g_ij ] / [ Σ_i Ai^2 ]
 
-        Implementação equivalente (evita dupla contagem):
-            numerador = Σ_{i<j} Ai Aj g_ij   (assumindo g_ii=0)
-            D = numerador / Σ_i Ai^2
+        Equivalent implementation (avoids double counting):
+            numerator = Σ_{i<j} Ai Aj g_ij   (assuming g_ii=0)
+            D = numerator / Σ_i Ai^2
         """
         partials = list(partials1 or []) + list(partials2 or [])
         if not partials:
@@ -593,17 +617,17 @@ class VassilakisDissonance(DissonanceModel):
     def __init__(self):
         super().__init__("Vassilakis", "Eq. (6.23): AF-degree + SPL + Sethares spectral term")
 
-        # Constants explicitly stated after Eq. (6.23)
+        # Vassilakis (2001, eqs. 6.20-6.23), shared spectral coefficients with Sethares term.
         self.b1 = 3.5
         self.b2 = 5.75
         self.x_star = 0.24
         self.s1 = 0.0207
         self.s2 = 18.96
 
-        # Exponents / factors from Eqs. (6.20)–(6.23)
+        # Vassilakis (2001, eqs. 6.20-6.23; see also Vassilakis & Fitz, 2007).
         self.af_exp = 3.11     # AF_degree exponent
         self.spl_exp = 0.1     # SPL exponent (1/10)
-        self.pair_factor = 0.5 # Eq. (6.22) factor
+        self.pair_factor = 0.5 # Eq. (6.22) pair factor
 
     def _s(self, f_low: float) -> float:
         # s = x* / (s1*f1 + s2)
@@ -636,7 +660,7 @@ class VassilakisDissonance(DissonanceModel):
 
 
 # -----------------------------------------------------------------------------
-# FUNÇÕES DE UTILIDADE E COMPARADORAS (RESTAURADAS)
+# UTILITY AND COMPARISON FUNCTIONS
 # -----------------------------------------------------------------------------
 
 _MODELS = {
@@ -648,7 +672,7 @@ _MODELS = {
 def get_dissonance_model(name: str, *, allow_harmonicity: bool = True) -> DissonanceModel:
     key = name.strip().lower()
     if key in _MODELS: return _MODELS[key]()
-    raise ValueError(f"Modelo desconhecido: {name}")
+    raise ValueError(f"Unknown model: {name}")
 
 def list_available_models(*, include_harmonicity: bool = True) -> List[str]:
     return list(_MODELS.keys())
@@ -660,7 +684,7 @@ def calculate_all_dissonance_metrics(df: pd.DataFrame) -> Dict[str, float]:
             model = get_dissonance_model(name)
             results[name] = model.calculate_dissonance_metric(df)
         except Exception as e:
-            logger.error(f"Erro em {name}: {e}")
+            logger.error("Error in %s: %s", name, e)
             results[name] = 0.0
     return results
 
@@ -674,7 +698,7 @@ def compare_dissonance_models(partials: List[Tuple[float, float]],
                              show_minima: bool = True,
                              add_cent_axis: bool = True,
                              dpi: int = DEFAULT_PLOT_DPI) -> Dict[str, Dict]:
-    """Compara curvas de dissonância de diferentes modelos."""
+    """Compare dissonance curves across different models."""
     if not partials: return {}
     
     models = [get_dissonance_model(name) for name in (models_to_include or list_available_models())]
@@ -735,7 +759,7 @@ def analyze_real_timbre(df: pd.DataFrame,
                        note_name: str = "",
                        include_models: Optional[List[str]] = None,
                        save_directory: Optional[str] = None) -> Dict[str, Any]:
-    """Analisa um timbre real e salva métricas/gráficos."""
+    """Analyze a real timbre and save metrics/plots."""
     if df is None or df.empty or "Frequency (Hz)" not in df.columns: return {}
     
     amps = df["Amplitude"] if "Amplitude" in df.columns else 10**(df["Magnitude (dB)"]/20)
@@ -767,18 +791,19 @@ def analyze_real_timbre(df: pd.DataFrame,
         path = os.path.join(save_directory, "dissonance_comparison.png")
         compare_dissonance_models(partials, save_file=path, models_to_include=[m.name for m in models])
         
-        # Salva métricas
+        # Save metrics
         m_df = pd.DataFrame({"Model": list(results["metrics"].keys()), "Dissonance": list(results["metrics"].values())})
         m_df.to_csv(os.path.join(save_directory, "dissonance_metrics.csv"), index=False)
 
     return results
 
-# Exports para compatibilidade
+# Compatibility exports
 __all__ = [
     'DissonanceModel',
     'SetharesDissonance',
     'HutchinsonKnopoffDissonance',
     'VassilakisDissonance',
+    'HK_G_TABLE_PROVENANCE',
     'get_dissonance_model',
     'list_available_models',
     'compare_dissonance_models',
