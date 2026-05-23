@@ -13,7 +13,7 @@ import json
 import os
 import re
 import zipfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Optional, Set, Tuple, Union
 
@@ -699,12 +699,19 @@ def sanitize_path_for_publication(path: Union[str, Path, None], dataset_root: Op
     """Basename or POSIX path relative to *dataset_root* (never absolute host paths)."""
     if path is None:
         return ""
-    p = Path(str(path))
+    path_text = str(path)
+    # Treat Windows-formatted paths explicitly so basename extraction works on Linux runners.
+    is_windows_style = bool(_WIN_ABS_START_EXPORT.match(path_text)) or "\\" in path_text
+    p = Path(path_text)
     if dataset_root is not None:
         try:
+            if is_windows_style:
+                return PureWindowsPath(path_text).name
             return p.resolve().relative_to(Path(dataset_root).resolve()).as_posix()
         except Exception:
             pass
+    if is_windows_style:
+        return PureWindowsPath(path_text).name or "path_redacted"
     return p.name if p.name else "path_redacted"
 
 
