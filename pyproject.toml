@@ -7,7 +7,7 @@ name = "soundspectranalyse"
 version = "3.7.0"
 description = "Advanced spectral analysis tool for acoustic research with harmonic-order-aware spectral processing"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "Scientific Research Use"}
 authors = [
     {name = "Research Team", email = "research@example.com"}
@@ -17,7 +17,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",

@@ -5,7 +5,7 @@ Spectral analysis for acoustic research. **Canonical publication pipeline:** **`
 Optional **batch preprocessing** (`batch_audio_analyzer` / `super_audio_analyzer`) may supply **`batch_summary.xlsx`** for empirical **H+I+S** profiles and **H/(H+I)** model coefficients; it is **not** required for the canonical chain above. Legacy Tk / PyQt entry points remain ancillary.
 
 **Package version:** 3.7.0 (`pyproject.toml`; at runtime: `importlib.metadata.version("soundspectranalyse")`)  
-**Python:** ≥ 3.8  
+**Python:** ≥ 3.9  
 
 ## Install
 
@@ -119,6 +119,25 @@ Continuous integration runs the full `tests/` suite on Ubuntu (`.github/workflow
 |------|---------|
 | **[NOTICE.md](NOTICE.md)** | Copyright and use terms (proprietary; no open-source licence granted). |
 | **[CITATION.cff](CITATION.cff)** | Citation metadata for software recognition. |
+
+## Installers (optional)
+
+**Repository:** https://github.com/LuisMRaimundo/SoundSpectrAnalyse
+
+End users without Python: see **[`installers/`](installers/)** —
+especially on Windows, double-click
+**`installers/windows/INSTALL.bat`** (installs Python 3.11, downloads
+this repo, installs libraries, creates shortcuts).
+
+| Folder | Standard install | Portable build (PyInstaller) |
+|--------|------------------|------------------------------|
+| [`installers/windows/`](installers/windows/) | **`INSTALL.bat`** | `Build-All.ps1` |
+| [`installers/mac/`](installers/mac/) | `install-easy.sh` | `build-all.sh` |
+| [`installers/linux/`](installers/linux/) | `install-easy.sh` | `build-all.sh` |
+
+Built `.exe` / `.app` / `.dmg` / `.tar.gz` files are **not** in git
+— use [GitHub Releases](https://github.com/LuisMRaimundo/SoundSpectrAnalyse/releases)
+if you distribute frozen builds.
 
 ## Acknowledgements
 
