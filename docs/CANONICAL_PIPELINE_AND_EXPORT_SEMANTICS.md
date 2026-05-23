@@ -228,3 +228,12 @@ This section is **orthogonal** to the Stage 1/2 Excel contract above: it documen
 | **`CODE_FORMULA_TRACEABILITY_TABLE.md`** (repo root) | Optional code ↔ formula traceability table. |
 
 **Cautious interpretation:** the formula-validation corpus supports **internal consistency** between the documented mathematical formulas and the tested Python implementations. It verifies formula/code agreement for **selected numerical fixtures**. It does **not**, by itself, prove scientific optimality, universal correctness, or full acoustic validity of the models.
+
+---
+
+## 11. Naming caveat: effective_partial_density vs. classical density
+
+`effective_partial_density` currently computes `N_eff / N`, where `N_eff` is the Hill diversity index for `q = 2` (inverse Herfindahl) on partial power weights (`Hill, 1973`; `Jost, 2006`).
+This is an effective-participation statistic, not a bandwidth-occupancy density in the classical sense.
+Readers should avoid mapping it directly to density framings associated with Krimphoff et al. (1994) or Peeters et al. (2011).
+The exported column name is retained for backward compatibility and workbook stability.
