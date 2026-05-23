@@ -1,11 +1,11 @@
 # SoundSpectrAnalyse
 
-Spectral analysis for acoustic research. **Canonical publication pipeline:** **`proc_audio.AudioProcessor`** (Stage 1) writes per-note **`spectral_analysis.xlsx`** plus standard PNGs (**`spectrogram.png`**, two **semantically distinct** component pies ÔÇö linear **amplitude-mass** vs **energy-ratio** ÔÇö and a legacy-alias **`component_energy_pie.png`**; see **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`**); **`compile_metrics.compile_density_metrics_with_pca`** (Stage 2) builds **`compiled_density_metrics.xlsx`** with multi-sheet exports (`Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Debug_Counts`, ÔÇª). The primary public spectral-fatness scalar on **`Density_Metrics`** is **`effective_partial_density`**.
+Spectral analysis for acoustic research. **Canonical publication pipeline:** **`proc_audio.AudioProcessor`** (Stage 1) writes per-note **`spectral_analysis.xlsx`** plus standard PNGs (**`spectrogram.png`**, two **semantically distinct** component pies — linear **amplitude-mass** vs **energy-ratio** — and a legacy-alias **`component_energy_pie.png`**; see **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`**); **`compile_metrics.compile_density_metrics_with_pca`** (Stage 2) builds **`compiled_density_metrics.xlsx`** with multi-sheet exports (`Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Debug_Counts`, …). The primary public spectral-fatness scalar on **`Density_Metrics`** is **`effective_partial_density`**.
 
 Optional **batch preprocessing** (`batch_audio_analyzer` / `super_audio_analyzer`) may supply **`batch_summary.xlsx`** for empirical **H+I+S** profiles and **H/(H+I)** model coefficients; it is **not** required for the canonical chain above. Legacy Tk / PyQt entry points remain ancillary.
 
 **Package version:** 3.7.0 (`pyproject.toml`; at runtime: `importlib.metadata.version("soundspectranalyse")`)  
-**Python:** ÔëÑ 3.8  
+**Python:** ≥ 3.8  
 
 ## Install
 
@@ -25,8 +25,8 @@ pip install --upgrade --force-reinstall -r requirements-pins.txt
 
 | Command | Role |
 |---------|------|
-| **`python run_orchestrator.py`** / **`soundspectranalyse`** (`pip install -e .`) | **Canonical full pipeline:** optional preprocessing ÔåÆ `batch_summary.xlsx` ÔåÆ per-note `spectral_analysis.xlsx` ÔåÆ **`compiled_density_metrics.xlsx`**. |
-| **`run.bat`** (Windows) | Starts **`pipeline_orchestrator_gui.py`** (Tk / tier orchestrator). For the integrated batchÔåÆcompile path use **`python run_orchestrator.py`** above. |
+| **`python run_orchestrator.py`** / **`soundspectranalyse`** (`pip install -e .`) | **Canonical full pipeline:** optional preprocessing → `batch_summary.xlsx` → per-note `spectral_analysis.xlsx` → **`compiled_density_metrics.xlsx`**. |
+| **`run.bat`** (Windows) | Starts **`pipeline_orchestrator_gui.py`** (Tk / tier orchestrator). For the integrated batch→compile path use **`python run_orchestrator.py`** above. |
 | **`python pipeline_orchestrator_integrated.py`** | Same backend as `run_orchestrator.py` when you pass audio paths explicitly (no wrapper discovery). |
 | **`python main.py`** / **`soundspectranalyse-legacy-gui`** | Forwards to **`pipeline_orchestrator_integrated.py --gui`** (Tk; typically subprocess **`pipeline_orchestrator_gui.py`**). Not the old PyQt **`interface.py`** window. |
 | **`python pipeline_orchestrator_gui.py`** | Same entry as **`run.bat`**; **`FFT_SETTINGS_BY_CLUSTER`** is imported from here by **`pipeline_orchestrator_integrated.py`**. |
@@ -39,11 +39,11 @@ pip install --upgrade --force-reinstall -r requirements-pins.txt
 | **[docs/CURRENT_DOCUMENTATION_INDEX.md](docs/CURRENT_DOCUMENTATION_INDEX.md)** | What is safe to cite vs legacy vs archived. |
 | **[docs/DOCUMENTATION_AUDIT_REPORT.md](docs/DOCUMENTATION_AUDIT_REPORT.md)** | 2026-05-13 documentation audit register. |
 | **[docs/MATHEMATICAL_FORMALISATION_VERIFICATION_REPORT_FIRST_PASS.md](docs/MATHEMATICAL_FORMALISATION_VERIFICATION_REPORT_FIRST_PASS.md)** | LaTeX formalisation of six core `density.py` metrics (read-only vs code). |
-| **[docs/formula_extraction/FORMULA_EXTRACTION_INDEX.md](docs/formula_extraction/FORMULA_EXTRACTION_INDEX.md)** | Pass 1ÔÇô15 **formula-extraction** tables (Python ÔåÆ notation); companion to validation plans and tests. |
-| **[docs/formula_validation/FORMULA_VALIDATION_PLAN_INDEX.md](docs/formula_validation/FORMULA_VALIDATION_PLAN_INDEX.md)** | Pass 1ÔÇô15 **formula-validation plans** (fixtures and assertions; plans only). |
-| **[VALIDATION_STATUS_812_PASSED_PASSES_1_15.md](VALIDATION_STATUS_812_PASSED_PASSES_1_15.md)** | Recorded pytest counts: full suite **812 passed** (39 skipped, 0 failed); **149** formula-validation tests passed; Passes **1ÔÇô15** completed. |
-| **[METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md](METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md)** | Methodological note on extraction ÔåÆ validation workflow and limits of what automated checks establish. |
-| **[CODE_FORMULA_TRACEABILITY_TABLE.md](CODE_FORMULA_TRACEABILITY_TABLE.md)** | Optional code Ôåö formula traceability (audit / PDF-oriented). |
+| **[docs/formula_extraction/FORMULA_EXTRACTION_INDEX.md](docs/formula_extraction/FORMULA_EXTRACTION_INDEX.md)** | Pass 1–15 **formula-extraction** tables (Python → notation); companion to validation plans and tests. |
+| **[docs/formula_validation/FORMULA_VALIDATION_PLAN_INDEX.md](docs/formula_validation/FORMULA_VALIDATION_PLAN_INDEX.md)** | Pass 1–15 **formula-validation plans** (fixtures and assertions; plans only). |
+| **[VALIDATION_STATUS_812_PASSED_PASSES_1_15.md](VALIDATION_STATUS_812_PASSED_PASSES_1_15.md)** | Recorded pytest counts: full suite **812 passed** (39 skipped, 0 failed); **149** formula-validation tests passed; Passes **1–15** completed. |
+| **[METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md](METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md)** | Methodological note on extraction → validation workflow and limits of what automated checks establish. |
+| **[CODE_FORMULA_TRACEABILITY_TABLE.md](CODE_FORMULA_TRACEABILITY_TABLE.md)** | Optional code ↔ formula traceability (audit / PDF-oriented). |
 | **[docs/COMPUTATIONAL_METRICS_CODE_REVIEW_REPORT.md](docs/COMPUTATIONAL_METRICS_CODE_REVIEW_REPORT.md)** | Project-owned computational code inventory for formalisation / peer review (not a user guide). |
 | **`docs/DENSITY_EXPORT_SCHEMA.md`** | **Authoritative** export schema: `Density_Metrics`, `Per_Note_Processing_Metadata`, dissonance/PCA separation, redaction notes. |
 | **`docs/BATCH_ANALYSIS_AUDIT.md`** | Batch row semantics, H+I+S validation, model weights **H/(H+I)** (optional Phase 1). |
@@ -51,9 +51,9 @@ pip install --upgrade --force-reinstall -r requirements-pins.txt
 | [TECHNICAL_MANUAL.md](TECHNICAL_MANUAL.md) | Long-form architecture (includes **historical** sections; canonical export semantics in **`docs/`**). |
 | [TESTING.md](TESTING.md) | Pytest policy, slow-marker contract, pipeline invariants, **formula-validation** command. |
 | [QUICK_START_ORCHESTRATOR.md](QUICK_START_ORCHESTRATOR.md) | CLI examples for **`run_orchestrator.py`**. |
-| [ORCHESTRATOR_INTEGRATION_GUIDE.md](ORCHESTRATOR_INTEGRATION_GUIDE.md) | Optional preprocessing ÔåÆ main analysis integration. |
+| [ORCHESTRATOR_INTEGRATION_GUIDE.md](ORCHESTRATOR_INTEGRATION_GUIDE.md) | Optional preprocessing → main analysis integration. |
 | [API_REFERENCE.md](API_REFERENCE.md) | **`AudioProcessor`** / **`density`** / compile overview. |
-| [audio_analysis/README_SUPER_ANALYZER.md](audio_analysis/README_SUPER_ANALYZER.md) | **Legacy** Super Audio Analyzer CLI when batch Phase 1 is used ÔÇö not the canonical Stage 1 engine. |
+| [audio_analysis/README_SUPER_ANALYZER.md](audio_analysis/README_SUPER_ANALYZER.md) | **Legacy** Super Audio Analyzer CLI when batch Phase 1 is used — not the canonical Stage 1 engine. |
 
 ### Legacy or out-of-repo (not part of the default pipeline)
 
@@ -61,7 +61,7 @@ Older Markdown snapshots (integrated vs Tk `v2_16` notes, external **`split_audi
 
 | Document | Note |
 |----------|------|
-| [TROUBLESHOOTING_ORCHESTRATOR.md](TROUBLESHOOTING_ORCHESTRATOR.md) | **Tk `pipeline_orchestrator_gui.py` startup** only ÔÇö not `run_orchestrator.py`. |
+| [TROUBLESHOOTING_ORCHESTRATOR.md](TROUBLESHOOTING_ORCHESTRATOR.md) | **Tk `pipeline_orchestrator_gui.py` startup** only — not `run_orchestrator.py`. |
 
 ## Tests
 
@@ -69,7 +69,7 @@ Older Markdown snapshots (integrated vs Tk `v2_16` notes, external **`split_audi
 python -m pytest tests -v
 ```
 
-**Formula-validation (Passes 1ÔÇô15):** executable checks under **`tests/formula_validation/`** implement the per-pass validation plans against selected numerical fixtures. As recorded in **`VALIDATION_STATUS_812_PASSED_PASSES_1_15.md`**, the formula-validation suite reports **149 passed**, **0 failed**, and the full repository suite **812 passed**, **39 skipped**, **0 failed** for that recorded run. The formula-validation corpus supports **internal consistency** between the documented formulas and the tested Python implementations; it verifies formula/code agreement for those fixtures and **does not**, by itself, prove scientific optimality, universal correctness, or full acoustic validity of the models. See **`METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md`** for scope and limitations.
+**Formula-validation (Passes 1–15):** executable checks under **`tests/formula_validation/`** implement the per-pass validation plans against selected numerical fixtures. As recorded in **`VALIDATION_STATUS_812_PASSED_PASSES_1_15.md`**, the formula-validation suite reports **149 passed**, **0 failed**, and the full repository suite **812 passed**, **39 skipped**, **0 failed** for that recorded run. The formula-validation corpus supports **internal consistency** between the documented formulas and the tested Python implementations; it verifies formula/code agreement for those fixtures and **does not**, by itself, prove scientific optimality, universal correctness, or full acoustic validity of the models. See **`METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md`** for scope and limitations.
 
 ```bash
 python -m pytest tests/formula_validation/ -q
@@ -101,7 +101,7 @@ python tools/export_research_density_workbook.py path/to/compiled_density_metric
 
 Instrument and dynamic columns may be filled from existing workbook fields, inferred conservatively from filenames and folder paths, or set explicitly with ``--instrument`` / ``--dynamic`` (see the research workbook README sheet for details).
 
-The research workbook is written for **Microsoft Excel compatibility**: it does **not** embed formal **Table** objects (no `xl/tables/table*.xml`). Data sheets use **worksheet-level AutoFilter** and frozen header rows; **README** and **Dashboard** are not auto-filtered. Exported column headers are sanitised (no blank names; duplicates get `_2`, `_3`, ÔÇª).
+The research workbook is written for **Microsoft Excel compatibility**: it does **not** embed formal **Table** objects (no `xl/tables/table*.xml`). Data sheets use **worksheet-level AutoFilter** and frozen header rows; **README** and **Dashboard** are not auto-filtered. Exported column headers are sanitised (no blank names; duplicates get `_2`, `_3`, …).
 
 The full **`compiled_density_metrics.xlsx`** remains the complete technical and audit export; **`compiled_density_metrics_research.xlsx`** is the recommended workbook for analysis, plotting, and thesis-ready tables.
 
@@ -120,21 +120,9 @@ Continuous integration runs the full `tests/` suite on Ubuntu (`.github/workflow
 | **[NOTICE.md](NOTICE.md)** | Copyright and use terms (proprietary; no open-source licence granted). |
 | **[CITATION.cff](CITATION.cff)** | Citation metadata for software recognition. |
 
-## Installers (optional)
-
-**Repository:** https://github.com/LuisMRaimundo/SoundSpectrAnalyse
-
-End users without Python: see **[`instalers/`](instalers/)** — especially on Windows, double-click **`instalers/windows/INSTALL.bat`** (installs Python 3.11, downloads this repo, installs libraries, creates shortcuts).
-
-| Folder | Standard install | Portable build (PyInstaller) |
-|--------|------------------|------------------------------|
-| [`instalers/windows/`](instalers/windows/) | **`INSTALL.bat`** | `Build-All.ps1` |
-| [`instalers/mac/`](instalers/mac/) | `install-easy.sh` | `build-all.sh` |
-| [`instalers/linux/`](instalers/linux/) | `install-easy.sh` | `build-all.sh` |
-
-Built `.exe` / `.app` / `.dmg` / `.tar.gz` files are **not** in git — use [GitHub Releases](https://github.com/LuisMRaimundo/SoundSpectrAnalyse/releases) if you distribute frozen builds.
-
 ## Acknowledgements
+
+Author: **Luís Raimundo** (ORCID: [https://orcid.org/0009-0005-1890-1519](https://orcid.org/0009-0005-1890-1519)).
 
 This project was developed by **Luís Raimundo** with the support and funding of the **Fundação para a Ciência e a Tecnologia (FCT)** and **Universidade NOVA de Lisboa**.
 
