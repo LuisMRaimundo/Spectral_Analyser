@@ -1,16 +1,26 @@
 cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
 title: "SoundSpectrAnalyse"
-message: "If you refer to this software or its methodology, cite it as below. No licence for reuse is granted by this citation file."
-type: software
+version: "3.7.0"
+date-released: "2026-05-27"
+license: "LicenseRef-Proprietary"
+repository-code: ""
 authors:
   - family-names: "Raimundo"
     given-names: "Luís"
-    orcid: "https://orcid.org/0009-0005-1890-1519"
-version: "3.7.0"
-date-released: "2026-05-15"
-repository-code: "https://github.com/LuisMRaimundo/SoundSpectrAnalyse"
-abstract: "Private research software for spectral, density, dissonance, and publication-clean export analysis of instrumental sound data."
-license: "NOASSERTION"
-identifiers:
-  - type: doi
-    value: "10.54499/2020.08817.BD"
+    affiliation: "NOVA University of Lisbon"
+references:
+  - type: generic
+    title: "Canonical bibliography and theoretical anchors"
+  - type: grant
+    title: "Fundação para a Ciência e a Tecnologia (FCT) doctoral grant 2020.08817.BD"
+    doi: "10.54499/2020.08817.BD"
+    notes: "Funded the doctoral research that produced this software."
+preferred-citation:
+  type: software
+  title: "SoundSpectrAnalyse"
+  version: "3.7.0"
+  authors:
+    - family-names: "Raimundo"
+      given-names: "Luís"
+  year: 2026

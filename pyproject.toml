@@ -8,13 +8,14 @@ version = "3.7.0"
 description = "Advanced spectral analysis tool for acoustic research with harmonic-order-aware spectral processing"
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
-license = {text = "Scientific Research Use"}
+license = {text = "Proprietary - All Rights Reserved"}
 authors = [
     {name = "Research Team", email = "research@example.com"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
     "Topic :: Scientific/Engineering",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -62,30 +63,53 @@ soundspectranalyse-legacy-gui = "main:main"
 # Flat layout: top-level modules (no src/ package); avoids invalid `packages = ["."]`
 py-modules = [
     "acoustic_data_analysis_suite",
+    "acoustic_density_core",
+    "adaptive_density_engine",
+    "analysis_policy",
     "audio_utils",
     "compile_metrics",
     "constants",
     "data_integrity",
+    "debug_counts",
     "density",
     "dissonance_export",
     "dissonance_models",
     "energy_accounting",
     "export_paths",
+    "gui_compile_stage2_worker",
     "gui_model_weight_policy",
     "harmonic_alignment",
     "harmonic_validation",
+    "inharmonicity_model",
     "interface",
     "log_config",
+    "low_frequency_policy",
     "main",
+    "metadata_sanitizer",
+    "metric_contract",
+    "mir_descriptors",
+    "note_parser",
     "peak_component_counts",
+    "pipeline_contract",
+    "pipeline_orchestrator_gui",
+    "pipeline_orchestrator_integrated",
+    "post_compile_research_export",
     "proc_audio",
     "public_audio_identifiers",
+    "publication_chart_policy",
     "publication_metric_columns",
+    "reference_signal_utils",
     "result_cache",
-    "runtime_versions",
-    "pipeline_orchestrator_integrated",
-    "pipeline_orchestrator_gui",
     "run_orchestrator",
+    "run_real_corpus_validation",
+    "runtime_versions",
+    "spectral_leakage_guards",
+    "spectral_normalization",
+    "subbass_policy",
+    "temporal_segmentation",
+    "validate_canonical_metrics",
+    "verify_runtime_schema",
+    "weight_function_ui_labels",
 ]
 
 [tool.pytest.ini_options]

@@ -440,35 +440,24 @@ def analyze_audio_file(
     #    low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz using
     #    the same freq_min / leakage pattern as proc_audio._finalize_low_frequency_policy_state.
     try:
-        from density import compute_subbass_protection_tolerance_hz
-        from low_frequency_policy import calculate_adaptive_subfundamental_cutoff_hz
+        from subbass_policy import SubBassPolicy
 
         f0raw = getattr(proc, "f0_final", None)
         try:
             mf = float(getattr(proc, "freq_min", 20.0) or 20.0)
         except (TypeError, ValueError):
             mf = 20.0
-        leak_arg = None
         try:
             f0f = float(f0raw) if f0raw is not None else float("nan")
-            sr = float(getattr(proc, "sr", None) or 0.0)
+            sr = float(getattr(proc, "sr", None) or 44100.0)
             nff = int(getattr(proc, "n_fft", 0) or 0)
-            if np.isfinite(f0f) and f0f > 0.0 and np.isfinite(sr) and sr > 0.0 and nff > 0:
-                tol = float(compute_subbass_protection_tolerance_hz(sr, nff))
-                if np.isfinite(tol) and tol > 0.0:
-                    lr = float(f0f - tol)
-                    if np.isfinite(lr) and lr > 0.0:
-                        leak_arg = lr
-        except Exception:
-            pass
-        _guard = calculate_adaptive_subfundamental_cutoff_hz(
-            f0raw,
-            min_floor_hz=mf,
-            max_fraction_of_f0=0.95,
-            leakage_guard_cutoff_hz=leak_arg,
-        )
-        mv = _to_float_or_none(_guard.get("min_floor_hz"))
-        xv = _to_float_or_none(_guard.get("max_fraction_of_f0"))
+        except (TypeError, ValueError):
+            f0f = float("nan")
+            sr = 44100.0
+            nff = 0
+        _resolved = float(SubBassPolicy.upper_bound_hz(f0_hz=f0f, sr_hz=sr, n_fft=nff))
+        mv = _to_float_or_none(mf)
+        xv = _to_float_or_none(0.95)
         out["min_floor_hz"] = mv
         out["min_floor_hz__status"] = STATUS_COMPUTED if mv is not None else STATUS_UNAVAILABLE
         out["max_fraction_of_f0"] = xv
@@ -486,8 +475,9 @@ def analyze_audio_file(
             out["adaptive_subfundamental_cutoff_source"] = "per_note_analysis_export"
             out["adaptive_subfundamental_cutoff_source__status"] = STATUS_COMPUTED
         else:
-            out["adaptive_subfundamental_cutoff_source"] = "not_available_missing_f0"
-            out["adaptive_subfundamental_cutoff_source__status"] = STATUS_UNAVAILABLE
+            out["adaptive_subfundamental_cutoff_source"] = "derived_at_compile_stage_from_f0_final_hz"
+            out["adaptive_subfundamental_cutoff_source__status"] = STATUS_COMPUTED
+            out["adaptive_subfundamental_cutoff_hz"] = _resolved
     except Exception:
         out["min_floor_hz"] = None
         out["min_floor_hz__status"] = STATUS_UNAVAILABLE

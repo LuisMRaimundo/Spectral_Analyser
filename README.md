@@ -1,169 +1,124 @@
 # SoundSpectrAnalyse
 
-Spectral analysis for acoustic research. **Canonical publication pipeline:** **`proc_audio.AudioProcessor`** (Stage 1) writes per-note **`spectral_analysis.xlsx`** plus standard PNGs (**`spectrogram.png`**, two **semantically distinct** component pies — linear **amplitude-mass** vs **energy-ratio** — and a legacy-alias **`component_energy_pie.png`**; see **`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`**); **`compile_metrics.compile_density_metrics_with_pca`** (Stage 2) builds **`compiled_density_metrics.xlsx`** with multi-sheet exports (`Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Debug_Counts`, …). For note body/thickness analysis, use **`spectral_body_thickness_index`**; **`effective_partial_density`** remains an effective-component participation descriptor.
+SoundSpectrAnalyse is a spectral-analysis pipeline developed in support of doctoral research in musicology at NOVA University of Lisbon, with a focus on musical texture in twentieth-century repertoire. The instrument analyses individual note recordings and produces an auditable per-note and corpus-level decomposition of spectral content into harmonic, inharmonic, and sub-bass components (H/I/S), supplemented by a battery of psychoacoustic and MIR descriptors. The H/I/S model is treated throughout as an operational measurement framework - anchored in primary sources in acoustics and psychoacoustics - rather than as a universal ontology of musical sound. The pipeline is designed for traceable, reproducible analysis at doctoral standard: every exported metric is accompanied by an epistemic contract, every numeric constant by a provenance class, and every methodological change by a versioned and tested phase entry in CHANGES.md.
 
-Current accepted final-density architecture:
-- primary final metric: `final_note_density_salience_weighted`
-- control metric: `final_note_density_count_based`
-- canonical mode defaults: `his_weighted`, `wH=1.0`, `wI=0.5`, `wS=0.25`, threshold `-45 dB`, ceiling `5000 Hz`
+## Status
 
-Canonical processing chain:
-`GUI/Orchestrator config -> Stage 1 per-note spectral analysis -> Stage 2 compile -> Stage 3 research export -> Dashboard/Charts/Metadata`.
+- **Version**: 3.7.0.
+- **Python**: >=3.10,<3.12.
+- **Development status**: Beta.
+- **License**: Proprietary — see `LICENSE` at the repository root.
 
-Legacy warning:
-- `density_metric_raw`, `density_weighted_sum`, `Combined Density Metric`, and related legacy fields are not the final note-density definition.
-- fallback f0 (`nominal_fallback_used_not_acoustically_verified`) is not acoustic verification.
+## What this software does
 
-Optional **batch preprocessing** (`batch_audio_analyzer` / `super_audio_analyzer`) may supply **`batch_summary.xlsx`** for empirical **H+I+S** profiles and **H/(H+I)** model coefficients; it is **not** required for the canonical chain above. Legacy Tk / PyQt entry points remain ancillary.
+SoundSpectrAnalyse analyses individual note recordings and produces a multi-sheet workbook of spectral, harmonic, inharmonic, sub-bass, and MIR descriptors per note, together with a corpus-level adaptive density profile. The pipeline runs in two stages:
 
-**Package version:** 3.7.0 (`pyproject.toml`; at runtime: `importlib.metadata.version("soundspectranalyse")`)  
-**Python:** 3.10 and 3.11 (supported); Python 3.9 is not supported.  
+1. **Stage 1 — per-note analysis** (`proc_audio.AudioProcessor`): STFT, peak picking, F0 estimation, harmonic / inharmonic / sub-bass (H/I/S) partitioning, stiff-string inharmonicity fit, sub-bass policy, MIR descriptors (spectral moments, tristimulus, Aures roughness, ERB-weighted density), and optional temporal segmentation. Output: one `spectral_analysis.xlsx` per note.
+2. **Stage 2 — compilation** (`compile_metrics.compile_density_metrics_with_pca`): per-note rows aggregated into `compiled_density_metrics.xlsx` with tier-normalized columns, dissonance metrics, PCA scores, and validation summary. A reduced research workbook (`compiled_density_metrics_research.xlsx`) is then produced for publication-oriented analysis.
 
-## Install
+An online adaptive engine (`adaptive_density_engine.AdaptiveDensityEngine`) learns a corpus-level (H, I, S) density profile across notes, using pure observations decoupled from the prior (Phase 1) and a Jensen-Shannon divergence reliability gate (Phase 7). The engine state is exported to `adaptive_density_engine_state.json` for reproducibility.
+
+The full pipeline architecture and mathematical foundations are documented in [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md).
+
+## Theoretical anchoring
+
+This software is the analytical instrument supporting the doctoral dissertation of Luís Raimundo (NOVA University of Lisbon, in preparation).
+
+## Installation
+
+The software is developed and tested on Python >=3.10,<3.12. Installation from a clean environment:
 
 ```bash
+git clone <repository-url>
+cd "SoundSpectrAnalys_version 55"
 pip install -r requirements.txt
-pip install -r requirements-dev.txt   # optional: pytest, coverage, linters
-pip install -e .                      # editable install + console scripts (see Entry points)
 ```
 
-Optional reproducible stack (same bounds as `requirements.txt`; does not alter export columns):
+Principal runtime dependencies (versions pinned in `pyproject.toml`):
+
+- numerical: numpy, scipy, pandas, numba, scikit-learn
+- audio / DSP: librosa, soundfile, pydub
+- output: openpyxl, xlsxwriter
+- visualisation: matplotlib, seaborn, plotly
+- GUI: PyQt5 (legacy), tkinter (current Windows GUI is Tk-based and shipped with the standard library)
+
+Optional development dependencies (testing, linting, type checking) are declared under `[project.optional-dependencies] dev` in `pyproject.toml`:
 
 ```bash
-pip install --upgrade --force-reinstall -r requirements-pins.txt
+pip install -e ".[dev]"
 ```
 
-## Entry points (what is actually used)
+The full module manifest (48 top-level modules) is declared under `[tool.setuptools] py-modules` in `pyproject.toml`. An installed wheel ships all scientific modules.
 
-| Command | Role |
-|---------|------|
-| **`python run_orchestrator.py`** / **`soundspectranalyse`** (`pip install -e .`) | **Canonical full pipeline:** optional preprocessing → `batch_summary.xlsx` → per-note `spectral_analysis.xlsx` → **`compiled_density_metrics.xlsx`**. |
-| **`run.bat`** (Windows) | Starts **`pipeline_orchestrator_gui.py`** (Tk / tier orchestrator). For the integrated batch→compile path use **`python run_orchestrator.py`** above. |
-| **`python pipeline_orchestrator_integrated.py`** | Same backend as `run_orchestrator.py` when you pass audio paths explicitly (no wrapper discovery). |
-| **`python main.py`** / **`soundspectranalyse-legacy-gui`** | Forwards to **`pipeline_orchestrator_integrated.py --gui`** (Tk; typically subprocess **`pipeline_orchestrator_gui.py`**). Not the old PyQt **`interface.py`** window. |
-| **`python pipeline_orchestrator_gui.py`** | Same entry as **`run.bat`**; **`FFT_SETTINGS_BY_CLUSTER`** is imported from here by **`pipeline_orchestrator_integrated.py`**. |
+## Usage
 
-## Documentation (aligned with the canonical code path)
+### Cross-platform CLI
 
-| Document | Purpose |
-|----------|---------|
-| **[docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md](docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md)** | **Normative** pipeline, f0, harmonics, nonharmonics, subfundamental, Debug_Counts, missing metrics, audit CLI. |
-| **[docs/TECHNICAL_MANUAL.md](docs/TECHNICAL_MANUAL.md)** | Complete technical manual for the current final-density architecture (formulas, pipeline, GUI options, workbook schema, interpretation, limitations). |
-| **[docs/QUICK_GUIDE.md](docs/QUICK_GUIDE.md)** | User quick-start: what to run, recommended defaults, which metrics to use, common pitfalls. |
-| **[docs/TUTORIAL.md](docs/TUTORIAL.md)** | Step-by-step tutorials for default, harmonic-only, weighted H/I/S, clarinet/cello comparisons, and validity checks. |
-| **[docs/FINAL_ACCEPTANCE_REPORT.md](docs/FINAL_ACCEPTANCE_REPORT.md)** | Final acceptance evidence (population, formula checks, regression gate, release decision). |
-| **[docs/GUI_OPTION_EFFECT_AUDIT.md](docs/GUI_OPTION_EFFECT_AUDIT.md)** | GUI wiring/effect audit for mode, weights, threshold, ceiling, metadata and propagation checks. |
-| **[docs/CURRENT_DOCUMENTATION_INDEX.md](docs/CURRENT_DOCUMENTATION_INDEX.md)** | What is safe to cite vs legacy vs archived. |
-| **[docs/DOCUMENTATION_AUDIT_REPORT.md](docs/DOCUMENTATION_AUDIT_REPORT.md)** | 2026-05-13 documentation audit register. |
-| **[docs/MATHEMATICAL_FORMALISATION_VERIFICATION_REPORT_FIRST_PASS.md](docs/MATHEMATICAL_FORMALISATION_VERIFICATION_REPORT_FIRST_PASS.md)** | LaTeX formalisation of six core `density.py` metrics (read-only vs code). |
-| **[docs/formula_extraction/FORMULA_EXTRACTION_INDEX.md](docs/formula_extraction/FORMULA_EXTRACTION_INDEX.md)** | Pass 1–15 **formula-extraction** tables (Python → notation); companion to validation plans and tests. |
-| **[docs/formula_validation/FORMULA_VALIDATION_PLAN_INDEX.md](docs/formula_validation/FORMULA_VALIDATION_PLAN_INDEX.md)** | Pass 1–15 **formula-validation plans** (fixtures and assertions; plans only). |
-| **[docs/validation/VALIDATION_STATUS.md](docs/validation/VALIDATION_STATUS.md)** | Formula-validation status note for Passes **1–15** (without fixed full-suite pass/fail claims). |
-| **[METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md](METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md)** | Methodological note on extraction → validation workflow and limits of what automated checks establish. |
-| **[CODE_FORMULA_TRACEABILITY_TABLE.md](CODE_FORMULA_TRACEABILITY_TABLE.md)** | Optional code ↔ formula traceability (audit / PDF-oriented). |
-| **[docs/COMPUTATIONAL_METRICS_CODE_REVIEW_REPORT.md](docs/COMPUTATIONAL_METRICS_CODE_REVIEW_REPORT.md)** | Project-owned computational code inventory for formalisation / peer review (not a user guide). |
-| **`docs/DENSITY_EXPORT_SCHEMA.md`** | **Authoritative** export schema: `Density_Metrics`, `Per_Note_Processing_Metadata`, dissonance/PCA separation, redaction notes. |
-| **`docs/BATCH_ANALYSIS_AUDIT.md`** | Batch row semantics, H+I+S validation, model weights **H/(H+I)** (optional Phase 1). |
-| **`docs/BATCH_ANALYSIS_FIELD_MAP.md`** | Short field map for `batch_summary.xlsx` and orchestrator handoff. |
-| [TECHNICAL_MANUAL.md](TECHNICAL_MANUAL.md) | Legacy root manual retained for historical compatibility; use **`docs/TECHNICAL_MANUAL.md`** as current technical reference. |
-| [TESTING.md](TESTING.md) | Pytest policy, slow-marker contract, pipeline invariants, **formula-validation** command. |
-| [QUICK_START_ORCHESTRATOR.md](QUICK_START_ORCHESTRATOR.md) | CLI examples for **`run_orchestrator.py`**. |
-| [ORCHESTRATOR_INTEGRATION_GUIDE.md](ORCHESTRATOR_INTEGRATION_GUIDE.md) | Optional preprocessing → main analysis integration. |
-| [API_REFERENCE.md](API_REFERENCE.md) | **`AudioProcessor`** / **`density`** / compile overview. |
-| [audio_analysis/README_SUPER_ANALYZER.md](audio_analysis/README_SUPER_ANALYZER.md) | **Legacy** Super Audio Analyzer CLI when batch Phase 1 is used — not the canonical Stage 1 engine. |
-
-### Legacy or out-of-repo (not part of the default pipeline)
-
-Older Markdown snapshots (integrated vs Tk `v2_16` notes, external **`split_audio_segments`** manual, pre-cleanup inventories) lived under **`Backup/`** and were **removed from the working tree**; use **git history** if you need them.
-
-| Document | Note |
-|----------|------|
-| [TROUBLESHOOTING_ORCHESTRATOR.md](TROUBLESHOOTING_ORCHESTRATOR.md) | **Tk `pipeline_orchestrator_gui.py` startup** only — not `run_orchestrator.py`. |
-
-## Tests
+The canonical entry point is `run_orchestrator.py`, which runs the full Stage 1 + Stage 2 pipeline on a folder of audio files:
 
 ```bash
-python -m pytest tests -v
+python run_orchestrator.py
 ```
 
-**Formula-validation (Passes 1–15):** executable checks under **`tests/formula_validation/`** implement the per-pass validation plans against selected numerical fixtures. The formula-validation corpus supports **internal consistency** between the documented formulas and the tested Python implementations; it verifies formula/code agreement for those fixtures and **does not**, by itself, prove scientific optimality, universal correctness, or full acoustic validity of the models. See **`docs/validation/METHODOLOGICAL_NOTE_FORMULA_VALIDATION.md`** for scope and limitations.
-
-See `docs/FINAL_ACCEPTANCE_REPORT.md` and `docs/KNOWN_BASELINE_TEST_FAILURES.md` for the current test status.
+Equivalently, after installation:
 
 ```bash
-python -m pytest tests/formula_validation/ -q
+soundspectranalyse
 ```
 
-**Pipeline / workbook invariants (recommended):**
+### Windows GUI
 
-```bash
-pytest tests/test_final_pipeline_invariants.py tests/test_low_frequency_policy.py tests/test_validate_canonical_metrics.py
-```
+A Tk-based graphical orchestrator is available via `run.bat` on Windows, which launches `pipeline_orchestrator_gui.py`. The GUI provides per-stage progress reporting and adaptive-engine diagnostics.
 
-**Compiled workbook audit (CLI):**
+## Outputs
 
-```bash
-python tools/audit_compiled_workbook.py path/to/compiled_density_metrics.xlsx
-# optional: second path to a per-note spectral_analysis.xlsx for Harmonic Spectrum checks
-```
+For each input folder of audio files, the pipeline produces an `analysis_results/` directory containing:
 
-**Research export (reduced workbook for plotting / thesis tables):**
+| Artefact | Description |
+|---|---|
+| `<note_name>/spectral_analysis.xlsx` | Per-note multi-sheet workbook (spectrum, peaks, partitioning, descriptors). |
+| `compiled_density_metrics.xlsx` | Corpus-level compiled workbook (16 sheets including `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Validation_Metrics`, `PCA_*`, `Dissonance_Metrics`, `Analysis_Metadata`). |
+| `compiled_density_metrics_research.xlsx` | Reduced research workbook for publication-oriented analysis. |
+| `phase1_discovered_density_profiles.csv` | Full adaptive trajectory per note (observation triplets, JS divergence, reliability, confidence). |
+| `adaptive_density_engine_state.json` | Final engine state (posterior profile, concentration, confidence). |
+| `phase2_application_profile.json` | The profile applied during Stage 2 compilation. |
 
-After you have the full compiled workbook, generate a separate, professionally formatted research export (does not modify the source file or change Stage-2 compilation):
+Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
 
-```bash
-python tools/export_research_density_workbook.py path/to/compiled_density_metrics.xlsx
-# optional: --output path/to/compiled_density_metrics_research.xlsx
-# optional: --no-charts   --overwrite
-# optional: --instrument Clarinet --dynamic pp   (metadata; use --force-metadata to override non-empty workbook cells)
-```
+## Scientific governance
 
-Instrument and dynamic columns may be filled from existing workbook fields, inferred conservatively from filenames and folder paths, or set explicitly with ``--instrument`` / ``--dynamic`` (see the research workbook README sheet for details).
+Methodological changes to the pipeline are tracked in [`CHANGES.md`](CHANGES.md) with explicit phase markers (phases 1, 7, 7.1, 8 at time of writing). Each phase change is accompanied by phase-organised regression tests under `tests/phase_<n>/`. Symbolic-structure tests for the canonical formulae are under [`tests/formula_validation/`](tests/formula_validation/) and documented in [`docs/validation/FORMULA_VALIDATION_STATUS.md`](docs/validation/FORMULA_VALIDATION_STATUS.md).
 
-The research workbook is written for **Microsoft Excel compatibility**: it does **not** embed formal **Table** objects (no `xl/tables/table*.xml`). Data sheets use **worksheet-level AutoFilter** and frozen header rows; **README** and **Dashboard** are not auto-filtered. Exported column headers are sanitised (no blank names; duplicates get `_2`, `_3`, …).
+Principal methodological commitments:
 
-The full **`compiled_density_metrics.xlsx`** remains the complete technical and audit export; **`compiled_density_metrics_research.xlsx`** is the recommended workbook for analysis, plotting, and thesis-ready tables.
+- **FFT-length-aware normalization** (Phase 8). Peak-bin sums are normalized using `peak_amplitude_sum` (`N_ref/N`) or `peak_power_sum` (`(N_ref/N)²`) factors rather than broadband-L2 factors, eliminating the cross-tier discontinuity introduced by FFT-length tier switching. The empirical step discontinuity on a 1 kHz synthetic benchmark is reduced from approximately 29.9 % to approximately 0.87 %. See `CHANGES.md`, Phase 8 entry.
+- **Prior / observation decoupling** (Phase 1). The triplet `pure_observation_w_{h,i,s}` carries the unmixed observation; the prior-smoothed values are retained as `smoothed_w_{h,i,s}_legacy` for backward compatibility only. This is a precondition for any defensible Bayesian update of the corpus-level profile.
+- **Formula versioning** (Phase 7.1). `obs_w_formula_version = "v56_occupancy_ratio"` and `density_formula_version = "v5_apply_density_metric_adapted_v6_1"` are exported on every row, permitting cross-version comparability of compiled workbooks.
+- **Per-metric epistemic contract** (`metric_contract.py`). Every exported density metric carries an explicit record of its formula, input domain, unit/scale, amplitude basis, power basis, normalization scope, physical interpretation, validity boundary, and ontological family.
+- **Per-constant provenance registry** ([`docs/CONSTANTS_PROVENANCE.md`](docs/CONSTANTS_PROVENANCE.md)). Every numeric constant exported by `constants.py` is classified as `primary_source`, `derived`, `convention`, or `internal_default`. Internal defaults are tunable engineering choices documented for auditability rather than concealed.
 
-On **`Spectral_Density_Metrics`**, the research export keeps **`density_metric_raw`** as an explicitly diagnostic, energy-weighted component sum (`D_H*w_H + D_I*w_I + D_S*w_S`) and does **not** export **`density_weighted_sum_cdm_mean`** by default.  
-**`Combined Density Metric`** is legacy-only and exported on **`Legacy_Compatibility`**, not as a primary `Spectral_Density_Metrics` metric.
-If you need the deprecated editorial blend **`density_weighted_sum_cdm_mean`**, pass **`--include-legacy-cdm-mean`** explicitly; it is not dimensionally/acoustically valid as a final scalar.
+The canonical bibliography for the theoretical anchors of the scientific modules is [`REFERENCES.md`](REFERENCES.md). Inline `References` blocks in each scientific module cite from it in short form.
 
-**Per-note legacy sheet (Stage 1):** each **`spectral_analysis.xlsx`** also writes **`Legacy_Density_Metrics`** (SDM, FDM, CDM, `Density Metric`) so compile can populate **`Weighted Combined Metric`** on diagnostic sheets. v6 does **not** restore the v5 spectral-masking checkbox; masking stays off in the physical workflow.
+## License
 
-When you run **`run_orchestrator.py`**, **`pipeline_orchestrator_integrated.py`**, or the Tk **`pipeline_orchestrator_gui.py`** pipeline, the research workbook is generated **automatically** after each successful Stage 2 compile (same folder as the compiled workbook). Failures there are logged only and do not fail the acoustic pipeline.
+Proprietary. All rights reserved. The full notice is contained in the `LICENSE` file at the repository root, summarised here for visibility.
 
-Continuous integration runs the full `tests/` suite on Ubuntu (`.github/workflows/ci.yml`).
+Copyright © 2026 Luís Raimundo. All rights reserved.
 
-## Legal and citation
+This repository and its contents — source code, documentation, mathematical formulations, tests, validation reports, data structures, configuration files, and associated materials — are proprietary research material. No open-source licence is granted. No permission is granted to copy, redistribute, modify, publish, sublicense, sell, reuse, incorporate, train on, derive from, or otherwise exploit this work, in whole or in part, without prior written permission from the copyright holder.
 
-| File | Purpose |
-|------|---------|
-| **[NOTICE.md](NOTICE.md)** | Copyright and use terms (proprietary; no open-source licence granted). |
-| **[CITATION.cff](CITATION.cff)** | Citation metadata for software recognition. |
+Access to this repository, whether private or shared, does not imply any licence to use, reproduce, redistribute, modify, publish, or derive works from the software or documentation. Authorised users may run the software only for the specific purpose for which access has been granted. Any other use requires prior written permission.
 
-## Installers (optional)
+For permission requests, contact: lmr.2020@outlook.pt
 
-**Repository:** https://github.com/LuisMRaimundo/SoundSpectrAnalyse
+## Citation
 
-End users without Python: see **[`installers/`](installers/)** —
-especially on Windows, double-click
-**`installers/windows/INSTALL.bat`** (installs Python 3.11, downloads
-this repo, installs libraries, creates shortcuts).
+Citation metadata is provided in `CITATION.cff`.
 
-| Folder | Standard install | Portable build (PyInstaller) |
-|--------|------------------|------------------------------|
-| [`installers/windows/`](installers/windows/) | **`INSTALL.bat`** | `Build-All.ps1` |
-| [`installers/mac/`](installers/mac/) | `install-easy.sh` | `build-all.sh` |
-| [`installers/linux/`](installers/linux/) | `install-easy.sh` | `build-all.sh` |
-
-Built `.exe` / `.app` / `.dmg` / `.tar.gz` files are **not** in git
-— use [GitHub Releases](https://github.com/LuisMRaimundo/SoundSpectrAnalyse/releases)
-if you distribute frozen builds.
+This work was funded by the Fundação para a Ciência e a Tecnologia (FCT) under grant [2020.08817.BD](https://doi.org/10.54499/2020.08817.BD).
 
 ## Acknowledgements
 
-This project was developed by **Luís Raimundo** with the support and funding of the **Foundation for Science and Technology (FST))** and **NOVA University of Lisbon**.
+This project was developed by Luís Raimundo with the support and funding of the Fundação para a Ciência e a Tecnologia (FCT) and NOVA University of Lisbon, under doctoral grant [2020.08817.BD](https://doi.org/10.54499/2020.08817.BD).
 
-**Funding DOI:** [https://doi.org/10.54499/2020.08817.BD](https://doi.org/10.54499/2020.08817.BD)
-
-The author also gratefully acknowledges **Isabel Pires** for her support throughout the development of this work.
+The author gratefully acknowledges Isabel Pires for her supervisory support throughout the development of this work.

@@ -33,11 +33,14 @@ import gc
 import re
 import sys
 import math
+import random
 import os
 import webbrowser
 import datetime
+import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+import numpy as np
 
 # --- CRITICAL: Ensure main directory is in sys.path ---
 # This ensures all imports come from the main directory, even when processing external folders
@@ -66,6 +69,87 @@ def resolve_stage2_compile_file_pattern(
     if allow_legacy_super_json and json_present:
         return "super_analysis_results.json"
     return None
+
+
+def compute_obs_ws_artifact_diagnostics(
+    *,
+    pure_observation_w_h: float,
+    pure_observation_w_i: float,
+    pure_observation_w_s: float,
+    component_subbass_energy_ratio: float,
+    harmonic_energy_sum: float,
+    subbass_energy_sum: float,
+    subbass_energy_sum_tier_normalized: float | None = None,
+    subbass_upper_bound_hz: float | None = None,
+    subbass_density_component: float | None = None,
+) -> Dict[str, Any]:
+    """Phase 7 diagnostic interpretation for obs_wS in discovery exports."""
+
+    def _f(x: Any) -> float:
+        try:
+            xv = float(x)
+            return xv if np.isfinite(xv) else float("nan")
+        except Exception:
+            return float("nan")
+
+    obs_h = _f(pure_observation_w_h)
+    obs_i = _f(pure_observation_w_i)
+    obs_s = _f(pure_observation_w_s)
+    comp_s = _f(component_subbass_energy_ratio)
+    h_sum = _f(harmonic_energy_sum)
+    s_sum = _f(subbass_energy_sum)
+    s_tier = _f(subbass_energy_sum_tier_normalized)
+    s_cut = _f(subbass_upper_bound_hz)
+    s_density = _f(subbass_density_component)
+
+    high_obs = bool(np.isfinite(obs_s) and obs_s > 0.05)
+    negligible_comp_ratio = bool(np.isfinite(comp_s) and comp_s < 1e-4)
+
+    # Prefer tier-normalized sum when available to align with compiled comparability checks.
+    s_evidence = s_tier if np.isfinite(s_tier) else s_sum
+    if np.isfinite(h_sum) and h_sum > 0.0 and np.isfinite(s_evidence):
+        negligible_vs_h = bool((s_evidence / h_sum) < 1e-4)
+    else:
+        negligible_vs_h = False
+    negligible_abs = bool(np.isfinite(s_evidence) and abs(s_evidence) < 1e-9)
+    missing_energy_evidence = bool(not np.isfinite(s_evidence))
+    # Phase 7C semantic requirement:
+    # high obs_wS + negligible subbass_energy_ratio is sufficient to flag
+    # a model-density vs energy-evidence mismatch.
+    energy_mismatch = bool(negligible_comp_ratio)
+    is_artifact = bool(high_obs and energy_mismatch)
+
+    reason_tokens: List[str] = []
+    if high_obs:
+        reason_tokens.append("obs_wS_above_0p05")
+    if negligible_comp_ratio:
+        reason_tokens.append("component_subbass_energy_ratio_below_1e-4")
+    if negligible_vs_h:
+        reason_tokens.append("subbass_energy_sum_negligible_vs_harmonic_energy_sum")
+    if negligible_abs:
+        reason_tokens.append("subbass_energy_sum_below_absolute_floor")
+    if missing_energy_evidence:
+        reason_tokens.append("subbass_energy_sum_missing")
+    if is_artifact:
+        interpretation = "model_density_residual_not_physical_subbass_energy"
+    else:
+        interpretation = "physical_or_mixed_subbass_evidence"
+
+    return {
+        "pure_observation_w_h": obs_h,
+        "pure_observation_w_i": obs_i,
+        "pure_observation_w_s": obs_s,
+        "obs_wS": obs_s,
+        "subbass_density_component": s_density,
+        "subbass_energy_ratio": comp_s,
+        "subbass_energy_sum": s_sum,
+        "subbass_energy_sum_tier_normalized": s_tier,
+        "subbass_upper_bound_hz": s_cut,
+        "subbass_component_interpretation": interpretation,
+        "obs_wS_artifact_flag": is_artifact,
+        "obs_wS_artifact_reason": ";".join(reason_tokens) if is_artifact else "",
+        "obs_wS_diagnostic_source": "compile_extractor_energy_terms_plus_per_note_observation",
+    }
 
 
 def _flush_orchestrator_log_handlers(logger: logging.Logger) -> None:
@@ -167,6 +251,7 @@ from weight_function_ui_labels import (
     WEIGHT_FUNCTION_COMBO_LABELS,
     resolve_weight_key_from_user_label,
 )
+from adaptive_density_engine import AdaptiveDensityEngine
 
 # --- DEPENDENCIES ---
 try:
@@ -390,6 +475,45 @@ FFT_SETTINGS_BY_CLUSTER = {
 }
 
 VALID_AUDIO_EXTENSIONS = {'.wav', '.mp3', '.aif', '.aiff', '.flac'}
+PHASE_1_ADAPTIVE_RANDOMIZATION_SEED = 20260526
+
+
+def build_phase1_file_iteration_order(
+    folder: Path,
+    *,
+    enable_adaptive_path_randomization: bool = False,
+    random_seed: int = PHASE_1_ADAPTIVE_RANDOMIZATION_SEED,
+) -> List[Path]:
+    """Return deterministic Phase 1 order: ascending nominal f0, unknown notes last."""
+    from note_parser import canonical_note_from_filename
+
+    folder_files = [
+        f for f in folder.glob("*")
+        if f.suffix.lower() in VALID_AUDIO_EXTENSIONS
+    ]
+
+    sortable: List[Tuple[float, str, int, str, Path]] = []
+    for idx, f in enumerate(folder_files):
+        note_token, _ = canonical_note_from_filename(f.name)
+        if note_token:
+            try:
+                hz = float(librosa.note_to_hz(str(note_token)))
+            except Exception:
+                hz = float("inf")
+        else:
+            hz = float("inf")
+        # Unknown notes (inf) are always last, then deterministic by filename.
+        unknown_rank = 1 if not np.isfinite(hz) else 0
+        sortable.append((hz, f.name.lower(), unknown_rank, f.name, f))
+
+    sortable.sort(key=lambda item: (item[2], item[0], item[1]))
+    ordered = [item[4] for item in sortable]
+
+    if enable_adaptive_path_randomization:
+        rng = random.Random(int(random_seed))
+        rng.shuffle(ordered)
+
+    return ordered
 
 # --- WINDOW TYPES (Full parity with interface.py) ---
 VALID_WINDOW_TYPES = ['hann', 'hamming', 'blackmanharris', 'bartlett', 'kaiser', 'gaussian']
@@ -454,6 +578,7 @@ log = logging.getLogger("RobustOrchestrator")
 log.setLevel(logging.INFO)
 
 DENSITY_MODE_LABEL_TO_INTERNAL: Dict[str, str] = {
+    "Per-note adaptive (acoustic, auto)": "his_note_adaptive",
     "Harmonic only": "harmonic_only",
     "Inharmonic only": "inharmonic_only",
     "Subbass only": "subbass_only",
@@ -517,11 +642,16 @@ class RobustOrchestratorApp:
             state="readonly",
             values=list(DENSITY_MODE_LABEL_TO_INTERNAL.keys()),
         )
-        self.combo_density_mode.set(DENSITY_MODE_INTERNAL_TO_LABEL["his_weighted"])
+        self.combo_density_mode.set(DENSITY_MODE_INTERNAL_TO_LABEL["his_note_adaptive"])
         self.combo_density_mode.pack(fill=tk.X)
+        self.combo_density_mode.bind("<<ComboboxSelected>>", self._on_density_mode_changed)
         _attach_tk_tooltip(
             self.combo_density_mode,
-            "Controls which spectral components enter the final note-density metric.",
+            (
+                "Controls how final-density combines harmonic/inharmonic/subbass "
+                "evidence. In per-note adaptive mode, weights are inferred from "
+                "each note's own spectral evidence (no imposed fixed percentages)."
+            ),
         )
 
         ttk.Label(lf_density, text="Harmonic weight").pack(anchor="w", pady=(6, 0))
@@ -550,6 +680,17 @@ class RobustOrchestratorApp:
             self.entry_density_w_s,
             "Weight applied to salient subbass/breath/bow-scrape particles.",
         )
+
+        self.var_runtime_density_profile = tk.StringVar(
+            value="Runtime learned profile: waiting for first note"
+        )
+        self.lbl_runtime_density_profile = ttk.Label(
+            lf_density,
+            textvariable=self.var_runtime_density_profile,
+            justify="left",
+        )
+        self.lbl_runtime_density_profile.pack(anchor="w", pady=(8, 0))
+        self._on_density_mode_changed()
 
         ttk.Label(lf_density, text="Salience threshold (dB)").pack(anchor="w", pady=(6, 0))
         self.entry_density_salience_threshold_db = ttk.Entry(lf_density, width=10)
@@ -871,7 +1012,311 @@ class RobustOrchestratorApp:
 
     def _density_mode_internal(self) -> str:
         display = str(self.combo_density_mode.get() or "").strip()
-        return DENSITY_MODE_LABEL_TO_INTERNAL.get(display, "his_weighted")
+        return DENSITY_MODE_LABEL_TO_INTERNAL.get(display, "his_note_adaptive")
+
+    def _on_density_mode_changed(self, _event: object = None) -> None:
+        mode = self._density_mode_internal()
+        manual_weights_enabled = mode not in {"his_note_adaptive"}
+        widgets = (
+            self.entry_density_w_h,
+            self.entry_density_w_i,
+            self.entry_density_w_s,
+        )
+
+        def _set_entry(widget: ttk.Entry, text: str, state: str) -> None:
+            widget.configure(state="normal")
+            widget.delete(0, tk.END)
+            widget.insert(0, text)
+            widget.configure(state=state)
+
+        if manual_weights_enabled:
+            cached = getattr(self, "_manual_density_weights", None)
+            if cached is not None and len(cached) == 3:
+                _set_entry(self.entry_density_w_h, f"{float(cached[0]):.6f}", "normal")
+                _set_entry(self.entry_density_w_i, f"{float(cached[1]):.6f}", "normal")
+                _set_entry(self.entry_density_w_s, f"{float(cached[2]):.6f}", "normal")
+            else:
+                for widget in widgets:
+                    widget.configure(state="normal")
+        else:
+            try:
+                self._manual_density_weights = (
+                    float(self.entry_density_w_h.get()),
+                    float(self.entry_density_w_i.get()),
+                    float(self.entry_density_w_s.get()),
+                )
+            except Exception:
+                self._manual_density_weights = (1.0, 0.5, 0.25)
+            for widget in widgets:
+                _set_entry(widget, "AUTO (Phase 1 discovery)", "disabled")
+        if hasattr(self, "var_runtime_density_profile"):
+            if manual_weights_enabled:
+                self.var_runtime_density_profile.set(
+                    "Runtime learned profile: manual/fixed mode selected"
+                )
+            else:
+                self.var_runtime_density_profile.set(
+                    "Runtime learned profile: adaptive mode (Phase 1 discovery -> Phase 2 application; GUI fixed values ignored)"
+                )
+
+    def _extract_note_density_feedback(self, workbook_path: Path) -> Optional[Tuple[float, float, float]]:
+        """Read per-note density weights emitted by Stage 1 workbook."""
+        if not workbook_path.is_file():
+            return None
+        try:
+            def _normalize_triplet(values: Tuple[float, float, float]) -> Optional[Tuple[float, float, float]]:
+                vals = np.array(values, dtype=float)
+                if not np.all(np.isfinite(vals)):
+                    return None
+                vals = np.maximum(vals, 0.0)
+                total = float(np.sum(vals))
+                if total <= 0.0:
+                    return None
+                vals = vals / total
+                return (float(vals[0]), float(vals[1]), float(vals[2]))
+
+            with pd.ExcelFile(workbook_path) as xf:
+                # Stage-1 per-note workbook writes adaptive weights in ``Metrics``.
+                # ``Density_Metrics`` appears in compiled/legacy workbook variants.
+                for sheet in ("Metrics", "Density_Metrics", "Spectral_Density_Metrics"):
+                    if sheet not in xf.sheet_names:
+                        continue
+                    df = xf.parse(sheet_name=sheet, nrows=1)
+                    if df.empty:
+                        continue
+                    row = df.iloc[0]
+
+                    # Canonical adaptive triplet (Phase 1 pure observation).
+                    triplet = _normalize_triplet(
+                        (
+                            float(row.get("pure_observation_w_h", float("nan"))),
+                            float(row.get("pure_observation_w_i", float("nan"))),
+                            float(row.get("pure_observation_w_s", float("nan"))),
+                        )
+                    )
+                    if triplet is not None:
+                        return triplet
+
+                    # Backward-compatible alias fallback.
+                    triplet = _normalize_triplet(
+                        (
+                            float(row.get("harmonic_density_weight", float("nan"))),
+                            float(row.get("inharmonic_density_weight", float("nan"))),
+                            float(row.get("subbass_density_weight", float("nan"))),
+                        )
+                    )
+                    if triplet is not None:
+                        return triplet
+
+                    # Legacy fallback with only model H/I weights.
+                    w_h = float(row.get("model_harmonic_weight", float("nan")))
+                    w_i = float(row.get("model_inharmonic_weight", float("nan")))
+                    if np.isfinite(w_h) and np.isfinite(w_i):
+                        triplet = _normalize_triplet((w_h, w_i, max(0.0, 1.0 - (w_h + w_i))))
+                        if triplet is not None:
+                            return triplet
+
+                    # Last fallback from component-energy ratios.
+                    triplet = _normalize_triplet(
+                        (
+                            float(row.get("harmonic_energy_ratio", float("nan"))),
+                            float(row.get("inharmonic_energy_ratio", float("nan"))),
+                            float(row.get("subbass_energy_ratio", float("nan"))),
+                        )
+                    )
+                    if triplet is not None:
+                        return triplet
+            return None
+        except Exception as exc:
+            log.warning("Could not extract adaptive density feedback from %s: %s", workbook_path, exc)
+            return None
+
+    def _extract_note_density_feedback_diagnostics(self, workbook_path: Path) -> Dict[str, Any]:
+        """Extract Phase 7 obs_wS diagnostics from per-note workbook."""
+        defaults = compute_obs_ws_artifact_diagnostics(
+            pure_observation_w_h=float("nan"),
+            pure_observation_w_i=float("nan"),
+            pure_observation_w_s=float("nan"),
+            component_subbass_energy_ratio=float("nan"),
+            harmonic_energy_sum=float("nan"),
+            subbass_energy_sum=float("nan"),
+            subbass_energy_sum_tier_normalized=float("nan"),
+            subbass_upper_bound_hz=float("nan"),
+            subbass_density_component=float("nan"),
+        )
+        defaults["obs_w_formula_version"] = ""
+        for _k in (
+            "component_strength_h",
+            "component_strength_i",
+            "component_strength_s",
+            "legacy_component_strength_h_v55",
+            "legacy_component_strength_i_v55",
+            "legacy_component_strength_s_v55",
+        ):
+            defaults[_k] = float("nan")
+        if not workbook_path.is_file():
+            return defaults
+        try:
+            row = None
+            with pd.ExcelFile(workbook_path) as xf:
+                for sheet in ("Metrics", "Density_Metrics", "Spectral_Density_Metrics"):
+                    if sheet not in xf.sheet_names:
+                        continue
+                    df = xf.parse(sheet_name=sheet, nrows=1)
+                    if df.empty:
+                        continue
+                    row = df.iloc[0]
+                    if any(k in df.columns for k in ("pure_observation_w_h", "pure_observation_w_i", "pure_observation_w_s")):
+                        break
+            if row is None:
+                return defaults
+
+            # Reuse compile-stage extraction so Phase 1 diagnostics and Density_Metrics
+            # share the same energy-term source semantics.
+            extracted: Dict[str, Any] = {}
+            try:
+                extracted = compile_metrics.extract_density_components_from_per_note_workbook(
+                    workbook_path
+                )
+            except Exception:
+                extracted = {}
+
+            extracted_subbass_sum = extracted.get("subbass_energy_sum", float("nan"))
+            extracted_harm_sum = extracted.get("harmonic_energy_sum", float("nan"))
+            extracted_subbass_sum_tn = extracted.get("subbass_energy_sum_tier_normalized", float("nan"))
+            extracted_tier_source = "per_note_metrics_sheet"
+            try:
+                _tn_val = float(extracted_subbass_sum_tn)
+                if not np.isfinite(_tn_val):
+                    raise ValueError("missing_tier_normalized_sum")
+                extracted_subbass_sum_tn = _tn_val
+                extracted_tier_source = "compile_extractor_tier_normalized_sum"
+            except Exception:
+                try:
+                    from spectral_normalization import n_fft_normalization_factor
+
+                    _n_fft_raw = extracted.get("n_fft", extracted.get("n_fft_effective", float("nan")))
+                    _n_fft = int(float(_n_fft_raw))
+                    _power_factor = n_fft_normalization_factor(
+                        n_fft=_n_fft,
+                        n_fft_reference=8192,
+                        quantity_kind="peak_power_sum",
+                    )
+                    _s_en = float(extracted_subbass_sum)
+                    if np.isfinite(_s_en) and np.isfinite(_power_factor):
+                        extracted_subbass_sum_tn = float(_s_en * _power_factor)
+                        extracted_tier_source = "computed_from_compile_extractor_n_fft_and_subbass_energy_sum"
+                    else:
+                        extracted_subbass_sum_tn = float("nan")
+                        extracted_tier_source = "not_available_missing_subbass_sum_or_n_fft"
+                except Exception:
+                    extracted_subbass_sum_tn = float("nan")
+                    extracted_tier_source = "not_available_missing_subbass_sum_or_n_fft"
+
+            def _pick(*vals: Any) -> float:
+                for v in vals:
+                    try:
+                        fv = float(v)
+                        if np.isfinite(fv):
+                            return fv
+                    except Exception:
+                        continue
+                return float("nan")
+
+            _diag = compute_obs_ws_artifact_diagnostics(
+                pure_observation_w_h=_pick(row.get("pure_observation_w_h", float("nan"))),
+                pure_observation_w_i=_pick(row.get("pure_observation_w_i", float("nan"))),
+                pure_observation_w_s=_pick(row.get("pure_observation_w_s", float("nan"))),
+                component_subbass_energy_ratio=_pick(
+                    extracted.get("component_subbass_energy_ratio", float("nan")),
+                    row.get("component_subbass_energy_ratio", row.get("subbass_energy_ratio", float("nan"))),
+                ),
+                harmonic_energy_sum=_pick(
+                    extracted_harm_sum,
+                    row.get("harmonic_energy_sum", float("nan")),
+                ),
+                subbass_energy_sum=_pick(
+                    extracted_subbass_sum,
+                    row.get("subbass_energy_sum", float("nan")),
+                ),
+                subbass_energy_sum_tier_normalized=_pick(
+                    extracted_subbass_sum_tn,
+                    row.get("subbass_energy_sum_tier_normalized", float("nan")),
+                ),
+                subbass_upper_bound_hz=_pick(
+                    extracted.get("adaptive_subfundamental_cutoff_hz", float("nan")),
+                    row.get("subbass_upper_bound_hz", row.get("subfundamental_cutoff_hz", float("nan"))),
+                ),
+                subbass_density_component=_pick(
+                    extracted.get("subbass_density_sum", float("nan")),
+                    row.get("subbass_density_component", float("nan")),
+                ),
+            )
+            _diag["obs_w_formula_version"] = str(
+                extracted.get(
+                    "obs_w_formula_version",
+                    row.get("obs_w_formula_version", ""),
+                )
+                or ""
+            )
+            for _k in (
+                "component_strength_h",
+                "component_strength_i",
+                "component_strength_s",
+                "legacy_component_strength_h_v55",
+                "legacy_component_strength_i_v55",
+                "legacy_component_strength_s_v55",
+            ):
+                _diag[_k] = _pick(
+                    extracted.get(_k, float("nan")),
+                    row.get(_k, float("nan")),
+                )
+            _diag["subbass_energy_sum_source"] = "compile_extractor_energy_terms"
+            _diag["subbass_energy_sum_tier_normalized_source"] = extracted_tier_source
+            _diag["component_subbass_energy_ratio_source"] = "compile_extractor_energy_terms"
+            return _diag
+        except Exception as exc:
+            log.warning("Could not extract obs_wS diagnostics from %s: %s", workbook_path, exc)
+        return defaults
+
+    def _push_density_feedback_to_ui(
+        self,
+        w_h: float,
+        w_i: float,
+        w_s: float,
+        *,
+        confidence: Optional[float] = None,
+        reliability: Optional[float] = None,
+    ) -> None:
+        """Reflect adaptive weights in GUI entries from worker thread safely."""
+        def _apply() -> None:
+            widgets = (
+                self.entry_density_w_h,
+                self.entry_density_w_i,
+                self.entry_density_w_s,
+            )
+            previous_states = [str(widget.cget("state")) for widget in widgets]
+            for widget in widgets:
+                widget.configure(state="normal")
+            self.entry_density_w_h.delete(0, tk.END)
+            self.entry_density_w_h.insert(0, f"{w_h:.6f}")
+            self.entry_density_w_i.delete(0, tk.END)
+            self.entry_density_w_i.insert(0, f"{w_i:.6f}")
+            self.entry_density_w_s.delete(0, tk.END)
+            self.entry_density_w_s.insert(0, f"{w_s:.6f}")
+            meta_parts: List[str] = []
+            if confidence is not None and np.isfinite(confidence):
+                meta_parts.append(f"conf={float(confidence):.3f}")
+            if reliability is not None and np.isfinite(reliability):
+                meta_parts.append(f"rel={float(reliability):.3f}")
+            meta_txt = f" ({', '.join(meta_parts)})" if meta_parts else ""
+            self.var_runtime_density_profile.set(
+                f"Runtime learned profile: wH={w_h:.4f}, wI={w_i:.4f}, wS={w_s:.4f}{meta_txt}"
+            )
+            for widget, old_state in zip(widgets, previous_states, strict=False):
+                widget.configure(state=old_state)
+
+        self.master.after(0, _apply)
 
     def _open_doc(self, relative_path: str) -> None:
         doc_path = (MAIN_DIR / relative_path).resolve()
@@ -959,9 +1404,15 @@ class RobustOrchestratorApp:
                 return False, f"Tolerance ({tolerance}) should be in range (0, 100] Hz"
 
             density_mode = str(
-                params.get("density_summation_mode", "his_weighted") or "his_weighted"
+                params.get("density_summation_mode", "his_note_adaptive") or "his_note_adaptive"
             ).strip().lower()
-            if density_mode not in {"his_weighted", "harmonic_only", "inharmonic_only", "subbass_only"}:
+            if density_mode not in {
+                "his_weighted",
+                "his_note_adaptive",
+                "harmonic_only",
+                "inharmonic_only",
+                "subbass_only",
+            }:
                 return False, f"Invalid density_summation_mode: {density_mode}"
             for k in (
                 "harmonic_density_weight",
@@ -1039,6 +1490,16 @@ class RobustOrchestratorApp:
             
             manual_mw = bool(self.var_manual_model_weight_override.get())
             i_weight_val = (self.var_i_weight.get() / 100.0) if manual_mw else 0.05
+            density_mode_selected = self._density_mode_internal()
+            if density_mode_selected == "his_note_adaptive":
+                cached_density = getattr(self, "_manual_density_weights", (1.0, 0.5, 0.25))
+                dwh = float(cached_density[0])
+                dwi = float(cached_density[1])
+                dws = float(cached_density[2])
+            else:
+                dwh = float(self.entry_density_w_h.get() or "1.0")
+                dwi = float(self.entry_density_w_i.get() or "0.5")
+                dws = float(self.entry_density_w_s.get() or "0.25")
             params = {
                 'i_weight': i_weight_val,
                 'manual_model_weight_override': manual_mw,
@@ -1056,10 +1517,11 @@ class RobustOrchestratorApp:
                 'kaiser_beta': kaiser_beta,
                 'gaussian_std': gaussian_std,
                 'spectral_masking_enabled': False,  # Physical density workflow: masking not exposed in GUI
-                'density_summation_mode': self._density_mode_internal(),
-                'harmonic_density_weight': float(self.entry_density_w_h.get() or "1.0"),
-                'inharmonic_density_weight': float(self.entry_density_w_i.get() or "0.5"),
-                'subbass_density_weight': float(self.entry_density_w_s.get() or "0.25"),
+                'density_summation_mode': density_mode_selected,
+                'harmonic_density_weight': dwh,
+                'inharmonic_density_weight': dwi,
+                'subbass_density_weight': dws,
+                'enable_adaptive_path_randomization': False,
                 'density_salience_threshold_db': float(self.entry_density_salience_threshold_db.get() or "-45.0"),
                 'density_frequency_ceiling_hz': float(self.entry_density_frequency_ceiling_hz.get() or "5000.0"),
                 'compile': self.var_compile.get(),
@@ -1090,6 +1552,26 @@ class RobustOrchestratorApp:
                 float(params["density_salience_threshold_db"]),
                 float(params["density_frequency_ceiling_hz"]),
             )
+            _wf_cmp = str(params.get("wf", "linear") or "linear").strip().lower()
+            _dst_cmp = float(params.get("density_salience_threshold_db", -45.0))
+            _dceil_cmp = float(params.get("density_frequency_ceiling_hz", 5000.0))
+            _primary = (
+                _wf_cmp == "log"
+                and abs(_dst_cmp - (-45.0)) <= 1e-9
+                and abs(_dceil_cmp - 5000.0) <= 1e-9
+            )
+            if _primary:
+                log.info(
+                    "Comparability profile: PRIMARY (wf=log, threshold=-45 dB, ceiling=5000 Hz)"
+                )
+            else:
+                log.warning(
+                    "Comparability profile: EXPLORATORY (wf=%s, threshold=%.1f dB, ceiling=%.1f Hz). "
+                    "Do not compare directly against primary-profile runs.",
+                    _wf_cmp,
+                    _dst_cmp,
+                    _dceil_cmp,
+                )
             tier_or_fixed = "tier strategy" if bool(params.get("smart", False)) else "fixed FFT"
             log.info("STFT configuration:")
             log.info(
@@ -1132,7 +1614,11 @@ class RobustOrchestratorApp:
                     "H=0.500, I=0.500; final component ratios are computed "
                     "from current spectral analysis (ACTIVATED)."
                 )
-            log.info(f"Frequency Range: [{params['freq_min']:.1f}, {params['freq_max']:.1f}] Hz (ACTIVATED)")
+            log.info(
+                "Global spectral peak-search range: [%.1f, %.1f] Hz (ACTIVATED)",
+                float(params["freq_min"]),
+                float(params["freq_max"]),
+            )
             log.info(f"Magnitude Range: [{params['db_min']:.1f}, {params['db_max']:.1f}] dB (ACTIVATED)")
             log.info(f"Tolerance: {params['tolerance']:.2f} Hz | Adaptive: {params['use_adaptive_tolerance']} (ACTIVATED)")
             log.info(
@@ -1143,6 +1629,10 @@ class RobustOrchestratorApp:
                 params["subbass_density_weight"],
                 params["density_salience_threshold_db"],
                 params["density_frequency_ceiling_hz"],
+            )
+            log.info(
+                "Domain distinction: peak-search range is global STFT detection domain; "
+                "density ceiling is metric integration upper bound."
             )
             log.info("Final density config:")
             log.info("density_summation_mode = %s", params["density_summation_mode"])
@@ -1204,7 +1694,13 @@ class RobustOrchestratorApp:
             log.info("=" * 80)
             
             try:
-                self._process_folder_complete_pipeline(folder, params)
+                self._process_folder_complete_pipeline(
+                    folder,
+                    params,
+                    enable_adaptive_path_randomization=bool(
+                        params.get("enable_adaptive_path_randomization", False)
+                    ),
+                )
                 _summary = self._collect_post_run_summary(folder)
                 if _summary is not None:
                     folder_summaries.append(_summary)
@@ -1302,7 +1798,11 @@ class RobustOrchestratorApp:
             return None
 
     def _process_folder_complete_pipeline(
-        self, folder: Path, params: Dict[str, Any]
+        self,
+        folder: Path,
+        params: Dict[str, Any],
+        *,
+        enable_adaptive_path_randomization: bool = False,
     ) -> None:
         """Run the two-stage pipeline on a single folder.
 
@@ -1327,10 +1827,11 @@ class RobustOrchestratorApp:
         log.info(f"PIPELINE START - FOLDER: {folder.name}")
         log.info("=" * 80)
 
-        folder_files = [
-            f for f in folder.glob("*")
-            if f.suffix.lower() in VALID_AUDIO_EXTENSIONS
-        ]
+        folder_files = build_phase1_file_iteration_order(
+            folder,
+            enable_adaptive_path_randomization=enable_adaptive_path_randomization,
+            random_seed=PHASE_1_ADAPTIVE_RANDOMIZATION_SEED,
+        )
         if not folder_files:
             log.warning(f"No audio files in folder: {folder.name}")
             return
@@ -1339,6 +1840,12 @@ class RobustOrchestratorApp:
             f"Found {len(folder_files)} audio file(s) in folder: "
             f"{folder.name}"
         )
+        if enable_adaptive_path_randomization:
+            log.info(
+                "Phase 1 adaptive path randomization enabled "
+                "(seed=%d).",
+                PHASE_1_ADAPTIVE_RANDOMIZATION_SEED,
+            )
 
         if str(MAIN_DIR) not in sys.path:
             sys.path.insert(0, str(MAIN_DIR))
@@ -1416,7 +1923,7 @@ class RobustOrchestratorApp:
         log.info("Final density config:")
         log.info(
             "density_summation_mode = %s",
-            str(params.get("density_summation_mode", "his_weighted") or "his_weighted"),
+            str(params.get("density_summation_mode", "his_note_adaptive") or "his_note_adaptive"),
         )
         log.info("wH = %.6f", float(params.get("harmonic_density_weight", 1.0)))
         log.info("wI = %.6f", float(params.get("inharmonic_density_weight", 0.5)))
@@ -1432,11 +1939,63 @@ class RobustOrchestratorApp:
 
         successful_files = 0
         failed_files = 0
+        density_mode_runtime = str(
+            params.get("density_summation_mode", "his_note_adaptive") or "his_note_adaptive"
+        ).strip().lower()
+        adaptive_feedback_enabled = density_mode_runtime in {
+            "his_note_adaptive",
+            "his_adaptive",
+            "note_adaptive",
+            "adaptive",
+            "auto_note",
+        }
+        if adaptive_feedback_enabled:
+            self.master.after(
+                0,
+                lambda: self.var_runtime_density_profile.set(
+                    "Runtime learned profile: adaptive feed-forward active"
+                ),
+            )
+        if adaptive_feedback_enabled:
+            # In adaptive mode, start from a neutral prior instead of fixed GUI
+            # percentages so the run is driven by extracted note evidence.
+            running_density_w_h = 1.0 / 3.0
+            running_density_w_i = 1.0 / 3.0
+            running_density_w_s = 1.0 / 3.0
+        else:
+            running_density_w_h = float(params.get("harmonic_density_weight", 1.0))
+            running_density_w_i = float(params.get("inharmonic_density_weight", 0.5))
+            running_density_w_s = float(params.get("subbass_density_weight", 0.25))
+        _running_vec = np.maximum(
+            np.array([running_density_w_h, running_density_w_i, running_density_w_s], dtype=float),
+            0.0,
+        )
+        _running_sum = float(np.sum(_running_vec))
+        if _running_sum > 0.0:
+            _running_vec = _running_vec / _running_sum
+        else:
+            _running_vec = np.array([0.5, 0.3, 0.2], dtype=float)
+        running_density_w_h = float(_running_vec[0])
+        running_density_w_i = float(_running_vec[1])
+        running_density_w_s = float(_running_vec[2])
+        adaptive_engine: Optional[AdaptiveDensityEngine] = None
+        if adaptive_feedback_enabled:
+            adaptive_engine = AdaptiveDensityEngine(
+                initial_profile=(
+                    running_density_w_h,
+                    running_density_w_i,
+                    running_density_w_s,
+                ),
+                initial_strength=8.0,
+                forgetting=0.02,
+                divergence_temperature=0.18,
+            )
+        adaptive_profile_history: List[Dict[str, Any]] = []
 
         log.info("=" * 80)
         log.info(
-            f"STAGE 1: Per-note spectral analysis "
-            f"({len(folder_files)} file(s))"
+            f"PHASE 1 (DISCOVERY): Per-note spectral analysis "
+            f"for natural H/I/S contribution discovery ({len(folder_files)} file(s))"
         )
         log.info("=" * 80)
 
@@ -1597,6 +2156,13 @@ class RobustOrchestratorApp:
                     pr.gaussian_std = gaussian_std
 
                 try:
+                    if adaptive_feedback_enabled:
+                        log.info(
+                            "  Adaptive prior used for this note: wH=%.4f, wI=%.4f, wS=%.4f",
+                            running_density_w_h,
+                            running_density_w_i,
+                            running_density_w_s,
+                        )
                     pr.apply_filters_and_generate_data(
                         freq_min=cutoff,
                         freq_max=params['freq_max'],
@@ -1625,10 +2191,10 @@ class RobustOrchestratorApp:
                         time_avg=params['avg'],
                         tier=tier_name,
                         spectral_masking_enabled=False,
-                        density_summation_mode=params.get("density_summation_mode", "his_weighted"),
-                        harmonic_density_weight=float(params.get("harmonic_density_weight", 1.0)),
-                        inharmonic_density_weight=float(params.get("inharmonic_density_weight", 0.5)),
-                        subbass_density_weight=float(params.get("subbass_density_weight", 0.25)),
+                        density_summation_mode=params.get("density_summation_mode", "his_note_adaptive"),
+                        harmonic_density_weight=float(running_density_w_h),
+                        inharmonic_density_weight=float(running_density_w_i),
+                        subbass_density_weight=float(running_density_w_s),
                         density_salience_threshold_db=float(params.get("density_salience_threshold_db", -45.0)),
                         density_frequency_ceiling_hz=float(params.get("density_frequency_ceiling_hz", 5000.0)),
                         use_tsne=params.get('use_tsne', False),
@@ -1660,6 +2226,125 @@ class RobustOrchestratorApp:
                             "  Note token absent: skipping per-note "
                             "workbook existence check."
                         )
+
+                    if adaptive_feedback_enabled:
+                        feedback_workbook: Optional[Path] = None
+                        if extracted_note:
+                            candidate = (parent_output_dir / extracted_note / "spectral_analysis.xlsx")
+                            if candidate.is_file():
+                                feedback_workbook = candidate
+                        if feedback_workbook is None:
+                            found = sorted(parent_output_dir.rglob("spectral_analysis.xlsx"))
+                            if found:
+                                feedback_workbook = found[0]
+
+                        if feedback_workbook is not None:
+                            pure_observation_triplet = self._extract_note_density_feedback(feedback_workbook)
+                            if pure_observation_triplet is not None:
+                                obs_ws_diag = self._extract_note_density_feedback_diagnostics(feedback_workbook)
+                                if adaptive_engine is not None:
+                                    upd = adaptive_engine.update(
+                                        pure_observation_triplet,
+                                        evidence_strength=1.0,
+                                    )
+                                    running_density_w_h, running_density_w_i, running_density_w_s = upd.profile
+                                else:
+                                    running_density_w_h, running_density_w_i, running_density_w_s = pure_observation_triplet
+                                params["harmonic_density_weight"] = running_density_w_h
+                                params["inharmonic_density_weight"] = running_density_w_i
+                                params["subbass_density_weight"] = running_density_w_s
+                                self._push_density_feedback_to_ui(
+                                    running_density_w_h,
+                                    running_density_w_i,
+                                    running_density_w_s,
+                                    confidence=(upd.confidence if adaptive_engine is not None else None),
+                                    reliability=(upd.reliability if adaptive_engine is not None else None),
+                                )
+                                adaptive_profile_history.append(
+                                    {
+                                        "audio_file": audio_file.name,
+                                        "note_token": extracted_note or "",
+                                        "f0_hz_from_filename": float(hz) if np.isfinite(hz) else float("nan"),
+                                        "obs_wH": float(pure_observation_triplet[0]),
+                                        "obs_wI": float(pure_observation_triplet[1]),
+                                        "obs_wS": float(pure_observation_triplet[2]),
+                                        "obs_w_formula_version": obs_ws_diag.get(
+                                            "obs_w_formula_version", ""
+                                        ),
+                                        "wH": running_density_w_h,
+                                        "wI": running_density_w_i,
+                                        "wS": running_density_w_s,
+                                        "confidence": (
+                                            float(upd.confidence) if adaptive_engine is not None else float("nan")
+                                        ),
+                                        "uncertainty": (
+                                            float(upd.uncertainty) if adaptive_engine is not None else float("nan")
+                                        ),
+                                        "reliability": (
+                                            float(upd.reliability) if adaptive_engine is not None else float("nan")
+                                        ),
+                                        "js_divergence": (
+                                            float(upd.js_divergence) if adaptive_engine is not None else float("nan")
+                                        ),
+                                        "source_workbook": str(feedback_workbook),
+                                        "pure_observation_w_h": obs_ws_diag.get("pure_observation_w_h"),
+                                        "pure_observation_w_i": obs_ws_diag.get("pure_observation_w_i"),
+                                        "pure_observation_w_s": obs_ws_diag.get("pure_observation_w_s"),
+                                        "component_strength_h": obs_ws_diag.get("component_strength_h"),
+                                        "component_strength_i": obs_ws_diag.get("component_strength_i"),
+                                        "component_strength_s": obs_ws_diag.get("component_strength_s"),
+                                        "legacy_component_strength_h_v55": obs_ws_diag.get(
+                                            "legacy_component_strength_h_v55"
+                                        ),
+                                        "legacy_component_strength_i_v55": obs_ws_diag.get(
+                                            "legacy_component_strength_i_v55"
+                                        ),
+                                        "legacy_component_strength_s_v55": obs_ws_diag.get(
+                                            "legacy_component_strength_s_v55"
+                                        ),
+                                        "subbass_density_component": obs_ws_diag.get("subbass_density_component"),
+                                        "subbass_energy_ratio": obs_ws_diag.get("subbass_energy_ratio"),
+                                        "subbass_energy_sum": obs_ws_diag.get("subbass_energy_sum"),
+                                        "subbass_energy_sum_tier_normalized": obs_ws_diag.get(
+                                            "subbass_energy_sum_tier_normalized"
+                                        ),
+                                        "subbass_energy_sum_source": obs_ws_diag.get(
+                                            "subbass_energy_sum_source"
+                                        ),
+                                        "subbass_energy_sum_tier_normalized_source": obs_ws_diag.get(
+                                            "subbass_energy_sum_tier_normalized_source"
+                                        ),
+                                        "component_subbass_energy_ratio_source": obs_ws_diag.get(
+                                            "component_subbass_energy_ratio_source"
+                                        ),
+                                        "subbass_upper_bound_hz": obs_ws_diag.get("subbass_upper_bound_hz"),
+                                        "subbass_component_interpretation": obs_ws_diag.get(
+                                            "subbass_component_interpretation"
+                                        ),
+                                        "obs_wS_artifact_flag": obs_ws_diag.get("obs_wS_artifact_flag"),
+                                        "obs_wS_artifact_reason": obs_ws_diag.get("obs_wS_artifact_reason"),
+                                        "obs_wS_diagnostic_source": obs_ws_diag.get("obs_wS_diagnostic_source"),
+                                    }
+                                )
+                                log.info(
+                                    "  Adaptive per-note density feedback learned and propagated: "
+                                    "wH=%.4f, wI=%.4f, wS=%.4f",
+                                    running_density_w_h,
+                                    running_density_w_i,
+                                    running_density_w_s,
+                                )
+                                if adaptive_engine is not None:
+                                    log.info(
+                                        "  Adaptive diagnostics: conf=%.3f rel=%.3f js=%.4f",
+                                        float(upd.confidence),
+                                        float(upd.reliability),
+                                        float(upd.js_divergence),
+                                    )
+                            else:
+                                log.warning(
+                                    "  Adaptive feedback unavailable from workbook: %s",
+                                    feedback_workbook,
+                                )
                 except Exception as analysis_error:
                     log.error(
                         "  [fail] apply_filters_and_generate_data raised: "
@@ -1684,6 +2369,46 @@ class RobustOrchestratorApp:
                 log.error(traceback.format_exc())
                 continue
 
+        phase1_application_profile: Optional[Dict[str, float]] = None
+        if adaptive_feedback_enabled and adaptive_profile_history:
+            try:
+                history_df = pd.DataFrame(adaptive_profile_history)
+                history_path = analysis_results_dir / "phase1_discovered_density_profiles.csv"
+                history_df.to_csv(history_path, index=False, encoding="utf-8")
+                log.info("Phase 1 discovery profile history exported: %s", history_path)
+                if adaptive_engine is not None:
+                    state_path = analysis_results_dir / "adaptive_density_engine_state.json"
+                    state_path.write_text(
+                        json.dumps(adaptive_engine.state_dict(), indent=2),
+                        encoding="utf-8",
+                    )
+                    log.info("Adaptive engine state exported: %s", state_path)
+                    st = adaptive_engine.state_dict()
+                    phase1_application_profile = {
+                        "harmonic_density_weight": float(st.get("profile_h", running_density_w_h)),
+                        "inharmonic_density_weight": float(st.get("profile_i", running_density_w_i)),
+                        "subbass_density_weight": float(st.get("profile_s", running_density_w_s)),
+                        "confidence": float(st.get("confidence", 0.0)),
+                        "uncertainty": float(st.get("uncertainty", 1.0)),
+                    }
+                else:
+                    phase1_application_profile = {
+                        "harmonic_density_weight": float(running_density_w_h),
+                        "inharmonic_density_weight": float(running_density_w_i),
+                        "subbass_density_weight": float(running_density_w_s),
+                        "confidence": float("nan"),
+                        "uncertainty": float("nan"),
+                    }
+                if phase1_application_profile is not None:
+                    profile_path = analysis_results_dir / "phase2_application_profile.json"
+                    profile_path.write_text(
+                        json.dumps(phase1_application_profile, indent=2),
+                        encoding="utf-8",
+                    )
+                    log.info("Phase 2 application profile exported: %s", profile_path)
+            except Exception as history_exc:
+                log.warning("Could not export adaptive profile history: %s", history_exc)
+
         log.info("=" * 80)
         log.info(
             f"STAGE 1 COMPLETE - "
@@ -1703,8 +2428,23 @@ class RobustOrchestratorApp:
             return
 
         log.info("=" * 80)
-        log.info("STAGE 2: Compilation (compiled_density_metrics.xlsx)")
+        log.info("PHASE 2 (APPLICATION): Apply discovered profile to downstream compilation")
         log.info("=" * 80)
+        if phase1_application_profile is not None:
+            log.info(
+                "Applying discovered Phase 1 profile in Phase 2: "
+                "wH=%.4f, wI=%.4f, wS=%.4f | conf=%s",
+                float(phase1_application_profile["harmonic_density_weight"]),
+                float(phase1_application_profile["inharmonic_density_weight"]),
+                float(phase1_application_profile["subbass_density_weight"]),
+                (
+                    f"{float(phase1_application_profile['confidence']):.3f}"
+                    if np.isfinite(float(phase1_application_profile["confidence"]))
+                    else "n/a"
+                ),
+            )
+        else:
+            log.info("No discovered profile available; using runtime fallback profile.")
 
         try:
             stage2_fallback_compile_attempted = False
@@ -1743,8 +2483,21 @@ class RobustOrchestratorApp:
                 "output_path": str(compiled_output_path),
                 "file_pattern": file_pattern,
                 "include_pca": True,
-                "harmonic_weight": harmonic_weight,
-                "inharmonic_weight": inharmonic_weight,
+                "harmonic_weight": (
+                    float(phase1_application_profile["harmonic_density_weight"])
+                    if phase1_application_profile is not None
+                    else harmonic_weight
+                ),
+                "inharmonic_weight": (
+                    float(phase1_application_profile["inharmonic_density_weight"])
+                    if phase1_application_profile is not None
+                    else inharmonic_weight
+                ),
+                "subbass_weight": (
+                    float(phase1_application_profile["subbass_density_weight"])
+                    if phase1_application_profile is not None
+                    else None
+                ),
                 "weight_function": params["wf"],
                 "use_tsne": params.get("use_tsne", False),
                 "use_umap": params.get("use_umap", False),
@@ -1760,6 +2513,26 @@ class RobustOrchestratorApp:
                     "legacy_pipeline_used": file_pattern.lower().endswith(".json"),
                     "publication_output_allowed": not file_pattern.lower().endswith(
                         ".json"
+                    ),
+                    "density_runtime_profile_h": float(running_density_w_h),
+                    "density_runtime_profile_i": float(running_density_w_i),
+                    "density_runtime_profile_s": float(running_density_w_s),
+                    "density_runtime_profile_mode": (
+                        "adaptive_online_engine" if adaptive_feedback_enabled else "manual_or_fixed"
+                    ),
+                    "density_runtime_profile_confidence": (
+                        (
+                            float(phase1_application_profile["confidence"])
+                            if phase1_application_profile is not None
+                            else (float(adaptive_engine.confidence()) if adaptive_engine is not None else None)
+                        )
+                    ),
+                    "density_runtime_profile_uncertainty": (
+                        (
+                            float(phase1_application_profile["uncertainty"])
+                            if phase1_application_profile is not None
+                            else (float(adaptive_engine.uncertainty()) if adaptive_engine is not None else None)
+                        )
                     ),
                 },
             }

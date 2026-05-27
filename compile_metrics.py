@@ -35,6 +35,8 @@ import hashlib
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from subbass_policy import SubBassPolicy
+from spectral_normalization import n_fft_normalization_factor
 
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -126,7 +128,6 @@ def _ensure_adaptive_subfundamental_cutoff(row: Dict[str, Any]) -> Dict[str, Any
     from low_frequency_policy import (
         LOW_FREQUENCY_POLICY_VERSION,
         SUBFUNDAMENTAL_CUTOFF_SELECTION_RULE,
-        calculate_adaptive_subfundamental_cutoff_hz,
     )
 
     def _to_float(x: Any) -> float:
@@ -169,9 +170,12 @@ def _ensure_adaptive_subfundamental_cutoff(row: Dict[str, Any]) -> Dict[str, Any
             row.get("low_frequency_policy_version") or LOW_FREQUENCY_POLICY_VERSION
         )
         if math.isfinite(f0) and f0 > 0.0:
-            g_full = calculate_adaptive_subfundamental_cutoff_hz(
-                f0, leakage_guard_cutoff_hz=leak_arg
-            )
+            g_full = {
+                "adaptive_subfundamental_cutoff_hz": float(
+                    SubBassPolicy.upper_bound_hz(f0_hz=f0, sr_hz=44100.0, n_fft=0)
+                ),
+                "subfundamental_cutoff_selected_by": "subbass_policy_unified",
+            }
             for k, v in g_full.items():
                 if k in (
                     "f0_final_hz",
@@ -197,13 +201,20 @@ def _ensure_adaptive_subfundamental_cutoff(row: Dict[str, Any]) -> Dict[str, Any
         return row
 
     if math.isfinite(f0) and f0 > 0.0:
-        guard = calculate_adaptive_subfundamental_cutoff_hz(
-            f0, leakage_guard_cutoff_hz=leak_arg
+        resolved = float(SubBassPolicy.upper_bound_hz(f0_hz=f0, sr_hz=44100.0, n_fft=0))
+        row["adaptive_subfundamental_cutoff_hz"] = resolved
+        row["subfundamental_margin_percent"] = float("nan")
+        row["percentage_subfundamental_cutoff_hz"] = float("nan")
+        row["leakage_guard_cutoff_hz"] = float(leak_arg) if leak_arg is not None else float("nan")
+        row["min_floor_hz"] = float("nan")
+        row["max_fraction_of_f0"] = float("nan")
+        row["effective_subfundamental_margin_percent"] = float(
+            100.0 * (1.0 - resolved / f0)
         )
-        for k, v in guard.items():
-            if k == "f0_final_hz":
-                continue
-            row[k] = v
+        row["subfundamental_guard_valid"] = True
+        row["subfundamental_guard_policy"] = "subbass_policy_unified"
+        row["subfundamental_cutoff_selection_rule"] = str(SUBFUNDAMENTAL_CUTOFF_SELECTION_RULE)
+        row["subfundamental_cutoff_selected_by"] = "subbass_policy_unified"
         row["adaptive_subfundamental_cutoff_source"] = (
             "derived_at_compile_stage_from_f0_final_hz"
         )
@@ -270,8 +281,11 @@ DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
     "discrete_metric_d24",
     "effective_partial_density",
     "harmonic_energy_sum",
+    "harmonic_energy_sum_tier_normalized",
     "inharmonic_energy_sum",
+    "inharmonic_energy_sum_tier_normalized",
     "subbass_energy_sum",
+    "subbass_energy_sum_tier_normalized",
     "total_component_energy",
     "harmonic_energy_ratio",
     "inharmonic_energy_ratio",
@@ -328,6 +342,17 @@ DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
     "inharmonic_density_weight",
     "subbass_density_weight",
     "density_summation_mode",
+    "f0_epistemic_status",
+    "f0_final_source",
+    "valid_for_primary_statistics",
+    "density_confidence",
+    "f0_confidence",
+    "harmonic_assignment_confidence",
+    "spectral_stability_confidence",
+    "qc_status",
+    "outlier_ratio_max_to_mean",
+    "outlier_policy_applied",
+    "sethares_status",
     "density_salience_threshold_db",
     "density_frequency_ceiling_hz",
     "core_harmonic_energy_ratio",
@@ -335,6 +360,11 @@ DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
     "core_subbass_energy_ratio",
     "harmonic_effective_power_density_normalized",
     "energy_weighted_component_density_diagnostic",
+    "effective_components_weighted_diagnostic",
+    "diagnostic_effective_components_h",
+    "diagnostic_effective_components_r",
+    "diagnostic_effective_components_s",
+    "tier_consistency_status",
     "spectral_entropy",
     "density_source_formula",
     "density_normalization_scope",
@@ -386,6 +416,8 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "component_harmonic_energy_ratio",
     "component_inharmonic_energy_ratio",
     "component_subbass_energy_ratio",
+    "density_metric_raw_per_note_balance",
+    "density_weights_source",
     "acoustic_f0_status",
     "f0_used_for_density_source",
     "harmonic_occupancy_detected_order_count",
@@ -433,6 +465,16 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "Harmonic Partials sum",
     "Inharmonic Partials sum",
     "Sub-bass sum",
+    "harmonic_amplitude_sum",
+    "harmonic_amplitude_sum_tier_normalized",
+    "inharmonic_amplitude_sum",
+    "inharmonic_amplitude_sum_tier_normalized",
+    "subbass_amplitude_sum",
+    "subbass_amplitude_sum_tier_normalized",
+    "harmonic_energy_sum_tier_normalized",
+    "inharmonic_energy_sum_tier_normalized",
+    "subbass_energy_sum_tier_normalized",
+    "tier_consistency_status",
     "Total sum",
     "source_file_name",
     "weight_function",
@@ -451,6 +493,95 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "inharmonic_spectrum_count",
     "subbass_spectrum_count",
 ]
+
+PHASE7_INHARMONICITY_COMPILED_COLUMNS: List[str] = [
+    "inharmonicity_coefficient_B",
+    "inharmonicity_fit_residual_std_cents",
+    "inharmonicity_fit_status",
+    "inharmonicity_fit_method",
+    "inharmonicity_model_applied",
+    "inharmonicity_fit_source",
+    "inharmonicity_validation_warning",
+]
+
+PHASE7_OBSERVATION_EXPOSURE_COLUMNS: List[str] = [
+    "obs_w_formula_version",
+    "pure_observation_w_h",
+    "pure_observation_w_i",
+    "pure_observation_w_s",
+    "component_strength_h",
+    "component_strength_i",
+    "component_strength_s",
+    "legacy_component_strength_h_v55",
+    "legacy_component_strength_i_v55",
+    "legacy_component_strength_s_v55",
+]
+
+PHASE5_DESCRIPTOR_BASE_COLUMNS: List[str] = [
+    "spectral_centroid_hz",
+    "spectral_spread_hz",
+    "spectral_skewness",
+    "spectral_kurtosis",
+    "spectral_irregularity",
+    "tristimulus_1_fundamental",
+    "tristimulus_2_low_harmonics_2_to_4",
+    "tristimulus_3_high_harmonics_5_plus",
+    "spectral_flatness",
+    "spectral_rolloff_hz_85",
+    "spectral_rolloff_hz_95",
+    "roughness_aures_1985",
+    "erb_weighted_spectral_density",
+]
+PHASE5_SEGMENT_SUFFIXES: Tuple[str, ...] = (
+    "_on_attack",
+    "_on_sustain",
+    "_on_release",
+)
+PHASE5_SEGMENTED_DENSITY_COMPONENT_COLUMNS: List[str] = [
+    "harmonic_density_component_on_attack",
+    "harmonic_density_component_on_sustain",
+    "harmonic_density_component_on_release",
+    "inharmonic_density_component_on_attack",
+    "inharmonic_density_component_on_sustain",
+    "inharmonic_density_component_on_release",
+    "subbass_density_component_on_attack",
+    "subbass_density_component_on_sustain",
+    "subbass_density_component_on_release",
+]
+PHASE5_ALL_DESCRIPTOR_COLUMNS: List[str] = (
+    PHASE5_DESCRIPTOR_BASE_COLUMNS
+    + [f"{c}_on_sustain_segment" for c in PHASE5_DESCRIPTOR_BASE_COLUMNS]
+    + [f"{c}{s}" for c in PHASE5_DESCRIPTOR_BASE_COLUMNS for s in PHASE5_SEGMENT_SUFFIXES]
+    + PHASE5_SEGMENTED_DENSITY_COMPONENT_COLUMNS
+)
+
+for _col in PHASE5_ALL_DESCRIPTOR_COLUMNS:
+    if _col not in DENSITY_METRICS_MAIN_COLUMNS:
+        DENSITY_METRICS_MAIN_COLUMNS.append(_col)
+    if _col not in DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS:
+        DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS.append(_col)
+
+for _col in PHASE7_INHARMONICITY_COMPILED_COLUMNS:
+    if _col not in DENSITY_METRICS_MAIN_COLUMNS:
+        DENSITY_METRICS_MAIN_COLUMNS.append(_col)
+    if _col not in DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS:
+        DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS.append(_col)
+
+for _col in PHASE7_OBSERVATION_EXPOSURE_COLUMNS:
+    if _col not in DENSITY_METRICS_MAIN_COLUMNS:
+        DENSITY_METRICS_MAIN_COLUMNS.append(_col)
+    if _col not in DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS:
+        DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS.append(_col)
+
+for _col in (
+    "mir_descriptors_available",
+    "mir_descriptors_source",
+    "mir_descriptors_missing_reason",
+):
+    if _col not in DENSITY_METRICS_MAIN_COLUMNS:
+        DENSITY_METRICS_MAIN_COLUMNS.append(_col)
+    if _col not in DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS:
+        DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS.append(_col)
 
 # Stage 1 harmonic-spectrum candidate density metric. Independent of
 # Power_raw / component_* ratios / external H/I weights. Surfaced as an
@@ -493,6 +624,8 @@ DENSITY_METRICS_WEIGHTED_DENSITY_COLUMNS: frozenset[str] = frozenset(
         "weighted_inharmonic_component",
         "weighted_subbass_component",
         "density_weighted_sum",
+    "density_weighted_sum_alias_of",
+    "density_weighted_sum_semantic_status",
         "density_log_weighted",
         "density_log_formula",
     }
@@ -506,6 +639,9 @@ DENSITY_METRICS_WEIGHT_FUNCTION_COLUMNS: frozenset[str] = frozenset(
     {
         "note_source",
         "density_weight_function",
+        "density_metric_name",
+        "density_metric_basis",
+        "density_metric_physical_status",
         "harmonic_density_sum",
         "inharmonic_density_sum",
         "subbass_density_sum",
@@ -532,6 +668,47 @@ DENSITY_METRICS_DEBUG_OPTIONAL_COLUMNS: frozenset[str] = frozenset(
 
 # Legacy workbooks may still carry unique_harmonic_order_count; it is accepted by the validator when present.
 DENSITY_METRICS_LEGACY_OPTIONAL_COLUMNS: frozenset[str] = frozenset({"unique_harmonic_order_count"})
+
+# Epistemic/QC contract columns (scientific-status control layer).
+DENSITY_METRICS_EPISTEMIC_COLUMNS: frozenset[str] = frozenset(
+    {
+        "density_metric_name",
+        "density_metric_basis",
+        "density_metric_physical_status",
+        "f0_epistemic_status",
+        "f0_validation_mode",
+        "nominal_prior_hz",
+        "f0_candidate_hz",
+        "f0_deviation_cents",
+        "low_order_match_count",
+        "odd_harmonic_match_count",
+        "even_harmonic_match_count",
+        "median_abs_error_cents",
+        "p90_abs_error_cents",
+        "harmonic_comb_score",
+        "f0_validation_max_hz",
+        "valid_for_primary_statistics",
+        "density_confidence",
+        "f0_confidence",
+        "harmonic_assignment_confidence",
+        "spectral_stability_confidence",
+        "qc_status",
+        "outlier_ratio_max_to_mean",
+        "outlier_policy_applied",
+        "density_winsorized",
+        "density_median_based",
+        "density_trimmed_mean",
+        "sethares_status",
+        "sethares_value_status",
+        "sethares_curve_status",
+        "sethares_plot_status",
+        "analysis_parameter_profile_id",
+        "is_primary_comparable_profile",
+        "primary_comparable_profile_definition",
+        "density_weighted_sum_alias_of",
+        "density_weighted_sum_semantic_status",
+    }
+)
 
 # SEMANTIC HARDENING — PCA exports must include ONLY metrics marked
 # ``independent_for_pca=true`` in ``metrics_dictionary.json``. Algebraic
@@ -590,6 +767,7 @@ DENSITY_METRICS_ALLOWED_COLUMNS: frozenset = (
     | DENSITY_METRICS_HARMONIC_CANDIDATE_COLUMNS
     | DENSITY_METRICS_WEIGHTED_DENSITY_COLUMNS
     | DENSITY_METRICS_WEIGHT_FUNCTION_COLUMNS
+    | DENSITY_METRICS_EPISTEMIC_COLUMNS
 )
 
 # Explicit forbidden labels / patterns (defence in depth if upstream frames are wide).
@@ -641,6 +819,23 @@ DENSITY_METRICS_FORBIDDEN_EXACT_LOWER: frozenset = frozenset(
     {"window", "n_fft", "hop_length", "hop length", "fft size", "zero padding"}
 )
 
+# Strict aliases are preserved for back-compat, but moved out of the
+# primary metrics sheet to keep the main table analytically narrow.
+STRICT_LEGACY_ALIAS_COLUMNS: frozenset[str] = frozenset(
+    {
+        "harmonic_energy_ratio",
+        "inharmonic_energy_ratio",
+        "subbass_energy_ratio",
+        "density_weighted_sum_alias_of",
+        "inharmonic_bin_count_deprecated_legacy_alias",
+        "inharmonic_candidate_count_deprecated_legacy_alias",
+        "inharmonic_peak_count_deprecated_legacy_alias",
+        "harmonic_peak_count_deprecated_legacy_alias",
+        "subbass_peak_count_deprecated_legacy_alias",
+        "total_detected_peak_count_deprecated_legacy_alias",
+    }
+)
+
 
 def density_metric_column_is_forbidden(name: str) -> bool:
     """True if ``name`` must not appear on ``Density_Metrics``."""
@@ -654,6 +849,24 @@ def density_metric_column_is_forbidden(name: str) -> bool:
     if low in DENSITY_METRICS_FORBIDDEN_EXACT_LOWER or n in ("Window", "N FFT", "Hop Length"):
         return True
     return False
+
+
+def _split_strict_alias_columns(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Return ``(main_df, aliases_df)`` with strict aliases separated."""
+    if df is None or df.empty:
+        return df, pd.DataFrame()
+    alias_cols: List[str] = []
+    for col in df.columns:
+        low = str(col).strip().lower()
+        if col in STRICT_LEGACY_ALIAS_COLUMNS or "deprecated_legacy_alias" in low:
+            alias_cols.append(col)
+    alias_cols = list(dict.fromkeys(alias_cols))
+    if not alias_cols:
+        return df, pd.DataFrame()
+    id_cols = [c for c in ("Note", "Filename", "note_file", "source_file") if c in df.columns]
+    aliases_df = df[[*id_cols, *alias_cols]].copy()
+    main_df = df.drop(columns=alias_cols, errors="ignore").copy()
+    return main_df, aliases_df
 
 
 def _finalize_analysis_metadata_for_workbook(
@@ -868,7 +1081,9 @@ def _build_compile_guide_dataframe(meta_flat: Dict[str, Any], density_columns: L
     row(
         "READ FIRST — publication policy",
         "Where are the publication-grade metrics?",
-        "Use **Canonical_Metrics**. Diagnostic_Metrics, Density_Metrics and "
+        "Use **Canonical_Primary_Filtered** for primary inferential/descriptive statistics "
+        "(QC/f0 filtered subset) and **Canonical_Metrics** for full exploratory inventory. "
+        "Diagnostic_Metrics, Density_Metrics and "
         "Legacy_Compatibility are intermediate / back-compat sheets and MUST "
         "NOT be cited as final scientific outputs. See "
         "metrics_dictionary.json (status='canonical'/'diagnostic'/'legacy', "
@@ -876,8 +1091,15 @@ def _build_compile_guide_dataframe(meta_flat: Dict[str, Any], density_columns: L
     )
     row(
         "READ FIRST — publication policy",
+        "Primary filtering rule",
+        "Canonical_Primary_Filtered applies valid_for_primary_statistics=True "
+        "(and, when present, is_primary_comparable_profile=True). "
+        "Use this sheet for primary statistics; use Canonical_Metrics for full exploratory context.",
+    )
+    row(
+        "READ FIRST — publication policy",
         "Density_Metrics sheet status",
-        "For final analysis use Canonical_Metrics. Density_Metrics is "
+        "For final analysis use Canonical_Primary_Filtered / Canonical_Metrics. Density_Metrics is "
         "preserved for backward compatibility and is not the "
         "publication-grade table.",
     )
@@ -1140,6 +1362,68 @@ def _prepare_df_for_density_export(df: pd.DataFrame) -> pd.DataFrame:
     na soma) for the compiled ``Density_Metrics`` sheet.
     """
     out = df.copy()
+
+    tier_sum_specs: Dict[str, str] = {
+        "harmonic_amplitude_sum": "peak_amplitude_sum",
+        "inharmonic_amplitude_sum": "peak_amplitude_sum",
+        "subbass_amplitude_sum": "peak_amplitude_sum",
+        "harmonic_energy_sum": "peak_power_sum",
+        "inharmonic_energy_sum": "peak_power_sum",
+        "subbass_energy_sum": "peak_power_sum",
+    }
+
+    def _resolve_nfft_for_row(r: pd.Series) -> Optional[int]:
+        for key in ("n_fft", "N FFT", "n_fft_effective"):
+            if key not in out.columns:
+                continue
+            try:
+                val = float(r.get(key))
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(val) and val > 0.0:
+                return int(val)
+        return None
+
+    if any(col in out.columns for col in tier_sum_specs):
+        nfft_series = out.apply(_resolve_nfft_for_row, axis=1)
+        for raw_col, quantity_kind in tier_sum_specs.items():
+            norm_col = f"{raw_col}_tier_normalized"
+            if raw_col not in out.columns:
+                out[norm_col] = np.nan
+                continue
+            raw_values = pd.to_numeric(out[raw_col], errors="coerce")
+            norm_values: List[float] = []
+            for idx, val in enumerate(raw_values.tolist()):
+                if not pd.notna(val):
+                    norm_values.append(float("nan"))
+                    continue
+                nfft = nfft_series.iloc[idx]
+                if nfft is None:
+                    norm_values.append(float("nan"))
+                    continue
+                norm_values.append(
+                    float(
+                        float(val)
+                        * n_fft_normalization_factor(
+                            n_fft=int(nfft),
+                            n_fft_reference=8192,
+                            quantity_kind=quantity_kind,
+                        )
+                    )
+                )
+            out[norm_col] = norm_values
+
+        status = pd.Series("all_tiers_normalised", index=out.index, dtype=object)
+        raw_present_any = pd.Series(False, index=out.index)
+        for raw_col in tier_sum_specs:
+            if raw_col not in out.columns:
+                continue
+            norm_col = f"{raw_col}_tier_normalized"
+            raw_notna = pd.to_numeric(out[raw_col], errors="coerce").notna()
+            raw_present_any = raw_present_any | raw_notna
+            status = status.mask(raw_notna & out[norm_col].isna(), "missing_tier_normalized_companion")
+        status = status.mask(~raw_present_any, "no_cross_note_sums_available")
+        out["tier_consistency_status"] = status.astype(str)
     if "spectral_entropy" not in out.columns and "Spectral Entropy" in out.columns:
         out["spectral_entropy"] = pd.to_numeric(out["Spectral Entropy"], errors="coerce")
     if "Spectral Entropy" not in out.columns and "spectral_entropy" in out.columns:
@@ -1206,7 +1490,13 @@ def _prepare_df_for_density_export(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def _add_canonical_and_global_density_columns(df: pd.DataFrame) -> pd.DataFrame:
+def _add_canonical_and_global_density_columns(
+    df: pd.DataFrame,
+    *,
+    harmonic_weight: Optional[float] = None,
+    inharmonic_weight: Optional[float] = None,
+    subbass_weight: Optional[float] = None,
+) -> pd.DataFrame:
     """Ensure Phase-2 canonical density, then global [0,1] norm; ``density_metric_normalized`` aliases the global norm."""
     if df is None or df.empty:
         return df
@@ -1256,11 +1546,22 @@ def _add_canonical_and_global_density_columns(df: pd.DataFrame) -> pd.DataFrame:
     # AUDIT FIX (single-pass weighted density) — compute the weighted partial-
     # sum density columns here so every sheet sees the same values and so
     # Density_Metrics does not silently diverge from the wide compiled frame.
-    out = _compute_weighted_density_columns_for_wide_df(out)
+    out = _compute_weighted_density_columns_for_wide_df(
+        out,
+        harmonic_weight=harmonic_weight,
+        inharmonic_weight=inharmonic_weight,
+        subbass_weight=subbass_weight,
+    )
     return out
 
 
-def _compute_weighted_density_columns_for_wide_df(df: pd.DataFrame) -> pd.DataFrame:
+def _compute_weighted_density_columns_for_wide_df(
+    df: pd.DataFrame,
+    *,
+    harmonic_weight: Optional[float] = None,
+    inharmonic_weight: Optional[float] = None,
+    subbass_weight: Optional[float] = None,
+) -> pd.DataFrame:
     """Attach the canonical weighted-density columns to the *wide* compiled frame.
 
     This is the single source of truth for the Density_Metrics-sheet
@@ -1296,15 +1597,30 @@ def _compute_weighted_density_columns_for_wide_df(df: pd.DataFrame) -> pd.DataFr
             return pd.to_numeric(out[alias], errors="coerce")
         return pd.Series(np.nan, index=out.index)
 
-    w_H = _src("component_harmonic_energy_ratio", "harmonic_energy_ratio")
-    w_I = _src("component_inharmonic_energy_ratio", "inharmonic_energy_ratio")
-    w_S = _src("component_subbass_energy_ratio", "subbass_energy_ratio")
+    w_H_per_note = _src("component_harmonic_energy_ratio", "harmonic_energy_ratio")
+    w_I_per_note = _src("component_inharmonic_energy_ratio", "inharmonic_energy_ratio")
+    w_S_per_note = _src("component_subbass_energy_ratio", "subbass_energy_ratio")
+    use_phase2_profile = (
+        harmonic_weight is not None
+        and inharmonic_weight is not None
+        and subbass_weight is not None
+    )
+    if use_phase2_profile:
+        w_H = pd.Series(float(harmonic_weight), index=out.index, dtype=float)
+        w_I = pd.Series(float(inharmonic_weight), index=out.index, dtype=float)
+        w_S = pd.Series(float(subbass_weight), index=out.index, dtype=float)
+        out["density_weights_source"] = "phase2_corpus_profile"
+    else:
+        w_H = w_H_per_note
+        w_I = w_I_per_note
+        w_S = w_S_per_note
+        out["density_weights_source"] = "per_note_energy_ratio"
 
     # Mirror the resolved ratios into the canonical column names so
     # downstream consumers (Density_Metrics, audits) see the same values.
-    out["component_harmonic_energy_ratio"] = w_H.astype(float)
-    out["component_inharmonic_energy_ratio"] = w_I.astype(float)
-    out["component_subbass_energy_ratio"] = w_S.astype(float)
+    out["component_harmonic_energy_ratio"] = w_H_per_note.astype(float)
+    out["component_inharmonic_energy_ratio"] = w_I_per_note.astype(float)
+    out["component_subbass_energy_ratio"] = w_S_per_note.astype(float)
 
     D_H = pd.to_numeric(out[h_new], errors="coerce")
     D_I = pd.to_numeric(out[i_new], errors="coerce")
@@ -1322,6 +1638,15 @@ def _compute_weighted_density_columns_for_wide_df(df: pd.DataFrame) -> pd.DataFr
     if full_nan_mask.any():
         raw = raw.mask(full_nan_mask)
     out["density_metric_raw"] = raw
+    raw_per_note = (
+        (D_H * w_H_per_note).fillna(0.0)
+        + (D_I * w_I_per_note).fillna(0.0)
+        + (D_S * w_S_per_note).fillna(0.0)
+    )
+    full_nan_per_note_mask = w_H_per_note.isna() & w_I_per_note.isna() & w_S_per_note.isna()
+    if full_nan_per_note_mask.any():
+        raw_per_note = raw_per_note.mask(full_nan_per_note_mask)
+    out["density_metric_raw_per_note_balance"] = raw_per_note
 
     arr = raw.to_numpy(dtype=float, copy=False)
     finite_pos = arr[np.isfinite(arr) & (arr > 0)]
@@ -2139,6 +2464,118 @@ def _extract_band_amplitude_sum_for_density(
     return total, int(finite_mask.sum()), f"sheet={sheet};column={amp_col}"
 
 
+def _extract_harmonic_power_sum_for_density(
+    xf: pd.ExcelFile,
+    sheet_names: List[str],
+) -> tuple[Optional[float], int, str]:
+    """Sum harmonic power for cross-note absolute power comparisons.
+
+    Priority:
+    1) ``Power_raw`` if present.
+    2) ``Amplitude_raw`` squared.
+    3) ``Amplitude`` squared (legacy fallback).
+    """
+    sheet = _pick_sheet_case_insensitive(sheet_names, HARMONIC_SPECTRUM_SHEET_PREFERENCES)
+    if sheet is None:
+        return None, 0, ""
+    try:
+        df = xf.parse(sheet)
+    except Exception as exc:
+        logger.warning(
+            "harmonic_energy_sum: cannot parse %s sheet (%s); skipping.",
+            sheet, exc,
+        )
+        return None, 0, f"sheet={sheet};column=<unreadable>"
+    if df is None or df.empty:
+        return 0.0, 0, f"sheet={sheet};column=<empty>"
+
+    cols_lower = {str(c).lower(): c for c in df.columns}
+    p_col = cols_lower.get("power_raw")
+    if p_col is not None:
+        p = pd.to_numeric(df[p_col], errors="coerce")
+        finite_mask = p.notna() & (p > 0)
+        if "include_for_density" in cols_lower:
+            inc_col = cols_lower["include_for_density"]
+            inc_raw = df[inc_col]
+            if pd.api.types.is_bool_dtype(inc_raw):
+                inc_mask = inc_raw.astype(bool)
+            else:
+                inc_mask = inc_raw.map(
+                    lambda v: str(v).strip().lower() in {"1", "true", "yes"}
+                ).astype(bool)
+            finite_mask = finite_mask & inc_mask
+        if not finite_mask.any():
+            return 0.0, 0, f"sheet={sheet};column={p_col};no_included_rows"
+        return float(p.loc[finite_mask].sum()), int(finite_mask.sum()), f"sheet={sheet};column={p_col}"
+
+    a_col = cols_lower.get("amplitude_raw") or cols_lower.get("amplitude")
+    if a_col is None:
+        return None, 0, f"sheet={sheet};column=<not_found>"
+    a = pd.to_numeric(df[a_col], errors="coerce")
+    finite_mask = a.notna() & (a > 0)
+    if "include_for_density" in cols_lower:
+        inc_col = cols_lower["include_for_density"]
+        inc_raw = df[inc_col]
+        if pd.api.types.is_bool_dtype(inc_raw):
+            inc_mask = inc_raw.astype(bool)
+        else:
+            inc_mask = inc_raw.map(
+                lambda v: str(v).strip().lower() in {"1", "true", "yes"}
+            ).astype(bool)
+        finite_mask = finite_mask & inc_mask
+    if not finite_mask.any():
+        return 0.0, 0, f"sheet={sheet};column={a_col};no_included_rows"
+    return float((a.loc[finite_mask] ** 2).sum()), int(finite_mask.sum()), f"sheet={sheet};column={a_col}^2"
+
+
+def _extract_band_power_sum_for_density(
+    xf: pd.ExcelFile,
+    sheet_names: List[str],
+    sheet_prefs: Tuple[str, ...],
+    *,
+    label: str,
+) -> tuple[Optional[float], int, str]:
+    """Sum band power for inharmonic/sub-bass cross-note comparisons."""
+    sheet = _pick_sheet_case_insensitive(sheet_names, sheet_prefs)
+    if sheet is None:
+        return None, 0, ""
+    try:
+        df = xf.parse(sheet)
+    except Exception as exc:
+        logger.warning(
+            "%s energy_sum: cannot parse %s sheet (%s); skipping.",
+            label, sheet, exc,
+        )
+        return None, 0, f"sheet={sheet};column=<unreadable>"
+    if df is None or df.empty:
+        return 0.0, 0, f"sheet={sheet};column=<empty>"
+
+    usable_cols = [
+        c for c in df.columns
+        if str(c).strip().lower() not in _FORBIDDEN_DISPLAY_SCALED_COLUMN_NAMES_LOWER
+    ]
+    if not usable_cols:
+        return None, 0, f"sheet={sheet};column=<not_found>"
+    cols_lower = {str(c).lower(): c for c in usable_cols}
+
+    p_col = cols_lower.get("power_raw")
+    if p_col is not None:
+        p = pd.to_numeric(df[p_col], errors="coerce")
+        finite_mask = p.notna() & (p > 0)
+        if not finite_mask.any():
+            return 0.0, 0, f"sheet={sheet};column={p_col};no_finite_rows"
+        return float(p.loc[finite_mask].sum()), int(finite_mask.sum()), f"sheet={sheet};column={p_col}"
+
+    a_col = cols_lower.get("amplitude_raw") or cols_lower.get("amplitude")
+    if a_col is None:
+        return None, 0, f"sheet={sheet};column=<not_found>"
+    a = pd.to_numeric(df[a_col], errors="coerce")
+    finite_mask = a.notna() & (a > 0)
+    if not finite_mask.any():
+        return 0.0, 0, f"sheet={sheet};column={a_col};no_finite_rows"
+    return float((a.loc[finite_mask] ** 2).sum()), int(finite_mask.sum()), f"sheet={sheet};column={a_col}^2"
+
+
 DENSITY_WEIGHT_FUNCTION_VALID: Tuple[str, ...] = ("linear", "log", "power")
 DENSITY_WEIGHT_FUNCTION_DEFAULT: str = "linear"
 DENSITY_WEIGHT_SUM_TOLERANCE: float = 1e-3
@@ -2609,6 +3046,11 @@ def extract_density_components_from_per_note_workbook(
         "subbass_amplitude_sum": None,
         "subbass_amplitude_source": "",
         "subbass_amplitude_count": 0,
+        "harmonic_energy_sum": None,
+        "inharmonic_energy_sum": None,
+        "subbass_energy_sum": None,
+        "n_fft": None,
+        "n_fft_effective": None,
         "weighted_harmonic_component": None,
         "weighted_inharmonic_component": None,
         "weighted_subbass_component": None,
@@ -2645,7 +3087,61 @@ def extract_density_components_from_per_note_workbook(
         # overwrites these for the harmonic sheet later in the body.
         "harmonic_density_inclusion_policy": "",
         "harmonic_density_excluded_count": 0,
+        # Epistemic / QC carry-through (read from per-note Analysis_Metadata).
+        "f0_epistemic_status": None,
+        "f0_final_source": None,
+        "f0_validation_mode": None,
+        "nominal_prior_hz": None,
+        "f0_candidate_hz": None,
+        "f0_deviation_cents": None,
+        "low_order_match_count": None,
+        "odd_harmonic_match_count": None,
+        "even_harmonic_match_count": None,
+        "median_abs_error_cents": None,
+        "p90_abs_error_cents": None,
+        "harmonic_comb_score": None,
+        "f0_validation_max_hz": None,
+        "valid_for_primary_statistics": None,
+        "density_confidence": None,
+        "f0_confidence": None,
+        "harmonic_assignment_confidence": None,
+        "spectral_stability_confidence": None,
+        "qc_status": None,
+        "outlier_ratio_max_to_mean": None,
+        "outlier_policy_applied": None,
+        "density_winsorized": None,
+        "density_median_based": None,
+        "density_trimmed_mean": None,
+        "sethares_status": None,
+        "sethares_value_status": None,
+        "sethares_curve_status": None,
+        "sethares_plot_status": None,
+        "analysis_parameter_profile_id": None,
+        "is_primary_comparable_profile": None,
+        "primary_comparable_profile_definition": None,
+        "inharmonicity_coefficient_B": None,
+        "inharmonicity_fit_residual_std_cents": None,
+        "inharmonicity_fit_status": None,
+        "inharmonicity_fit_method": None,
+        "inharmonicity_model_applied": None,
+        "inharmonicity_fit_source": None,
+        "inharmonicity_validation_warning": None,
+        "obs_w_formula_version": None,
+        "pure_observation_w_h": None,
+        "pure_observation_w_i": None,
+        "pure_observation_w_s": None,
+        "component_strength_h": None,
+        "component_strength_i": None,
+        "component_strength_s": None,
+        "legacy_component_strength_h_v55": None,
+        "legacy_component_strength_i_v55": None,
+        "legacy_component_strength_s_v55": None,
+        "mir_descriptors_available": None,
+        "mir_descriptors_source": None,
+        "mir_descriptors_missing_reason": None,
     }
+    for _k in PHASE5_ALL_DESCRIPTOR_COLUMNS:
+        result[_k] = None
 
     if not p.exists():
         result["density_extraction_status"] = "extraction_error"
@@ -2698,6 +3194,242 @@ def extract_density_components_from_per_note_workbook(
         logger.warning("Density_Metrics extraction: cannot open %s: %s", p, exc)
         result["density_extraction_status"] = "extraction_error"
         return result
+
+    _metrics_sheet_name = next(
+        (
+            _sn
+            for _sn in sheet_names
+            if str(_sn).strip().lower() in {"metrics", "density_metrics", "compiled metrics"}
+        ),
+        None,
+    )
+    if _metrics_sheet_name is not None:
+        try:
+            _mdf = xf.parse(_metrics_sheet_name)
+            if _mdf is not None and not _mdf.empty:
+                _row0 = _mdf.iloc[0]
+                _lower_map = {str(c).strip().lower(): c for c in _mdf.columns}
+                # Carry FFT/tier metadata and absolute sums from per-note metrics
+                # when available so the direct-extraction path can populate
+                # *_tier_normalized companions consistently.
+                for _k in (
+                    "n_fft",
+                    "n_fft_effective",
+                    "harmonic_energy_sum",
+                    "inharmonic_energy_sum",
+                    "subbass_energy_sum",
+                    "inharmonicity_coefficient_B",
+                    "inharmonicity_fit_residual_std_cents",
+                    "pure_observation_w_h",
+                    "pure_observation_w_i",
+                    "pure_observation_w_s",
+                    "component_strength_h",
+                    "component_strength_i",
+                    "component_strength_s",
+                    "legacy_component_strength_h_v55",
+                    "legacy_component_strength_i_v55",
+                    "legacy_component_strength_s_v55",
+                ):
+                    _src_col = _lower_map.get(_k.lower())
+                    if _src_col is None:
+                        continue
+                    _raw = _row0.get(_src_col)
+                    try:
+                        _val = float(_raw)
+                    except (TypeError, ValueError):
+                        _val = float("nan")
+                    if np.isfinite(_val):
+                        result[_k] = float(_val)
+                for _k, _aliases in (
+                    ("inharmonicity_fit_status", ("inharmonicity_fit_status", "fit_status")),
+                    ("inharmonicity_fit_method", ("inharmonicity_fit_method", "fit_method", "method")),
+                    ("inharmonicity_model_applied", ("inharmonicity_model_applied", "model_applied")),
+                    ("obs_w_formula_version", ("obs_w_formula_version",)),
+                ):
+                    _src_col = next(
+                        (_lower_map.get(_a.lower()) for _a in _aliases if _lower_map.get(_a.lower()) is not None),
+                        None,
+                    )
+                    if _src_col is None:
+                        continue
+                    _raw = _row0.get(_src_col)
+                    _txt = str(_raw).strip() if _raw is not None else ""
+                    if _txt:
+                        result[_k] = _txt
+                _f0_final_col = _lower_map.get("f0_final_source")
+                if _f0_final_col is not None:
+                    _raw = _row0.get(_f0_final_col)
+                    _txt = str(_raw).strip() if _raw is not None else ""
+                    if _txt:
+                        result["f0_final_source"] = _txt
+                for _k in PHASE5_ALL_DESCRIPTOR_COLUMNS:
+                    _src_col = _lower_map.get(_k.lower())
+                    if _src_col is None:
+                        continue
+                    _raw = _row0.get(_src_col)
+                    try:
+                        _val = float(_raw)
+                    except (TypeError, ValueError):
+                        _val = float("nan")
+                    if np.isfinite(_val):
+                        result[_k] = float(_val)
+        except Exception as _phase5_metrics_exc:
+            logger.debug(
+                "Phase 5 metrics merge skipped for %s: %s",
+                p,
+                _phase5_metrics_exc,
+            )
+
+    # Fallback: if inharmonicity fit fields are absent on Metrics, read the
+    # first row from the dedicated Inharmonicity_Fit sheet.
+    need_fit_fallback = any(
+        result.get(_k) in (None, "")
+        for _k in (
+            "inharmonicity_coefficient_B",
+            "inharmonicity_fit_residual_std_cents",
+            "inharmonicity_fit_status",
+            "inharmonicity_fit_method",
+        )
+    )
+    if need_fit_fallback:
+        _fit_sheet_name = _pick_sheet_case_insensitive(sheet_names, ("Inharmonicity_Fit",))
+        if _fit_sheet_name is not None:
+            try:
+                _fit_df = xf.parse(_fit_sheet_name)
+                if _fit_df is not None and not _fit_df.empty:
+                    _fit_row = _fit_df.iloc[0]
+                    _fit_lower_map = {str(c).strip().lower(): c for c in _fit_df.columns}
+                    for _k, _aliases in (
+                        ("inharmonicity_coefficient_B", ("inharmonicity_coefficient_B",)),
+                        (
+                            "inharmonicity_fit_residual_std_cents",
+                            ("inharmonicity_fit_residual_std_cents", "fit_residual_std_cents"),
+                        ),
+                    ):
+                        if result.get(_k) is not None:
+                            continue
+                        _src_col = next(
+                            (_fit_lower_map.get(_a.lower()) for _a in _aliases if _fit_lower_map.get(_a.lower()) is not None),
+                            None,
+                        )
+                        if _src_col is None:
+                            continue
+                        _raw = _fit_row.get(_src_col)
+                        try:
+                            _val = float(_raw)
+                        except (TypeError, ValueError):
+                            _val = float("nan")
+                        if np.isfinite(_val):
+                            result[_k] = float(_val)
+                    for _k, _aliases in (
+                        ("inharmonicity_fit_status", ("inharmonicity_fit_status", "fit_status")),
+                        ("inharmonicity_fit_method", ("inharmonicity_fit_method", "fit_method", "method")),
+                    ):
+                        _cur = result.get(_k)
+                        if _cur is not None and str(_cur).strip() != "":
+                            continue
+                        _src_col = next(
+                            (_fit_lower_map.get(_a.lower()) for _a in _aliases if _fit_lower_map.get(_a.lower()) is not None),
+                            None,
+                        )
+                        if _src_col is None:
+                            continue
+                        _raw = _fit_row.get(_src_col)
+                        _txt = str(_raw).strip() if _raw is not None else ""
+                        if _txt:
+                            result[_k] = _txt
+            except Exception as _fit_exc:
+                logger.debug("Inharmonicity_Fit fallback read skipped for %s: %s", p, _fit_exc)
+
+    if result.get("inharmonicity_model_applied") in (None, ""):
+        _model_applied_meta = _read_analysis_metadata_scalar(p, "inharmonicity_model_applied")
+        if _model_applied_meta is not None:
+            _model_txt = str(_model_applied_meta).strip()
+            if _model_txt:
+                result["inharmonicity_model_applied"] = _model_txt
+
+    if result.get("f0_final_source") in (None, ""):
+        _f0_final_meta = _read_analysis_metadata_scalar(p, "f0_final_source")
+        if _f0_final_meta is not None:
+            _f0_txt = str(_f0_final_meta).strip()
+            if _f0_txt:
+                result["f0_final_source"] = _f0_txt
+    if result.get("f0_final_source") in (None, ""):
+        result["f0_final_source"] = "unknown"
+
+    _b_val = result.get("inharmonicity_coefficient_B")
+    _st_val = str(result.get("inharmonicity_fit_status") or "").strip()
+    _res_val = result.get("inharmonicity_fit_residual_std_cents")
+    _method_val = str(result.get("inharmonicity_fit_method") or "").strip()
+    _has_b = False
+    _has_res = False
+    try:
+        _has_b = _b_val is not None and np.isfinite(float(_b_val))
+    except (TypeError, ValueError):
+        _has_b = False
+    try:
+        _has_res = _res_val is not None and np.isfinite(float(_res_val))
+    except (TypeError, ValueError):
+        _has_res = False
+
+    _model_raw = result.get("inharmonicity_model_applied")
+    _model_txt = str(_model_raw).strip().lower() if _model_raw is not None else ""
+    if _model_txt in {"true", "1", "yes", "y"}:
+        result["inharmonicity_model_applied"] = "true"
+    elif _model_txt in {"false", "0", "no", "n"}:
+        result["inharmonicity_model_applied"] = "false"
+    elif _has_b:
+        # Explicit nonblank semantic: fit computed but stretched model not applied.
+        result["inharmonicity_model_applied"] = "false"
+    else:
+        result["inharmonicity_model_applied"] = "not_available"
+
+    if _has_b and _st_val and _has_res and _method_val:
+        result["inharmonicity_fit_source"] = "per_note_inharmonicity_fit_sheet"
+    elif _has_b and (not _st_val or not _has_res):
+        result["inharmonicity_fit_source"] = "partial_export_missing_status"
+    else:
+        result["inharmonicity_fit_source"] = "not_available"
+
+    _warn_tokens: List[str] = []
+    _src_lower = str(p).lower()
+    if _has_b:
+        try:
+            if ("clar" in _src_lower) and float(_b_val) > 1e-5:
+                _warn_tokens.append("clarinet_B_above_1e-5")
+        except (TypeError, ValueError):
+            pass
+    if _has_b and not _st_val:
+        _warn_tokens.append("fit_status_missing")
+    if _has_b and not _has_res:
+        _warn_tokens.append("fit_residual_missing")
+    result["inharmonicity_validation_warning"] = ";".join(_warn_tokens) if _warn_tokens else ""
+
+    _mir_key_cols = (
+        "spectral_centroid_hz",
+        "spectral_rolloff_hz_85",
+        "spectral_flatness",
+    )
+    _mir_present = False
+    for _mir_col in _mir_key_cols:
+        _mir_v = result.get(_mir_col)
+        try:
+            if _mir_v is not None and np.isfinite(float(_mir_v)):
+                _mir_present = True
+                break
+        except (TypeError, ValueError):
+            continue
+    if _mir_present:
+        result["mir_descriptors_available"] = True
+        result["mir_descriptors_source"] = "per_note_metrics_sheet"
+        result["mir_descriptors_missing_reason"] = ""
+    else:
+        result["mir_descriptors_available"] = False
+        result["mir_descriptors_source"] = "not_available"
+        result["mir_descriptors_missing_reason"] = (
+            "spectral_centroid_hz/spectral_rolloff_hz_85/spectral_flatness missing "
+            "from per-note workbook export path"
+        )
 
     def _extract_one(
         sheet_prefs: Tuple[str, ...],
@@ -2767,6 +3499,15 @@ def extract_density_components_from_per_note_workbook(
         s_amp_sum, s_n, s_src = _extract_band_amplitude_sum_for_density(
             xf, sheet_names, SUBBASS_SPECTRUM_SHEET_PREFERENCES, label="subbass"
         )
+        h_pow_sum, _, _ = _extract_harmonic_power_sum_for_density(
+            xf, sheet_names
+        )
+        i_pow_sum, _, _ = _extract_band_power_sum_for_density(
+            xf, sheet_names, INHARMONIC_SPECTRUM_SHEET_PREFERENCES, label="inharmonic"
+        )
+        s_pow_sum, _, _ = _extract_band_power_sum_for_density(
+            xf, sheet_names, SUBBASS_SPECTRUM_SHEET_PREFERENCES, label="subbass"
+        )
     finally:
         try:
             xf.close()
@@ -2797,6 +3538,12 @@ def extract_density_components_from_per_note_workbook(
         result["subbass_amplitude_sum"] = None
     result["subbass_amplitude_count"] = int(s_n)
     result["subbass_amplitude_source"] = str(s_src)
+    if h_pow_sum is not None and np.isfinite(h_pow_sum):
+        result["harmonic_energy_sum"] = float(h_pow_sum)
+    if i_pow_sum is not None and np.isfinite(i_pow_sum):
+        result["inharmonic_energy_sum"] = float(i_pow_sum)
+    if s_pow_sum is not None and np.isfinite(s_pow_sum):
+        result["subbass_energy_sum"] = float(s_pow_sum)
 
     result["D_H"] = D_H
     result["D_I"] = D_I
@@ -2912,6 +3659,47 @@ def extract_density_components_from_per_note_workbook(
         meta_note_source = None
     if meta_note_source:
         result["analysis_metadata_note_source"] = str(meta_note_source)
+    # Pull epistemic/QC fields without changing the direct spectral extraction.
+    for _k in (
+        "f0_epistemic_status",
+        "f0_validation_mode",
+        "n_fft",
+        "n_fft_effective",
+        "nominal_prior_hz",
+        "f0_candidate_hz",
+        "f0_deviation_cents",
+        "low_order_match_count",
+        "odd_harmonic_match_count",
+        "even_harmonic_match_count",
+        "median_abs_error_cents",
+        "p90_abs_error_cents",
+        "harmonic_comb_score",
+        "f0_validation_max_hz",
+        "valid_for_primary_statistics",
+        "density_confidence",
+        "f0_confidence",
+        "harmonic_assignment_confidence",
+        "spectral_stability_confidence",
+        "qc_status",
+        "outlier_ratio_max_to_mean",
+        "outlier_policy_applied",
+        "density_winsorized",
+        "density_median_based",
+        "density_trimmed_mean",
+        "sethares_status",
+        "sethares_value_status",
+        "sethares_curve_status",
+        "sethares_plot_status",
+        "analysis_parameter_profile_id",
+        "is_primary_comparable_profile",
+        "primary_comparable_profile_definition",
+    ):
+        try:
+            _v = _read_analysis_metadata_scalar(p, _k)
+        except Exception:
+            _v = None
+        if _v is not None and str(_v).strip() != "":
+            result[_k] = _v
 
     # AUDIT FIX (component_*_energy_ratio sum-to-1 invariant) — record
     # the weight-sum residual and warn loudly if it drifts outside the
@@ -3050,6 +3838,9 @@ def _build_density_metrics_sheet_from_per_note_files(
     *,
     weight_function: Optional[str] = None,
     density_component_basis: str = DENSITY_COMPONENT_BASIS_DEFAULT,
+    harmonic_weight: Optional[float] = None,
+    inharmonic_weight: Optional[float] = None,
+    subbass_weight: Optional[float] = None,
 ) -> pd.DataFrame:
     """Build the compiled ``Density_Metrics`` sheet by direct extraction
     from every per-note ``spectral_analysis.xlsx``.
@@ -3072,6 +3863,7 @@ def _build_density_metrics_sheet_from_per_note_files(
         weighted_harmonic_density_contribution,
         weighted_inharmonic_density_contribution,
         weighted_subbass_density_contribution,
+        density_weights_source, density_metric_raw_per_note_balance,
         density_metric_raw, density_metric_normalized,
         density_extraction_status,
         harmonic_spectrum_source, inharmonic_spectrum_source,
@@ -3082,6 +3874,11 @@ def _build_density_metrics_sheet_from_per_note_files(
     wf = (weight_function or "").strip().lower() or "linear"
     if wf == "sum":
         wf = "linear"
+    use_phase2_profile = (
+        harmonic_weight is not None
+        and inharmonic_weight is not None
+        and subbass_weight is not None
+    )
 
     rows: List[Dict[str, Any]] = []
     files_list: List[tuple[Path, str, str]] = list(found_files)
@@ -3151,18 +3948,34 @@ def _build_density_metrics_sheet_from_per_note_files(
         D_Hf, D_If, D_Sf = _f(D_H), _f(D_I), _f(D_S)
         w_Hf, w_If, w_Sf = _f(w_H), _f(w_I), _f(w_S)
 
-        wh_c = D_Hf * w_Hf if not (np.isnan(D_Hf) or np.isnan(w_Hf)) else float("nan")
-        wi_c = D_If * w_If if not (np.isnan(D_If) or np.isnan(w_If)) else float("nan")
-        ws_c = D_Sf * w_Sf if not (np.isnan(D_Sf) or np.isnan(w_Sf)) else float("nan")
-
-        if np.isnan(wh_c) and np.isnan(wi_c) and np.isnan(ws_c):
-            raw = float("nan")
+        if use_phase2_profile:
+            w_H_applied = float(harmonic_weight)
+            w_I_applied = float(inharmonic_weight)
+            w_S_applied = float(subbass_weight)
+            density_weights_source = "phase2_corpus_profile"
         else:
-            raw = float(
-                (0.0 if np.isnan(wh_c) else wh_c)
-                + (0.0 if np.isnan(wi_c) else wi_c)
-                + (0.0 if np.isnan(ws_c) else ws_c)
+            w_H_applied = w_Hf
+            w_I_applied = w_If
+            w_S_applied = w_Sf
+            density_weights_source = "per_note_energy_ratio"
+
+        def _weighted_sum(d_h: float, d_i: float, d_s: float, w_h: float, w_i: float, w_s: float) -> float:
+            wh = d_h * w_h if not (np.isnan(d_h) or np.isnan(w_h)) else float("nan")
+            wi = d_i * w_i if not (np.isnan(d_i) or np.isnan(w_i)) else float("nan")
+            ws = d_s * w_s if not (np.isnan(d_s) or np.isnan(w_s)) else float("nan")
+            if np.isnan(wh) and np.isnan(wi) and np.isnan(ws):
+                return float("nan")
+            return float(
+                (0.0 if np.isnan(wh) else wh)
+                + (0.0 if np.isnan(wi) else wi)
+                + (0.0 if np.isnan(ws) else ws)
             )
+
+        wh_c = D_Hf * w_H_applied if not (np.isnan(D_Hf) or np.isnan(w_H_applied)) else float("nan")
+        wi_c = D_If * w_I_applied if not (np.isnan(D_If) or np.isnan(w_I_applied)) else float("nan")
+        ws_c = D_Sf * w_S_applied if not (np.isnan(D_Sf) or np.isnan(w_S_applied)) else float("nan")
+        raw = _weighted_sum(D_Hf, D_If, D_Sf, w_H_applied, w_I_applied, w_S_applied)
+        raw_per_note = _weighted_sum(D_Hf, D_If, D_Sf, w_Hf, w_If, w_Sf)
 
         total_sum = (
             float("nan")
@@ -3173,6 +3986,57 @@ def _build_density_metrics_sheet_from_per_note_files(
                 + (0.0 if np.isnan(D_Sf) else D_Sf)
             )
         )
+
+        n_fft_val = _f(
+            info.get("n_fft", info.get("N FFT", info.get("n_fft_effective")))
+        )
+        if np.isfinite(n_fft_val) and n_fft_val > 0:
+            amp_factor = n_fft_normalization_factor(
+                n_fft=int(n_fft_val),
+                n_fft_reference=8192,
+                quantity_kind="peak_amplitude_sum",
+            )
+            power_factor = n_fft_normalization_factor(
+                n_fft=int(n_fft_val),
+                n_fft_reference=8192,
+                quantity_kind="peak_power_sum",
+            )
+        else:
+            amp_factor = float("nan")
+            power_factor = float("nan")
+
+        h_amp = _f(info.get("harmonic_amplitude_sum"))
+        i_amp = _f(info.get("inharmonic_amplitude_sum"))
+        s_amp = _f(info.get("subbass_amplitude_sum"))
+        h_en = _f(info.get("harmonic_energy_sum"))
+        i_en = _f(info.get("inharmonic_energy_sum"))
+        s_en = _f(info.get("subbass_energy_sum"))
+
+        h_amp_tn = h_amp * amp_factor if np.isfinite(h_amp) and np.isfinite(amp_factor) else float("nan")
+        i_amp_tn = i_amp * amp_factor if np.isfinite(i_amp) and np.isfinite(amp_factor) else float("nan")
+        s_amp_tn = s_amp * amp_factor if np.isfinite(s_amp) and np.isfinite(amp_factor) else float("nan")
+        h_en_tn = h_en * power_factor if np.isfinite(h_en) and np.isfinite(power_factor) else float("nan")
+        i_en_tn = i_en * power_factor if np.isfinite(i_en) and np.isfinite(power_factor) else float("nan")
+        s_en_tn = s_en * power_factor if np.isfinite(s_en) and np.isfinite(power_factor) else float("nan")
+
+        raw_vs_norm = (
+            (h_amp, h_amp_tn),
+            (i_amp, i_amp_tn),
+            (s_amp, s_amp_tn),
+            (h_en, h_en_tn),
+            (i_en, i_en_tn),
+            (s_en, s_en_tn),
+        )
+        any_raw_present = any(np.isfinite(raw_v) for raw_v, _ in raw_vs_norm)
+        all_companions_present = all(
+            (not np.isfinite(raw_v)) or np.isfinite(norm_v) for raw_v, norm_v in raw_vs_norm
+        )
+        if not any_raw_present:
+            tier_consistency_status = "no_cross_note_sums_available"
+        elif all_companions_present:
+            tier_consistency_status = "all_tiers_normalised"
+        else:
+            tier_consistency_status = "missing_tier_normalized_companion"
 
         # AUDIT FIX (Density_Metrics component basis) — surface the
         # basis used to evaluate D_H / D_I / D_S so a downstream
@@ -3205,6 +4069,8 @@ def _build_density_metrics_sheet_from_per_note_files(
             #   density_metric_raw       = D_H*w_H + D_I*w_I + D_S*w_S
             #   density_metric_normalized = density_metric_raw / max(raw)
             "density_metric_raw": raw,
+            "density_metric_raw_per_note_balance": raw_per_note,
+            "density_weights_source": density_weights_source,
             "density_metric_normalized": float("nan"),  # filled after the loop
             # === PER-COMPONENT WEIGHTED CONTRIBUTIONS ====================
             #   D_x * w_x; sum to density_metric_raw.
@@ -3246,6 +4112,11 @@ def _build_density_metrics_sheet_from_per_note_files(
                     "density_metric_raw = D_H*w_H + D_I*w_I + D_S*w_S",
                 )
             ),
+            "density_metric_name": "his_energy_ratio_weighted_log_density",
+            "density_metric_basis": (
+                "log-amplitude" if wf == "log" else ("power" if wf == "power" else "amplitude")
+            ),
+            "density_metric_physical_status": "model_derived_composite",
             "density_component_sum_source": str(
                 info.get("density_component_sum_source", "") or ""
             ),
@@ -3279,7 +4150,8 @@ def _build_density_metrics_sheet_from_per_note_files(
             # === STAGE 1 CANDIDATE-BASED HARMONIC DENSITY METRIC =========
             # Independent of Power_raw / component_* ratios / external H/I
             # weights.
-            "harmonic_amplitude_sum": _f(info.get("harmonic_amplitude_sum")),
+            "harmonic_amplitude_sum": h_amp,
+            "harmonic_amplitude_sum_tier_normalized": h_amp_tn,
             "harmonic_log_amplitude_density": _f(
                 info.get("harmonic_log_amplitude_density")
             ),
@@ -3294,14 +4166,23 @@ def _build_density_metrics_sheet_from_per_note_files(
             #   band D values as density_metric_raw / harmonic_density_sum).
             # density_log_weighted  = log10(1 + density_weighted_sum).
             # harmonic_amplitude_sum remains a linear diagnostic only.
-            "inharmonic_amplitude_sum": _f(info.get("inharmonic_amplitude_sum")),
+            "inharmonic_amplitude_sum": i_amp,
+            "inharmonic_amplitude_sum_tier_normalized": i_amp_tn,
             "inharmonic_amplitude_source": str(
                 info.get("inharmonic_amplitude_source", "")
             ),
             "inharmonic_amplitude_count": int(
                 info.get("inharmonic_amplitude_count", 0) or 0
             ),
-            "subbass_amplitude_sum": _f(info.get("subbass_amplitude_sum")),
+            "subbass_amplitude_sum": s_amp,
+            "subbass_amplitude_sum_tier_normalized": s_amp_tn,
+            "harmonic_energy_sum": h_en,
+            "harmonic_energy_sum_tier_normalized": h_en_tn,
+            "inharmonic_energy_sum": i_en,
+            "inharmonic_energy_sum_tier_normalized": i_en_tn,
+            "subbass_energy_sum": s_en,
+            "subbass_energy_sum_tier_normalized": s_en_tn,
+            "tier_consistency_status": tier_consistency_status,
             "subbass_amplitude_source": str(
                 info.get("subbass_amplitude_source", "")
             ),
@@ -3314,11 +4195,104 @@ def _build_density_metrics_sheet_from_per_note_files(
             ),
             "weighted_subbass_component": _f(info.get("weighted_subbass_component")),
             "density_weighted_sum": _f(info.get("density_weighted_sum")),
+            "density_weighted_sum_alias_of": "density_metric_raw",
+            "density_weighted_sum_semantic_status": "legacy_alias_not_independent",
             "density_log_weighted": _f(info.get("density_log_weighted")),
             "density_log_formula": str(
                 info.get("density_log_formula", "log10(1 + density_weighted_sum)")
             ),
+            # QC / epistemic controls propagated from per-note metadata.
+            "f0_epistemic_status": str(info.get("f0_epistemic_status") or ""),
+            "f0_final_source": str(info.get("f0_final_source") or "unknown"),
+            "f0_validation_mode": str(info.get("f0_validation_mode") or ""),
+            "nominal_prior_hz": _f(info.get("nominal_prior_hz")),
+            "f0_candidate_hz": _f(info.get("f0_candidate_hz")),
+            "f0_deviation_cents": _f(info.get("f0_deviation_cents")),
+            "low_order_match_count": _f(info.get("low_order_match_count")),
+            "odd_harmonic_match_count": _f(info.get("odd_harmonic_match_count")),
+            "even_harmonic_match_count": _f(info.get("even_harmonic_match_count")),
+            "median_abs_error_cents": _f(info.get("median_abs_error_cents")),
+            "p90_abs_error_cents": _f(info.get("p90_abs_error_cents")),
+            "harmonic_comb_score": _f(info.get("harmonic_comb_score")),
+            "f0_validation_max_hz": _f(info.get("f0_validation_max_hz")),
+            "valid_for_primary_statistics": (
+                str(info.get("valid_for_primary_statistics", "")).strip().lower()
+                in {"true", "1", "yes"}
+            ),
+            "density_confidence": _f(info.get("density_confidence")),
+            "f0_confidence": _f(info.get("f0_confidence")),
+            "harmonic_assignment_confidence": _f(info.get("harmonic_assignment_confidence")),
+            "spectral_stability_confidence": _f(info.get("spectral_stability_confidence")),
+            "qc_status": str(info.get("qc_status") or ""),
+            "outlier_ratio_max_to_mean": _f(info.get("outlier_ratio_max_to_mean")),
+            "outlier_policy_applied": str(info.get("outlier_policy_applied") or ""),
+            "density_winsorized": _f(info.get("density_winsorized")),
+            "density_median_based": _f(info.get("density_median_based")),
+            "density_trimmed_mean": _f(info.get("density_trimmed_mean")),
+            "sethares_status": str(info.get("sethares_status") or ""),
+            "sethares_value_status": str(info.get("sethares_value_status") or ""),
+            "sethares_curve_status": str(info.get("sethares_curve_status") or ""),
+            "sethares_plot_status": str(info.get("sethares_plot_status") or ""),
+            "analysis_parameter_profile_id": str(info.get("analysis_parameter_profile_id") or ""),
+            "is_primary_comparable_profile": (
+                str(info.get("is_primary_comparable_profile", "")).strip().lower() in {"true", "1", "yes"}
+            ),
+            "primary_comparable_profile_definition": str(
+                info.get("primary_comparable_profile_definition") or ""
+            ),
+            "inharmonicity_coefficient_B": _f(
+                info.get("inharmonicity_coefficient_B")
+            ),
+            "inharmonicity_fit_residual_std_cents": _f(
+                info.get("inharmonicity_fit_residual_std_cents")
+            ),
+            "inharmonicity_fit_status": str(
+                info.get("inharmonicity_fit_status") or ""
+            ),
+            "inharmonicity_fit_method": str(
+                info.get("inharmonicity_fit_method") or ""
+            ),
+            "inharmonicity_model_applied": str(
+                info.get("inharmonicity_model_applied") or ""
+            ),
+            "inharmonicity_fit_source": str(
+                info.get("inharmonicity_fit_source") or ""
+            ),
+            "inharmonicity_validation_warning": str(
+                info.get("inharmonicity_validation_warning") or ""
+            ),
+            "obs_w_formula_version": str(
+                info.get("obs_w_formula_version") or ""
+            ),
+            "pure_observation_w_h": _f(info.get("pure_observation_w_h")),
+            "pure_observation_w_i": _f(info.get("pure_observation_w_i")),
+            "pure_observation_w_s": _f(info.get("pure_observation_w_s")),
+            "component_strength_h": _f(info.get("component_strength_h")),
+            "component_strength_i": _f(info.get("component_strength_i")),
+            "component_strength_s": _f(info.get("component_strength_s")),
+            "legacy_component_strength_h_v55": _f(
+                info.get("legacy_component_strength_h_v55")
+            ),
+            "legacy_component_strength_i_v55": _f(
+                info.get("legacy_component_strength_i_v55")
+            ),
+            "legacy_component_strength_s_v55": _f(
+                info.get("legacy_component_strength_s_v55")
+            ),
+            "mir_descriptors_available": bool(
+                info.get("mir_descriptors_available")
+            )
+            if info.get("mir_descriptors_available") is not None
+            else False,
+            "mir_descriptors_source": str(
+                info.get("mir_descriptors_source") or ""
+            ),
+            "mir_descriptors_missing_reason": str(
+                info.get("mir_descriptors_missing_reason") or ""
+            ),
         }
+        for _phase5_col in PHASE5_ALL_DESCRIPTOR_COLUMNS:
+            row[_phase5_col] = _f(info.get(_phase5_col))
         if str(info.get("density_component_basis")) == "power_sum":
             row["density_metric_power_weighted_raw"] = raw
         rows.append(row)
@@ -3549,6 +4523,9 @@ def _build_density_metrics_main_sheet(
     *,
     weight_function: Optional[str] = None,
     density_component_basis: str = DENSITY_COMPONENT_BASIS_DEFAULT,
+    harmonic_weight: Optional[float] = None,
+    inharmonic_weight: Optional[float] = None,
+    subbass_weight: Optional[float] = None,
 ) -> pd.DataFrame:
     """
     Build the compiled ``Density_Metrics`` sheet: Note + per-band partial sums under the
@@ -3583,6 +4560,9 @@ def _build_density_metrics_main_sheet(
                 files,
                 weight_function=weight_function,
                 density_component_basis=density_component_basis,
+                harmonic_weight=harmonic_weight,
+                inharmonic_weight=inharmonic_weight,
+                subbass_weight=subbass_weight,
             )
 
     work = _prepare_df_for_density_export(df)
@@ -3658,7 +4638,7 @@ def _build_density_metrics_main_sheet(
         "harmonic_spectrum_source": "",
         "inharmonic_spectrum_source": "",
         "subbass_spectrum_source": "",
-        "density_summation_mode": "his_weighted",
+        "density_summation_mode": "his_note_adaptive",
         # AUDIT FIX (Density_Metrics component basis) — the scalar
         # fallback path consumes already-aggregated rows that don't go
         # through the per-note extractor, so the basis fields must be
@@ -4116,6 +5096,111 @@ def _build_validation_metrics_sheet(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     return df.loc[:, cols].copy()
 
 
+def _build_phase7_final_validation_summary_sheet(
+    density_df: pd.DataFrame,
+    *,
+    harmonic_weight: Optional[float],
+    inharmonic_weight: Optional[float],
+    subbass_weight: Optional[float],
+    phase1_history_csv_path: Optional[Union[str, Path]] = None,
+) -> pd.DataFrame:
+    """Compact single-sheet summary for Phase 7 scientific export audit."""
+    if density_df is None or density_df.empty:
+        return pd.DataFrame(
+            {
+                "field": ["validation_summary_status"],
+                "value": ["empty_density_metrics_dataframe"],
+            }
+        )
+
+    d = density_df.copy()
+    total_rows = int(len(d))
+    primary_true = 0
+    if "is_primary_comparable_profile" in d.columns:
+        _pp = pd.to_numeric(d["is_primary_comparable_profile"], errors="coerce").fillna(0.0)
+        primary_true = int((_pp == 1).sum())
+    comparability_profile = "PRIMARY" if total_rows > 0 and primary_true == total_rows else "EXPLORATORY"
+
+    if "density_weights_source" in d.columns:
+        _src = d["density_weights_source"].astype(str).str.strip()
+        _src = _src[_src != ""]
+        density_weights_source = ";".join(sorted(_src.unique().tolist())) if not _src.empty else "unknown"
+    else:
+        density_weights_source = "unknown"
+
+    if "tier_consistency_status" in d.columns:
+        _tier = d["tier_consistency_status"].astype(str).str.strip().replace("", "missing")
+        tier_counts = _tier.value_counts(dropna=False)
+        tier_summary = "; ".join(f"{k}:{int(v)}" for k, v in tier_counts.items())
+    else:
+        tier_summary = "missing"
+
+    b_series = pd.to_numeric(d.get("inharmonicity_coefficient_B", pd.Series(dtype=float)), errors="coerce")
+    b_mean = float(b_series.mean()) if b_series.notna().any() else float("nan")
+    b_max = float(b_series.max()) if b_series.notna().any() else float("nan")
+    b_above = int((b_series > 1e-5).sum()) if b_series.notna().any() else 0
+
+    if "obs_wS_artifact_flag" in d.columns:
+        _art = d["obs_wS_artifact_flag"].astype(str).str.strip().str.lower().isin({"true", "1", "yes"})
+        art_count = int(_art.sum())
+        art_notes = (
+            d.loc[_art, "Note"].astype(str).dropna().tolist()
+            if "Note" in d.columns
+            else []
+        )
+    else:
+        art_count = 0
+        art_notes = []
+    if art_count == 0 and phase1_history_csv_path is not None:
+        try:
+            _phase1_path = Path(phase1_history_csv_path)
+            if _phase1_path.is_file():
+                _hist = pd.read_csv(_phase1_path)
+                if "obs_wS_artifact_flag" in _hist.columns:
+                    _hist_art = (
+                        _hist["obs_wS_artifact_flag"]
+                        .astype(str)
+                        .str.strip()
+                        .str.lower()
+                        .isin({"true", "1", "yes"})
+                    )
+                    art_count = int(_hist_art.sum())
+                    if art_count > 0 and "note" in {str(c).lower() for c in _hist.columns}:
+                        _note_col = next(c for c in _hist.columns if str(c).lower() == "note")
+                        art_notes = (
+                            _hist.loc[_hist_art, _note_col]
+                            .astype(str)
+                            .fillna("")
+                            .map(str.strip)
+                            .loc[lambda s: s != ""]
+                            .tolist()
+                        )
+        except Exception:
+            pass
+
+    if "mir_descriptors_available" in d.columns:
+        _mir = d["mir_descriptors_available"].astype(str).str.strip().str.lower().isin({"true", "1", "yes"})
+        mir_summary = f"available:{int(_mir.sum())};missing:{int((~_mir).sum())}"
+    else:
+        mir_summary = "not_exported"
+
+    summary_rows = [
+        ("comparability_profile", comparability_profile),
+        ("density_weights_source", density_weights_source),
+        ("phase2_harmonic_weight", harmonic_weight),
+        ("phase2_inharmonic_weight", inharmonic_weight),
+        ("phase2_subbass_weight", subbass_weight),
+        ("tier_consistency_status_summary", tier_summary),
+        ("inharmonicity_B_mean", b_mean),
+        ("inharmonicity_B_max", b_max),
+        ("inharmonicity_B_notes_above_1e-5", b_above),
+        ("obs_wS_artifact_count", art_count),
+        ("obs_wS_artifact_notes", ";".join(art_notes)),
+        ("mir_descriptors_available_summary", mir_summary),
+    ]
+    return pd.DataFrame(summary_rows, columns=["field", "value"])
+
+
 def _build_per_note_processing_metadata_sheet(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     """Per-note STFT / tier / f0 policy (never mixed into ``Density_Metrics``)."""
     if df is None or df.empty or "Note" not in df.columns:
@@ -4276,6 +5361,15 @@ CANONICAL_METRIC_COLUMNS: List[str] = [
     "spectral_entropy",
     "harmonic_completeness",
     "f0_final_hz",
+    # Canonical QC/f0 gate fields (must travel with publication-grade rows)
+    "acoustic_f0_status",
+    "f0_epistemic_status",
+    "valid_for_primary_statistics",
+    "density_confidence",
+    "qc_status",
+    "is_primary_comparable_profile",
+    "analysis_parameter_profile_id",
+    "primary_comparable_profile_definition",
     "adaptive_subfundamental_cutoff_hz",
     "subfundamental_margin_percent",
     "percentage_subfundamental_cutoff_hz",
@@ -4318,6 +5412,21 @@ LEGACY_COLUMN_EXACT_NAMES: frozenset[str] = frozenset(
     }
 )
 
+PHASE7_DIAGNOSTIC_EXPOSURE_COLUMNS: frozenset[str] = frozenset(
+    {
+        "obs_w_formula_version",
+        "pure_observation_w_h",
+        "pure_observation_w_i",
+        "pure_observation_w_s",
+        "component_strength_h",
+        "component_strength_i",
+        "component_strength_s",
+        "legacy_component_strength_h_v55",
+        "legacy_component_strength_i_v55",
+        "legacy_component_strength_s_v55",
+    }
+)
+
 # Columns that must NEVER reach the Canonical_Metrics sheet, even if their
 # name is benign. This is the audit-time defence-in-depth list.
 NEVER_CANONICAL_COLUMN_NAMES: frozenset[str] = frozenset(
@@ -4345,6 +5454,8 @@ def _classify_compiled_column(col: str) -> str:
     diagnostic. ``compilation_error`` is never canonical.
     """
     c = str(col)
+    if c in PHASE7_DIAGNOSTIC_EXPOSURE_COLUMNS:
+        return "diagnostic"
     if c in NEVER_CANONICAL_COLUMN_NAMES:
         return "diagnostic"
     if c in LEGACY_COLUMN_EXACT_NAMES:
@@ -4501,6 +5612,9 @@ def _write_compiled_excel(
     input_schema_validation_status: str = "not_validated",
     legacy_pipeline_inputs_found: int = 0,
     legacy_pipeline_inputs_ignored: str = "none",
+    harmonic_weight: Optional[float] = None,
+    inharmonic_weight: Optional[float] = None,
+    subbass_weight: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Write compiled workbook: slim ``Density_Metrics``, ``Analysis_Metadata``, optional PCA sheets.
 
@@ -4565,7 +5679,12 @@ def _write_compiled_excel(
     outp.parent.mkdir(parents=True, exist_ok=True)
     base_df = df.copy()
     if not base_df.empty:
-        base_df = _add_canonical_and_global_density_columns(base_df)
+        base_df = _add_canonical_and_global_density_columns(
+            base_df,
+            harmonic_weight=harmonic_weight,
+            inharmonic_weight=inharmonic_weight,
+            subbass_weight=subbass_weight,
+        )
     if base_df.columns.duplicated().any():
         logger.warning("Compiled export: removing duplicate column labels.")
         base_df = base_df.loc[:, ~base_df.columns.duplicated()].copy()
@@ -4597,6 +5716,7 @@ def _write_compiled_excel(
         _omit = [c for c in _OMIT_FROM_COMPILED_METRICS_EXPORT if c in export_df.columns]
         if _omit:
             export_df = export_df.drop(columns=_omit)
+        export_df, legacy_aliases_df = _split_strict_alias_columns(export_df)
         if apply_publication_column_filter:
             filtered = filter_dataframe_for_publication_metrics_sheet(export_df)
             if filtered.shape[1] > 0:
@@ -4632,6 +5752,11 @@ def _write_compiled_excel(
                 logger.warning("Compile_Guide sheet skipped: %s", _ge)
                 meta_flat["compile_guide_export_status"] = f"skipped: {_ge}"
             export_df.to_excel(writer, sheet_name="Compiled Metrics", index=False)
+            if legacy_aliases_df is not None and not legacy_aliases_df.empty:
+                legacy_aliases_df.to_excel(writer, sheet_name="Legacy_Aliases", index=False)
+                meta_flat["legacy_aliases_export_status"] = "exported"
+            else:
+                meta_flat["legacy_aliases_export_status"] = "skipped: no strict alias columns"
             _append_dissonance_excel_sheets(writer, base_df, meta_flat)
             try:
                 from metadata_sanitizer import publication_redaction_enabled, sanitize_metadata_dict
@@ -4654,7 +5779,13 @@ def _write_compiled_excel(
         return meta_flat
 
     wf_for_density_sheet = str(metadata.get("weight_function") or "").strip() or None
-    density_df = _build_density_metrics_main_sheet(base_df, weight_function=wf_for_density_sheet)
+    density_df = _build_density_metrics_main_sheet(
+        base_df,
+        weight_function=wf_for_density_sheet,
+        harmonic_weight=harmonic_weight,
+        inharmonic_weight=inharmonic_weight,
+        subbass_weight=subbass_weight,
+    )
     _strip = dissonance_columns_present_in_density_sheet(density_df)
     if _strip:
         logger.warning("Removing dissonance-like columns from Density_Metrics: %s", _strip)
@@ -4693,6 +5824,9 @@ def _write_compiled_excel(
 
     if _den_clean() and "density_formula_version" in density_df.columns:
         density_df = density_df.drop(columns=["density_formula_version"], errors="ignore")
+    density_df, legacy_aliases_df = _split_strict_alias_columns(density_df)
+    if legacy_aliases_df is None or legacy_aliases_df.empty:
+        _, legacy_aliases_df = _split_strict_alias_columns(base_df)
     _dbg = _build_debug_counts_sheet(base_df)
     if _dbg is not None and not _dbg.empty:
         _dbg = _sdf(_dbg)
@@ -4719,6 +5853,11 @@ def _write_compiled_excel(
             logger.warning("Compile_Guide sheet skipped: %s", _ge)
             meta_flat["compile_guide_export_status"] = f"skipped: {_ge}"
         density_df.to_excel(writer, sheet_name="Density_Metrics", index=False)
+        if legacy_aliases_df is not None and not legacy_aliases_df.empty:
+            legacy_aliases_df.to_excel(writer, sheet_name="Legacy_Aliases", index=False)
+            meta_flat["legacy_aliases_export_status"] = "exported"
+        else:
+            meta_flat["legacy_aliases_export_status"] = "skipped: no strict alias columns"
 
         # Publication policy text lives in ``Compile_Guide`` / dictionary docs;
         # avoid stuffing warning prose into ``Analysis_Metadata`` when publication-clean is on.
@@ -4764,8 +5903,97 @@ def _write_compiled_excel(
                         "canonical_density",
                         pd.to_numeric(_canon["canonical_density_v5_adapted"], errors="coerce"),
                     )
+            # Backfill canonical QC/f0 text fields from Density_Metrics when
+            # canonical sanitization/path does not carry them through.
+            if (
+                isinstance(density_df, pd.DataFrame)
+                and not density_df.empty
+                and "Note" in _canon.columns
+                and "Note" in density_df.columns
+            ):
+                _canon = _canon.copy()
+                _dm_take = density_df[
+                    [
+                        c
+                        for c in (
+                            "Note",
+                            "acoustic_f0_status",
+                            "f0_epistemic_status",
+                            "qc_status",
+                            "f0_validation_mode",
+                        )
+                        if c in density_df.columns
+                    ]
+                ].copy()
+                if not _dm_take.empty:
+                    _dm_take = _dm_take.groupby("Note", as_index=False).last()
+                    _canon = _canon.merge(
+                        _dm_take,
+                        on="Note",
+                        how="left",
+                        suffixes=("", "__dm"),
+                    )
+                    for _k in (
+                        "acoustic_f0_status",
+                        "f0_epistemic_status",
+                        "qc_status",
+                        "f0_validation_mode",
+                    ):
+                        _dmk = f"{_k}__dm"
+                        if _dmk in _canon.columns:
+                            if _k not in _canon.columns:
+                                _canon[_k] = _canon[_dmk]
+                            else:
+                                _base = _canon[_k]
+                                _fill = _canon[_dmk]
+                                _need = _base.isna() | _base.astype(str).str.strip().eq("")
+                                _canon.loc[_need, _k] = _fill.loc[_need]
+                            _canon = _canon.drop(columns=[_dmk], errors="ignore")
+                # If acoustic_f0_status is still blank, derive it from
+                # f0_epistemic_status so canonical sheets remain documentally complete.
+                if "acoustic_f0_status" in _canon.columns and "f0_epistemic_status" in _canon.columns:
+                    _af0 = _canon["acoustic_f0_status"]
+                    _epi = _canon["f0_epistemic_status"].astype(str).str.strip().str.lower()
+                    _need_af0 = _af0.isna() | _af0.astype(str).str.strip().eq("")
+                    _derived = pd.Series("status_missing", index=_canon.index, dtype=object)
+                    _derived.loc[_epi.eq("free_fit_acoustically_verified")] = "fit_accepted_acoustically_verified"
+                    _derived.loc[_epi.eq("nominal_guided_acoustically_verified")] = (
+                        "nominal_guided_acoustically_verified"
+                    )
+                    _derived.loc[_epi.eq("nominal_fallback_not_verified")] = (
+                        "nominal_fallback_used_not_acoustically_verified"
+                    )
+                    _canon.loc[_need_af0, "acoustic_f0_status"] = _derived.loc[_need_af0]
             _canon.to_excel(writer, sheet_name="Canonical_Metrics", index=False)
             meta_flat["canonical_metrics_export_status"] = "exported"
+            # Canonical primary subset for inferential/descriptive stats.
+            _canon_primary = _canon.copy()
+            if "valid_for_primary_statistics" in _canon_primary.columns:
+                _canon_primary = _canon_primary[
+                    pd.to_numeric(_canon_primary["valid_for_primary_statistics"], errors="coerce").fillna(0).astype(int) == 1
+                ].copy()
+            if "is_primary_comparable_profile" in _canon_primary.columns:
+                _canon_primary = _canon_primary[
+                    pd.to_numeric(_canon_primary["is_primary_comparable_profile"], errors="coerce").fillna(0).astype(int) == 1
+                ].copy()
+            if _canon_primary.empty:
+                _canon_primary = pd.DataFrame(
+                    [
+                        {
+                            "canonical_primary_status": (
+                                "no rows passed valid_for_primary_statistics "
+                                "and/or is_primary_comparable_profile filters"
+                            )
+                        }
+                    ]
+                )
+            _canon_primary.to_excel(writer, sheet_name="Canonical_Primary_Filtered", index=False)
+            meta_flat["canonical_primary_filtered_export_status"] = "exported"
+            meta_flat["canonical_metrics_row_count"] = int(len(_canon))
+            if "canonical_primary_status" in _canon_primary.columns:
+                meta_flat["canonical_primary_filtered_row_count"] = 0
+            else:
+                meta_flat["canonical_primary_filtered_row_count"] = int(len(_canon_primary))
             # AUDIT FIX (Clarinete_mf workbook-clutter complaint):
             # Diagnostic_Metrics historically shipped a long tail of
             # all-NaN / all-zero columns left over from removed features
@@ -4785,6 +6013,16 @@ def _write_compiled_excel(
             # column SET (for live columns) are preserved.
             if not _diag.empty:
                 _diag = _drop_dead_columns(_diag)
+                # Scientific hygiene: avoid reusing canonical Density_Metrics names
+                # for diagnostic-scale variants on a different sheet.
+                _diag_ren = {
+                    "density_metric_raw": "diagnostic_density_metric_raw",
+                    "density_metric_normalized": "diagnostic_density_metric_normalized",
+                    "density_weighted_sum": "diagnostic_density_weighted_sum",
+                }
+                _present_ren = {k: v for k, v in _diag_ren.items() if k in _diag.columns}
+                if _present_ren:
+                    _diag = _diag.rename(columns=_present_ren)
                 _diag.to_excel(writer, sheet_name="Diagnostic_Metrics", index=False)
                 meta_flat["diagnostic_metrics_export_status"] = "exported"
             else:
@@ -4822,6 +6060,15 @@ def _write_compiled_excel(
             meta_flat["validation_export_status"] = "exported"
         else:
             meta_flat.setdefault("validation_export_status", "skipped: no validation columns in compiled frame")
+        _phase7_summary = _build_phase7_final_validation_summary_sheet(
+            density_df,
+            harmonic_weight=harmonic_weight,
+            inharmonic_weight=inharmonic_weight,
+            subbass_weight=subbass_weight,
+            phase1_history_csv_path=outp.parent / "phase1_discovered_density_profiles.csv",
+        )
+        _phase7_summary.to_excel(writer, sheet_name="Validation_Summary", index=False)
+        meta_flat["validation_summary_export_status"] = "exported"
         if _pn is not None and not _pn.empty:
             _pn.to_excel(writer, sheet_name="Per_Note_Processing_Metadata", index=False)
             meta_flat["per_note_metadata_export_status"] = "exported"
@@ -6925,6 +8172,7 @@ def _compile_density_metrics_impl(
     include_pca: bool = False,
     harmonic_weight: float = 0.95,  # Default: 95% (alinhado com interface)
     inharmonic_weight: float = 0.05,  # Default: 5% (alinhado com interface)
+    subbass_weight: Optional[float] = None,
     weight_function: str = "linear",
     *,
     compiled_public_columns: bool = True,
@@ -6946,6 +8194,7 @@ def _compile_density_metrics_impl(
             use ``enable_pca_export``. Se True, força ``enable_pca_export=True``.
         harmonic_weight: Peso da componente harmónica.
         inharmonic_weight: Peso da componente inarmónica.
+        subbass_weight: Peso da componente sub-bass (None = usar razão por nota).
         weight_function: Função de ponderação ('linear', 'log', 'sqrt', 'exp', ...).
         compiled_public_columns: Se True (padrão), o Excel de densidade inclui apenas a folha
             enxuta ``Density_Metrics`` + ``Analysis_Metadata`` (+ PCA em folhas separadas).
@@ -7084,7 +8333,12 @@ def _compile_density_metrics_impl(
     else:
         logger.warning("Column 'Note' not found; keeping original order.")
 
-    df = _add_canonical_and_global_density_columns(df)
+    df = _add_canonical_and_global_density_columns(
+        df,
+        harmonic_weight=harmonic_weight,
+        inharmonic_weight=inharmonic_weight,
+        subbass_weight=subbass_weight,
+    )
 
     # ---------- PONTO CRÍTICO: (re)calcular a Weighted Combined Metric ----------
     # 1) eliminar qualquer WCM herdada dos Excels
@@ -7160,6 +8414,7 @@ def _compile_density_metrics_impl(
                 "minimum_samples_for_pca": minimum_samples_for_pca,
                 "harmonic_weight": harmonic_weight,
                 "inharmonic_weight": inharmonic_weight,
+                "subbass_weight": subbass_weight,
                 "weight_function": wf_key,
                 "n_samples": int(len(df)),
                 "rolloff_density_public_canonical_source_policy": (
@@ -7185,6 +8440,9 @@ def _compile_density_metrics_impl(
                 compile_file_pattern=file_pattern,
                 allow_legacy_super_json=allow_legacy_super_json,
                 input_schema_validation_status="not_validated_compile_metrics_impl",
+                harmonic_weight=harmonic_weight,
+                inharmonic_weight=inharmonic_weight,
+                subbass_weight=subbass_weight,
             )
             logger.info("Compiled workbook written to '%s'", outp)
         except Exception as e:
@@ -7722,6 +8980,7 @@ def compile_density_metrics_with_pca(
     include_pca: bool = True,
     harmonic_weight: float = 0.95,  # Default: 95% (alinhado com interface)
     inharmonic_weight: float = 0.05,  # Default: 5% (alinhado com interface)
+    subbass_weight: Optional[float] = None,
     weight_function: str = "linear",
     use_tsne: bool = False,
     use_umap: bool = False,
@@ -7754,6 +9013,7 @@ def compile_density_metrics_with_pca(
         include_pca=False,            # PCA será aplicado já de seguida (se pedido)
         harmonic_weight=harmonic_weight,
         inharmonic_weight=inharmonic_weight,
+        subbass_weight=subbass_weight,
         weight_function=weight_function,
         compiled_public_columns=False,
         prefer_phase2_rolloff_density=prefer_phase2_rolloff_density,
@@ -7779,6 +9039,7 @@ def compile_density_metrics_with_pca(
                 include_pca=False,
                 harmonic_weight=harmonic_weight,
                 inharmonic_weight=inharmonic_weight,
+                subbass_weight=subbass_weight,
                 weight_function=weight_function,
                 compiled_public_columns=False,
                 prefer_phase2_rolloff_density=prefer_phase2_rolloff_density,
@@ -8019,6 +9280,7 @@ def compile_density_metrics_with_pca(
                 "minimum_samples_for_pca": minimum_samples_for_pca,
                 "harmonic_weight": harmonic_weight,
                 "inharmonic_weight": inharmonic_weight,
+                "subbass_weight": subbass_weight,
                 "weight_function": weight_function,
                 "detect_anomalies": detect_anomalies,
                 "anomaly_contamination": anomaly_contamination if anomaly_contamination is not None else "auto",
@@ -8055,6 +9317,9 @@ def compile_density_metrics_with_pca(
                 compile_file_pattern=_eff_pat,
                 allow_legacy_super_json=allow_legacy_super_json,
                 input_schema_validation_status=_schema_status,
+                harmonic_weight=harmonic_weight,
+                inharmonic_weight=inharmonic_weight,
+                subbass_weight=subbass_weight,
             )
             if meta_out.get("pca_export_status") == "exported" and outp.is_file() and "Note" in df.columns:
                 try:

@@ -1,19 +1,40 @@
 # References
 
-Hill, M. O. (1973). Diversity and evenness: A unifying notation and its consequences. *Ecology, 54*(2), 427-432. https://doi.org/10.2307/1934352
+This file is the canonical bibliography for all theoretical anchors used in the SoundSpectrAnalys_version 55 codebase. Inline `References` blocks in individual modules use short form; full APA-7 entries live here. The dissertation that consumes this software should cite from this file.
 
-Hutchinson, W., & Knopoff, L. (1978). The acoustic component of Western consonance. *Interface, 7*(1), 1–29.
+## Spectral analysis and DFT/window theory
+- Harris, F. J. (1978). On the use of windows for harmonic analysis with the discrete Fourier transform. *Proceedings of the IEEE, 66*(1), 51–83.
+- Heinzel, G., Rüdiger, A., & Schilling, R. (2002). *Spectrum and spectral density estimation by the Discrete Fourier transform (DFT), including a comprehensive list of window functions and some new at-top windows* (Technical report). Max-Planck-Institut für Gravitationsphysik.
 
-Jost, L. (2006). Entropy and diversity. *Oikos, 113*(2), 363-375. https://doi.org/10.1111/j.2006.0030-1299.14714.x
+## Inharmonicity and string acoustics
+- Fletcher, H. (1962). Normal vibration frequencies of a stiff piano string. *Journal of the Acoustical Society of America, 36*(1), 203–209.
+- Fletcher, N. H., & Rossing, T. D. (1998). *The physics of musical instruments* (2nd ed.). Springer.
 
-Krimphoff, J., McAdams, S., & Winsberg, S. (1994). Caractérisation du timbre des sons complexes. II. Analyses acoustiques et quantification psychophysique. *Journal de Physique IV, 4*(C5), C5-625-C5-628. https://doi.org/10.1051/jp4:19945135
+## Psychoacoustics
+- Zwicker, E., & Fastl, H. (1990). *Psychoacoustics: Facts and models*. Springer.
+- Moore, B. C. J., & Glasberg, B. R. (1983). Suggested formulae for calculating auditory-filter bandwidths and excitation patterns. *Journal of the Acoustical Society of America, 74*(3), 750–753.
+- Aures, W. (1985). Ein Berechnungsverfahren der Rauhigkeit. *Acustica, 58*(5), 268–281.
 
-Peeters, G., Giordano, B. L., Susini, P., Misdariis, N., & McAdams, S. (2011). The timbre toolbox: Extracting audio descriptors from musical signals. *Journal of the Acoustical Society of America, 130*(5), 2902-2916. https://doi.org/10.1121/1.3642604
+## Timbre and MIR descriptors
+- Pollard, H. F., & Jansson, E. V. (1982). A tristimulus method for the specification of musical timbre. *Acustica, 51*(3), 162–171.
+- Peeters, G., Giordano, B. L., Susini, P., Misdariis, N., & McAdams, S. (2011). The Timbre Toolbox: Extracting audio descriptors from musical signals. *Journal of the Acoustical Society of America, 130*(5), 2902–2916.
 
-Sethares, W. A. (2005). *Tuning, timbre, spectrum, scale* (2nd ed.). Springer.
+## Bayesian inference and information theory
+- Lin, J. (1991). Divergence measures based on the Shannon entropy. *IEEE Transactions on Information Theory, 37*(1), 145–151.
+- Gelman, A., Carlin, J. B., Stern, H. S., Dunson, D. B., Vehtari, A., & Rubin, D. B. (2013). *Bayesian data analysis* (3rd ed.). CRC Press.
 
-Vassilakis, P. N. (2001). *Perceptual and physical properties of amplitude fluctuation and their musical significance* (Doctoral dissertation, University of California, Los Angeles).
+## Scientific software methodology
+- Hatton, L. (1997). The T-experiments: Errors in scientific software. *IEEE Computational Science and Engineering, 4*(2), 27–38.
+- Soergel, D. A. W. (2015). Rampant software errors may undermine scientific results. *F1000Research, 3*, 303.
 
-Vassilakis, P. N., & Fitz, K. (2007). Computational models of roughness and sensory dissonance. In K. A. Kendall & E. R. Miranda (Eds.), *Current directions in computer music research* (pp. 123-144). Springer.
+## Module-to-reference mapping
 
-Zwicker, E., & Terhardt, E. (1980). Analytical expressions for critical-band rate and critical bandwidth as a function of frequency. *Journal of the Acoustical Society of America, 68*(5), 1523-1525. https://doi.org/10.1121/1.385079
+| Module | References used |
+|---|---|
+| `spectral_normalization.py` | Harris (1978); Heinzel et al. (2002) |
+| `inharmonicity_model.py` | Fletcher (1962); Fletcher & Rossing (1998) |
+| `subbass_policy.py` | Zwicker & Fastl (1990) |
+| `mir_descriptors.py` | Moore & Glasberg (1983); Aures (1985); Pollard & Jansson (1982); Peeters et al. (2011) |
+| `adaptive_density_engine.py` | Lin (1991); Gelman et al. (2013) |
+| `metric_contract.py` | Hatton (1997); Soergel (2015) |
+| `temporal_segmentation.py` | Peeters et al. (2011) |

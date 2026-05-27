@@ -2577,14 +2577,33 @@ def aggregate_low_frequency_residual_peak_power(
     return float(tot)
 
 
-def aggregate_subbass_noise_peak_power(*args: Any, **kwargs: Any) -> float:
-    """
-    Deprecated compatibility wrapper.
+_AGGREGATE_SUBBASS_WRAPPER_WARNED = False
 
-    Use :func:`aggregate_low_frequency_residual_peak_power` instead. This aggregate
-    measures fixed-band low-frequency **residual** peak power, not proven physical
-    sub-bass and not proven noise.
-    """
+
+def aggregate_subbass_noise_peak_power(*args: Any, **kwargs: Any) -> float:
+    """Deprecated wrapper; use ``aggregate_low_frequency_residual_peak_power``."""
+    global _AGGREGATE_SUBBASS_WRAPPER_WARNED
+    if not _AGGREGATE_SUBBASS_WRAPPER_WARNED:
+        warnings.warn(
+            "deprecated, see aggregate_low_frequency_residual_peak_power",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        _AGGREGATE_SUBBASS_WRAPPER_WARNED = True
+
+    if "freqs_hz" in kwargs or "amplitudes" in kwargs:
+        freqs = np.asarray(kwargs.pop("freqs_hz", []), dtype=float).ravel()
+        amps = np.asarray(kwargs.pop("amplitudes", []), dtype=float).ravel()
+        n = int(min(len(freqs), len(amps)))
+        if n <= 0:
+            return 0.0
+        complete = pd.DataFrame({"Frequency (Hz)": freqs[:n], "Amplitude": amps[:n]})
+        return aggregate_low_frequency_residual_peak_power(
+            complete_list_df=complete,
+            harmonic_list_df=None,
+            **kwargs,
+        )
+
     return aggregate_low_frequency_residual_peak_power(*args, **kwargs)
 
 

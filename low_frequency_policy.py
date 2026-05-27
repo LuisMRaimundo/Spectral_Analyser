@@ -9,9 +9,12 @@ margins, optional leakage-aware lower bounds, and classification labels for audi
 from __future__ import annotations
 
 import math
+import warnings
 from typing import Any, Dict, Optional
+from subbass_policy import SubBassPolicy
 
 LOW_FREQUENCY_POLICY_VERSION = "dc_removed_adaptive_subfundamental_guard_v1"
+_ADAPTIVE_SUBFUNDAMENTAL_SHIM_WARNED = False
 
 SUBFUNDAMENTAL_CUTOFF_SELECTION_RULE: str = (
     "adaptive_subfundamental_cutoff_hz = min( max( min_floor_hz, "
@@ -77,15 +80,24 @@ def calculate_adaptive_subfundamental_cutoff_hz(
     min_floor_hz: float = 20.0,
     max_fraction_of_f0: float = 0.95,
     leakage_guard_cutoff_hz: Optional[float] = None,
+    sr_hz: Optional[float] = None,
+    n_fft: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    Compute the adaptive lower-frequency guard for one analysed note.
+    deprecated, see SubBassPolicy.upper_bound_hz
 
-    ``percentage_subfundamental_cutoff_hz`` is the pure register policy line
-    (no ``min_floor_hz`` applied). The final ``adaptive_subfundamental_cutoff_hz``
-    applies ``min_floor``, optional finite ``leakage_guard_cutoff_hz``, then an
-    upper cap ``f0 * max_fraction_of_f0`` so metadata matches the protective rule.
+    Legacy API retained for compatibility while unifying operational sub-bass
+    boundary semantics across the codebase.
     """
+    global _ADAPTIVE_SUBFUNDAMENTAL_SHIM_WARNED
+    if not _ADAPTIVE_SUBFUNDAMENTAL_SHIM_WARNED:
+        warnings.warn(
+            "deprecated, see SubBassPolicy.upper_bound_hz",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        _ADAPTIVE_SUBFUNDAMENTAL_SHIM_WARNED = True
+
     result = _nan_result()
     if not _finite_positive(f0_hz):
         return result
@@ -124,7 +136,18 @@ def calculate_adaptive_subfundamental_cutoff_hz(
     at_raw = [p for p in parts if abs(p[0] - raw_max) <= eps]
     selected_raw = max(at_raw, key=lambda p: _prio.get(p[1], 0))[1]
 
-    adaptive = min(raw_max, cap_hz)
+    sr_eff = float(sr_hz) if _finite_positive(sr_hz) else 44100.0
+    n_fft_eff = int(n_fft) if n_fft is not None else 0
+    if n_fft_eff < 0:
+        n_fft_eff = 0
+    policy_bound = float(
+        SubBassPolicy.upper_bound_hz(
+            f0_hz=f0,
+            sr_hz=sr_eff,
+            n_fft=n_fft_eff,
+        )
+    )
+    adaptive = min(policy_bound, cap_hz)
     if adaptive + eps < raw_max:
         selected_final = "max_fraction_of_f0_cap"
     else:

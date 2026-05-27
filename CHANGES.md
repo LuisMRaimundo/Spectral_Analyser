@@ -1,0 +1,564 @@
+# Documentation synchronization to current code state (2026-05-27)
+
+## Files touched and rationale
+
+- `docs/TECHNICAL_MANUAL_COMPLETE.md`
+  Updated provenance and limitations sections to reflect current canonical documentation sources: constants registry (`docs/CONSTANTS_PROVENANCE.md`) and formula-validation status (`docs/validation/FORMULA_VALIDATION_STATUS.md`), replacing stale TODO-era framing. Also corrected FFT-tier normalization equations to match the current Phase-8 `quantity_kind` contract (`peak_amplitude_sum: N_ref/N`, `peak_power_sum: (N_ref/N)^2`) and documented backward-compatible broadband-L2 branches explicitly.
+
+- `docs/MANUAL_COVERAGE_REPORT.md`
+  Synchronized scope/caveat language with current repository state; added explicit resolved rows for constants-provenance registry completion and formula-validation baseline (F1-F6).
+
+- `docs/parameter_provenance.md`
+  Added a current-state note clarifying this file is now a historical Phase-6 ledger for signature defaults, while constants provenance is canonicalized in `docs/CONSTANTS_PROVENANCE.md`.
+
+- `pipeline.md`
+  Updated Phase-6 provenance row to reference the current constants-provenance registry path and removed stale generator-path wording. Updated P3 normalization row to the current Phase-8 peak-sum normalization law.
+
+- `pipeline_runtime.md`
+  Updated runtime-path P3 normalization row to the current Phase-8 peak-sum normalization law (`N_ref/N` and `(N_ref/N)^2`) instead of the legacy broadband-L2 form.
+
+- `docs/METRIC_FORMULA_INDEX.md`
+  Corrected F-021 and F-022 to the current Phase-8 tier-normalization formulas for exported peak-amplitude and peak-power sums.
+
+- `README.md`, `pipeline_runtime.md`
+  Applied terminology/notation consistency polish only (e.g., `tier-normalized`, `normalization`, `N_ref`) with no change to technical claims, formulas, or export semantics.
+
+- `metrics_dictionary.json`
+  Bumped `registry_version` to `phase_8_docs_sync_v1` to mark documentation/registry synchronization to the current code state.
+
+## Scope and non-scope
+
+- No computational logic changed.
+- No `.py` implementation module modified.
+- No tests modified.
+- Documentation and metadata synchronization only.
+
+# README.md technical body restoration (2026-05-27)
+
+## Files touched and rationale
+
+- `README.md`
+  Inserted the technical scaffolding sections (Status; What this software does; Installation; Usage; Outputs; Scientific governance) at named positions, between the pre-existing authorial sections. The opening paragraph, Theoretical anchoring, License, Citation, and Acknowledgements sections were preserved byte-for-byte. The README now functions as a doctoral-grade entry document and links to `REFERENCES.md`, `CITATION.cff`, `CHANGES.md`, `docs/TECHNICAL_MANUAL_COMPLETE.md`, `docs/EXPORT_COLUMN_DICTIONARY.md`, `docs/METRIC_FORMULA_INDEX.md`, `docs/CONSTANTS_PROVENANCE.md`, `docs/validation/FORMULA_VALIDATION_STATUS.md`, `tests/formula_validation/`, and `LICENSE`.
+
+## Scope and non-scope
+
+- No `.py` file modified.
+- No test modified.
+- No file under `docs/` modified.
+- No authorial content altered.
+- `REFERENCES.md`, `pyproject.toml`, `CITATION.cff`, and `LICENSE` untouched.
+
+# Proportionate formula-validation suite (2026-05-27)
+
+## Files touched and rationale
+
+- `tests/formula_validation/` (new directory, six tests plus conftest)
+  Six AST-based formula-extraction tests covering the canonical form of: the H/I/S weighted density formula (F1), the Phase-8 FFT-length normalisation factor (F2), the stiff-string inharmonicity fit (F3), the sub-bass upper bound (F4), the effective partial density (F5), and the Jensen-Shannon divergence (F6). The suite complements the numerical regression tests under `tests/phase_*`: those detect drift in numerical outputs, these detect drift in the symbolic structure of the formulae themselves.
+
+- `docs/validation/FORMULA_VALIDATION_STATUS.md` (new)
+  Per-formula record of canonical form, module, reference, test path, and status. This document is the citation target for any methodology-chapter reference to the formula-validation suite.
+
+## Scope and non-scope
+
+- No existing test modified.
+- No `.py` module under the implementation tree modified.
+- The suite is deliberately proportionate (six formulae), not a full mirror of `SoundSpectrAnalyse-main/tests/formula_validation/`, because v55 has scientific modules (`adaptive_density_engine.py`, `inharmonicity_model.py`, `subbass_policy.py`, `spectral_normalization.py`, etc.) that have no counterpart in `main`. A direct mirror would be incoherent.
+- Tests are conservative: they assert structural invariants (presence of `sqrt`, polynomial degree, additive structure) rather than exact AST identity, to avoid firing on legitimate refactoring.
+
+# Authorial completion of README.md and CITATION.cff; LICENSE file and pyproject.toml license synchronisation (2026-05-27)
+
+## Files touched and rationale
+
+- `README.md`
+  Filled the four `[AUTHOR: ...]` placeholder blocks with content supplied by the author (opening framing paragraph, dissertation reference sentence, full proprietary licence summary, FCT funding citation, and acknowledgements). Technical sections were not altered.
+
+- `CITATION.cff`
+  Filled author identity (Luís Raimundo, NOVA University of Lisbon), version and release date, proprietary licence reference (`LicenseRef-Proprietary`), and added a structured `references` entry citing the FCT doctoral grant DOI `10.54499/2020.08817.BD`. ORCID and project URL fields were omitted as the author has not supplied them.
+
+- `LICENSE`
+  Created at the repository root with the full proprietary copyright notice supplied by the author.
+
+- `pyproject.toml`
+  `license = {text = "Scientific Research Use"}` was replaced with `license = {text = "Proprietary - All Rights Reserved"}` to synchronise the package metadata with the LICENSE file and the README. The `"License :: Other/Proprietary License"` classifier was added if absent. No other field was modified.
+
+## Scope and non-scope
+
+- No `.py` file modified.
+- No test modified.
+- No file under `docs/` modified.
+- `REFERENCES.md` not modified.
+- `py-modules` list in `pyproject.toml` not modified.
+- No licence was selected on the author's behalf — the proprietary posture was supplied by the author.
+
+# Constants provenance registry and pyproject.toml module manifest completion (2026-05-27)
+
+## Files touched and rationale
+
+- `docs/CONSTANTS_PROVENANCE.md`
+  Created per-constant provenance registry classifying every numeric constant in `constants.py` as `primary_source`, `derived`, `convention`, or `internal_default`. Honest classification preferred over fabricated provenance.
+
+- `constants.py`
+  Extended `_PROVENANCE_SOURCED_CONSTANTS` to cover every constant classified as `primary_source`, `derived`, or `convention` in the registry. Softened the unsourced-constants notification from `RuntimeWarning` to `logging.INFO`, in keeping with the fact that `internal_default` constants are a documented design choice rather than a defect. Module-level docstring updated to reference `docs/CONSTANTS_PROVENANCE.md` and `REFERENCES.md`.
+
+- `REFERENCES.md`
+  Extended only if a new primary source was cited that was not already present.
+
+- `pyproject.toml`
+  Completed the `py-modules` manifest to include all 48 top-level Python modules. Previously, 23 modules — including all of the new scientific modules (`adaptive_density_engine`, `inharmonicity_model`, `metric_contract`, `mir_descriptors`, `spectral_normalization`, `subbass_policy`, `temporal_segmentation`, etc.) — were absent from the manifest and would not have been packaged into an installed wheel.
+
+## Scope and non-scope
+
+- No numeric constant value was altered.
+- No constant was renamed or removed.
+- No test was modified.
+- No computational logic was changed.
+- No exported metric or schema was changed.
+
+# Bibliographic provenance pass — REFERENCES.md and inline docstring references (2026-05-27)
+
+## Files touched and rationale
+
+- `REFERENCES.md`
+  Created canonical APA-7 bibliography at repository root; serves as the single source of truth for the theoretical anchors used in the scientific modules and as the bridge document between source code and dissertation.
+
+- `inharmonicity_model.py`, `mir_descriptors.py`, `adaptive_density_engine.py`, `metric_contract.py`, `temporal_segmentation.py`
+  Added short-form inline `References` blocks to module-level docstrings, mirroring the convention already used in `spectral_normalization.py` and `subbass_policy.py`. No computational logic, signatures, or exported metrics were modified.
+
+## Scope and non-scope
+
+- No tests modified.
+- No exported metric names, schemas, or formula versions altered.
+- `spectral_normalization.py` and `subbass_policy.py` were intentionally left untouched as they already carry correct inline references.
+
+# Phase 8 - FFT-Length Normalization for Peak Sums (2026-05-26)
+
+## Files touched and rationale
+
+- `spectral_normalization.py`  
+  Refactored `n_fft_normalization_factor(...)` to make scaling assumptions explicit via `quantity_kind`, adding peak-sum laws (`peak_amplitude_sum -> N_ref/N`, `peak_power_sum -> (N_ref/N)^2`) and preserving legacy `kind="amplitude"/"power"` as deprecated aliases to the broadband-L2 laws for backward compatibility.
+
+- `compile_metrics.py`  
+  Updated tier-normalization mapping to use peak-sum semantics for production exported sums (`harmonic/inharmonic/subbass_amplitude_sum` and `harmonic/inharmonic/subbass_energy_sum`) and switched all normalization call sites to `quantity_kind=`; this removes FFT-length bias from the compiled `*_tier_normalized` peak-sum columns.
+
+- `pipeline_orchestrator_gui.py`  
+  Updated the fallback normalization call used by Phase-1 diagnostics to the explicit peak-power law (`quantity_kind="peak_power_sum"`), avoiding legacy deprecation usage and keeping Phase-1 derived tier-normalized sub-bass energy aligned with the new Phase-8 semantics.
+
+- `tests/phase_8/test_normalization_factor_peak_amplitude.py`  
+  Added unit regression for `peak_amplitude_sum` factors at `n_fft=4096` and `n_fft=16384`.
+
+- `tests/phase_8/test_normalization_factor_peak_power.py`  
+  Added unit regression for `peak_power_sum` factors at `n_fft=4096` and `n_fft=16384`.
+
+- `tests/phase_8/test_peak_amplitude_invariance_in_pipeline.py`  
+  Added critical integration regression: synthetic sinusoid processed through real Stage-1/Stage-2 paths at two FFT lengths, asserting `harmonic_amplitude_sum_tier_normalized` invariance within 5%.
+
+- `tests/phase_8/test_legacy_kind_keyword_still_works.py`  
+  Added backward-compatibility regression ensuring legacy `kind=` still returns prior broadband-L2 scaling and emits `DeprecationWarning`.
+
+- `tests/phase_8/test_phase_3_test_still_passes.py`  
+  Added compatibility regression asserting the existing Phase-3 invariance test still passes under legacy alias behavior.
+
+## Acoustic / methodological justification
+
+- Peak-bin sums and broadband L2 quantities have different N-dependence under the DFT/window model; applying broadband-L2 normalization (`sqrt(N_ref/N)` for amplitude-like quantities) to peak-amplitude sums leaves a systematic cross-tier bias.
+- For fixed-window harmonic peaks, coherent gain causes peak magnitudes to scale linearly with N, so peak-amplitude sums require `N_ref/N` and peak-power sums require `(N_ref/N)^2` for cross-tier comparability.
+
+## Cross-tier discontinuity measurement (synthetic benchmark)
+
+- Synthetic 1 kHz sinusoid benchmark (Stage 1 + Stage 2, `n_fft=4096` vs `8192`):  
+  pre-Phase-8 (legacy broadband amplitude factor) step discontinuity = **29.903588%**;  
+  post-Phase-8 (peak-amplitude factor) step discontinuity = **0.868704%**.
+
+## References (APA)
+
+- Harris, F. J. (1978). On the use of windows for harmonic analysis with the discrete Fourier transform. *Proceedings of the IEEE, 66*(1), 51-83.
+- Heinzel, G., Rudiger, A., & Schilling, R. (2002). *Spectrum and spectral density estimation by the Discrete Fourier transform (DFT), including a comprehensive list of window functions and some new at-top windows* (Technical report). Max-Planck-Institut fur Gravitationsphysik.
+
+# Phase 7.1 - Version Tagging, Compiled Exposure, and Warning Cleanup (2026-05-26)
+
+## Files touched and rationale
+
+- `acoustic_density_core.py`  
+  Added `OBS_W_FORMULA_VERSION_CURRENT = "v56_occupancy_ratio"` and exported `obs_w_formula_version` with the pure-observation triplet so v56 audit cross-version `obs_w*` comparisons have explicit semantics; switched the canonical runtime sub-bass bound call site from `deprecated_subbass_upper_bound_hz_from_ratio(...)` to `SubBassPolicy.upper_bound_hz(...)` to remove the per-run deprecation warning flagged by the v56 audit while preserving numeric behavior.
+
+- `pipeline_orchestrator_gui.py`  
+  Added `obs_w_formula_version` to Phase 1 discovery diagnostics and `phase1_discovered_density_profiles.csv` rows so the same v56 audit traceability tag present per note is propagated into corpus-level adaptive history exports.
+
+- `compile_metrics.py`  
+  Extended compiled allow-lists and extraction plumbing to ingest/export `obs_w_formula_version`, `pure_observation_w_{h,i,s}`, `component_strength_{h,i,s}`, and `legacy_component_strength_{h,i,s}_v55` from per-note `Metrics` into `Density_Metrics`; classification logic was updated so these Phase-7 fields are visible in `Diagnostic_Metrics` and remain excluded from `Canonical_Metrics`, addressing the v56 workbook column-audit visibility gap.
+
+- `tests/phase_7_1/test_formula_version_tagged.py`  
+  Added regression ensuring `compute_acoustic_density_descriptors(...)` always tags outputs with `obs_w_formula_version == "v56_occupancy_ratio"`.
+
+- `tests/phase_7_1/test_phase7_fields_in_compiled.py`  
+  Added compile-path regression ensuring the nine Phase-7 observation/strength fields are present and populated in `Density_Metrics` and available in `Diagnostic_Metrics`.
+
+- `tests/phase_7_1/test_no_operational_deprecation_warning.py`  
+  Added runtime warning regression asserting no operational `DeprecationWarning` referencing `SubBassPolicy.upper_bound_hz` is emitted during descriptor computation.
+
+- `tests/phase_7_1/test_numeric_invariance.py`  
+  Added invariance regression that emulates the pre-7.1 deprecated-call path and asserts numeric outputs are bit-identical to the direct-policy path, guarding against silent semantic drift.
+
+## Phase 7.1B - Per-note Metrics Serialization Gap (2026-05-26)
+
+- `proc_audio.py`  
+  Fixed the per-note `Metrics` writer gap by explicitly serializing `pure_observation_w_{h,i,s}`, `component_strength_{h,i,s}`, `legacy_component_strength_{h,i,s}_v55`, and `obs_w_formula_version` from the in-memory `compute_acoustic_density_descriptors(...)` output state into the per-note `Metrics` sheet row.
+
+- `pipeline_orchestrator_gui.py`  
+  Extended `_extract_note_density_feedback_diagnostics(...)` and `phase1_discovered_density_profiles.csv` history rows to carry the same Phase-7.1 field family (`obs_w_formula_version`, `component_strength_*`, `legacy_component_strength_*_v55`) alongside `pure_observation_w_*`, so Phase 1 CSV exports no longer drop these values.
+
+- `tests/phase_7_1/test_phase7_fields_in_compiled.py`  
+  Clarified scope as a unit/plumbing test (synthetic workbook fixture path), keeping it as valid narrow coverage.
+
+- `tests/phase_7_1b/test_per_note_metrics_writes_all_phase7_fields.py`  
+  Added integration regression that runs Stage 1 on a synthetic WAV, opens on-disk per-note `Metrics`, and verifies all ten Phase-7.1 fields are present/populated with expected semantics.
+
+- `tests/phase_7_1b/test_compiled_has_phase7_fields_populated.py`  
+  Added integration regression that runs synthetic Stage 1 + Stage 2 and asserts on-disk `compiled_density_metrics.xlsx` `Density_Metrics` contains all ten Phase-7.1 fields populated for all rows.
+
+- `tests/phase_7_1b/test_phase1_csv_has_phase7_fields_populated.py`  
+  Added integration regression validating Phase 1 discovery CSV generation path writes non-NaN `pure_observation_w_*` and propagates the full Phase-7.1 field family, including `obs_w_formula_version`.
+
+# Phase 1 - Decouple Prior from Observation and Fix File Ordering (2026-05-26)
+
+## Files touched and rationale
+
+- `acoustic_density_core.py`  
+  Added explicit Phase 1 changelog note, introduced pure observation outputs (`pure_observation_w_h`, `pure_observation_w_i`, `pure_observation_w_s`), preserved legacy prior-smoothed outputs (`smoothed_w_h_legacy`, `smoothed_w_i_legacy`, `smoothed_w_s_legacy`), and changed canonical compatibility aliases (`harmonic_density_weight`, `inharmonic_density_weight`, `subbass_density_weight`) to expose pure observation. Replaced hard-coded `0.55/0.45` with named deprecated constants for traceability and auditability of prior-contaminated behavior.
+
+- `pipeline_orchestrator_gui.py`  
+  Added deterministic Phase 1 file ordering utility (`build_phase1_file_iteration_order`) that sorts by parsed note f0 via `canonical_note_from_filename` + `librosa.note_to_hz`, with unparseable names sorted last by filename. Added orchestrator entry-point parameter `enable_adaptive_path_randomization: bool = False` and deterministic seed logging, with default behavior remaining sorted-by-f0. Updated adaptive feedback extraction to prioritize pure observation fields and ensured adaptive engine updates consume pure observations.
+
+- `adaptive_density_engine.py`  
+  Added explicit `update()` docstring assertion that `observation` must be pure data ratio input (not prior-mixed), clarifying methodological contract between Stage 1 evidence and online Bayesian-style update.
+
+- `tests/phase_1/conftest.py`  
+  Added test bootstrap path setup so Phase 1 tests import project modules consistently.
+
+- `tests/phase_1/test_no_prior_contamination.py`  
+  Added regression test proving note-level pure observation output is invariant to strongly different priors for identical spectral evidence.
+
+- `tests/phase_1/test_deterministic_ordering.py`  
+  Added regression test proving Phase 1 folder iteration order is monotonic in nominal f0 and deterministic for unparseable note tokens.
+
+## Acoustic / methodological justification
+
+- Observation and prior should be separated in online learning pipelines: the likelihood term should reflect current data, while prior influence should be applied in the posterior update step. Mixing prior into the observation channel causes biased updates and can over-propagate early-run conditions across later notes.
+- Deterministic f0-ordered traversal improves reproducibility and interpretability of adaptive trajectories in per-note spectral pipelines; optional seeded randomization provides controlled robustness checks without changing default publication behavior.
+
+## References (APA)
+
+- Bottou, L. (2010). Large-scale machine learning with stochastic gradient descent. In Y. Lechevallier & G. Saporta (Eds.), *Proceedings of COMPSTAT'2010* (pp. 177-186). Springer. https://doi.org/10.1007/978-3-7908-2604-3_16
+- Bishop, C. M. (2006). *Pattern recognition and machine learning*. Springer.
+
+# Phase 2 - Unify Sub-Bass Semantics and Fix Phase-2 Application Path (2026-05-26)
+
+## Files touched and rationale
+
+- `subbass_policy.py`  
+  Added canonical `SubBassPolicy.upper_bound_hz(f0_hz, sr_hz, n_fft)` implementing `min(f0_hz * 0.5, 80.0)` as the single operational sub-bass definition.
+
+- `constants.py`  
+  Kept legacy constant compatibility and added deprecated shim `deprecated_subbass_aggregate_cutoff_hz(...)` that routes to `SubBassPolicy` and emits one deprecation warning per process.
+
+- `acoustic_density_core.py`  
+  Replaced operational use of legacy `subbass_upper_ratio` with `SubBassPolicy` resolution while retaining a deprecated ratio shim (`deprecated_subbass_upper_bound_hz_from_ratio`) for backward compatibility and testability.
+
+- `low_frequency_policy.py`  
+  Kept `calculate_adaptive_subfundamental_cutoff_hz(...)` as a deprecated compatibility shim with one-time warning, internally mapped to `SubBassPolicy` so legacy callers converge on the same cutoff value.
+
+- `proc_audio.py`  
+  Replaced all operational sub-bass fallback call sites that used fixed aggregate constants or legacy low-frequency cutoff routine with unified `SubBassPolicy` via `_current_subbass_upper_bound_hz()`.
+
+- `run_real_corpus_validation.py`  
+  Updated validation-side cutoff derivation to use `SubBassPolicy`, removing direct dependency on legacy adaptive cutoff computation.
+
+- `pipeline_orchestrator_gui.py`  
+  Fixed Phase-2 application path by forwarding `subbass_weight` in Stage-2 `compile_kw` so discovered profile triplets are fully transmitted.
+
+- `compile_metrics.py`  
+  Extended `compile_density_metrics_with_pca` and `_compile_density_metrics_impl` with `subbass_weight: float = None` behavior. Updated weighted-density computation so explicit corpus profile (`harmonic_weight`, `inharmonic_weight`, `subbass_weight`) is actually applied when all three are provided; added `density_weights_source` and invariant comparator `density_metric_raw_per_note_balance`.
+
+- `tests/phase_2/conftest.py`  
+  Added Phase-2 test import bootstrap.
+
+- `tests/phase_2/test_subbass_policy_single_source.py`  
+  Added regression test ensuring legacy entry points resolve to the same sub-bass upper bound for identical `(f0, sr, n_fft)`.
+
+- `tests/phase_2/test_phase2_profile_actually_applied.py`  
+  Added regression test ensuring Phase-2 fixed corpus profile is truly applied to `density_metric_raw`, while `density_metric_raw_per_note_balance` remains per-note.
+
+## Acoustic / methodological justification
+
+- A single sub-bass boundary definition prevents semantic drift between Stage-1 extraction, low-frequency guards, and Stage-2 compilation. This improves reproducibility and interpretability of low-frequency component accounting.
+- Explicitly surfacing both corpus-profile and per-note-balance raw density scores removes ambiguity about which weighting regime generated a result, preventing silent methodological mismatch in downstream analysis.
+
+## References (APA)
+
+- Zwicker, E., & Fastl, H. (1990). *Psychoacoustics: Facts and models*. Springer.
+
+# Phase 7 - Register-Invariant Strength Formula (2026-05-26)
+
+## Files touched and rationale
+
+- `acoustic_density_core.py`  
+  Replaced the Phase-6/v55 incommensurate strength blend (harmonic-order count + residual log-bin count + sub-bass particle count with fixed scalar 0.25) with a register-invariant occupancy-ratio formulation. Added `_expected_residual_bin_count(...)`, denominator guards with `qc_status` append semantics (`register_normalization_denominator_zero_*`), and explicit deprecated exports for the prior v55 strengths:
+  `legacy_component_strength_h_v55`, `legacy_component_strength_i_v55`, `legacy_component_strength_s_v55`.  
+  Canonical `pure_observation_w_{h,i,s}` now expose the new register-normalized data ratio; `smoothed_w_*_legacy` remain prior-mixed legacy compatibility fields built on top of the new data ratio.
+
+- `constants.py`  
+  Added Phase-7 neutral symmetry constants:
+  `STRENGTH_OCCUPANCY_WEIGHT_HARMONIC = 1.0`,  
+  `STRENGTH_OCCUPANCY_WEIGHT_INHARMONIC = 1.0`,  
+  `STRENGTH_OCCUPANCY_WEIGHT_SUBBASS = 1.0`,  
+  each documented as Phase-7 equal-weight occupancy defaults. Added the three constants to `_PROVENANCE_SOURCED_CONSTANTS`.
+
+- `compile_metrics.py`  
+  Extended compiled `Density_Metrics` allow-lists to carry inharmonicity fit outputs:  
+  `inharmonicity_coefficient_B`, `inharmonicity_fit_residual_std_cents`, `inharmonicity_fit_status`, `inharmonicity_fit_method`.  
+  Updated per-note extraction to ingest these values from per-note `Metrics` when available and to fall back to the per-note `Inharmonicity_Fit` sheet (first row) otherwise.
+
+- `tests/phase_7/conftest.py`  
+  Added phase bootstrap import path setup.
+
+- `tests/phase_7/test_register_invariant_on_synthetic_odd_harmonic.py`  
+  Added low/high-register odd-harmonic clarinet-like synthetic regression for harmonic-majority observation constraints.
+
+- `tests/phase_7/test_register_invariance_across_f0.py`  
+  Added cross-register invariance regression (`f0` sweep) for `pure_observation_w_h`.
+
+- `tests/phase_7/test_strength_formula_units_match.py`  
+  Added dimensionless-scale regression for Phase-7 strength terms (`component_strength_*`) under near-uniform occupancy scenarios.
+
+- `tests/phase_7/test_inharmonicity_columns_in_compiled.py`  
+  Added compiled-workbook regression ensuring inharmonicity fit columns propagate into compiled `Density_Metrics`.
+
+- `tests/phase_7/test_clarinet_corpus_wh_is_majority.py`  
+  Added corpus-gated clarinet adaptive-profile sanity test (`profile_h >= 0.50`) using `CLARINET_SUSTAINS_DIR`.
+
+- `docs/parameter_provenance.md` and `tools/generate_parameter_provenance.py`  
+  Updated provenance ledger generation and entries for the three Phase-7 occupancy symmetry constants.
+
+## Acoustic / methodological justification
+
+- The previous v55 strength formula combined unlike counting alphabets (harmonic order slots vs 100-cent residual bins vs sub-bass particle slots) without normalizing by each alphabet’s available capacity. As f0 rises, this causes systematic register drift independent of actual spectral balance.  
+- Register-invariant occupancy normalization enforces commensurate comparison across H/I/S by dividing each density/count term by the number of available slots in that band before combination.  
+- Equal occupancy weights (1.0, 1.0, 1.0) are the neutral symmetry point; non-equal settings encode deliberate prior preference and must be explicitly documented.
+
+## References (APA)
+
+- Backus, J. (1974). *The acoustical foundations of music* (2nd ed.). W. W. Norton.
+- Benade, A. H. (1976). *Fundamentals of musical acoustics* (2nd ed.). Oxford University Press.
+- Cogan, R. (1984). *New images of musical sound*. Harvard University Press.
+- Dickens, P., Smith, J., & Wolfe, J. (2007). Improved precision of resonance frequency measurements in musical wind instruments. *The Journal of the Acoustical Society of America, 121*(4), 2020-2026.
+- Fletcher, N. H., & Rossing, T. D. (1998). *The physics of musical instruments* (2nd ed.). Springer.
+- Bottou, L. (2010). Large-scale machine learning with stochastic gradient descent. In Y. Lechevallier & G. Saporta (Eds.), *Proceedings of COMPSTAT'2010* (pp. 177-186). Springer. https://doi.org/10.1007/978-3-7908-2604-3_16
+
+# Phase 3 - Normalise Amplitudes Across FFT Tiers; Repair Diagnostic Alias (2026-05-26)
+
+## Files touched and rationale
+
+- `spectral_normalization.py`  
+  Added canonical FFT-tier normalization helper `n_fft_normalization_factor(n_fft, n_fft_reference=8192, kind=...)` with amplitude (`sqrt(N_ref/N)`) and power (`N_ref/N`) modes.
+
+- `compile_metrics.py`  
+  Added `_tier_normalized` companions for cross-note absolute sums in the compiled path:
+  `harmonic_amplitude_sum`, `inharmonic_amplitude_sum`, `subbass_amplitude_sum`,
+  `harmonic_energy_sum`, `inharmonic_energy_sum`, `subbass_energy_sum`.  
+  Added `tier_consistency_status` with explicit row status values including
+  `all_tiers_normalised`.  
+  Added these normalization/status columns to canonical sheet column sets so exported
+  rows expose both raw and normalized forms.
+
+- `acoustic_density_core.py`  
+  Replaced mixed-unit diagnostic alias terms with coherent participation-ratio terms:
+  `D_H`, `D_R`, `D_S` now all use inverse-Herfindahl (`_effective_count`) over
+  harmonic/residual/subbass power arrays, respectively.  
+  Added explicit diagnostic term fields:
+  `diagnostic_effective_components_h`, `diagnostic_effective_components_r`,
+  `diagnostic_effective_components_s`.  
+  Added canonical diagnostic output
+  `effective_components_weighted_diagnostic` and kept
+  `energy_weighted_component_density_diagnostic` as deprecated alias.
+
+- `tests/phase_3/conftest.py`  
+  Added Phase-3 test import bootstrap.
+
+- `tests/phase_3/test_tier_normalisation_invariance.py`  
+  Added regression test with a synthetic sustained sinusoid analyzed at `n_fft=4096`
+  and `n_fft=8192`, asserting tier-normalized agreement within 2%.
+
+- `tests/phase_3/test_diagnostic_unit_coherence.py`  
+  Added regression test validating finite, non-negative float outputs for each
+  effective-component term and the combined weighted diagnostic.
+
+## Acoustic / methodological justification
+
+- FFT-size changes alter absolute spectral sums in ways that confound cross-note
+  comparisons unless a reference normalization is explicitly applied.
+- Participation-ratio style diagnostics must combine unit-coherent terms; mixing
+  effective-density quantities with integer count surrogates leads to inconsistent
+  interpretation and unstable cross-note ranking.
+
+## References (APA)
+
+- Cogan, R. (1984). *New images of musical sound*. Harvard University Press.
+- Edwards, J. T., & Thouless, D. J. (1972). Numerical studies of localization in disordered systems. *Journal of Physics C: Solid State Physics, 5*(8), 807-820. https://doi.org/10.1088/0022-3719/5/8/007
+
+# Phase 4 - Parameterise Inharmonicity Instead of Merely Gating It (2026-05-26)
+
+## Files touched and rationale
+
+- `inharmonicity_model.py`  
+  Added `fit_inharmonicity_coefficient(...)` with least-squares estimation of stiff-string inharmonicity coefficient `B` in `f_n = n*f0*sqrt(1 + B*n^2)`, including fit status, residual spread, and predicted stretched harmonic grid.
+
+- `constants.py`  
+  Added dedicated inharmonicity / adaptive-harmonic-tolerance constants and policy documentation, including references for FFT-bin-aware tolerance floor.
+
+- `acoustic_density_core.py`  
+  Integrated inharmonicity fit before harmonic-mask construction.  
+  When fit succeeds and `B > 1e-5`, harmonic prediction uses stretched partials; otherwise behavior remains mathematically equivalent to the legacy gate (`B=0` path).  
+  Added adaptive per-partial tolerance:
+  `max(harmonic_tolerance_cents, 1200 * bin_spacing_hz / (n * f0_hz))`.  
+  Exported inharmonicity fit fields and status into descriptor output.
+
+- `proc_audio.py`  
+  Added export of inharmonicity fit payload as new workbook sheet `Inharmonicity_Fit` (coefficient, residual, status, method, and stretched predicted frequencies by order).
+
+- `tests/phase_4/conftest.py`  
+  Added Phase-4 test import bootstrap.
+
+- `tests/phase_4/test_inharmonicity_zero_for_pure_harmonic.py`  
+  Added regression test asserting near-zero `B` for exact harmonic synthetic spectrum.
+
+- `tests/phase_4/test_inharmonicity_recovers_known_B.py`  
+  Added regression test for synthetic stiff-string spectrum with known `B=1e-4` and ±20% recovery tolerance.
+
+- `tests/phase_4/test_clarinet_corpus_B_is_small.py`  
+  Added clarinet corpus sanity test (`mean B < 1e-5`) gated by `CLARINET_SUSTAINS_DIR` environment variable for environments where corpus audio is available.
+
+## Acoustic / methodological justification
+
+- A fixed ±35-cent harmonic gate can incorrectly label stretched stiff-string partials as inharmonic noise at higher orders.  
+- Explicit `B` estimation provides a physically grounded correction that preserves harmonic classification under known inharmonic instruments while remaining backward-compatible for acoustically harmonic cases (`B≈0`).  
+- Adaptive tolerance floor tied to FFT-bin spacing prevents deterministic spectral quantization error from being treated as structural inharmonicity.
+
+## References (APA)
+
+- Fletcher, H. (1962). *The physics of musical instruments*. Dover.
+- Fletcher, H., Blackham, E. D., & Stratton, R. (1962). Quality of piano tones. *The Journal of the Acoustical Society of America, 34*(6), 749-761.
+- Galembo, A., & Askenfelt, A. (1994). Signal representation and estimation of spectral parameters by inharmonic comb filtering. *IEEE Transactions on Speech and Audio Processing, 2*(2), 197-203.
+- Järveläinen, H., Karjalainen, M., & Tolonen, T. (2001). Computationally efficient analysis of beating and inharmonicity in musical tones. *Journal of the Audio Engineering Society, 49*(7/8), 695-708.
+- McAulay, R. J., & Quatieri, T. F. (1986). Speech analysis/synthesis based on a sinusoidal representation. *IEEE Transactions on Acoustics, Speech, and Signal Processing, 34*(4), 744-754.
+- Serra, X., & Smith, J. O. (1990). Spectral modeling synthesis: A sound analysis/synthesis system based on a deterministic plus stochastic decomposition. *Computer Music Journal, 14*(4), 12-24.
+- Fletcher, N. H., & Rossing, T. D. (1998). *The physics of musical instruments* (2nd ed.). Springer.
+
+# Phase 5 - Extended Timbral Descriptors and Temporal Segmentation (2026-05-26)
+
+## Files touched and rationale
+
+- `mir_descriptors.py`  
+  Added Phase-5 MIR descriptor engine covering spectral moments, irregularity, tristimulus family, flatness, rolloff (85/95), Aures roughness, and ERB-weighted spectral density.
+
+- `temporal_segmentation.py`  
+  Added envelope-follower segmentation (`attack`, `sustain`, `release`) with MPEG-7 style log-attack-time output.
+
+- `proc_audio.py`  
+  Integrated descriptor extraction into per-note export workflow; added whole-note descriptor fields plus segmented variants (`_on_attack`, `_on_sustain`, `_on_release`) and sustain-focused aliases (`_on_sustain_segment`).  
+  Exported segmented density component columns and `log_attack_time_s` into `Metrics`.
+
+- `compile_metrics.py`  
+  Extended compiled-sheet allowlists to include Phase-5 descriptor columns and segmented columns so they propagate into `compiled_density_metrics.xlsx`.  
+  Updated direct per-note extractor to ingest these columns from per-note `Metrics` and carry them into compiled rows.
+
+- `metrics_dictionary.json`  
+  Added citation-backed entries for all new Phase-5 descriptors.
+
+- `tests/phase_5/conftest.py`  
+  Added Phase-5 test bootstrap.
+
+- `tests/phase_5/test_descriptor_ranges.py`  
+  Added regression test asserting valid descriptor-domain ranges on synthetic spectra.
+
+- `tests/phase_5/test_segmentation_on_pluck_synth.py`  
+  Added regression test asserting pluck segmentation behavior (`attack < 50 ms`, sustain dominant).
+
+## Acoustic / methodological justification
+
+- MPEG-7/Timbre-Toolbox-compatible descriptors improve external comparability across studies and instrument families.  
+- Attack/sustain/release decomposition prevents sustained-reed assumptions from being baked into descriptors when analyzing percussive/plucked instruments with attack-dominant timbre.
+
+## References (APA)
+
+- Aures, W. (1985). Ein Berechnungsverfahren der Rauhigkeit. *Acustica, 58*(5), 268-281.
+- Krimphoff, J., McAdams, S., & Winsberg, S. (1994). Caractérisation du timbre des sons complexes. II. Analyses acoustiques et quantification psychophysique. *Journal de Physique IV*, 4(C5), 625-628.
+- Moore, B. C. J., & Glasberg, B. R. (1983). Suggested formulae for calculating auditory-filter bandwidths and excitation patterns. *The Journal of the Acoustical Society of America, 74*(3), 750-753.
+- Peeters, G. (2004). *A large set of audio features for sound description (similarity and classification) in the CUIDADO project*. IRCAM.
+- Peeters, G., Giordano, B., Susini, P., Misdariis, N., & McAdams, S. (2011). The Timbre Toolbox: Extracting audio descriptors from musical signals. *The Journal of the Acoustical Society of America, 130*(5), 2902-2916.
+- Pollard, H. F., & Jansson, E. V. (1982). A tristimulus method for the specification of musical timbre. *Acta Acustica united with Acustica, 51*(3), 162-171.
+
+# Phase 6 - Document Magic Numbers; Final Consolidation (2026-05-26)
+
+## Files touched and rationale
+
+- `docs/parameter_provenance.md`  
+  Added a generated provenance ledger that enumerates all numeric constants in `constants.py` and all numeric defaults in function signatures for modules touched in Phases 1-5. Each entry now records canonical name, current value, one-line acoustic meaning, source status, qualitative stability range, and an anchoring test file.
+
+- `constants.py`  
+  Added a one-time import warning (`RuntimeWarning`) that lists numeric constants lacking bibliographic provenance and marks them explicitly as `TODO: bibliographic justification required`, fulfilling traceability requirements without silently changing analytical behavior.
+
+- `density.py`  
+  Kept `aggregate_subbass_noise_peak_power` because live imports still exist; hardened it into an explicit deprecation wrapper (one-time `DeprecationWarning`) with backward-compatible argument mapping to `aggregate_low_frequency_residual_peak_power`.
+
+- `compile_metrics.py`  
+  Added strict alias partitioning (`_split_strict_alias_columns`) and wrote strict aliases to a dedicated `Legacy_Aliases` sheet, while keeping the primary metrics sheet narrower and canonical for downstream analyses.
+
+- `tests/phase_6/conftest.py`  
+  Added import bootstrap for Phase 6 tests.
+
+- `tests/phase_6/test_parameter_provenance_doc.py`  
+  Added regression test asserting that the parameter provenance document exists and exposes required ledger fields.
+
+- `tests/phase_6/test_legacy_aliases_sheet_split.py`  
+  Added regression test proving strict aliases move to `Legacy_Aliases` and are excluded from the primary metrics sheet.
+
+- `tests/phase_6/test_density_wrapper_deprecation.py`  
+  Added regression test proving legacy sub-bass wrapper still works but emits `DeprecationWarning`.
+
+- `tests/phase_6/test_density_order_invariance.py`  
+  Added regression test showing `density_metric_raw` values are permutation-invariant under row reordering.
+
+- `tests/phase_6/test_subbass_observation_cap.py`  
+  Added regression test verifying low sub-bass observation weight (`pure_observation_w_s < 0.05`) for a harmonic-like synthetic note.
+
+- `tools/generate_parameter_provenance.py`  
+  Added utility script to regenerate `docs/parameter_provenance.md` deterministically from AST-level extraction of constants/defaults.
+
+## Migration guide for downstream analyses (Phases 1-6)
+
+- **Phase 1**  
+  Treat `pure_observation_w_h|w_i|w_s` as canonical observation weights. Legacy blended fields are explicitly labeled legacy/deprecated and should not be used for adaptive updates.
+
+- **Phase 2**  
+  Sub-bass semantics are unified under `SubBassPolicy.upper_bound_hz`. In compiled outputs, interpret `density_weights_source` to distinguish explicit corpus profile application (`phase2_corpus_profile`) from per-note weighting. Use `density_metric_raw_per_note_balance` for per-note-only comparators.
+
+- **Phase 3**  
+  Cross-note absolute sums should use `_tier_normalized` columns for FFT-size comparability. `effective_components_weighted_diagnostic` is the coherent diagnostic; `energy_weighted_component_density_diagnostic` remains as deprecated alias only.
+
+- **Phase 4**  
+  Consume inharmonicity fields (`inharmonicity_coefficient_B`, fit status/residual/method) for harmonicity diagnostics. Clarinet-like harmonic corpora should remain near `B≈0`; stretched instruments are now handled physically rather than by fixed gate alone.
+
+- **Phase 5**  
+  New MIR and temporal descriptors are available as whole-note and segmented forms. Segment suffixes (`_on_attack`, `_on_sustain`, `_on_release`, `_on_sustain_segment`) are semantically distinct and should not be collapsed without explicit modeling intent.
+
+- **Phase 6**  
+  Strict aliases have moved to the `Legacy_Aliases` sheet; primary analysis should use canonical fields from `Density_Metrics` / `Canonical_Metrics`. Treat import-time provenance warnings as a signal to prioritize bibliographic completion before publication.
+
+## References (APA)
+
+- Fletcher, N. H., & Rossing, T. D. (1998). *The physics of musical instruments* (2nd ed.). Springer.
+- Galembo, A., & Askenfelt, A. (1994). Signal representation and estimation of spectral parameters by inharmonic comb filtering. *IEEE Transactions on Speech and Audio Processing, 2*(2), 197-203.
+- Järveläinen, H., Karjalainen, M., & Tolonen, T. (2001). Computationally efficient analysis of beating and inharmonicity in musical tones. *Journal of the Audio Engineering Society, 49*(7/8), 695-708.
+- McAulay, R. J., & Quatieri, T. F. (1986). Speech analysis/synthesis based on a sinusoidal representation. *IEEE Transactions on Acoustics, Speech, and Signal Processing, 34*(4), 744-754.
+- Moore, B. C. J. (2012). *An introduction to the psychology of hearing* (6th ed.). Brill.
+- Zwicker, E., & Fastl, H. (1990). *Psychoacoustics: Facts and models*. Springer.

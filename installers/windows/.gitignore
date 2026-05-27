@@ -1,7 +1,0 @@
-# Build artefacts (do not commit)
-build/
-dist/
-output/
-
-*.zip
-*.exe

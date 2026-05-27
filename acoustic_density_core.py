@@ -40,19 +40,72 @@ power:
     "Power", "power", "power_raw"
 
 No external audio I/O is performed here.
+
+Module changelog
+----------------
+2026-05-26
+- Phase 1 semantic change: ``harmonic_density_weight``,
+  ``inharmonic_density_weight`` and ``subbass_density_weight`` now expose the
+  note-local pure observation (no prior mixing). Legacy smoothed values remain
+  available as explicit deprecated fields.
+- Phase 7 semantic change: register-invariant strength formula now normalizes
+  harmonic-order / residual-log-bin / subbass-particle terms by their
+  available slot capacities before computing pure observation weights.
+- Phase 7.1 housekeeping: canonical runtime path now calls
+  ``SubBassPolicy.upper_bound_hz`` directly (deprecated wrapper retained for
+  external callers only), removing operational deprecation warnings.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any, Final, Mapping, Optional
 
 import math
+import warnings
 import numpy as np
 import pandas as pd
+from subbass_policy import SubBassPolicy
+from inharmonicity_model import fit_inharmonicity_coefficient
+from constants import (
+    ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC,
+    INHARMONICITY_B_ENABLE_THRESHOLD,
+    INHARMONICITY_FIT_CENTS_WINDOW,
+    INHARMONICITY_FIT_ORDER_CAP,
+    STRENGTH_OCCUPANCY_WEIGHT_HARMONIC,
+    STRENGTH_OCCUPANCY_WEIGHT_INHARMONIC,
+    STRENGTH_OCCUPANCY_WEIGHT_SUBBASS,
+)
 
 
 EPS = 1e-12
+_SUBBASS_RATIO_SHIM_WARNED = False
+
+
+"""
+deprecated, see pure_observation_w_{h,i,s}
+
+Historical feed-forward blend retained only for backward-compatible reporting
+of legacy smoothed values. Mixing current evidence with a running prior at the
+observation stage can bias stochastic updates; online methods should ingest the
+pure per-sample evidence and apply Bayesian / stochastic updates downstream
+(Bottou, 2010).
+"""
+DEPRECATED_LEGACY_OBSERVATION_BLEND_WEIGHT = 0.55
+DEPRECATED_LEGACY_PRIOR_BLEND_WEIGHT = 0.45
+
+OBS_W_FORMULA_VERSION_CURRENT: Final[str] = "v56_occupancy_ratio"
+"""
+obs_w formula semantic tag used in exported descriptors.
+
+Allowed values:
+- ``v50_prior_mixed``: historical prior-contaminated blend
+  (0.55 observation / 0.45 prior).
+- ``v55_incommensurate_strength``: pure data ratio from the Phase-6/v55
+  incommensurate strength formulation.
+- ``v56_occupancy_ratio``: pure data ratio from the Phase-7 register-invariant
+  occupancy-ratio strength formulation.
+"""
 
 
 @dataclass(frozen=True)
@@ -212,6 +265,54 @@ def _expected_harmonic_orders(
     return np.arange(n0, n1 + 1, dtype=int)
 
 
+def _expected_residual_bin_count(
+    *,
+    freq_min_hz: float,
+    freq_max_hz: float,
+    residual_log_bin_cents: float,
+) -> int:
+    lo = float(max(freq_min_hz, 1e-6))
+    hi = float(max(freq_max_hz, lo))
+    step = float(max(residual_log_bin_cents, 1e-6))
+    if hi <= lo:
+        return 0
+    span_cents = float(1200.0 * math.log2(hi / lo))
+    if not np.isfinite(span_cents) or span_cents <= 0.0:
+        return 0
+    return int(max(0, math.ceil(span_cents / step)))
+
+
+def _append_qc_status(existing: str, token: str) -> str:
+    base = str(existing or "").strip()
+    if not base:
+        return token
+    parts = [p.strip() for p in base.split(",") if p.strip()]
+    if token in parts:
+        return ",".join(parts)
+    parts.append(token)
+    return ",".join(parts)
+
+
+def deprecated_subbass_upper_bound_hz_from_ratio(
+    *,
+    f0_hz: float,
+    sr_hz: float,
+    n_fft: int,
+    subbass_upper_ratio: float = 0.75,
+) -> float:
+    """deprecated, see SubBassPolicy.upper_bound_hz"""
+    del subbass_upper_ratio
+    global _SUBBASS_RATIO_SHIM_WARNED
+    if not _SUBBASS_RATIO_SHIM_WARNED:
+        warnings.warn(
+            "deprecated, see SubBassPolicy.upper_bound_hz",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        _SUBBASS_RATIO_SHIM_WARNED = True
+    return float(SubBassPolicy.upper_bound_hz(f0_hz=f0_hz, sr_hz=sr_hz, n_fft=n_fft))
+
+
 def compute_acoustic_density_descriptors(
     peaks_df: pd.DataFrame,
     *,
@@ -233,19 +334,29 @@ def compute_acoustic_density_descriptors(
     residual_body_contribution_cap: float = 0.25,
     salient_harmonic_relative_db: float = -45.0,
     salient_harmonic_ceiling_hz: float = 5000.0,
-    density_summation_mode: str = "his_weighted",
+    density_summation_mode: str = "his_note_adaptive",
     harmonic_density_weight: float = 1.0,
     inharmonic_density_weight: float = 0.5,
     subbass_density_weight: float = 0.25,
     density_salience_threshold_db: float = -45.0,
     density_frequency_ceiling_hz: float = 5000.0,
+    sr_hz: float = 44100.0,
+    n_fft: int = 4096,
 ) -> dict[str, Any]:
     """
     Compute separated acoustic descriptors from a peak/component table.
 
     The returned descriptors are designed for export. No descriptor here should
     be silently averaged with legacy "Combined Density Metric" fields.
+
+    deprecated, see pure_observation_w_{h,i,s}
+    ``smoothed_w_h_legacy``, ``smoothed_w_i_legacy`` and
+    ``smoothed_w_s_legacy`` preserve the historical prior-mixed semantics for
+    backward compatibility only.
     """
+    # Legacy compatibility argument kept for external callers; canonical runtime
+    # path resolves sub-bass boundary via SubBassPolicy directly.
+    del subbass_upper_ratio
     freq, power = _extract_peak_vectors(peaks_df)
 
     out: dict[str, Any] = {
@@ -294,15 +405,38 @@ def compute_acoustic_density_descriptors(
         "harmonic_density_weight": float(harmonic_density_weight),
         "inharmonic_density_weight": float(inharmonic_density_weight),
         "subbass_density_weight": float(subbass_density_weight),
-        "density_summation_mode": str(density_summation_mode or "his_weighted"),
+        "pure_observation_w_h": float("nan"),
+        "pure_observation_w_i": float("nan"),
+        "pure_observation_w_s": float("nan"),
+        "smoothed_w_h_legacy": float("nan"),
+        "smoothed_w_i_legacy": float("nan"),
+        "smoothed_w_s_legacy": float("nan"),
+        "legacy_component_strength_h_v55": float("nan"),
+        "legacy_component_strength_i_v55": float("nan"),
+        "legacy_component_strength_s_v55": float("nan"),
+        "component_strength_h": float("nan"),
+        "component_strength_i": float("nan"),
+        "component_strength_s": float("nan"),
+        "density_summation_mode": str(density_summation_mode or "his_note_adaptive"),
         "density_salience_threshold_db": float(density_salience_threshold_db),
         "density_frequency_ceiling_hz": float(density_frequency_ceiling_hz),
         "density_metric_raw": float("nan"),
+        "effective_components_weighted_diagnostic": float("nan"),
+        "diagnostic_effective_components_h": float("nan"),
+        "diagnostic_effective_components_r": float("nan"),
+        "diagnostic_effective_components_s": float("nan"),
         "energy_weighted_component_density_diagnostic": float("nan"),
+        "inharmonicity_coefficient_B": float(0.0),
+        "inharmonicity_fit_residual_std_cents": float("nan"),
+        "inharmonicity_fit_status": "insufficient_partials",
+        "inharmonicity_fit_method": "",
+        "inharmonicity_stretch_applied": False,
+        "adaptive_harmonic_tolerance_policy": ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC,
         "arithmetic_validation_status": "passed",
         "acoustic_validation_status": (
             "passed" if bool(f0_fit_accepted) else "nominal_fallback_used_not_acoustically_verified"
         ),
+        "qc_status": "",
     }
 
     if freq.size == 0 or power.size == 0 or not _finite_positive(f0_hz):
@@ -341,14 +475,58 @@ def compute_acoustic_density_descriptors(
     expected_count = int(orders_expected.size)
     out["expected_harmonic_slot_count"] = expected_count
 
+    # Inharmonicity fit on significant peaks (near-harmonic candidates only).
+    fit_result = fit_inharmonicity_coefficient(
+        candidate_freqs_hz=freq_sig,
+        f0_hz=float(f0_hz),
+        order_cap=int(INHARMONICITY_FIT_ORDER_CAP),
+        cents_window=float(INHARMONICITY_FIT_CENTS_WINDOW),
+    )
+    fit_B = float(fit_result.get("inharmonicity_coefficient_B", 0.0) or 0.0)
+    fit_status = str(fit_result.get("fit_status", "insufficient_partials") or "insufficient_partials")
+    out["inharmonicity_coefficient_B"] = fit_B
+    out["inharmonicity_fit_residual_std_cents"] = float(
+        fit_result.get("fit_residual_std_cents", float("nan"))
+    )
+    out["inharmonicity_fit_status"] = fit_status
+    out["inharmonicity_fit_method"] = str(fit_result.get("method", "") or "")
+    out["inharmonicity_fit_result"] = fit_result
+    # Explicit boolean export semantic:
+    # False => fit computed but stretched prediction not used in assignment.
+    out["inharmonicity_stretch_applied"] = False
+
+    freq_sorted = np.sort(freq_sig.astype(float))
+    freq_diffs = np.diff(freq_sorted) if freq_sorted.size >= 2 else np.asarray([], dtype=float)
+    freq_diffs = freq_diffs[np.isfinite(freq_diffs) & (freq_diffs > EPS)]
+    bin_spacing_hz = float(np.median(freq_diffs)) if freq_diffs.size > 0 else float(f0_hz / 8.0)
+    out["bin_spacing_hz_estimate"] = float(bin_spacing_hz)
+
     # Classify each significant peak by nearest harmonic order in cents.
     nearest_order = np.rint(freq_sig / float(f0_hz)).astype(int)
     valid_order = nearest_order >= 1
     predicted = nearest_order.astype(float) * float(f0_hz)
+    if fit_status == "ok" and fit_B > float(INHARMONICITY_B_ENABLE_THRESHOLD):
+        n_float = np.maximum(nearest_order.astype(float), 1.0)
+        predicted = n_float * float(f0_hz) * np.sqrt(1.0 + fit_B * (n_float**2))
+        out["inharmonicity_stretch_applied"] = True
     cents_error = 1200.0 * np.log2(np.maximum(freq_sig, EPS) / np.maximum(predicted, EPS))
-    harmonic_peak_mask = valid_order & (np.abs(cents_error) <= float(harmonic_tolerance_cents))
+    n_safe = np.maximum(nearest_order.astype(float), 1.0)
+    tol_floor_cents = 1200.0 * float(bin_spacing_hz) / np.maximum(n_safe * float(f0_hz), EPS)
+    tol_per_partial = np.maximum(float(harmonic_tolerance_cents), tol_floor_cents)
+    harmonic_peak_mask = valid_order & (np.abs(cents_error) <= tol_per_partial)
 
-    subbass_upper_hz = max(freq_min_hz, float(subbass_upper_ratio) * float(f0_hz))
+    try:
+        sr_guess = float(max(freq_max_hz * 2.0, 1.0))
+    except (TypeError, ValueError):
+        sr_guess = 44100.0
+    subbass_upper_hz = max(
+        freq_min_hz,
+        SubBassPolicy.upper_bound_hz(
+            f0_hz=float(f0_hz),
+            sr_hz=sr_guess,
+            n_fft=int(n_fft),
+        ),
+    )
     subbass_mask = freq_sig < subbass_upper_hz
     harmonic_peak_mask = harmonic_peak_mask & ~subbass_mask
     residual_mask = ~(harmonic_peak_mask | subbass_mask)
@@ -485,19 +663,10 @@ def compute_acoustic_density_descriptors(
     # Final user-facing density family (count-based and salience-weighted).
     d_ceiling_hz = float(max(density_frequency_ceiling_hz, 1e-6))
     d_thr_db = float(density_salience_threshold_db)
-    mode = str(density_summation_mode or "his_weighted").strip().lower()
-    w_h = float(harmonic_density_weight)
-    w_i = float(inharmonic_density_weight)
-    w_s = float(subbass_density_weight)
-    if mode in ("harmonic_only", "harmonic-only", "h_only"):
-        w_h, w_i, w_s = 1.0, 0.0, 0.0
-    elif mode in ("inharmonic_only", "inharmonic-only", "i_only"):
-        w_h, w_i, w_s = 0.0, 1.0, 0.0
-    elif mode in ("subbass_only", "subbass-only", "s_only"):
-        w_h, w_i, w_s = 0.0, 0.0, 1.0
-    out["harmonic_density_weight"] = w_h
-    out["inharmonic_density_weight"] = w_i
-    out["subbass_density_weight"] = w_s
+    mode = str(density_summation_mode or "his_note_adaptive").strip().lower()
+    manual_w_h = float(harmonic_density_weight)
+    manual_w_i = float(inharmonic_density_weight)
+    manual_w_s = float(subbass_density_weight)
     out["density_summation_mode"] = mode
     out["density_salience_threshold_db"] = d_thr_db
     out["density_frequency_ceiling_hz"] = d_ceiling_hz
@@ -589,6 +758,196 @@ def compute_acoustic_density_descriptors(
     out["harmonic_density_component"] = float(h_density)
     out["inharmonic_density_component"] = float(inharmonic_density)
     out["subbass_density_component"] = float(subbass_density)
+
+    w_h, w_i, w_s = manual_w_h, manual_w_i, manual_w_s
+    pure_observation_triplet: tuple[float, float, float] | None = None
+    smoothed_legacy_triplet: tuple[float, float, float] | None = None
+    if mode in ("harmonic_only", "harmonic-only", "h_only"):
+        w_h, w_i, w_s = 1.0, 0.0, 0.0
+        out["density_weight_origin"] = "mode_forced_component"
+    elif mode in ("inharmonic_only", "inharmonic-only", "i_only"):
+        w_h, w_i, w_s = 0.0, 1.0, 0.0
+        out["density_weight_origin"] = "mode_forced_component"
+    elif mode in ("subbass_only", "subbass-only", "s_only"):
+        w_h, w_i, w_s = 0.0, 0.0, 1.0
+        out["density_weight_origin"] = "mode_forced_component"
+    elif mode in ("his_note_adaptive", "his_adaptive", "note_adaptive", "adaptive", "auto_note"):
+        # Phase 1 canonical behavior: expose pure note-local observation and
+        # keep prior-smoothed output only as explicit legacy compatibility.
+        legacy_component_strength = np.array(
+            [
+                max(float(h_density), 0.0) + 0.25 * max(float(h_count), 0.0),
+                max(float(inharmonic_density), 0.0) + 0.25 * max(float(salient_inharmonic_bin_count), 0.0),
+                max(float(subbass_density), 0.0) + 0.25 * max(float(salient_subbass_particle_count), 0.0),
+            ],
+            dtype=float,
+        )
+        out["legacy_component_strength_h_v55"] = float(legacy_component_strength[0])
+        out["legacy_component_strength_i_v55"] = float(legacy_component_strength[1])
+        out["legacy_component_strength_s_v55"] = float(legacy_component_strength[2])
+
+        expected_h_slots = int(
+            out.get("expected_harmonic_order_count_up_to_density_ceiling_hz", 0) or 0
+        )
+        subbass_upper_hz = float(
+            SubBassPolicy.upper_bound_hz(
+                f0_hz=float(f0_hz),
+                sr_hz=float(sr_hz),
+                n_fft=int(max(1, n_fft)),
+            )
+        )
+        residual_bin_min_hz = max(float(freq_min_hz), subbass_upper_hz)
+        residual_bin_max_hz = max(float(residual_bin_min_hz), float(d_ceiling_hz))
+        expected_i_bins = int(
+            _expected_residual_bin_count(
+                freq_min_hz=residual_bin_min_hz,
+                freq_max_hz=residual_bin_max_hz,
+                residual_log_bin_cents=float(residual_log_bin_cents),
+            )
+        )
+        bin_spacing_hz_estimate = float(out.get("bin_spacing_hz_estimate", float("nan")))
+        if not np.isfinite(bin_spacing_hz_estimate) or bin_spacing_hz_estimate <= 0.0:
+            bin_spacing_hz_estimate = 1.0
+        raw_expected_s_particles = int(
+            math.ceil(
+                max(0.0, subbass_upper_hz - float(freq_min_hz))
+                / max(1.0, float(bin_spacing_hz_estimate))
+            )
+        )
+        expected_s_particles = int(max(1, raw_expected_s_particles))
+
+        h_term = i_term = s_term = 0.0
+        if expected_h_slots <= 0:
+            out["qc_status"] = _append_qc_status(
+                str(out.get("qc_status", "")),
+                "register_normalization_denominator_zero_harmonic",
+            )
+        else:
+            h_occupancy = float(
+                np.clip(float(h_count) / float(expected_h_slots), 0.0, 1.0)
+            )
+            h_density_per_slot = float(
+                np.clip(max(float(h_density), 0.0) / float(expected_h_slots), 0.0, 1.0)
+            )
+            h_term = float(
+                h_density_per_slot
+                + float(STRENGTH_OCCUPANCY_WEIGHT_HARMONIC) * h_occupancy
+            )
+
+        if expected_i_bins <= 0:
+            out["qc_status"] = _append_qc_status(
+                str(out.get("qc_status", "")),
+                "register_normalization_denominator_zero_inharmonic",
+            )
+        else:
+            i_occupancy = float(
+                np.clip(
+                    float(salient_inharmonic_bin_count) / float(expected_i_bins), 0.0, 1.0
+                )
+            )
+            i_density_per_bin = float(
+                np.clip(
+                    max(float(inharmonic_density), 0.0) / float(expected_i_bins),
+                    0.0,
+                    1.0,
+                )
+            )
+            i_term = float(
+                i_density_per_bin
+                + float(STRENGTH_OCCUPANCY_WEIGHT_INHARMONIC) * i_occupancy
+            )
+
+        if raw_expected_s_particles <= 0:
+            out["qc_status"] = _append_qc_status(
+                str(out.get("qc_status", "")),
+                "register_normalization_denominator_zero_subbass",
+            )
+            s_term = 0.0
+        else:
+            s_occupancy = float(
+                np.clip(
+                    float(salient_subbass_particle_count) / float(expected_s_particles),
+                    0.0,
+                    1.0,
+                )
+            )
+            s_density_per_particle = float(
+                np.clip(
+                    max(float(subbass_density), 0.0) / float(expected_s_particles),
+                    0.0,
+                    1.0,
+                )
+            )
+            s_term = float(
+                s_density_per_particle
+                + float(STRENGTH_OCCUPANCY_WEIGHT_SUBBASS) * s_occupancy
+            )
+
+        component_strength = np.array([h_term, i_term, s_term], dtype=float)
+        out["component_strength_h"] = float(component_strength[0])
+        out["component_strength_i"] = float(component_strength[1])
+        out["component_strength_s"] = float(component_strength[2])
+        total_strength = float(np.sum(component_strength))
+        if np.isfinite(total_strength) and total_strength > EPS:
+            data_ratio = component_strength / total_strength
+            # Feed-forward prior from previous analyses (GUI/orchestrator can pass
+            # running weights learned from earlier notes). This makes later notes
+            # depend on extracted earlier-note metrics instead of a fixed constant.
+            prior_ratio = np.array([manual_w_h, manual_w_i, manual_w_s], dtype=float)
+            prior_ratio = np.maximum(prior_ratio, 0.0)
+            prior_sum = float(np.sum(prior_ratio))
+            if prior_sum <= EPS:
+                prior_ratio = np.array([0.45, 0.35, 0.20], dtype=float)
+                prior_sum = float(np.sum(prior_ratio))
+            prior_ratio = prior_ratio / max(prior_sum, EPS)
+            legacy_smoothed_ratio = (
+                DEPRECATED_LEGACY_OBSERVATION_BLEND_WEIGHT * data_ratio
+                + DEPRECATED_LEGACY_PRIOR_BLEND_WEIGHT * prior_ratio
+            )
+            legacy_smoothed_ratio = legacy_smoothed_ratio / max(float(np.sum(legacy_smoothed_ratio)), EPS)
+
+            pure_observation_triplet = (
+                float(data_ratio[0]),
+                float(data_ratio[1]),
+                float(data_ratio[2]),
+            )
+            smoothed_legacy_triplet = (
+                float(legacy_smoothed_ratio[0]),
+                float(legacy_smoothed_ratio[1]),
+                float(legacy_smoothed_ratio[2]),
+            )
+            # Canonical alias fields now expose pure observation.
+            w_h, w_i, w_s = pure_observation_triplet
+            out["density_weight_origin"] = "per_note_adaptive_pure_observation"
+        else:
+            fallback = np.array([1.0, 0.5, 0.25], dtype=float)
+            fallback = fallback / max(float(np.sum(fallback)), EPS)
+            pure_observation_triplet = (
+                float(fallback[0]),
+                float(fallback[1]),
+                float(fallback[2]),
+            )
+            smoothed_legacy_triplet = pure_observation_triplet
+            w_h, w_i, w_s = pure_observation_triplet
+            out["density_weight_origin"] = "adaptive_fallback_default"
+    else:
+        out["density_weight_origin"] = "manual_or_mode_default"
+
+    if pure_observation_triplet is None:
+        pure_observation_triplet = (float(w_h), float(w_i), float(w_s))
+    if smoothed_legacy_triplet is None:
+        smoothed_legacy_triplet = (float(w_h), float(w_i), float(w_s))
+
+    out["pure_observation_w_h"] = float(pure_observation_triplet[0])
+    out["pure_observation_w_i"] = float(pure_observation_triplet[1])
+    out["pure_observation_w_s"] = float(pure_observation_triplet[2])
+    out["obs_w_formula_version"] = OBS_W_FORMULA_VERSION_CURRENT
+    out["smoothed_w_h_legacy"] = float(smoothed_legacy_triplet[0])
+    out["smoothed_w_i_legacy"] = float(smoothed_legacy_triplet[1])
+    out["smoothed_w_s_legacy"] = float(smoothed_legacy_triplet[2])
+    out["harmonic_density_weight"] = float(w_h)
+    out["inharmonic_density_weight"] = float(w_i)
+    out["subbass_density_weight"] = float(w_s)
     out["final_note_density_count_based"] = float(
         w_h * h_count + w_i * float(salient_inharmonic_bin_count) + w_s * float(salient_subbass_particle_count)
     )
@@ -603,16 +962,20 @@ def compute_acoustic_density_descriptors(
         min(out["residual_body_contribution"], float(residual_body_contribution_cap))
     )
 
-    # Retain the old scalar only as a diagnostic alias. This is intentionally
-    # not a publication-safe "spectral density" construct.
-    D_H = h_eff
-    D_R = float(len(np.unique(residual_freq))) if residual_freq.size else 0.0
-    D_S = float(np.count_nonzero(subbass_mask))
+    # Unit-coherent diagnostic alias: all terms are effective-component counts
+    # (inverse Herfindahl / participation-ratio family), not mixed counts.
+    D_H = float(_effective_count(harmonic_power))
+    D_R = float(_effective_count(residual_power))
+    D_S = float(_effective_count(subbass_power))
     w_H = out["harmonic_energy_ratio"]
     w_R = out["residual_energy_ratio"]
     w_S = out["subbass_energy_ratio"]
     diagnostic = D_H * w_H + D_R * w_R + D_S * w_S
-    out["density_metric_raw"] = float(diagnostic)
+    out["effective_components_weighted_diagnostic"] = float(diagnostic)
+    out["diagnostic_effective_components_h"] = float(D_H)
+    out["diagnostic_effective_components_r"] = float(D_R)
+    out["diagnostic_effective_components_s"] = float(D_S)
+    # deprecated diagnostic alias, see effective_components_weighted_diagnostic
     out["energy_weighted_component_density_diagnostic"] = float(diagnostic)
 
     return out

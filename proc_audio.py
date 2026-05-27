@@ -26,6 +26,7 @@ from collections import defaultdict
 import threading
 from density import spectral_density
 from audio_utils import harmonic_tolerance_hz
+from subbass_policy import SubBassPolicy
 import math
 from constants import (
     ROBUST_SALIENT_INHARMONIC_PEAK_PICKING_ENABLED,
@@ -39,7 +40,6 @@ from constants import (
     SMOOTHING_WINDOW_PERCENTAGE, SMOOTHING_MIN_WINDOW_LENGTH,
     SMOOTHING_POLYORDER, SMOOTHING_NOISE_FLOOR_PERCENTILE, SMOOTHING_NOISE_FLOOR_MULTIPLIER,
     DEFAULT_STFT_MAGNITUDE_SMOOTHING_ENABLED,
-    SUBBASS_AGGREGATE_CUTOFF_HZ,
     MAX_ABS_DENSITY, DENSITY_METRIC_WEIGHT_D, DENSITY_METRIC_WEIGHT_S,
     DENSITY_METRIC_WEIGHT_E, DENSITY_METRIC_WEIGHT_C, TOTAL_METRIC_SCALE,
     EPSILON_AMPLITUDE,     SNR_THRESHOLD_DB,
@@ -62,6 +62,11 @@ from analysis_policy import (
     NONHARMONIC_POLICY_VERSION,
 )
 from pipeline_contract import get_canonical_pipeline_contract
+from metric_contract import (
+    as_export_fields as metric_contract_export_fields,
+    classify_f0_epistemic_status,
+    density_metric_basis_label,
+)
 
 CANONICAL_PIPELINE_ROLE = "canonical_stage1_per_note_analysis"
 PUBLICATION_OUTPUT_ALLOWED = True
@@ -82,6 +87,18 @@ PUBLICATION_OUTPUT_ALLOWED = True
 # time with a clear "regenerate analysis" message.
 # =====================================================================
 ANALYSIS_SCHEMA_VERSION = "single_pass_raw_export_v2"
+PRIMARY_COMPARABLE_WEIGHT_FUNCTION = "log"
+PRIMARY_COMPARABLE_DENSITY_SALIENCE_THRESHOLD_DB = -45.0
+PRIMARY_COMPARABLE_DENSITY_FREQUENCY_CEILING_HZ = 5000.0
+F0_VALIDATION_MAX_HZ_DEFAULT = 5000.0
+NOMINAL_GUIDED_SEARCH_CENTS = 35.0
+NOMINAL_GUIDED_ACCEPT_MAX_CENTS = 25.0
+NOMINAL_GUIDED_GRID_STEP_CENTS = 1.0
+NOMINAL_GUIDED_MIN_LOW_ORDER_MATCH = 4
+NOMINAL_GUIDED_MIN_ODD_MATCH = 3
+NOMINAL_GUIDED_MEDIAN_ABS_ERROR_CENTS_MAX = 15.0
+NOMINAL_GUIDED_P90_ABS_ERROR_CENTS_MAX = 25.0
+NOMINAL_GUIDED_MIN_COMB_SCORE = 1.20
 
 
 def _proc_audio_runtime_signature() -> str:
@@ -331,6 +348,8 @@ from acoustic_density_core import (
     canonical_f0_triplet,
     compute_acoustic_density_descriptors,
 )
+from mir_descriptors import compute_mir_descriptors_from_spectrum
+from temporal_segmentation import segment_attack_sustain_release
 
 # logging base
 logger = logging.getLogger(__name__)
@@ -1522,6 +1541,12 @@ def _estimate_f0_global_robust(
     }
 
 
+def _nearest_cents_error(measured_hz: float, expected_hz: float) -> float:
+    if measured_hz <= 0.0 or expected_hz <= 0.0:
+        return float("nan")
+    return float(1200.0 * np.log2(measured_hz / expected_hz))
+
+
 def _correct_f0_candidate_against_prior(
     candidate_hz: float,
     prior_hz: float,
@@ -1784,6 +1809,7 @@ class AudioProcessor:
         nominal_hz: float,
         candidate_hz: float,
         accept_fit: bool,
+        acceptance_mode: str = "free_fit",
         fit_quality: Optional[float] = None,
         residual_std_hz: Optional[float] = None,
         rejection_reason: Optional[str] = None,
@@ -1828,14 +1854,22 @@ class AudioProcessor:
         self.f0_robust_residual_std = rs
         self.f0_fit_residual_std_hz = rs
 
+        mode = str(acceptance_mode or "free_fit").strip().lower()
         if accepted:
             self.f0_final = float(candidate)
-            self.f0_final_source = "prior_constrained_harmonic_fit"
-            self.f0_source = "prior_constrained_harmonic_fit"
-            self.f0_final_method = "prior_constrained_harmonic_fit"
+            if mode == "nominal_guided":
+                src = "nominal_guided_harmonic_fit"
+            else:
+                src = "prior_constrained_harmonic_fit"
+            self.f0_final_source = src
+            self.f0_source = src
+            self.f0_final_method = src
             self.f0_fit_accepted = True
             self.f0_robust_accepted = True
             self.f0_fit_rejection_reason = None
+            self.f0_validation_mode = (
+                "nominal_guided_f0_validation" if mode == "nominal_guided" else "free_f0_fit"
+            )
         else:
             self.f0_final = float(nominal)
             self.f0_final_source = "filename_note_nominal_fallback_fit_rejected"
@@ -1843,6 +1877,7 @@ class AudioProcessor:
             self.f0_final_method = "nominal_or_initial_due_to_bad_fit"
             self.f0_fit_accepted = False
             self.f0_robust_accepted = False
+            self.f0_validation_mode = "nominal_fallback_not_verified"
             self.f0_fit_rejection_reason = (
                 str(rejection_reason).strip()
                 if rejection_reason is not None and str(rejection_reason).strip()
@@ -1868,21 +1903,175 @@ class AudioProcessor:
         source = str(getattr(self, "f0_final_source", "") or "")
         accepted = bool(getattr(self, "f0_fit_accepted", False))
 
-        if source == "prior_constrained_harmonic_fit" and not accepted:
+        accepted_sources = {
+            "prior_constrained_harmonic_fit",
+            "nominal_guided_harmonic_fit",
+        }
+        if source in accepted_sources and not accepted:
             raise RuntimeError(
                 "Inconsistent f0 state: f0_final_source is "
-                "'prior_constrained_harmonic_fit' but f0_fit_accepted is False."
+                f"{source!r} but f0_fit_accepted is False."
             )
-        if accepted and source != "prior_constrained_harmonic_fit":
+        if accepted and source not in accepted_sources:
             raise RuntimeError(
                 "Inconsistent f0 state: f0_fit_accepted is True but "
                 f"f0_final_source is {source!r}."
             )
-        if not accepted and source == "prior_constrained_harmonic_fit":
+        if not accepted and source in accepted_sources:
             raise RuntimeError(
                 "Inconsistent f0 state: rejected fit cannot publish "
-                "'prior_constrained_harmonic_fit' as final source."
+                f"{source!r} as final source."
             )
+
+    def _is_clarinet_context(self) -> bool:
+        """Best-effort clarinet detector using source filename and note provenance."""
+        toks: List[str] = []
+        try:
+            for _y, _sr_ad, _n, _fp in getattr(self, "audio_data", []) or []:
+                if str(_n) == str(getattr(self, "note", "")):
+                    toks.append(str(_fp))
+                    break
+        except Exception:
+            pass
+        toks.append(str(getattr(self, "f0_prior_note", "") or ""))
+        txt = " ".join(toks).lower()
+        return ("clar" in txt) or ("clarinet" in txt)
+
+    def _nominal_guided_f0_validation(
+        self,
+        detected_freqs: np.ndarray,
+        detected_amplitudes: np.ndarray,
+        *,
+        nominal_prior_hz: float,
+        validation_max_hz: float,
+        harmonic_tolerance_hz: float,
+    ) -> Dict[str, Any]:
+        """Clarinet-aware nominal-guided F0 validation for low/mid register."""
+        out: Dict[str, Any] = {
+            "accepted": False,
+            "f0_candidate_hz": float(nominal_prior_hz),
+            "f0_deviation_cents": float("nan"),
+            "low_order_match_count": 0,
+            "odd_harmonic_match_count": 0,
+            "even_harmonic_match_count": 0,
+            "median_abs_error_cents": float("nan"),
+            "p90_abs_error_cents": float("nan"),
+            "harmonic_comb_score": float("nan"),
+            "f0_validation_mode": "nominal_guided_f0_validation",
+            "f0_validation_max_hz": float(validation_max_hz),
+        }
+        try:
+            prior = float(nominal_prior_hz)
+        except (TypeError, ValueError):
+            return out
+        if not np.isfinite(prior) or prior <= 0.0:
+            return out
+        freqs = np.asarray(detected_freqs, dtype=float)
+        amps = np.asarray(detected_amplitudes, dtype=float)
+        ok = np.isfinite(freqs) & np.isfinite(amps) & (freqs > 0.0) & (amps > 0.0)
+        freqs = freqs[ok]
+        amps = amps[ok]
+        if freqs.size < 3:
+            return out
+        if np.isfinite(validation_max_hz) and validation_max_hz > 0.0:
+            m = freqs <= float(validation_max_hz)
+            freqs = freqs[m]
+            amps = amps[m]
+        if freqs.size < 3:
+            return out
+
+        amp_norm = amps / (np.max(amps) + 1e-12)
+        cents_grid = np.arange(
+            -NOMINAL_GUIDED_SEARCH_CENTS,
+            NOMINAL_GUIDED_SEARCH_CENTS + 0.5 * NOMINAL_GUIDED_GRID_STEP_CENTS,
+            NOMINAL_GUIDED_GRID_STEP_CENTS,
+            dtype=float,
+        )
+        best: Optional[Dict[str, Any]] = None
+        tol_hz = float(max(0.5, harmonic_tolerance_hz))
+
+        for dc in cents_grid:
+            cand = float(prior * (2.0 ** (dc / 1200.0)))
+            if cand <= 0.0 or not np.isfinite(cand):
+                continue
+            errs_c: List[float] = []
+            low_order_match = 0
+            odd_match = 0
+            even_match = 0
+            comb_score = 0.0
+            for f, a in zip(freqs, amp_norm, strict=False):
+                n = int(max(1, round(float(f) / cand)))
+                exp_f = float(n) * cand
+                if exp_f <= 0.0:
+                    continue
+                if abs(float(f) - exp_f) > tol_hz:
+                    continue
+                err_c = abs(_nearest_cents_error(float(f), exp_f))
+                if not np.isfinite(err_c):
+                    continue
+                errs_c.append(float(err_c))
+                if n <= 8:
+                    low_order_match += 1
+                if n % 2 == 1:
+                    odd_match += 1
+                    o_weight = 1.0 / np.sqrt(float(n))
+                else:
+                    even_match += 1
+                    o_weight = 0.35 / np.sqrt(float(n))
+                comb_score += float(o_weight * float(a) * np.exp(-err_c / 12.0))
+
+            if not errs_c:
+                continue
+            med = float(np.median(errs_c))
+            p90 = float(np.percentile(errs_c, 90))
+            score = {
+                "cand": cand,
+                "dev_cents": abs(float(dc)),
+                "low_order_match": int(low_order_match),
+                "odd_match": int(odd_match),
+                "even_match": int(even_match),
+                "median_abs_error_cents": med,
+                "p90_abs_error_cents": p90,
+                "harmonic_comb_score": float(comb_score),
+            }
+            if best is None:
+                best = score
+            else:
+                # Prefer higher comb score, then lower median error.
+                if (
+                    score["harmonic_comb_score"] > best["harmonic_comb_score"]
+                    or (
+                        np.isclose(score["harmonic_comb_score"], best["harmonic_comb_score"])
+                        and score["median_abs_error_cents"] < best["median_abs_error_cents"]
+                    )
+                ):
+                    best = score
+
+        if best is None:
+            return out
+
+        out.update(
+            {
+                "f0_candidate_hz": float(best["cand"]),
+                "f0_deviation_cents": float(best["dev_cents"]),
+                "low_order_match_count": int(best["low_order_match"]),
+                "odd_harmonic_match_count": int(best["odd_match"]),
+                "even_harmonic_match_count": int(best["even_match"]),
+                "median_abs_error_cents": float(best["median_abs_error_cents"]),
+                "p90_abs_error_cents": float(best["p90_abs_error_cents"]),
+                "harmonic_comb_score": float(best["harmonic_comb_score"]),
+            }
+        )
+
+        out["accepted"] = bool(
+            out["low_order_match_count"] >= NOMINAL_GUIDED_MIN_LOW_ORDER_MATCH
+            and out["odd_harmonic_match_count"] >= NOMINAL_GUIDED_MIN_ODD_MATCH
+            and float(out["median_abs_error_cents"]) <= NOMINAL_GUIDED_MEDIAN_ABS_ERROR_CENTS_MAX
+            and float(out["p90_abs_error_cents"]) <= NOMINAL_GUIDED_P90_ABS_ERROR_CENTS_MAX
+            and float(out["f0_deviation_cents"]) <= NOMINAL_GUIDED_ACCEPT_MAX_CENTS
+            and float(out["harmonic_comb_score"]) >= NOMINAL_GUIDED_MIN_COMB_SCORE
+        )
+        return out
 
     # ----------------- janela p/ STFT -----------------
     def _get_window_arg(self):
@@ -2075,7 +2264,13 @@ class AudioProcessor:
 
         # --- Effective partial density (primary “fatness” metric) + energy accounting ---
         self.spectral_magnitude_smoothing_enabled: bool = bool(DEFAULT_STFT_MAGNITUDE_SMOOTHING_ENABLED)
-        self.subbass_aggregate_hz: float = float(SUBBASS_AGGREGATE_CUTOFF_HZ)
+        self.subbass_aggregate_hz: float = float(
+            SubBassPolicy.upper_bound_hz(
+                f0_hz=float("nan"),
+                sr_hz=float(getattr(self, "sr", 44100.0) or 44100.0),
+                n_fft=int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT),
+            )
+        )
         self.effective_partial_density: Optional[float] = None
         self.partial_density_effective_components: Optional[float] = None  # alias of effective_partial_density
         self.harmonic_energy_sum: Optional[float] = None
@@ -2287,6 +2482,20 @@ class AudioProcessor:
         except Exception:
             return {}
 
+    def _current_subbass_upper_bound_hz(self) -> float:
+        f0 = getattr(self, "f0_final", None)
+        if f0 is None:
+            f0 = getattr(self, "f0_initial", None)
+        try:
+            sr = float(getattr(self, "sr", None) or getattr(self, "sample_rate", None) or 44100.0)
+        except (TypeError, ValueError):
+            sr = 44100.0
+        try:
+            n_fft = int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT)
+        except (TypeError, ValueError):
+            n_fft = DEFAULT_N_FFT
+        return float(SubBassPolicy.upper_bound_hz(f0_hz=float(f0 or 0.0), sr_hz=sr, n_fft=n_fft))
+
     def _finalize_low_frequency_policy_state(self) -> None:
         """
         Canonical low-frequency / subfundamental policy finalizer.
@@ -2295,7 +2504,6 @@ class AudioProcessor:
         """
         from low_frequency_policy import (
             LOW_FREQUENCY_POLICY_VERSION,
-            calculate_adaptive_subfundamental_cutoff_hz,
         )
 
         try:
@@ -2318,12 +2526,18 @@ class AudioProcessor:
         except Exception:
             pass
 
-        guard = calculate_adaptive_subfundamental_cutoff_hz(
-            f0,
-            min_floor_hz=min_floor,
-            max_fraction_of_f0=0.95,
-            leakage_guard_cutoff_hz=leak_arg,
-        )
+        resolved_subbass_hz = float(self._current_subbass_upper_bound_hz())
+        guard = {
+            "adaptive_subfundamental_cutoff_hz": resolved_subbass_hz,
+            "subfundamental_margin_percent": float("nan"),
+            "percentage_subfundamental_cutoff_hz": float("nan"),
+            "leakage_guard_cutoff_hz": float(leak_arg) if leak_arg is not None else float("nan"),
+            "effective_subfundamental_margin_percent": float("nan"),
+            "subfundamental_cutoff_selection_rule": "deprecated, see SubBassPolicy.upper_bound_hz",
+            "subfundamental_cutoff_selected_by": "subbass_policy_unified",
+            "subfundamental_guard_valid": True,
+            "subfundamental_guard_policy": "subbass_policy_unified",
+        }
 
         self.low_frequency_policy_version = LOW_FREQUENCY_POLICY_VERSION
         self.adaptive_subfundamental_cutoff_hz = guard["adaptive_subfundamental_cutoff_hz"]
@@ -2339,7 +2553,7 @@ class AudioProcessor:
         self.subfundamental_guard_policy = str(guard["subfundamental_guard_policy"])
 
         self.physical_low_frequency_lower_hz = 30.0
-        self.physical_low_frequency_upper_hz = 200.0
+        self.physical_low_frequency_upper_hz = float(resolved_subbass_hz)
         self.low_frequency_residual_interpretation = (
             "diagnostic residual; not automatically sub-bass, "
             "not automatically noise, not partial"
@@ -2880,7 +3094,7 @@ class AudioProcessor:
         weight_function: str = "linear",
         zero_padding: int = 1,
         time_avg: str = "mean",
-        density_summation_mode: str = "his_weighted",
+        density_summation_mode: str = "his_note_adaptive",
         harmonic_density_weight: float = 1.0,
         inharmonic_density_weight: float = 0.5,
         subbass_density_weight: float = 0.25,
@@ -2958,7 +3172,7 @@ class AudioProcessor:
         self.time_avg = str(time_avg)
         if self.time_avg not in {"mean", "median", "max"}:
             self.time_avg = "mean"
-        self.density_summation_mode = str(density_summation_mode or "his_weighted").strip().lower()
+        self.density_summation_mode = str(density_summation_mode or "his_note_adaptive").strip().lower()
         self.harmonic_density_weight = float(harmonic_density_weight)
         self.inharmonic_density_weight = float(inharmonic_density_weight)
         self.subbass_density_weight = float(subbass_density_weight)
@@ -3722,6 +3936,36 @@ class AudioProcessor:
         self.f0_fit_accepted = None
         self.f0_fit_quality = None
         self.f0_fit_rejection_reason = None
+        self.f0_validation_mode = None
+        self.nominal_prior_hz = None
+        self.f0_candidate_hz = None
+        self.f0_deviation_cents = None
+        self.low_order_match_count = None
+        self.odd_harmonic_match_count = None
+        self.even_harmonic_match_count = None
+        self.median_abs_error_cents = None
+        self.p90_abs_error_cents = None
+        self.harmonic_comb_score = None
+        self.f0_validation_max_hz = None
+        self.f0_epistemic_status = None
+        self.valid_for_primary_statistics = None
+        self.density_confidence = None
+        self.f0_confidence = None
+        self.harmonic_assignment_confidence = None
+        self.spectral_stability_confidence = None
+        self.qc_status = None
+        self.outlier_ratio_max_to_mean = None
+        self.outlier_policy_applied = None
+        self.spectral_density_metric_winsorized = None
+        self.spectral_density_metric_median_based = None
+        self.spectral_density_metric_trimmed_mean = None
+        self.sethares_status = None
+        self.sethares_value_status = None
+        self.sethares_curve_status = None
+        self.sethares_plot_status = None
+        self.analysis_parameter_profile_id = None
+        self.is_primary_comparable_profile = None
+        self.primary_comparable_profile_definition = None
         try:
             if hasattr(self, "f0_robust"):
                 delattr(self, "f0_robust")
@@ -4093,11 +4337,27 @@ class AudioProcessor:
         f0_est = float(f0)
         fit_quality = 0.0
         residual_std = 0.0
+        f0_acceptance_mode = "free_fit"
+        nominal_guided_diag: Optional[Dict[str, Any]] = None
+        f0_validation_max_hz = float(
+            min(
+                F0_VALIDATION_MAX_HZ_DEFAULT,
+                float(getattr(self, "density_frequency_ceiling_hz", 5000.0) or 5000.0),
+            )
+        )
         if strict_peak_count_for_fit >= 3:
             detected_freqs = np.array([h['Frequency (Hz)'] for h in harmonic_list])
             detected_amps = np.array([h['Amplitude'] for h in harmonic_list])
+            use_mask = np.isfinite(detected_freqs) & np.isfinite(detected_amps) & (detected_freqs > 0.0)
+            use_mask = use_mask & (detected_freqs <= f0_validation_max_hz)
+            if int(np.count_nonzero(use_mask)) >= 3:
+                detected_freqs_fit = detected_freqs[use_mask]
+                detected_amps_fit = detected_amps[use_mask]
+            else:
+                detected_freqs_fit = detected_freqs
+                detected_amps_fit = detected_amps
 
-            f0_robust = _estimate_f0_global_robust(detected_freqs, detected_amps, f0)
+            f0_robust = _estimate_f0_global_robust(detected_freqs_fit, detected_amps_fit, f0)
 
             f0_est = float(f0_robust.get('f0_estimated', f0))
             fit_quality = float(f0_robust.get('fit_quality', 0.0))
@@ -4127,6 +4387,54 @@ class AudioProcessor:
                 else:
                     fit_rej = "harmonic_fit_rejected"
 
+        # Clarinet-aware nominal-guided path for low/mid register notes.
+        # This does NOT weaken free-fit gates globally; it only adds an
+        # instrument-aware validation branch when free-fit is rejected.
+        try:
+            nominal_prior_hz = float(
+                getattr(self, "f0_nominal_hz", None)
+                or getattr(self, "f0_prior_hz", None)
+                or float("nan")
+            )
+        except (TypeError, ValueError):
+            nominal_prior_hz = float("nan")
+        should_try_nominal_guided = (
+            not bool(accept_f0)
+            and strict_peak_count_for_fit >= 3
+            and np.isfinite(nominal_prior_hz)
+            and nominal_prior_hz > 0.0
+            and self._is_clarinet_context()
+        )
+        if should_try_nominal_guided:
+            nominal_guided_diag = self._nominal_guided_f0_validation(
+                detected_freqs=detected_freqs,
+                detected_amplitudes=detected_amps,
+                nominal_prior_hz=nominal_prior_hz,
+                validation_max_hz=float(f0_validation_max_hz),
+                harmonic_tolerance_hz=float(last_tol_hz),
+            )
+            if bool(nominal_guided_diag.get("accepted", False)):
+                accept_f0 = True
+                f0_acceptance_mode = "nominal_guided"
+                f0_est = float(nominal_guided_diag.get("f0_candidate_hz", nominal_prior_hz))
+                fit_quality = float("nan")
+                residual_std = float("nan")
+                fit_rej = None
+                self.logger.info(
+                    "Nominal-guided f0 accepted: nominal=%.4f Hz -> candidate=%.4f Hz "
+                    "(dev=%.2f cents, low_order=%d, odd=%d, med_err=%.2f cents, score=%.3f, max_hz=%.1f).",
+                    float(nominal_prior_hz),
+                    float(f0_est),
+                    float(nominal_guided_diag.get("f0_deviation_cents", float("nan"))),
+                    int(nominal_guided_diag.get("low_order_match_count", 0)),
+                    int(nominal_guided_diag.get("odd_harmonic_match_count", 0)),
+                    float(nominal_guided_diag.get("median_abs_error_cents", float("nan"))),
+                    float(nominal_guided_diag.get("harmonic_comb_score", float("nan"))),
+                    float(f0_validation_max_hz),
+                )
+            else:
+                fit_rej = str(fit_rej or "nominal_guided_validation_rejected")
+
         self.f0_robust_fit_quality = float(fit_quality)
 
         _fq_pass: Optional[float] = (
@@ -4149,19 +4457,56 @@ class AudioProcessor:
             nominal_hz=_nominal_for_finalize,
             candidate_hz=float(f0_est),
             accept_fit=bool(accept_f0),
+            acceptance_mode=str(f0_acceptance_mode),
             fit_quality=_fq_pass,
             residual_std_hz=float(residual_std),
             rejection_reason=None if accept_f0 else fit_rej,
         )
         self._finalize_low_frequency_policy_state()
 
+        # Persist f0 validation diagnostics for workbook exports.
+        self.f0_validation_max_hz = float(f0_validation_max_hz)
+        self.nominal_prior_hz = float(nominal_prior_hz) if np.isfinite(nominal_prior_hz) else None
+        self.f0_candidate_hz = float(f0_est) if np.isfinite(float(f0_est)) else None
+        if nominal_guided_diag is not None:
+            self.f0_deviation_cents = float(nominal_guided_diag.get("f0_deviation_cents", float("nan")))
+            self.low_order_match_count = int(nominal_guided_diag.get("low_order_match_count", 0))
+            self.odd_harmonic_match_count = int(nominal_guided_diag.get("odd_harmonic_match_count", 0))
+            self.even_harmonic_match_count = int(nominal_guided_diag.get("even_harmonic_match_count", 0))
+            self.median_abs_error_cents = float(
+                nominal_guided_diag.get("median_abs_error_cents", float("nan"))
+            )
+            self.p90_abs_error_cents = float(nominal_guided_diag.get("p90_abs_error_cents", float("nan")))
+            self.harmonic_comb_score = float(nominal_guided_diag.get("harmonic_comb_score", float("nan")))
+        else:
+            self.f0_deviation_cents = (
+                float(1200.0 * np.log2(float(f0_est) / float(nominal_prior_hz)))
+                if np.isfinite(float(f0_est)) and np.isfinite(nominal_prior_hz) and nominal_prior_hz > 0.0
+                else None
+            )
+            self.low_order_match_count = None
+            self.odd_harmonic_match_count = None
+            self.even_harmonic_match_count = None
+            self.median_abs_error_cents = None
+            self.p90_abs_error_cents = None
+            self.harmonic_comb_score = None
+
         if self.f0_fit_accepted:
             self.f0_robust = float(self.f0_final)
-            self.logger.info(
-                f"Global-fit f0 accepted: {f0:.4f} -> {float(self.f0_final):.4f} Hz "
-                f"(residual_std={residual_std:.4f} Hz, "
-                f"fit_quality={fit_quality:.6f}, strict_peaks={strict_peak_count_for_fit})"
-            )
+            if str(getattr(self, "f0_validation_mode", "")).strip().lower() == "nominal_guided_f0_validation":
+                self.logger.info(
+                    "Nominal-guided f0 published as acoustically verified: "
+                    "%.4f -> %.4f Hz (strict_peaks=%d).",
+                    float(f0),
+                    float(self.f0_final),
+                    int(strict_peak_count_for_fit),
+                )
+            else:
+                self.logger.info(
+                    f"Global-fit f0 accepted: {f0:.4f} -> {float(self.f0_final):.4f} Hz "
+                    f"(residual_std={residual_std:.4f} Hz, "
+                    f"fit_quality={fit_quality:.6f}, strict_peaks={strict_peak_count_for_fit})"
+                )
         else:
             try:
                 if hasattr(self, "f0_robust"):
@@ -5782,6 +6127,8 @@ class AudioProcessor:
                                         std_power = np.std(cpow)
                                         power_ratio = max_power / mean_power if mean_power > 0 else 0.0
                                         total_power = np.sum(cpow)
+                                        self.outlier_ratio_max_to_mean = float(power_ratio)
+                                        self.outlier_policy_applied = "none"
                                         
                                         # Log detailed power statistics for diagnosis
                                         self.logger.debug(
@@ -5797,12 +6144,36 @@ class AudioProcessor:
                                                 f"(max_power/mean_power={power_ratio:.1f}x). "
                                                 f"This may cause a peak in the metric."
                                             )
+                                            self.outlier_policy_applied = "winsorize_p95_for_robust_diagnostics"
                                     
                                     if use_physical_sdm:
                                         # Physical spectral density: integrates power over bandwidth and normalizes by range
                                         self.spectral_density_metric_value = float(
                                             physical_spectral_density(camp_final, f_hz_final)
                                         )
+                                        try:
+                                            if len(camp_final) > 0:
+                                                amp_arr = np.asarray(camp_final, dtype=float)
+                                                # Robust diagnostics are exported together with raw density
+                                                # (raw value remains unchanged as the canonical signal).
+                                                p95 = float(np.nanpercentile(amp_arr, 95))
+                                                wins = np.minimum(amp_arr, p95) if np.isfinite(p95) else amp_arr
+                                                self.spectral_density_metric_winsorized = float(
+                                                    physical_spectral_density(wins, f_hz_final)
+                                                )
+                                                self.spectral_density_metric_median_based = float(
+                                                    np.nanmedian(np.log10(1.0 + np.maximum(amp_arr, 0.0)))
+                                                )
+                                                q10 = float(np.nanpercentile(amp_arr, 10))
+                                                q90 = float(np.nanpercentile(amp_arr, 90))
+                                                core = amp_arr[(amp_arr >= q10) & (amp_arr <= q90)]
+                                                self.spectral_density_metric_trimmed_mean = float(
+                                                    np.nanmean(np.log10(1.0 + np.maximum(core, 0.0)))
+                                                ) if core.size > 0 else float("nan")
+                                        except Exception:
+                                            self.spectral_density_metric_winsorized = float("nan")
+                                            self.spectral_density_metric_median_based = float("nan")
+                                            self.spectral_density_metric_trimmed_mean = float("nan")
                                     else:
                                         # Legacy component-based density (kept for fallback)
                                         self.spectral_density_metric_value = self._apply_density_metric_sdm_vector(
@@ -6174,7 +6545,7 @@ class AudioProcessor:
                                 freq_min_hz=20.0,
                                 freq_max_hz=float(getattr(self, "freq_max", 20000.0) or 20000.0),
                                 density_summation_mode=str(
-                                    getattr(self, "density_summation_mode", "his_weighted") or "his_weighted"
+                                    getattr(self, "density_summation_mode", "his_note_adaptive") or "his_note_adaptive"
                                 ),
                                 harmonic_density_weight=float(
                                     getattr(self, "harmonic_density_weight", 1.0)
@@ -6489,7 +6860,7 @@ class AudioProcessor:
                     aggregate_low_frequency_residual_peak_power(
                         self.complete_list_df,
                         harm_protection_df,
-                        subbass_hz=float(getattr(self, "subbass_aggregate_hz", SUBBASS_AGGREGATE_CUTOFF_HZ)),
+                        subbass_hz=float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz())),
                         subbass_lower_hz=float(SUBBASS_AGGREGATE_LOWER_HZ),
                         freq_match_tol_hz=_tol_hz_eff,
                     )
@@ -6675,7 +7046,7 @@ class AudioProcessor:
             try:
                 if self.complete_list_df is not None and not self.complete_list_df.empty:
                     _fq = pd.to_numeric(self.complete_list_df["Frequency (Hz)"], errors="coerce")
-                    _cut = float(getattr(self, "subbass_aggregate_hz", SUBBASS_AGGREGATE_CUTOFF_HZ))
+                    _cut = float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz()))
                     self.subbass_bin_count = int((_fq < _cut).sum())
                 else:
                     self.subbass_bin_count = 0
@@ -6709,7 +7080,7 @@ class AudioProcessor:
                     pc = classify_peaks_harmonic_inharmonic_subbass_from_df(
                         peaks_for_class,
                         f0_hz,
-                        subbass_cutoff_hz=float(getattr(self, "subbass_aggregate_hz", SUBBASS_AGGREGATE_CUTOFF_HZ)),
+                        subbass_cutoff_hz=float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz())),
                         tolerance_cents=18.0,
                         max_freq_hz=float(getattr(self, "freq_max", 20000.0) or 20000.0),
                     )
@@ -6784,9 +7155,9 @@ class AudioProcessor:
                         _nfft_v = None
                     _f_sub_val = getattr(self, "subbass_aggregate_hz", None)
                     try:
-                        _f_sub = float(_f_sub_val) if _f_sub_val is not None else float(SUBBASS_AGGREGATE_CUTOFF_HZ)
+                        _f_sub = float(_f_sub_val) if _f_sub_val is not None else float(self._current_subbass_upper_bound_hz())
                     except (TypeError, ValueError):
-                        _f_sub = float(SUBBASS_AGGREGATE_CUTOFF_HZ)
+                        _f_sub = float(self._current_subbass_upper_bound_hz())
                     _vr = validate_harmonic_series_matched(
                         _f0_validate,
                         _pool,
@@ -6936,6 +7307,9 @@ class AudioProcessor:
 
             _ac_desc = getattr(self, "_acoustic_density_desc", {}) or {}
             if _ac_desc:
+                self.inharmonicity_model_applied = bool(
+                    _ac_desc.get("inharmonicity_stretch_applied", False)
+                )
                 self.harmonic_occupancy_ratio = float(_ac_desc.get("harmonic_occupancy_ratio", float("nan")))
                 self.expected_harmonic_slot_count = int(_ac_desc.get("expected_harmonic_slot_count", 0) or 0)
                 self.detected_harmonic_slot_count = int(_ac_desc.get("detected_harmonic_slot_count", 0) or 0)
@@ -6968,6 +7342,7 @@ class AudioProcessor:
                 self.harmonic_occupancy_status = "from_acoustic_density_core"
                 self.residual_log_frequency_occupancy_status = "from_acoustic_density_core"
             else:
+                self.inharmonicity_model_applied = False
                 try:
                     _fmax_occ = float(getattr(self, "freq_max", 20000.0) or 20000.0)
                     _occ = compute_harmonic_occupancy_ratio(
@@ -8123,8 +8498,18 @@ class AudioProcessor:
             return
         curve = self.dissonance_curves.get(model_name)
         scale = self.dissonance_scales.get(model_name)
-        if curve is None or scale is None:
-            self.logger.warning(f"No dissonance curve for {model_name}.")
+        if curve is None:
+            self.logger.warning(
+                "No dissonance curve data for %s at per-note plot stage.",
+                model_name,
+            )
+            return
+        if scale is None:
+            self.logger.info(
+                "Dissonance curve exists for %s but scale markers are unavailable; "
+                "skipping curve-plot export at this stage.",
+                model_name,
+            )
             return
         try:
             model = get_dissonance_model(model_name)
@@ -8209,7 +8594,7 @@ class AudioProcessor:
 
         ih_df = _ensure_amp_column(ih_raw.copy()) if ih_raw is not None and not ih_raw.empty else pd.DataFrame()
 
-        _cut_sb = float(getattr(self, "subbass_aggregate_hz", SUBBASS_AGGREGATE_CUTOFF_HZ))
+        _cut_sb = float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz()))
         _lo_sb = float(getattr(self, "subbass_aggregate_lower_hz", SUBBASS_AGGREGATE_LOWER_HZ))
         sub_df = pd.DataFrame()
         if isinstance(getattr(self, "complete_list_df", None), pd.DataFrame) and not self.complete_list_df.empty:
@@ -8765,6 +9150,34 @@ class AudioProcessor:
             "subbass_density_weight": metric_float_or_nan(
                 getattr(self, "subbass_density_weight", None)
             ),
+            "pure_observation_w_h": metric_float_or_nan(
+                getattr(self, "pure_observation_w_h", None)
+            ),
+            "pure_observation_w_i": metric_float_or_nan(
+                getattr(self, "pure_observation_w_i", None)
+            ),
+            "pure_observation_w_s": metric_float_or_nan(
+                getattr(self, "pure_observation_w_s", None)
+            ),
+            "component_strength_h": metric_float_or_nan(
+                getattr(self, "component_strength_h", None)
+            ),
+            "component_strength_i": metric_float_or_nan(
+                getattr(self, "component_strength_i", None)
+            ),
+            "component_strength_s": metric_float_or_nan(
+                getattr(self, "component_strength_s", None)
+            ),
+            "legacy_component_strength_h_v55": metric_float_or_nan(
+                getattr(self, "legacy_component_strength_h_v55", None)
+            ),
+            "legacy_component_strength_i_v55": metric_float_or_nan(
+                getattr(self, "legacy_component_strength_i_v55", None)
+            ),
+            "legacy_component_strength_s_v55": metric_float_or_nan(
+                getattr(self, "legacy_component_strength_s_v55", None)
+            ),
+            "obs_w_formula_version": str(getattr(self, "obs_w_formula_version", "") or ""),
             "density_summation_mode": str(getattr(self, "density_summation_mode", "") or ""),
             "density_salience_threshold_db": metric_float_or_nan(
                 getattr(self, "density_salience_threshold_db", None)
@@ -8953,6 +9366,184 @@ class AudioProcessor:
         main_metrics["f0_fit_rejection_reason"] = str(
             getattr(self, "f0_fit_rejection_reason", "") or ""
         )
+        main_metrics["f0_validation_mode"] = str(getattr(self, "f0_validation_mode", "") or "")
+        main_metrics["nominal_prior_hz"] = metric_float_or_nan(
+            getattr(self, "nominal_prior_hz", getattr(self, "f0_nominal_hz", None))
+        )
+        main_metrics["f0_candidate_hz"] = metric_float_or_nan(getattr(self, "f0_candidate_hz", None))
+        main_metrics["f0_deviation_cents"] = metric_float_or_nan(
+            getattr(self, "f0_deviation_cents", None)
+        )
+        main_metrics["low_order_match_count"] = metric_int_or_nan(
+            getattr(self, "low_order_match_count", None)
+        )
+        main_metrics["odd_harmonic_match_count"] = metric_int_or_nan(
+            getattr(self, "odd_harmonic_match_count", None)
+        )
+        main_metrics["even_harmonic_match_count"] = metric_int_or_nan(
+            getattr(self, "even_harmonic_match_count", None)
+        )
+        main_metrics["median_abs_error_cents"] = metric_float_or_nan(
+            getattr(self, "median_abs_error_cents", None)
+        )
+        main_metrics["p90_abs_error_cents"] = metric_float_or_nan(
+            getattr(self, "p90_abs_error_cents", None)
+        )
+        main_metrics["harmonic_comb_score"] = metric_float_or_nan(
+            getattr(self, "harmonic_comb_score", None)
+        )
+        main_metrics["f0_validation_max_hz"] = metric_float_or_nan(
+            getattr(self, "f0_validation_max_hz", None)
+        )
+        _f0_tri_state, _valid_primary = classify_f0_epistemic_status(
+            f0_fit_accepted=bool(getattr(self, "f0_fit_accepted", False)),
+            acoustic_f0_status=str(getattr(self, "acoustic_f0_status", _f0_used_status) or _f0_used_status),
+            f0_validation_mode=str(getattr(self, "f0_validation_mode", "") or ""),
+        )
+        main_metrics["f0_epistemic_status"] = _f0_tri_state
+        main_metrics["valid_for_primary_statistics"] = bool(_valid_primary)
+
+        # Confidence propagation for scientific-status fields.
+        try:
+            _f0q = float(getattr(self, "f0_fit_quality", np.nan))
+        except Exception:
+            _f0q = float("nan")
+        if np.isfinite(_f0q):
+            f0_conf = float(max(0.0, min(1.0, 1.0 - min(_f0q / 0.10, 1.0))))
+        else:
+            f0_conf = 0.35 if bool(getattr(self, "f0_fit_accepted", False)) else 0.15
+        try:
+            _expected_h = float(getattr(self, "expected_harmonic_count", np.nan))
+            _strict_h = float(getattr(self, "strict_harmonic_count", np.nan))
+            if np.isfinite(_expected_h) and _expected_h > 0 and np.isfinite(_strict_h):
+                harmonic_assignment_conf = float(max(0.0, min(1.0, _strict_h / _expected_h)))
+            else:
+                harmonic_assignment_conf = float(
+                    metric_float_or_nan(getattr(self, "harmonic_occupancy_ratio", None))
+                )
+                if not np.isfinite(harmonic_assignment_conf):
+                    harmonic_assignment_conf = 0.5
+        except Exception:
+            harmonic_assignment_conf = 0.5
+        _out_ratio = metric_float_or_nan(getattr(self, "outlier_ratio_max_to_mean", None))
+        if np.isfinite(_out_ratio) and _out_ratio > 1.0:
+            spectral_stability_conf = float(max(0.0, min(1.0, 1.0 / np.log10(10.0 + _out_ratio))))
+        else:
+            spectral_stability_conf = 0.8
+        density_conf = float(np.clip(0.45 * f0_conf + 0.35 * harmonic_assignment_conf + 0.20 * spectral_stability_conf, 0.0, 1.0))
+
+        main_metrics["density_confidence"] = density_conf
+        main_metrics["f0_confidence"] = f0_conf
+        main_metrics["harmonic_assignment_confidence"] = harmonic_assignment_conf
+        main_metrics["spectral_stability_confidence"] = spectral_stability_conf
+        self.f0_epistemic_status = _f0_tri_state
+        self.valid_for_primary_statistics = bool(_valid_primary)
+        self.density_confidence = float(density_conf)
+        self.f0_confidence = float(f0_conf)
+        self.harmonic_assignment_confidence = float(harmonic_assignment_conf)
+        self.spectral_stability_confidence = float(spectral_stability_conf)
+
+        _qc_parts: List[str] = []
+        if not _valid_primary:
+            _qc_parts.append("f0_not_acoustically_verified")
+        if np.isfinite(_out_ratio) and _out_ratio > 100.0:
+            _qc_parts.append("power_outlier_detected")
+        if density_conf < 0.50:
+            _qc_parts.append("low_confidence")
+        main_metrics["qc_status"] = "pass" if not _qc_parts else "warn:" + "|".join(_qc_parts)
+        main_metrics["include_qc_warning_rows_default"] = False
+        self.qc_status = str(main_metrics["qc_status"])
+
+        # Outlier policy and robust alternatives (raw + robust side by side).
+        main_metrics["outlier_ratio_max_to_mean"] = metric_float_or_nan(
+            getattr(self, "outlier_ratio_max_to_mean", None)
+        )
+        main_metrics["outlier_policy_applied"] = str(
+            getattr(self, "outlier_policy_applied", "none") or "none"
+        )
+        main_metrics["density_winsorized"] = metric_float_or_nan(
+            getattr(self, "spectral_density_metric_winsorized", None)
+        )
+        main_metrics["density_median_based"] = metric_float_or_nan(
+            getattr(self, "spectral_density_metric_median_based", None)
+        )
+        main_metrics["density_trimmed_mean"] = metric_float_or_nan(
+            getattr(self, "spectral_density_metric_trimmed_mean", None)
+        )
+
+        # Explicit semantic basis contract for the primary scalar.
+        _wf_key = str(getattr(self, "weight_function", "linear") or "linear")
+        main_metrics["metric_contract_value_name"] = "his_energy_ratio_weighted_log_density"
+        main_metrics["metric_contract_formula"] = "D_H*w_H + D_I*w_I + D_S*w_S"
+        main_metrics["metric_contract_basis"] = density_metric_basis_label(_wf_key)
+        main_metrics["metric_contract_normalization"] = str(
+            getattr(self, "density_normalization_scope", "none_per_note_absolute_canonical")
+            or "none_per_note_absolute_canonical"
+        )
+        main_metrics["metric_contract_component_assignment_status"] = str(
+            getattr(self, "harmonic_validation_status", "unknown") or "unknown"
+        )
+        main_metrics["metric_contract_ontology_family"] = "composite_metric"
+        main_metrics.update(metric_contract_export_fields("density_metric_raw"))
+        _wf_cmp = str(getattr(self, "weight_function", "linear") or "linear").strip().lower()
+        _dst_cmp = float(getattr(self, "density_salience_threshold_db", -45.0))
+        _dceil_cmp = float(getattr(self, "density_frequency_ceiling_hz", 5000.0))
+        _is_primary_profile = (
+            _wf_cmp == PRIMARY_COMPARABLE_WEIGHT_FUNCTION
+            and abs(_dst_cmp - PRIMARY_COMPARABLE_DENSITY_SALIENCE_THRESHOLD_DB) <= 1e-9
+            and abs(_dceil_cmp - PRIMARY_COMPARABLE_DENSITY_FREQUENCY_CEILING_HZ) <= 1e-9
+        )
+        main_metrics["analysis_parameter_profile_id"] = (
+            f"wf={_wf_cmp}|dst={_dst_cmp:.1f}|ceil={_dceil_cmp:.1f}"
+        )
+        main_metrics["is_primary_comparable_profile"] = bool(_is_primary_profile)
+        main_metrics["primary_comparable_profile_definition"] = (
+            f"wf={PRIMARY_COMPARABLE_WEIGHT_FUNCTION}|"
+            f"dst={PRIMARY_COMPARABLE_DENSITY_SALIENCE_THRESHOLD_DB:.1f}|"
+            f"ceil={PRIMARY_COMPARABLE_DENSITY_FREQUENCY_CEILING_HZ:.1f}"
+        )
+        self.analysis_parameter_profile_id = str(main_metrics["analysis_parameter_profile_id"])
+        self.is_primary_comparable_profile = bool(main_metrics["is_primary_comparable_profile"])
+        self.primary_comparable_profile_definition = str(
+            main_metrics["primary_comparable_profile_definition"]
+        )
+
+        # Sethares must expose value/curve/plot status separately.
+        _seth_value_status = "disabled"
+        _seth_curve_status = "disabled"
+        _seth_plot_status = "disabled"
+        if str(getattr(self, "dissonance_model", "") or "").strip().lower() == "sethares":
+            if not bool(getattr(self, "dissonance_enabled", False)):
+                _seth_value_status = "disabled"
+                _seth_curve_status = "disabled"
+                _seth_plot_status = "disabled"
+            else:
+                _dv = getattr(self, "dissonance_values", None)
+                _dc = getattr(self, "dissonance_curves", None)
+                _sv = _dv.get("sethares") if isinstance(_dv, dict) else None
+                _sc = _dc.get("sethares") if isinstance(_dc, dict) else None
+                if _sv is not None and np.isfinite(float(_sv)):
+                    _seth_value_status = "computed"
+                else:
+                    _seth_value_status = "failed_missing_input"
+                if bool(getattr(self, "dissonance_curve_enabled", False)):
+                    if _sc is not None:
+                        _seth_curve_status = "computed"
+                        _seth_plot_status = "available_from_curve"
+                    else:
+                        _seth_curve_status = "skipped_no_curve"
+                        _seth_plot_status = "unavailable_no_curve"
+                else:
+                    _seth_curve_status = "disabled"
+                    _seth_plot_status = "disabled_curve_generation"
+        main_metrics["sethares_status"] = _seth_value_status
+        main_metrics["sethares_value_status"] = _seth_value_status
+        main_metrics["sethares_curve_status"] = _seth_curve_status
+        main_metrics["sethares_plot_status"] = _seth_plot_status
+        self.sethares_status = _seth_value_status
+        self.sethares_value_status = _seth_value_status
+        self.sethares_curve_status = _seth_curve_status
+        self.sethares_plot_status = _seth_plot_status
 
         main_metrics["low_frequency_policy_version"] = str(
             getattr(self, "low_frequency_policy_version", "") or LOW_FREQUENCY_POLICY_VERSION
@@ -8990,6 +9581,44 @@ class AudioProcessor:
         main_metrics["physical_low_frequency_upper_hz"] = metric_float_or_nan(
             getattr(self, "physical_low_frequency_upper_hz", None)
         )
+
+        _phase5_base_keys = [
+            "spectral_centroid_hz",
+            "spectral_spread_hz",
+            "spectral_skewness",
+            "spectral_kurtosis",
+            "spectral_irregularity",
+            "tristimulus_1_fundamental",
+            "tristimulus_2_low_harmonics_2_to_4",
+            "tristimulus_3_high_harmonics_5_plus",
+            "spectral_flatness",
+            "spectral_rolloff_hz_85",
+            "spectral_rolloff_hz_95",
+            "roughness_aures_1985",
+            "erb_weighted_spectral_density",
+        ]
+        main_metrics["log_attack_time_s"] = metric_float_or_nan(
+            getattr(self, "log_attack_time_s", None)
+        )
+        _phase5_density_keys = [
+            "harmonic_density_component",
+            "inharmonic_density_component",
+            "subbass_density_component",
+        ]
+        for _k in _phase5_base_keys:
+            main_metrics[_k] = metric_float_or_nan(getattr(self, _k, None))
+            main_metrics[f"{_k}_on_sustain_segment"] = metric_float_or_nan(
+                getattr(self, f"{_k}_on_sustain_segment", None)
+            )
+            for _seg in ("attack", "sustain", "release"):
+                main_metrics[f"{_k}_on_{_seg}"] = metric_float_or_nan(
+                    getattr(self, f"{_k}_on_{_seg}", None)
+                )
+        for _k in _phase5_density_keys:
+            for _seg in ("attack", "sustain", "release"):
+                main_metrics[f"{_k}_on_{_seg}"] = metric_float_or_nan(
+                    getattr(self, f"{_k}_on_{_seg}", None)
+                )
 
         try:
             from metadata_sanitizer import publication_clean_export_enabled as _pub_clean_metrics  # noqa: PLC0415
@@ -9230,7 +9859,7 @@ class AudioProcessor:
 
             ih_df = _ensure_amp_column(ih_raw.copy()) if ih_raw is not None and not ih_raw.empty else pd.DataFrame()
 
-            _cut_sb = float(getattr(self, "subbass_aggregate_hz", SUBBASS_AGGREGATE_CUTOFF_HZ))
+            _cut_sb = float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz()))
             # AUDIT FIX (acoustic-physics, Clarinete_mf finding #1) —
             # apply the same lower-frequency floor that the energy
             # aggregator uses. Bins below this floor are DC / sub-audible
@@ -9438,7 +10067,7 @@ class AudioProcessor:
                 acoustic_status="candidate_not_confirmed_partial",
             )
             _dc_lo_sb = float(getattr(self, "subbass_aggregate_lower_hz", SUBBASS_AGGREGATE_LOWER_HZ))
-            _phys_hi_sb = float(getattr(self, "subbass_aggregate_hz", SUBBASS_AGGREGATE_CUTOFF_HZ))
+            _phys_hi_sb = float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz()))
             try:
                 _ad_raw = getattr(self, "adaptive_subfundamental_cutoff_hz", None)
                 _adf = float(_ad_raw) if _ad_raw is not None else float("nan")
@@ -9543,6 +10172,99 @@ class AudioProcessor:
                 h_for_sum, ih_df, sub_df
             )
 
+            # Phase 5: MIR descriptors (whole-note + per-segment attack/sustain/release).
+            try:
+                if self.complete_list_df is not None and not self.complete_list_df.empty:
+                    _fcol = (
+                        "Frequency (Hz)"
+                        if "Frequency (Hz)" in self.complete_list_df.columns
+                        else ("frequency_hz" if "frequency_hz" in self.complete_list_df.columns else None)
+                    )
+                    _acol = (
+                        "Amplitude"
+                        if "Amplitude" in self.complete_list_df.columns
+                        else ("amplitude" if "amplitude" in self.complete_list_df.columns else None)
+                    )
+                    if _fcol is not None and _acol is not None:
+                        _freq_all = pd.to_numeric(self.complete_list_df[_fcol], errors="coerce").to_numpy(float)
+                        _amp_all = pd.to_numeric(self.complete_list_df[_acol], errors="coerce").to_numpy(float)
+                        _f0_for_mir = getattr(self, "f0_used_for_density_hz", None)
+                        if _f0_for_mir is None or not np.isfinite(float(_f0_for_mir)):
+                            _f0_for_mir = getattr(self, "f0_final", None)
+                        _mir_all = compute_mir_descriptors_from_spectrum(
+                            frequencies_hz=_freq_all,
+                            amplitudes=_amp_all,
+                            f0_hz=float(_f0_for_mir) if _f0_for_mir is not None else None,
+                        )
+                        for _k, _v in _mir_all.items():
+                            setattr(self, _k, float(_v) if np.isfinite(float(_v)) else float("nan"))
+
+                def _segment_spectrum(y_seg: np.ndarray, sr_val: float) -> tuple[np.ndarray, np.ndarray]:
+                    if y_seg is None or y_seg.size == 0:
+                        return np.asarray([], dtype=float), np.asarray([], dtype=float)
+                    n_fft_seg = int(max(256, min(int(getattr(self, "n_fft", 4096) or 4096), int(y_seg.size))))
+                    win = np.hanning(n_fft_seg)
+                    frame = y_seg[:n_fft_seg]
+                    spec = np.fft.rfft(frame * win)
+                    freq = np.fft.rfftfreq(n_fft_seg, d=1.0 / float(sr_val))
+                    amp = np.abs(spec)
+                    ok = np.isfinite(freq) & np.isfinite(amp) & (freq > 0.0) & (amp > 0.0)
+                    return freq[ok].astype(float), amp[ok].astype(float)
+
+                if self.y is not None and self.sr is not None and len(self.y) > 0:
+                    _seg = segment_attack_sustain_release(y=np.asarray(self.y, dtype=float), sr_hz=float(self.sr))
+                    setattr(self, "log_attack_time_s", float(_seg.get("log_attack_time_s", float("nan"))))
+                    _f0_seg = getattr(self, "f0_used_for_density_hz", None)
+                    if _f0_seg is None or not np.isfinite(float(_f0_seg)):
+                        _f0_seg = getattr(self, "f0_final", None)
+                    _f0_seg = float(_f0_seg) if _f0_seg is not None and np.isfinite(float(_f0_seg)) else float("nan")
+                    for _name in ("attack", "sustain", "release"):
+                        _start = int(_seg[_name]["start_sample"])
+                        _end = int(_seg[_name]["end_sample"])
+                        _seg_y = np.asarray(self.y[_start:_end], dtype=float)
+                        _f_seg, _a_seg = _segment_spectrum(_seg_y, float(self.sr))
+                        _mir_seg = compute_mir_descriptors_from_spectrum(
+                            frequencies_hz=_f_seg,
+                            amplitudes=_a_seg,
+                            f0_hz=_f0_seg if np.isfinite(_f0_seg) else None,
+                        )
+                        for _k, _v in _mir_seg.items():
+                            setattr(self, f"{_k}_on_{_name}", float(_v) if np.isfinite(float(_v)) else float("nan"))
+                            if _name == "sustain":
+                                setattr(
+                                    self,
+                                    f"{_k}_on_sustain_segment",
+                                    float(_v) if np.isfinite(float(_v)) else float("nan"),
+                                )
+
+                        _peaks_seg = pd.DataFrame(
+                            {
+                                "Frequency (Hz)": _f_seg,
+                                "Amplitude": _a_seg,
+                                "Power": np.square(np.maximum(_a_seg, 0.0)),
+                            }
+                        )
+                        _desc_seg = compute_acoustic_density_descriptors(
+                            _peaks_seg,
+                            f0_hz=_f0_seg,
+                            f0_source=str(getattr(self, "f0_used_for_density_source", "") or ""),
+                            acoustic_f0_status=str(getattr(self, "acoustic_f0_status", "") or ""),
+                            f0_fit_accepted=bool(getattr(self, "f0_fit_accepted", False)),
+                        )
+                        for _dens_key in (
+                            "harmonic_density_component",
+                            "inharmonic_density_component",
+                            "subbass_density_component",
+                        ):
+                            _val = _desc_seg.get(_dens_key, float("nan"))
+                            setattr(
+                                self,
+                                f"{_dens_key}_on_{_name}",
+                                float(_val) if np.isfinite(float(_val)) else float("nan"),
+                            )
+            except Exception as _phase5_exc:
+                self.logger.warning("Phase 5 descriptor/segmentation export skipped: %s", _phase5_exc)
+
             # Folha ``Metrics``: apenas núcleo do modelo de densidade efetiva (sem PCA, dissonância,
             # parâmetros STFT, nem campos de masking). Parâmetros técnicos → ``Analysis_Metadata``.
             # effective_partial_density: número efetivo de componentes espectrais energeticamente relevantes
@@ -9616,6 +10338,16 @@ class AudioProcessor:
                     "component_total_inharmonic_energy_ratio",
                     "model_harmonic_weight",
                     "model_inharmonic_weight",
+                    "pure_observation_w_h",
+                    "pure_observation_w_i",
+                    "pure_observation_w_s",
+                    "component_strength_h",
+                    "component_strength_i",
+                    "component_strength_s",
+                    "legacy_component_strength_h_v55",
+                    "legacy_component_strength_i_v55",
+                    "legacy_component_strength_s_v55",
+                    "obs_w_formula_version",
                     "component_energy_status",
                     "effective_partial_density_status",
                     "density_metric_status",
@@ -9646,6 +10378,54 @@ class AudioProcessor:
             _rest = [c for c in metrics_df.columns if c not in _ordered]
             metrics_df = metrics_df[_ordered + _rest]
             metrics_df.to_excel(writer, sheet_name="Metrics", index=False)
+
+            # Phase 4: explicit inharmonicity fit report for auditability.
+            fit_payload = {}
+            try:
+                fit_payload = dict(
+                    getattr(self, "_acoustic_density_desc", {}).get(
+                        "inharmonicity_fit_result", {}
+                    )
+                    or {}
+                )
+            except Exception:
+                fit_payload = {}
+            if fit_payload:
+                fit_row = {
+                    "inharmonicity_coefficient_B": float(
+                        fit_payload.get("inharmonicity_coefficient_B", float("nan"))
+                    ),
+                    "inharmonicity_fit_residual_std_cents": float(
+                        fit_payload.get("fit_residual_std_cents", float("nan"))
+                    ),
+                    "fit_residual_std_cents": float(
+                        fit_payload.get("fit_residual_std_cents", float("nan"))
+                    ),
+                    "inharmonicity_fit_status": str(fit_payload.get("fit_status", "") or ""),
+                    "fit_status": str(fit_payload.get("fit_status", "") or ""),
+                    "inharmonicity_fit_method": str(fit_payload.get("method", "") or ""),
+                    "method": str(fit_payload.get("method", "") or ""),
+                    "inharmonicity_model_applied": bool(
+                        getattr(self, "inharmonicity_model_applied", False)
+                    ),
+                    "model_applied": bool(
+                        getattr(self, "inharmonicity_model_applied", False)
+                    ),
+                }
+                fit_df = pd.DataFrame([fit_row])
+                pred = np.asarray(
+                    fit_payload.get("stretched_harmonic_predicted_freqs_hz", []),
+                    dtype=float,
+                )
+                if pred.size > 0:
+                    pred_df = pd.DataFrame(
+                        {
+                            "harmonic_order_n": np.arange(1, pred.size + 1, dtype=int),
+                            "stretched_harmonic_predicted_freqs_hz": pred.astype(float),
+                        }
+                    )
+                    fit_df = pd.concat([fit_df, pred_df], axis=1)
+                _pub_df(fit_df).to_excel(writer, sheet_name="Inharmonicity_Fit", index=False)
 
             legacy_row = self._build_legacy_density_metrics_row(note)
             legacy_df = _pub_df(pd.DataFrame([legacy_row]))
@@ -9840,6 +10620,17 @@ class AudioProcessor:
                 ),
                 "f0_fit_accepted": getattr(self, "f0_fit_accepted", None),
                 "f0_fit_rejection_reason": getattr(self, "f0_fit_rejection_reason", None),
+                "f0_validation_mode": getattr(self, "f0_validation_mode", None),
+                "nominal_prior_hz": getattr(self, "nominal_prior_hz", None),
+                "f0_candidate_hz": getattr(self, "f0_candidate_hz", None),
+                "f0_deviation_cents": getattr(self, "f0_deviation_cents", None),
+                "low_order_match_count": getattr(self, "low_order_match_count", None),
+                "odd_harmonic_match_count": getattr(self, "odd_harmonic_match_count", None),
+                "even_harmonic_match_count": getattr(self, "even_harmonic_match_count", None),
+                "median_abs_error_cents": getattr(self, "median_abs_error_cents", None),
+                "p90_abs_error_cents": getattr(self, "p90_abs_error_cents", None),
+                "harmonic_comb_score": getattr(self, "harmonic_comb_score", None),
+                "f0_validation_max_hz": getattr(self, "f0_validation_max_hz", None),
                 "acoustic_f0_status": getattr(self, "acoustic_f0_status", None),
                 "harmonic_tolerance": float(tol_hz),
                 "snr_threshold_db": float(SNR_THRESHOLD_DB),
@@ -10052,6 +10843,10 @@ class AudioProcessor:
                 ("zero_padding", int(getattr(self, "zero_padding", 1) or 1)),
                 ("frequency_min_hz", float(getattr(self, "freq_min", float("nan")))),
                 ("frequency_max_hz", float(getattr(self, "freq_max", float("nan")))),
+                (
+                    "frequency_range_semantics",
+                    "global_peak_search_and_stft_detection_domain",
+                ),
                 ("magnitude_min_db", float(getattr(self, "db_min", float("nan")))),
                 ("magnitude_max_db", float(getattr(self, "db_max", float("nan")))),
                 ("rms_normalisation_enabled", True),
@@ -10061,7 +10856,7 @@ class AudioProcessor:
                 ("harmonic_tolerance", tol_hz),
                 (
                     "density_summation_mode",
-                    str(getattr(self, "density_summation_mode", "his_weighted") or "his_weighted"),
+                    str(getattr(self, "density_summation_mode", "his_note_adaptive") or "his_note_adaptive"),
                 ),
                 (
                     "harmonic_density_weight",
@@ -10102,6 +10897,15 @@ class AudioProcessor:
                         if getattr(self, "density_frequency_ceiling_hz", 5000.0) is not None
                         else 5000.0
                     ),
+                ),
+                (
+                    "density_frequency_ceiling_semantics",
+                    "upper_bound_for_density_metric_component_integration_not_global_peak_search",
+                ),
+                (
+                    "frequency_range_vs_density_ceiling_note",
+                    "frequency_min_hz/frequency_max_hz define global analysis domain; "
+                    "density_frequency_ceiling_hz defines density metric integration ceiling.",
                 ),
                 (
                     "legacy_up_to_5000hz_columns_alias_density_ceiling",
@@ -10204,8 +11008,8 @@ class AudioProcessor:
                 (
                     "physical_low_frequency_upper_hz",
                     float(
-                        getattr(self, "physical_low_frequency_upper_hz", SUBBASS_AGGREGATE_CUTOFF_HZ)
-                        or SUBBASS_AGGREGATE_CUTOFF_HZ
+                        getattr(self, "physical_low_frequency_upper_hz", self._current_subbass_upper_bound_hz())
+                        or self._current_subbass_upper_bound_hz()
                     ),
                 ),
                 (
@@ -10321,6 +11125,10 @@ class AudioProcessor:
                     str(getattr(self, "f0_final_source", "") or ""),
                 ),
                 (
+                    "inharmonicity_model_applied",
+                    bool(getattr(self, "inharmonicity_model_applied", False)),
+                ),
+                (
                     "f0_detuning_cents_from_nominal",
                     _meta_atom(getattr(self, "f0_detuning_cents_from_nominal", None)),
                 ),
@@ -10376,7 +11184,7 @@ class AudioProcessor:
                     "subbass_aggregate_cutoff_hz",
                     float(
                         getattr(self, "subbass_aggregate_hz",
-                                SUBBASS_AGGREGATE_CUTOFF_HZ)
+                                self._current_subbass_upper_bound_hz())
                     ),
                 ),
                 (
@@ -10522,6 +11330,55 @@ class AudioProcessor:
                 ("f0_fit_accepted", _meta_atom(getattr(self, "f0_fit_accepted", None))),
                 ("f0_fit_quality", _meta_atom(getattr(self, "f0_fit_quality", None))),
                 ("f0_fit_rejection_reason", _meta_atom(getattr(self, "f0_fit_rejection_reason", None))),
+                ("f0_validation_mode", _meta_atom(getattr(self, "f0_validation_mode", None))),
+                ("nominal_prior_hz", _meta_atom(getattr(self, "nominal_prior_hz", None))),
+                ("f0_candidate_hz", _meta_atom(getattr(self, "f0_candidate_hz", None))),
+                ("f0_deviation_cents", _meta_atom(getattr(self, "f0_deviation_cents", None))),
+                ("low_order_match_count", _meta_atom(getattr(self, "low_order_match_count", None))),
+                ("odd_harmonic_match_count", _meta_atom(getattr(self, "odd_harmonic_match_count", None))),
+                ("even_harmonic_match_count", _meta_atom(getattr(self, "even_harmonic_match_count", None))),
+                ("median_abs_error_cents", _meta_atom(getattr(self, "median_abs_error_cents", None))),
+                ("p90_abs_error_cents", _meta_atom(getattr(self, "p90_abs_error_cents", None))),
+                ("harmonic_comb_score", _meta_atom(getattr(self, "harmonic_comb_score", None))),
+                ("f0_validation_max_hz", _meta_atom(getattr(self, "f0_validation_max_hz", None))),
+                ("f0_epistemic_status", _meta_atom(getattr(self, "f0_epistemic_status", None))),
+                ("valid_for_primary_statistics", _meta_atom(getattr(self, "valid_for_primary_statistics", None))),
+                ("include_qc_warning_rows_default", False),
+                ("density_confidence", _meta_atom(getattr(self, "density_confidence", None))),
+                ("f0_confidence", _meta_atom(getattr(self, "f0_confidence", None))),
+                (
+                    "harmonic_assignment_confidence",
+                    _meta_atom(getattr(self, "harmonic_assignment_confidence", None)),
+                ),
+                (
+                    "spectral_stability_confidence",
+                    _meta_atom(getattr(self, "spectral_stability_confidence", None)),
+                ),
+                ("qc_status", _meta_atom(getattr(self, "qc_status", None))),
+                (
+                    "outlier_ratio_max_to_mean",
+                    _meta_atom(getattr(self, "outlier_ratio_max_to_mean", None)),
+                ),
+                ("outlier_policy_applied", _meta_atom(getattr(self, "outlier_policy_applied", None))),
+                ("density_winsorized", _meta_atom(getattr(self, "spectral_density_metric_winsorized", None))),
+                ("density_median_based", _meta_atom(getattr(self, "spectral_density_metric_median_based", None))),
+                ("density_trimmed_mean", _meta_atom(getattr(self, "spectral_density_metric_trimmed_mean", None))),
+                ("sethares_status", _meta_atom(getattr(self, "sethares_status", None))),
+                ("sethares_value_status", _meta_atom(getattr(self, "sethares_value_status", None))),
+                ("sethares_curve_status", _meta_atom(getattr(self, "sethares_curve_status", None))),
+                ("sethares_plot_status", _meta_atom(getattr(self, "sethares_plot_status", None))),
+                (
+                    "analysis_parameter_profile_id",
+                    _meta_atom(getattr(self, "analysis_parameter_profile_id", None)),
+                ),
+                (
+                    "is_primary_comparable_profile",
+                    _meta_atom(getattr(self, "is_primary_comparable_profile", None)),
+                ),
+                (
+                    "primary_comparable_profile_definition",
+                    _meta_atom(getattr(self, "primary_comparable_profile_definition", None)),
+                ),
                 (
                     "harmonic_occupancy_ratio",
                     _meta_atom(getattr(self, "harmonic_occupancy_ratio", None)),
@@ -10884,10 +11741,19 @@ class AudioProcessor:
                 processing_metadata['Parameter'].extend([
                     'f₀ Robust (Hz)', 'f₀ Robust Residual Std (Hz)', 'f₀ Robust Fit Quality', 'f₀ Robust Accepted'
                 ])
+                _f0r = getattr(self, "f0_robust", None)
+                _f0rs = getattr(self, "f0_robust_residual_std", None)
+                _f0rq = getattr(self, "f0_robust_fit_quality", None)
+                def _safe_float_nan(v: Any) -> float:
+                    try:
+                        fv = float(v)
+                        return fv if np.isfinite(fv) else float("nan")
+                    except Exception:
+                        return float("nan")
                 processing_metadata['Value'].extend([
-                    float(getattr(self, 'f0_robust', 0.0)),
-                    float(getattr(self, 'f0_robust_residual_std', 0.0)),
-                    float(getattr(self, 'f0_robust_fit_quality', 0.0)),
+                    _safe_float_nan(_f0r),
+                    _safe_float_nan(_f0rs),
+                    _safe_float_nan(_f0rq),
                     bool(getattr(self, "f0_fit_accepted", False))
                 ])
             

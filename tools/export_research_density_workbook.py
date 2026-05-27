@@ -343,6 +343,70 @@ def merge_workbook_frames(path: Path, warnings: List[str]) -> pd.DataFrame:
     return merged
 
 
+def _augment_source_file_name_from_per_note_processing_metadata(
+    merged: pd.DataFrame,
+    compiled_workbook: Path,
+) -> pd.DataFrame:
+    """Populate source-file hints from Per_Note_Processing_Metadata when available.
+
+    Some real runs carry reliable per-note filename provenance only in
+    ``Per_Note_Processing_Metadata.source_file_name``. This helper backfills
+    ``source_file_name`` in the merged frame by Note key without changing
+    analysis semantics.
+    """
+    if merged is None or merged.empty or "Note" not in merged.columns:
+        return merged
+    out = merged.copy()
+    if "source_file_name" not in out.columns:
+        out["source_file_name"] = np.nan
+    try:
+        pnp = pd.read_excel(
+            compiled_workbook,
+            sheet_name="Per_Note_Processing_Metadata",
+            engine="openpyxl",
+        )
+    except Exception:
+        return out
+    if pnp is None or pnp.empty:
+        return out
+    note_col = find_note_column(pnp)
+    if note_col is None:
+        return out
+    src_col = _first_matching_column(
+        pnp,
+        ("source_file_name", "Source_File", "source_file", "filename", "file_name"),
+    )
+    if src_col is None:
+        return out
+    pnp_map = (
+        pnp[[note_col, src_col]]
+        .copy()
+        .rename(columns={note_col: "Note", src_col: "source_file_name"})
+    )
+    pnp_map["Note"] = pnp_map["Note"].astype(str)
+    pnp_map["source_file_name"] = pnp_map["source_file_name"].astype(str)
+    pnp_map = pnp_map[
+        pnp_map["Note"].str.strip().ne("")
+        & pnp_map["source_file_name"].str.strip().ne("")
+        & pnp_map["source_file_name"].str.lower().ne("nan")
+    ]
+    if pnp_map.empty:
+        return out
+    note_to_src = dict(zip(pnp_map["Note"], pnp_map["source_file_name"], strict=False))
+    cur = out["source_file_name"]
+    out["source_file_name"] = [
+        cur.iloc[i]
+        if (
+            pd.notna(cur.iloc[i])
+            and str(cur.iloc[i]).strip() != ""
+            and str(cur.iloc[i]).strip().lower() != "nan"
+        )
+        else note_to_src.get(str(out.iloc[i]["Note"]), np.nan)
+        for i in range(len(out))
+    ]
+    return out
+
+
 def _series_or_nan(df: pd.DataFrame, name: str) -> pd.Series:
     if name in df.columns:
         return pd.to_numeric(df[name], errors="coerce")
@@ -728,6 +792,32 @@ def infer_dynamic_from_text(text: str | None) -> Optional[str]:
     return infer_dynamic_conservative(text)
 
 
+_TECHNIQUE_TOKEN_MAP: Dict[str, str] = {
+    "ord": "ord",
+    "ordinario": "ord",
+    "stacc": "stacc",
+    "staccato": "stacc",
+    "leg": "legato",
+    "legato": "legato",
+    "pizz": "pizz",
+    "pizzicato": "pizz",
+    "trem": "tremolo",
+    "tremolo": "tremolo",
+    "vib": "vibrato",
+    "vibrato": "vibrato",
+}
+
+
+def infer_technique_conservative(text: str | None) -> Optional[str]:
+    if not text:
+        return None
+    tokens = _tokenize_metadata_text(text)
+    for tok in tokens:
+        if tok in _TECHNIQUE_TOKEN_MAP:
+            return _TECHNIQUE_TOKEN_MAP[tok]
+    return None
+
+
 def _cell_str(row: pd.Series, col: str) -> Optional[str]:
     if col not in row.index:
         return None
@@ -780,11 +870,19 @@ def _instrument_inference_sources(merged: pd.DataFrame, i: int, compiled_workboo
             s = _cell_str(row, str(col))
             if s and s.lower() not in {"unknown", "nan", "none"}:
                 texts.append(s)
-    src = _pick_series(merged, "Source_File")
-    if len(src) > i:
-        v = src.iloc[i]
-        if pd.notna(v) and str(v).strip():
-            texts.append(str(v))
+    for _src_col in (
+        "Source_File",
+        "source_file_name",
+        "source_file",
+        "filename",
+        "file_name",
+        "input_file",
+    ):
+        _src_series = _pick_series(merged, _src_col)
+        if len(_src_series) > i:
+            v = _src_series.iloc[i]
+            if pd.notna(v) and str(v).strip():
+                texts.append(str(v))
     sw = _pick_series(merged, "Source_Workbook")
     if len(sw) > i:
         v = sw.iloc[i]
@@ -832,11 +930,19 @@ def _dynamic_inference_sources(merged: pd.DataFrame, i: int, compiled_workbook: 
             s = _cell_str(row, str(col))
             if s and s.lower() not in {"unknown", "nan", "none"}:
                 texts.append(s)
-    src = _pick_series(merged, "Source_File")
-    if len(src) > i:
-        v = src.iloc[i]
-        if pd.notna(v) and str(v).strip():
-            texts.append(str(v))
+    for _src_col in (
+        "Source_File",
+        "source_file_name",
+        "source_file",
+        "filename",
+        "file_name",
+        "input_file",
+    ):
+        _src_series = _pick_series(merged, _src_col)
+        if len(_src_series) > i:
+            v = _src_series.iloc[i]
+            if pd.notna(v) and str(v).strip():
+                texts.append(str(v))
     sw = _pick_series(merged, "Source_Workbook")
     if len(sw) > i:
         v = sw.iloc[i]
@@ -874,14 +980,17 @@ def _build_instrument_dynamic_series(
     compiled_workbook: Path,
     warnings: List[str],
     meta: ResearchExportMetadata,
-) -> Tuple[pd.Series, pd.Series]:
-    """Resolve Instrument and Dynamic per priority rules and CLI overrides."""
+) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series, pd.Series]:
+    """Resolve Instrument, Dynamic, Technique and inference-status columns."""
     n = len(merged)
     orig_inst = _pick_series(merged, "Instrument").copy()
     orig_dyn = _pick_series(merged, "Dynamic").copy()
 
     inst_out = orig_inst.astype(object)
     dyn_out = orig_dyn.astype(object)
+    tech_out = _pick_series(merged, "Technique").astype(object)
+    infer_status = pd.Series("provided_or_inferred", index=merged.index, dtype=object)
+    infer_reason = pd.Series("", index=merged.index, dtype=object)
 
     for i in range(n):
         if not (pd.isna(inst_out.iloc[i]) or str(inst_out.iloc[i]).strip() == ""):
@@ -903,6 +1012,17 @@ def _build_instrument_dynamic_series(
         if guess:
             dyn_out.iloc[i] = guess
 
+    for i in range(n):
+        if not (pd.isna(tech_out.iloc[i]) or str(tech_out.iloc[i]).strip() == ""):
+            continue
+        sources = _dedupe_preserve(
+            _instrument_inference_sources(merged, i, compiled_workbook)
+            + _dynamic_inference_sources(merged, i, compiled_workbook)
+        )
+        guess = _infer_first_from_sources(sources, infer_technique_conservative)
+        if guess:
+            tech_out.iloc[i] = guess
+
     if meta.instrument:
         for i in range(n):
             row_has = pd.notna(orig_inst.iloc[i]) and str(orig_inst.iloc[i]).strip() != ""
@@ -919,7 +1039,22 @@ def _build_instrument_dynamic_series(
     if _all_blank_or_nan(dyn_out):
         warnings.append("Dynamic column missing or ambiguous; could not be inferred confidently; left blank.")
 
-    return inst_out, dyn_out
+    for i in range(n):
+        miss = []
+        if pd.isna(inst_out.iloc[i]) or str(inst_out.iloc[i]).strip() == "":
+            miss.append("instrument")
+        if pd.isna(dyn_out.iloc[i]) or str(dyn_out.iloc[i]).strip() == "":
+            miss.append("dynamic")
+        if pd.isna(tech_out.iloc[i]) or str(tech_out.iloc[i]).strip() == "":
+            miss.append("technique")
+        if miss:
+            infer_status.iloc[i] = "incomplete_inference"
+            infer_reason.iloc[i] = "missing_" + "_".join(miss)
+        else:
+            infer_status.iloc[i] = "ok"
+            infer_reason.iloc[i] = ""
+
+    return inst_out, dyn_out, tech_out, infer_status, infer_reason
 
 
 def _collect_note_named_directories(analysis_root: Path) -> Dict[str, List[Path]]:
@@ -1042,6 +1177,11 @@ def apply_per_note_chart_paths(
             "Per-note component_energy_ratio_pie.png / component_energy_pie.png not found under analysis folder "
             "for at least one note (see energy_ratio_chart_file on Spectral_Density_Metrics)."
         )
+    for _path_col in ("amplitude_mass_chart_file", "energy_ratio_chart_file"):
+        if _path_col in sd.columns:
+            _s = sd[_path_col].astype(object)
+            _missing = _s.isna() | _s.astype(str).str.strip().eq("")
+            sd[_path_col] = _s.where(~_missing, "not_found_under_analysis_folder")
 
 
 def build_spectral_density_metrics(
@@ -1053,6 +1193,9 @@ def build_spectral_density_metrics(
     include_legacy_cdm_mean: bool = False,
 ) -> pd.DataFrame:
     meta = meta or ResearchExportMetadata()
+    merged = _augment_source_file_name_from_per_note_processing_metadata(
+        merged, compiled_workbook
+    )
     note_col = "Note"
     notes = merged[note_col] if note_col in merged.columns else pd.Series(np.nan, index=merged.index)
 
@@ -1061,9 +1204,20 @@ def build_spectral_density_metrics(
 
     norm_warns: Dict[str, bool] = {}
 
-    instrument, dynamic = _build_instrument_dynamic_series(merged, compiled_workbook, warnings, meta)
+    (
+        instrument,
+        dynamic,
+        technique,
+        metadata_inference_status,
+        metadata_missing_reason,
+    ) = _build_instrument_dynamic_series(merged, compiled_workbook, warnings, meta)
 
     f0_source_series = _series_str(merged, "f0_source")
+    f0_final_source_series = _series_str(merged, "f0_final_source")
+    f0_final_source_series = f0_final_source_series.where(
+        f0_final_source_series.notna() & f0_final_source_series.astype(str).str.strip().ne(""),
+        "unknown",
+    )
     f0_fit_accepted_series = (
         merged["f0_fit_accepted"] if "f0_fit_accepted" in merged.columns else pd.Series(np.nan, index=merged.index)
     )
@@ -1258,11 +1412,15 @@ def build_spectral_density_metrics(
     if subbass_density_weight.isna().all():
         subbass_density_weight = pd.Series(0.25, index=merged.index)
     if density_summation_mode.isna().all() or density_summation_mode.astype(str).str.strip().eq("").all():
-        density_summation_mode = pd.Series("his_weighted", index=merged.index)
+        density_summation_mode = pd.Series("his_note_adaptive", index=merged.index)
     if density_salience_threshold_db.isna().all():
         density_salience_threshold_db = pd.Series(-45.0, index=merged.index)
     if density_frequency_ceiling_hz.isna().all():
         density_frequency_ceiling_hz = pd.Series(5000.0, index=merged.index)
+    _valid_primary_str = _series_str(merged, "valid_for_primary_statistics").fillna("")
+    valid_for_primary_statistics = _valid_primary_str.astype(str).str.strip().str.lower().isin(
+        {"true", "1", "yes", "y"}
+    )
 
     _mode_norm = density_summation_mode.astype(str).str.strip().str.lower()
     _harm_only = _mode_norm.isin(["harmonic_only", "harmonic-only", "h_only"])
@@ -1311,9 +1469,13 @@ def build_spectral_density_metrics(
             "Octave": [parse_note(x)[2] for x in notes],
             "Register": [register_from_midi(m) for m in midi_list],
             "Dynamic": dynamic,
+            "Technique": technique,
+            "metadata_inference_status": metadata_inference_status,
+            "metadata_missing_reason": metadata_missing_reason,
             "f0_nominal_hz": _series_or_nan(merged, "f0_nominal_hz"),
             "f0_final_hz": _pick_series(merged, "f0_final_hz"),
             "f0_source": f0_source_series,
+            "f0_final_source": f0_final_source_series,
             "acoustic_f0_status": acoustic_f0_status_series,
             "f0_used_for_density_hz": _series_or_nan(merged, "f0_used_for_density_hz"),
             "f0_used_for_density_source": f0_used_for_density_source_series,
@@ -1322,10 +1484,23 @@ def build_spectral_density_metrics(
             ),
             "f0_fit_accepted": f0_fit_accepted_series,
             "f0_fit_rejection_reason": f0_fit_rejection_reason_series,
+            "f0_epistemic_status": _series_str(merged, "f0_epistemic_status"),
+            "f0_validation_mode": _series_str(merged, "f0_validation_mode"),
+            "nominal_prior_hz": _series_or_nan(merged, "nominal_prior_hz"),
+            "f0_candidate_hz": _series_or_nan(merged, "f0_candidate_hz"),
+            "f0_deviation_cents": _series_or_nan(merged, "f0_deviation_cents"),
+            "low_order_match_count": _series_or_nan(merged, "low_order_match_count"),
+            "odd_harmonic_match_count": _series_or_nan(merged, "odd_harmonic_match_count"),
+            "even_harmonic_match_count": _series_or_nan(merged, "even_harmonic_match_count"),
+            "median_abs_error_cents": _series_or_nan(merged, "median_abs_error_cents"),
+            "p90_abs_error_cents": _series_or_nan(merged, "p90_abs_error_cents"),
+            "harmonic_comb_score": _series_or_nan(merged, "harmonic_comb_score"),
+            "f0_validation_max_hz": _series_or_nan(merged, "f0_validation_max_hz"),
             "arithmetic_validation_status": _series_str(merged, "arithmetic_validation_status"),
             "acoustic_validation_status": _series_str(merged, "acoustic_validation_status"),
             "f0_detuning_cents_from_nominal": _series_or_nan(merged, "f0_detuning_cents_from_nominal"),
             "density_metric_raw": _series_or_nan(merged, "density_metric_raw"),
+            "density_metric_raw_source_sheet": "Density_Metrics",
             "energy_weighted_component_density_diagnostic": _series_or_nan(
                 merged, "density_metric_raw"
             ),
@@ -1365,6 +1540,30 @@ def build_spectral_density_metrics(
             "inharmonic_density_weight": inharmonic_density_weight,
             "subbass_density_weight": subbass_density_weight,
             "density_summation_mode": density_summation_mode,
+            "valid_for_primary_statistics": valid_for_primary_statistics,
+            "is_primary_comparable_profile": _series_str(
+                merged, "is_primary_comparable_profile"
+            ).fillna("").astype(str).str.strip().str.lower().isin({"true", "1", "yes", "y"}),
+            "analysis_parameter_profile_id": _series_str(merged, "analysis_parameter_profile_id"),
+            "primary_comparable_profile_definition": _series_str(
+                merged, "primary_comparable_profile_definition"
+            ),
+            "density_confidence": _series_or_nan(merged, "density_confidence"),
+            "f0_confidence": _series_or_nan(merged, "f0_confidence"),
+            "harmonic_assignment_confidence": _series_or_nan(merged, "harmonic_assignment_confidence"),
+            "spectral_stability_confidence": _series_or_nan(merged, "spectral_stability_confidence"),
+            "qc_status": _series_str(merged, "qc_status"),
+            "outlier_ratio_max_to_mean": _series_or_nan(merged, "outlier_ratio_max_to_mean"),
+            "outlier_policy_applied": _series_str(merged, "outlier_policy_applied"),
+            "density_winsorized": _series_or_nan(merged, "density_winsorized"),
+            "density_median_based": _series_or_nan(merged, "density_median_based"),
+            "density_trimmed_mean": _series_or_nan(merged, "density_trimmed_mean"),
+            "sethares_status": _series_str(merged, "sethares_status"),
+            "sethares_value_status": _series_str(merged, "sethares_value_status"),
+            "sethares_curve_status": _series_str(merged, "sethares_curve_status"),
+            "sethares_plot_status": _series_str(merged, "sethares_plot_status"),
+            "density_weighted_sum_alias_of": _series_str(merged, "density_weighted_sum_alias_of"),
+            "density_weighted_sum_semantic_status": _series_str(merged, "density_weighted_sum_semantic_status"),
             "density_salience_threshold_db": density_salience_threshold_db,
             "density_frequency_ceiling_hz": density_frequency_ceiling_hz,
             "harmonic_occupancy_detected_order_count": harmonic_occupancy_detected_order_count,
@@ -1434,6 +1633,8 @@ def build_spectral_density_metrics(
         "energy_ratio_chart_file",
     ):
         out[extra] = merged[extra] if extra in merged.columns else np.nan
+    for _path_col in ("amplitude_mass_chart_file", "energy_ratio_chart_file"):
+        out[_path_col] = out[_path_col].astype(object)
 
     for col in (
         "density_metric_raw",
@@ -1478,6 +1679,18 @@ def build_spectral_density_metrics(
             "Legacy editorial mean density_weighted_sum_cdm_mean omitted by default "
             "(use --include-legacy-cdm-mean to export it)."
         )
+
+    if "is_primary_comparable_profile" in out.columns:
+        _pp = pd.to_numeric(out["is_primary_comparable_profile"], errors="coerce")
+        _pp_true = int((_pp == 1).sum())
+        _pp_total = int(len(out))
+        if _pp_true < _pp_total:
+            warnings.append(
+                "Run-parameter comparability warning: "
+                f"{_pp_total - _pp_true}/{_pp_total} note rows are not in the primary "
+                "comparable profile (wf=log, threshold=-45 dB, ceiling=5000 Hz). "
+                "Use Primary_Statistics_Filtered for thesis-grade primary statistics."
+            )
 
     out = out.sort_values("MIDI", na_position="last", kind="mergesort")
     return out
@@ -1790,14 +2003,43 @@ def build_metadata_rows(
 ) -> pd.DataFrame:
     now = format_utc_publication_timestamp()
     source_workbook_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    git_status_reason = "ok"
+    git_commit = "unavailable_not_recorded"
+    git_branch = "unavailable_not_recorded"
     try:
-        git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        _git_commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=str(path.parent),
+            check=False,
+        )
+        if _git_commit.returncode == 0 and str(_git_commit.stdout).strip():
+            git_commit = str(_git_commit.stdout).strip()
+        else:
+            _msg = f"{_git_commit.stderr} {_git_commit.stdout}".lower()
+            if "not a git repository" in _msg:
+                git_commit = "unavailable_not_a_git_repository"
+                git_status_reason = "not_a_git_repository"
+            else:
+                git_status_reason = "git_rev_parse_failed"
     except Exception:
-        git_commit = "unavailable_not_recorded"
+        git_status_reason = "git_rev_parse_exception"
     try:
-        git_branch = subprocess.check_output(["git", "branch", "--show-current"], text=True).strip()
+        _git_branch = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            cwd=str(path.parent),
+            check=False,
+        )
+        if _git_branch.returncode == 0 and str(_git_branch.stdout).strip():
+            git_branch = str(_git_branch.stdout).strip()
+        elif git_status_reason == "ok":
+            git_status_reason = "git_branch_lookup_failed"
     except Exception:
-        git_branch = "unavailable_not_recorded"
+        if git_status_reason == "ok":
+            git_status_reason = "git_branch_lookup_exception"
 
     meta_missing: set[str] = set()
 
@@ -1932,6 +2174,7 @@ def build_metadata_rows(
         "output_path": output_path_val,
         "source_workbook_sha256": source_workbook_sha256,
         "git_commit": git_commit,
+        "git_status_reason": git_status_reason,
         "git_branch": git_branch,
         "research_export_created_at": now,
         "research_export_script": SCRIPT_NAME,
@@ -2735,6 +2978,12 @@ def build_workbook(
     )
     apply_per_note_chart_paths(sd, source, merged, warnings)
     required_front_cols = [
+        "Technique",
+        "metadata_inference_status",
+        "metadata_missing_reason",
+        "f0_final_source",
+        "amplitude_mass_chart_file",
+        "energy_ratio_chart_file",
         "f0_used_for_density_hz",
         "f0_used_for_density_source",
         "acoustic_f0_status",
@@ -2913,12 +3162,27 @@ def build_workbook(
         "f0_used_for_density_source",
         "f0_fit_accepted",
         "acoustic_f0_status",
+        "f0_validation_mode",
+        "nominal_prior_hz",
+        "f0_candidate_hz",
+        "f0_deviation_cents",
+        "low_order_match_count",
+        "odd_harmonic_match_count",
+        "even_harmonic_match_count",
+        "median_abs_error_cents",
+        "p90_abs_error_cents",
+        "harmonic_comb_score",
+        "f0_validation_max_hz",
         "arithmetic_validation_status",
         "acoustic_validation_status",
         "density_metric_raw",
+        "density_metric_raw_source_sheet",
         "energy_weighted_component_density_diagnostic",
         "density_weighted_sum",
         "density_log_weighted",
+        "density_winsorized",
+        "density_median_based",
+        "density_trimmed_mean",
         "Total sum",
         "spectral_body_thickness_index",
         "body_weighted_effective_density",
@@ -2950,6 +3214,20 @@ def build_workbook(
         "inharmonic_density_weight",
         "subbass_density_weight",
         "density_summation_mode",
+        "valid_for_primary_statistics",
+        "is_primary_comparable_profile",
+        "analysis_parameter_profile_id",
+        "primary_comparable_profile_definition",
+        "density_confidence",
+        "f0_confidence",
+        "harmonic_assignment_confidence",
+        "spectral_stability_confidence",
+        "qc_status",
+        "outlier_ratio_max_to_mean",
+        "outlier_policy_applied",
+        "sethares_value_status",
+        "sethares_curve_status",
+        "sethares_plot_status",
         "density_salience_threshold_db",
         "density_frequency_ceiling_hz",
         "residual_body_contribution",
@@ -3001,6 +3279,33 @@ def build_workbook(
         _hl.append(("density_weighted_sum_cdm_mean", RESEARCH_FILL_DWS_CDM_MEAN))
     _apply_research_column_highlights(sdm_ws, tuple(_hl))
     _apply_sdm_conditional(sdm_ws, hdrs)
+
+    # QC-governed primary statistical table (defaults to acoustically validated rows).
+    primary_sd = sd.copy()
+    if "valid_for_primary_statistics" in primary_sd.columns:
+        primary_sd = primary_sd[primary_sd["valid_for_primary_statistics"] == True].copy()  # noqa: E712
+    if "is_primary_comparable_profile" in primary_sd.columns:
+        primary_sd = primary_sd[primary_sd["is_primary_comparable_profile"] == True].copy()  # noqa: E712
+    if primary_sd.empty:
+        primary_sd = pd.DataFrame(
+            [
+                {
+                    "primary_statistics_status": (
+                        "no rows passed valid_for_primary_statistics + "
+                        "is_primary_comparable_profile filters"
+                    )
+                }
+            ]
+        )
+        _write_data_sheet(wb, "Primary_Statistics_Filtered", primary_sd, tuple(), ("primary_statistics_status",))
+    else:
+        _write_data_sheet(
+            wb,
+            "Primary_Statistics_Filtered",
+            primary_sd,
+            ratio_cols,
+            tuple(metric_cols),
+        )
 
     cb_ratios = (
         "component_harmonic_energy_ratio",
@@ -3117,6 +3422,17 @@ def build_workbook(
             "f0_used_for_density_hz",
             "f0_used_for_density_source",
             "acoustic_f0_status",
+            "f0_epistemic_status",
+            "f0_validation_mode",
+            "nominal_prior_hz",
+            "f0_candidate_hz",
+            "f0_deviation_cents",
+            "valid_for_primary_statistics",
+            "is_primary_comparable_profile",
+            "analysis_parameter_profile_id",
+            "qc_status",
+            "sethares_value_status",
+            "sethares_curve_status",
             "harmonic_tolerance_hz",
             "density_frequency_ceiling_hz",
         ),

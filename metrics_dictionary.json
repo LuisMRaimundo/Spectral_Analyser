@@ -1,2390 +1,537 @@
 {
-  "schema_version": "1.3.2",
-  "description": "Machine-readable dictionary of SoundSpectrAnalyse compiled metrics. Each entry documents the metric's status (canonical / diagnostic / legacy), the formula, the denominator, the physical quantity type, the metric family, the upstream metrics it derives from, whether it is independent for PCA, and how the value MUST and MUST NOT be interpreted. Consumers should treat 'canonical' as final scientific outputs and isolate 'legacy' to back-compat use only.",
-  "metric_family_enum": [
-    "component_energy",
-    "model_weight",
-    "density",
-    "entropy",
-    "harmonicity",
-    "rolloff",
-    "psychoacoustic",
-    "stft_parameter",
-    "validation",
-    "provenance",
-    "legacy_compatibility",
-    "metadata"
-  ],
-  "pca_inclusion_policy": "PCA exports must exclude every entry with independent_for_pca=false unless an explicit debug flag is passed. The 'derived_from' field documents the algebraic dependencies that motivate this exclusion.",
-  "audit_notes": {
-    "duplicate_resolution_v1_1": [
-      "harmonic_energy_ratio, inharmonic_energy_ratio, subbass_energy_ratio share the same H/(H+I+S) formula as the component_* names. They are demoted to status='diagnostic' (alias of component_*).",
-      "component_subbass_energy_ratio is the algebraic complement of component_harmonic_energy_ratio + component_inharmonic_energy_ratio (sum = 1). It is canonical but independent_for_pca=false.",
-      "component_total_inharmonic_energy_ratio is the exact sum (I+S)/(H+I+S). Canonical, but independent_for_pca=false.",
-      "model_inharmonic_weight = 1 - model_harmonic_weight. Canonical, but independent_for_pca=false.",
-      "effective_partial_count and effective_partial_density are NOT identical: effective_partial_count is N_eff over harmonic peaks only (computed in proc_audio); effective_partial_density is N_eff over the harmonic + aggregated inharmonic + sub-bass bundle (density.partial_density_effective_components_bundle). Both are canonical with distinct inputs.",
-      "density_normalized_global vs density_metric_normalized (v1.2): previous schema versions treated density_metric_normalized as a compatibility alias of density_normalized_global. As of the single-pass weighted-density refactor they are distinct descriptors: density_normalized_global is the canonical max-norm of canonical_density_v5_adapted (publication-grade, lives on Canonical_Metrics); density_metric_normalized is the run-relative max-norm of density_metric_raw (the weighted partial-sum density, lives on Density_Metrics) and is classified as diagnostic.",
-      "v1.3 (inharmonic-energy underestimation audit): the legacy linear_amplitude_batch_alignment_factor that rescaled the exported Inharmonic Spectrum + Sub-bass band amplitudes towards a batch energy budget (default harmonic_weight=0.95) is now disabled by default in integrated_single_pass mode (export_alignment_factor = 1.0, export_alignment_source = 'disabled_integrated_single_pass'). It is still computed in explicit legacy_batch mode but the scaled values are written to a new Amplitude_display_scaled column instead of overwriting Amplitude; the raw amplitudes are now always exported as Amplitude_raw and Power_raw = Amplitude_raw² so the compiled Density_Metrics extraction can prefer raw inputs.",
-      "v1.3: harmonic-slot acceptance tightened — a harmonic order is only accepted when there is a validated local peak inside the tolerance window (local maximum, ≥ 3 dB prominence above neighbours, SNR ≥ 3 dB above local noise floor); the previous silent 'nearest-bin' fallbacks that promoted orders without a validated peak are removed. Orders without a validated candidate are now left missing and their energy is correctly attributed to the inharmonic / residual buckets.",
-      "v1.3 new component_energy entries: component_residual_noise_energy_ratio (diffuse non-harmonic energy outside accepted harmonic / inharmonic / sub-bass masks; denominator H+I+S+residual; status=diagnostic, independent_for_pca=true) and component_nonharmonic_energy_ratio (1 − H/(H+I+S+residual); status=diagnostic, independent_for_pca=false because it is a derived complement). component_inharmonic_energy_ratio retains its H+I+S denominator semantics — the new residual ratio captures broadband bow / breath noise that the discrete-inharmonic accounting alone misses.",
-      "v1.3.2 (May 2026): proc_audio exports per-note Legacy_Density_Metrics sheet (SDM, FDM, CDM, Density Metric) by default; compile read_excel_metrics merges it for Weighted Combined Metric. Research export adds density_weighted_sum_cdm_mean = (density_weighted_sum + Combined Density Metric) / 2 on compiled_density_metrics_research.xlsx only — editorial, not canonical."
-    ]
+  "registry_version": "phase_8_docs_sync_v1",
+  "registry_semantics": {
+    "status_values": {
+      "canonical": "Primary public metric for current research workflow.",
+      "diagnostic": "Interpretation/audit support field; not necessarily primary endpoint.",
+      "validation": "Quality-control or warning/status field.",
+      "legacy": "Backward compatibility field; not recommended as new primary endpoint."
+    },
+    "notes": "This registry documents project-defined metric families and export semantics. Direct external-package primitive calls are not listed unless wrapped in project logic."
   },
-  "metrics": [
-    {
-      "name": "Note",
+  "phase_1_2_adaptive": {
+    "pure_observation_w_h": {
+      "status": "diagnostic",
+      "phase": "phase_1",
+      "description": "Pure observation harmonic weight from normalized component strengths.",
+      "sheet_or_export": "phase1_discovered_density_profiles.csv",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "pure_observation_w_i": {
+      "status": "diagnostic",
+      "phase": "phase_1",
+      "description": "Pure observation inharmonic weight from normalized component strengths.",
+      "sheet_or_export": "phase1_discovered_density_profiles.csv",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "pure_observation_w_s": {
+      "status": "diagnostic",
+      "phase": "phase_1",
+      "description": "Pure observation subbass weight from normalized component strengths.",
+      "sheet_or_export": "phase1_discovered_density_profiles.csv",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "phase2_harmonic_weight": {
       "status": "canonical",
-      "formula": "row key extracted from filename (e.g., 'A4')",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "compile_metrics / proc_audio (filename pattern)",
-      "interpretation": "identifies the musical note this row pertains to.",
-      "do_not_interpret_as": "a scientific result; this is an identifier.",
-      "metric_family": "metadata",
-      "derived_from": [],
-      "independent_for_pca": false
+      "phase": "phase_2",
+      "description": "Corpus-level harmonic model-density weight applied at compile stage.",
+      "sheet_or_export": "Validation_Summary / Analysis_Metadata",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
     },
-    {
-      "name": "source_file_name",
+    "phase2_inharmonic_weight": {
       "status": "canonical",
-      "formula": "absolute or relative path to the analysed WAV",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio.load_audio_files",
-      "interpretation": "identifies the source audio file.",
-      "do_not_interpret_as": "a measurement.",
-      "metric_family": "metadata",
-      "derived_from": [],
-      "independent_for_pca": false
+      "phase": "phase_2",
+      "description": "Corpus-level inharmonic model-density weight applied at compile stage.",
+      "sheet_or_export": "Validation_Summary / Analysis_Metadata",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
     },
-    {
-      "name": "tier",
+    "phase2_subbass_weight": {
       "status": "canonical",
-      "formula": "tier name assigned from FFT_SETTINGS_BY_CLUSTER by fundamental frequency",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "pipeline_orchestrator_integrated._assign_tier_for_file",
-      "interpretation": "documents the frequency-tier-specific STFT parameters (n_fft, hop_length, tolerance) used.",
-      "do_not_interpret_as": "a quality grade of the analysis.",
-      "metric_family": "metadata",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "component_harmonic_energy_ratio",
-      "status": "canonical",
-      "formula": "H / (H + I + S)",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S (total component power)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "fraction of the analysed component power that is held by detected harmonic partials.",
-      "do_not_interpret_as": "loudness, perceptual prominence, or a fraction of total signal energy (the denominator excludes residual full-spectrum noise outside the analysed component set).",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "harmonic_energy_sum",
-        "total_component_energy"
-      ],
-      "independent_for_pca": true
-    },
-    {
-      "name": "component_inharmonic_energy_ratio",
-      "status": "canonical",
-      "formula": "I / (H + I + S)",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S (total component power)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "fraction of the analysed component power held by detected inharmonic (non-integer-multiple) partials.",
-      "do_not_interpret_as": "perceptual roughness or dissonance; those are separate models.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "inharmonic_energy_sum",
-        "total_component_energy"
-      ],
-      "independent_for_pca": true
-    },
-    {
-      "name": "component_subbass_energy_ratio",
-      "status": "canonical",
-      "formula": "S / (H + I + S)",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S (total component power)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "fraction of the analysed component power held by the aggregated sub-bass / ground-noise band below the configured cut-off (default ~200 Hz).",
-      "do_not_interpret_as": "a separate noise-floor estimate; this aggregator includes any sub-bass peaks excluded from the harmonic template.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "component_harmonic_energy_ratio",
-        "component_inharmonic_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "component_total_inharmonic_energy_ratio",
-      "status": "canonical",
-      "formula": "(I + S) / (H + I + S)",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S (total component power)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "convenience sum of the inharmonic and sub-bass component shares; non-harmonic share of analysed components.",
-      "do_not_interpret_as": "a noise-to-signal ratio; this excludes content outside the analysed peak / sub-bass aggregation.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "component_inharmonic_energy_ratio",
-        "component_subbass_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "component_residual_noise_energy_ratio",
-      "status": "diagnostic",
-      "formula": "residual / (H + I + S + residual), residual = max(0, ΣA²|filtered − (H + I + S))",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S + residual (total surviving spectral energy after noise-floor rejection)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "diffuse non-harmonic residual energy fraction; spectral power that survived the noise-floor rejection but is NOT in the accepted harmonic peaks, NOT in the discrete inharmonic peaks, and NOT in the sub-bass region. Captures broadband bow/breath noise that the discrete-inharmonic accounting alone would miss.",
-      "do_not_interpret_as": "the same quantity as component_inharmonic_energy_ratio (denominator is intentionally different — H+I+S+residual vs H+I+S — and the masks are disjoint).",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "harmonic_energy_sum",
-        "inharmonic_energy_sum",
-        "subbass_energy_sum",
-        "total_filtered_spectral_energy"
-      ],
-      "independent_for_pca": true
-    },
-    {
-      "name": "component_nonharmonic_energy_ratio",
-      "status": "diagnostic",
-      "formula": "(I + S + residual) / (H + I + S + residual) = 1 − H / (H + I + S + residual)",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S + residual (total surviving spectral energy after noise-floor rejection)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "total non-harmonic share of the surviving spectrum: discrete inharmonic + sub-bass + diffuse residual. Complementary to component_harmonic_energy_ratio computed over the extended denominator.",
-      "do_not_interpret_as": "the arithmetic sum of component_inharmonic_energy_ratio + component_subbass_energy_ratio + component_residual_noise_energy_ratio when those use different denominators (this metric uses H+I+S+residual throughout).",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "component_residual_noise_energy_ratio",
-        "harmonic_energy_sum",
-        "total_filtered_spectral_energy"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "model_harmonic_weight",
-      "status": "canonical",
-      "formula": "H / (H + I)",
-      "quantity_type": "ratio",
-      "denominator": "H + I (binary partition, EXCLUDES sub-bass on purpose)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "binary coefficient used by downstream weighting / dissonance models to blend harmonic and inharmonic contributions.",
-      "do_not_interpret_as": "the same number as component_harmonic_energy_ratio; the denominator is intentionally H + I, not H + I + S.",
-      "metric_family": "model_weight",
-      "derived_from": [
-        "harmonic_energy_sum",
-        "inharmonic_energy_sum"
-      ],
-      "independent_for_pca": true
-    },
-    {
-      "name": "model_inharmonic_weight",
-      "status": "canonical",
-      "formula": "I / (H + I)",
-      "quantity_type": "ratio",
-      "denominator": "H + I (binary partition, EXCLUDES sub-bass on purpose)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "binary coefficient used by downstream weighting / dissonance models.",
-      "do_not_interpret_as": "the same number as component_inharmonic_energy_ratio; the denominator is intentionally H + I, not H + I + S.",
-      "metric_family": "model_weight",
-      "derived_from": [
-        "model_harmonic_weight"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "effective_partial_count",
-      "status": "canonical",
-      "formula": "N_eff = (Σ P_h_i)^2 / Σ (P_h_i)^2  with P_h_i = A_h_i^2 over HARMONIC peaks only",
-      "quantity_type": "count",
-      "denominator": "n/a (Hill q=2 / inverse Herfindahl over harmonic peaks)",
-      "unit": "dimensionless effective count of harmonic partials",
-      "source": "proc_audio._calculate_metrics (computed directly on harmonic_amps)",
-      "interpretation": "effective number of energetically participating HARMONIC partials. ≈1 for a single dominant harmonic; ≈N for N equal-energy harmonics.",
-      "do_not_interpret_as": "the same quantity as effective_partial_density (which is a BLENDED N_eff over harmonic + inharmonic + sub-bass). Inputs differ.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "effective_partial_density",
-      "status": "canonical",
-      "formula": "participation-ratio style effective number of energetically relevant partials over the BLENDED bundle (harmonic + aggregated inharmonic + sub-bass aggregate)",
-      "quantity_type": "count",
-      "denominator": "see partial_density_effective_components_bundle in density.py",
-      "unit": "dimensionless effective count",
-      "source": "density.partial_density_effective_components_bundle",
-      "interpretation": "effective spectral component participation descriptor over the blended bundle: how many components carry most H+I+S energy.",
-      "do_not_interpret_as": "the same as effective_partial_count; effective_partial_count restricts to harmonic peaks only.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": true,
-      "documentation_role": "secondary",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": []
-    },
-    {
-      "name": "canonical_density_v5_adapted",
-      "status": "canonical",
-      "formula": "canonical density v5 with effective partial weighting (see density.CANONICAL_DENSITY_FORMULA_VERSION)",
-      "quantity_type": "count",
-      "denominator": "see density.py canonical_density_v5_adapted",
-      "unit": "dimensionless",
-      "source": "density.apply_density_metric",
-      "interpretation": "current published density metric for SoundSpectrAnalyse.",
-      "do_not_interpret_as": "comparable across different weight_function settings; verify density_source_formula / density_formula_version.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "canonical_density",
-      "status": "canonical",
-      "formula": "Publication alias: identical scalar to canonical_density_v5_adapted (same pipeline; see density.CANONICAL_DENSITY_FORMULA_VERSION).",
-      "quantity_type": "count",
-      "denominator": "see density.py canonical_density_v5_adapted",
-      "unit": "dimensionless",
-      "source": "export alias of canonical_density_v5_adapted",
-      "interpretation": "Publication-facing column name for the canonical v5 adapted density; use when the internal lineage suffix is not needed in tables.",
-      "do_not_interpret_as": "an independent quantity from canonical_density_v5_adapted; values are duplicated for readability only.",
-      "metric_family": "density",
-      "derived_from": [
-        "canonical_density_v5_adapted"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "density_normalized_global",
-      "status": "canonical",
-      "formula": "canonical_density_v5_adapted / max(canonical_density_v5_adapted) over the compiled workbook (clipped to [0, 1])",
-      "quantity_type": "ratio",
-      "denominator": "max(canonical_density_v5_adapted) over the compiled workbook",
-      "unit": "dimensionless (0..1)",
-      "source": "compile_metrics._add_canonical_and_global_density_columns",
-      "interpretation": "canonical, publication-grade run-relative normalised density derived from canonical_density_v5_adapted. Default plotting metric for Canonical_Metrics.",
-      "do_not_interpret_as": "an absolute density. The normalisation is run-relative; do not compare across different runs unless the normalization reference is identical. NOTE: density_normalized_global is the canonical density max-norm; density_metric_normalized (Density_Metrics sheet) is a DIFFERENT diagnostic descriptor that max-normalises the weighted partial-sum density_metric_raw, not canonical_density_v5_adapted.",
-      "metric_family": "density",
-      "derived_from": [
-        "canonical_density_v5_adapted"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "density_per_component",
-      "status": "canonical",
-      "formula": "canonical_density_v5_adapted / harmonic_order_count",
-      "quantity_type": "ratio",
-      "denominator": "harmonic_order_count (count of detected harmonic orders)",
-      "unit": "dimensionless",
-      "source": "compile_metrics",
-      "interpretation": "density normalised by the number of detected harmonic orders.",
-      "do_not_interpret_as": "energy per partial; the denominator is a count, not a power.",
-      "metric_family": "density",
-      "derived_from": [
-        "canonical_density_v5_adapted"
-      ],
-      "independent_for_pca": true
-    },
-    {
-      "name": "rolloff_compensated_harmonic_density",
-      "status": "canonical",
-      "formula": "harmonic density with α-power frequency rolloff compensation",
-      "quantity_type": "count",
-      "denominator": "see density.rolloff_compensated_density",
-      "unit": "dimensionless",
-      "source": "density.rolloff_compensated_density",
-      "interpretation": "harmonic density corrected for the spectral envelope rolloff (α exponent).",
-      "do_not_interpret_as": "comparable across different α values; α is exported alongside as rolloff_compensated_harmonic_density_alpha.",
-      "metric_family": "rolloff",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "harmonic_effective_power_density",
-      "status": "canonical",
-      "formula": "effective power density of the harmonic template (see density.harmonic_effective_power_density)",
-      "quantity_type": "energy",
-      "denominator": "see density module",
-      "unit": "power-per-effective-component",
-      "source": "density.py",
-      "interpretation": "summary energy density of the harmonic stack.",
-      "do_not_interpret_as": "loudness or SPL.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "harmonic_energy_ratio",
-      "status": "diagnostic",
-      "formula": "harmonic_energy_sum / total_component_energy  (mathematically identical to component_harmonic_energy_ratio)",
-      "quantity_type": "ratio",
-      "denominator": "total_component_energy (= H + I + S)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "compatibility alias of component_harmonic_energy_ratio. Demoted from canonical → diagnostic in v1.1 of the dictionary because it is the SAME quantity as the explicit canonical name.",
-      "do_not_interpret_as": "an independent measurement; for new code use component_harmonic_energy_ratio.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "component_harmonic_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "inharmonic_energy_ratio",
-      "status": "diagnostic",
-      "formula": "inharmonic_energy_sum / total_component_energy  (mathematically identical to component_inharmonic_energy_ratio)",
-      "quantity_type": "ratio",
-      "denominator": "total_component_energy (= H + I + S)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "compatibility alias of component_inharmonic_energy_ratio.",
-      "do_not_interpret_as": "an independent measurement.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "component_inharmonic_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "subbass_energy_ratio",
-      "status": "diagnostic",
-      "formula": "subbass_energy_sum / total_component_energy  (mathematically identical to component_subbass_energy_ratio)",
-      "quantity_type": "ratio",
-      "denominator": "total_component_energy (= H + I + S)",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "compatibility alias of component_subbass_energy_ratio.",
-      "do_not_interpret_as": "a calibrated noise-floor estimate.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "component_subbass_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "harmonic_inharmonic_ratio",
-      "status": "canonical",
-      "formula": "harmonic_energy_sum / inharmonic_energy_sum (linear ratio, not in dB)",
-      "quantity_type": "ratio",
-      "denominator": "inharmonic_energy_sum",
-      "unit": "dimensionless",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "linear power ratio between harmonic and inharmonic detected components.",
-      "do_not_interpret_as": "a dB value; convert with 10·log10 if a dB reading is needed.",
-      "metric_family": "harmonicity",
-      "derived_from": [
-        "harmonic_energy_sum",
-        "inharmonic_energy_sum"
-      ],
-      "independent_for_pca": true
-    },
-    {
-      "name": "spectral_entropy",
-      "status": "canonical",
-      "formula": "Shannon entropy of the normalised power spectrum (Σ p_i log p_i, p_i ∝ |X_i|^2)",
-      "quantity_type": "entropy",
-      "denominator": "Σ |X_i|^2 (power-normalised)",
-      "unit": "nats (or bits, see implementation)",
-      "source": "proc_audio.compute_spectral_entropy",
-      "interpretation": "uniformity of the spectral power distribution; higher → more spread out.",
-      "do_not_interpret_as": "perceptual brightness or noisiness; entropy and timbre are not the same.",
-      "metric_family": "entropy",
-      "derived_from": [],
-      "independent_for_pca": true,
-      "documentation_role": "secondary",
-      "bounded": true,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": true,
-      "depends_on": []
-    },
-    {
-      "name": "harmonic_completeness",
-      "status": "canonical",
-      "formula": "min(1.0, n_unique_harmonic_orders / max_expected_orders)",
-      "quantity_type": "ratio",
-      "denominator": "max_expected_orders = max(1, freq_max / f0)",
-      "unit": "dimensionless (0..1)",
-      "source": "super_audio_analyzer._calculate_metrics (FIX 5)",
-      "interpretation": "fraction of expected integer harmonic orders that were detected.",
-      "do_not_interpret_as": "raw count of harmonic peaks; this is capped at 1.0 and counts UNIQUE orders only.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "f0_final_hz",
-      "status": "canonical",
-      "formula": "final accepted fundamental frequency (Hz) after harmonic fit / policy finalisation in proc_audio",
-      "quantity_type": "frequency",
-      "denominator": "n/a (absolute frequency)",
-      "unit": "Hz",
-      "source": "proc_audio (f0_final → main_metrics export); compile_metrics may propagate from per-note row",
-      "interpretation": "The analysis-time fundamental used for harmonic indexing, register-dependent low-frequency guards, and related metrics.",
-      "do_not_interpret_as": "MIDI nominal or filename pitch unless the pipeline explicitly resolved to that value; compare f0_nominal_hz when present.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "adaptive_subfundamental_cutoff_hz",
-      "status": "canonical",
-      "formula": "min( max(min_floor_hz, percentage_subfundamental_cutoff_hz, optional leakage_guard_cutoff_hz), f0_final_hz * max_fraction_of_f0 ) — see low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz",
-      "quantity_type": "frequency",
-      "denominator": "n/a (piecewise max then capped vs f0)",
-      "unit": "Hz",
-      "source": "low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz; proc_audio / compile_metrics._ensure_adaptive_subfundamental_cutoff",
-      "interpretation": "Lower-frequency guard: spectral energy below this cutoff in the fixed diagnostic band is classified as subfundamental residual for labelling/audit, not as proven physical sub-bass.",
-      "do_not_interpret_as": "the STFT bin width, the orchestral sub-bass limit, or a noise-floor estimate.",
-      "metric_family": "validation",
-      "derived_from": [
-        "f0_final_hz",
-        "subfundamental_margin_percent",
-        "min_floor_hz",
-        "max_fraction_of_f0",
-        "leakage_guard_cutoff_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "subfundamental_margin_percent",
-      "status": "canonical",
-      "formula": "register-dependent margin M(f0) from low_frequency_policy.calculate_subfundamental_margin_percent (piecewise vs f0 bands)",
-      "quantity_type": "ratio",
-      "denominator": "n/a (percent full scale 0–100)",
-      "unit": "percent",
-      "source": "low_frequency_policy.calculate_subfundamental_margin_percent",
-      "interpretation": "Nominal register margin below f0 used to form percentage_subfundamental_cutoff_hz = f0 * (1 − M/100).",
-      "do_not_interpret_as": "a loudness cue or psychoacoustic sharpness metric.",
-      "metric_family": "validation",
-      "derived_from": [
-        "f0_final_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "percentage_subfundamental_cutoff_hz",
-      "status": "canonical",
-      "formula": "f0_final_hz * (1 − subfundamental_margin_percent / 100)",
-      "quantity_type": "frequency",
-      "denominator": "n/a",
-      "unit": "Hz",
-      "source": "low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz",
-      "interpretation": "Pure register-policy cutoff line before min-floor, leakage guard, and f0·max_fraction caps.",
-      "do_not_interpret_as": "the final adaptive guard; use adaptive_subfundamental_cutoff_hz after caps.",
-      "metric_family": "validation",
-      "derived_from": [
-        "f0_final_hz",
-        "subfundamental_margin_percent"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "leakage_guard_cutoff_hz",
-      "status": "canonical",
-      "formula": "max(0, f0_final_hz − subbass_protection_tolerance_hz) when a finite leakage tolerance (Hz) is available; else NaN",
-      "quantity_type": "frequency",
-      "denominator": "n/a",
-      "unit": "Hz",
-      "source": "compile_metrics._ensure_adaptive_subfundamental_cutoff (optional); proc_audio leakage / protection fields",
-      "interpretation": "Optional lower bound derived from harmonic main-lobe / protection half-width so window leakage just below f0 is not mis-labelled as musical subfundamental content.",
-      "do_not_interpret_as": "proof of acoustic leakage level without STFT geometry context.",
-      "metric_family": "validation",
-      "derived_from": [
-        "f0_final_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "min_floor_hz",
-      "status": "canonical",
-      "formula": "parameter min_floor_hz to calculate_adaptive_subfundamental_cutoff_hz (default 20 Hz)",
-      "quantity_type": "frequency",
-      "denominator": "n/a",
-      "unit": "Hz",
-      "source": "low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz",
-      "interpretation": "Hard lower floor (Hz) in the max-stage of the adaptive cutoff so DC / sub-audible rumble bins do not set an absurdly low guard.",
-      "do_not_interpret_as": "the adaptive cutoff itself.",
-      "metric_family": "validation",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "max_fraction_of_f0",
-      "status": "canonical",
-      "formula": "parameter max_fraction_of_f0 (default 0.95); cap_hz = f0_final_hz * max_fraction_of_f0",
-      "quantity_type": "ratio",
-      "denominator": "n/a (dimensionless fraction of f0)",
-      "unit": "dimensionless",
-      "source": "low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz",
-      "interpretation": "Upper cap on the adaptive cutoff as a fraction of f0 so the guard never approaches Nyquist or swallows the fundamental.",
-      "do_not_interpret_as": "the detected bandwidth of the note.",
-      "metric_family": "validation",
-      "derived_from": [
-        "f0_final_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "effective_subfundamental_margin_percent",
-      "status": "canonical",
-      "formula": "100 * (1 − adaptive_subfundamental_cutoff_hz / f0_final_hz)",
-      "quantity_type": "ratio",
-      "denominator": "f0_final_hz",
-      "unit": "percent",
-      "source": "low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz; compile_metrics may recompute from stored cutoff",
-      "interpretation": "Effective margin (percent of f0) implied by the final adaptive cutoff after all floors/guards/caps.",
-      "do_not_interpret_as": "identical to subfundamental_margin_percent when caps bind; compare both.",
-      "metric_family": "validation",
-      "derived_from": [
-        "f0_final_hz",
-        "adaptive_subfundamental_cutoff_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "subfundamental_guard_valid",
-      "status": "canonical",
-      "formula": "boolean: finite f0_final_hz > 0 and successful guard computation (see low_frequency_policy._nan_result vs filled result)",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "boolean",
-      "source": "low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz; proc_audio main_metrics",
-      "interpretation": "True when an adaptive subfundamental guard was computed from a valid f0; false when f0 invalid and policy returns sentinel NaNs.",
-      "do_not_interpret_as": "evidence that the recording is in tune.",
-      "metric_family": "validation",
-      "derived_from": [
-        "f0_final_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "subfundamental_guard_policy",
-      "status": "canonical",
-      "formula": "string policy label from low_frequency_policy (e.g. f0_adaptive_register_margin, invalid_f0)",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz",
-      "interpretation": "Documents which guard branch produced the exported cutoff metadata.",
-      "do_not_interpret_as": "user-facing legal policy text.",
-      "metric_family": "validation",
-      "derived_from": [
-        "f0_final_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "low_frequency_policy_version",
-      "status": "canonical",
-      "formula": "constant LOW_FREQUENCY_POLICY_VERSION from low_frequency_policy",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "low_frequency_policy.LOW_FREQUENCY_POLICY_VERSION; proc_audio main_metrics default",
-      "interpretation": "Version tag for the register-dependent subfundamental guard and related compile-time fill logic.",
-      "do_not_interpret_as": "an analysis timestamp.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "adaptive_subfundamental_cutoff_source",
-      "status": "canonical",
-      "formula": "provenance string: e.g. per_note_analysis_export, derived_at_compile_stage_from_f0_final_hz, not_available_missing_f0",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "compile_metrics._ensure_adaptive_subfundamental_cutoff; proc_audio when cutoff pre-filled",
-      "interpretation": "Records whether the adaptive cutoff was taken from the per-note analysis export or recomputed at compile from f0_final_hz.",
-      "do_not_interpret_as": "the numeric cutoff value.",
-      "metric_family": "provenance",
-      "derived_from": [
-        "f0_final_hz",
-        "adaptive_subfundamental_cutoff_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "physical_low_frequency_lower_hz",
-      "status": "canonical",
-      "formula": "lower edge (Hz) of the fixed diagnostic low-frequency band for physical residual aggregation (default aligns with density.SUBBASS_AGGREGATE_LOWER_HZ, typically 30 Hz)",
-      "quantity_type": "frequency",
-      "denominator": "n/a",
-      "unit": "Hz",
-      "source": "proc_audio initialisation / main_metrics export",
-      "interpretation": "Lower bound of the Hz window used with physical_low_frequency_upper_hz for fixed-band low-frequency residual bookkeeping.",
-      "do_not_interpret_as": "the adaptive subfundamental guard cutoff.",
-      "metric_family": "validation",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "physical_low_frequency_upper_hz",
-      "status": "canonical",
-      "formula": "upper edge (Hz) of the fixed diagnostic low-frequency band (default aligns with sub-bass aggregate cutoff, typically 200 Hz)",
-      "quantity_type": "frequency",
-      "denominator": "n/a",
-      "unit": "Hz",
-      "source": "proc_audio main_metrics export (SUBBASS_AGGREGATE_CUTOFF_HZ default)",
-      "interpretation": "Upper bound of the fixed diagnostic band used with classify_low_frequency_row alongside adaptive_subfundamental_cutoff_hz.",
-      "do_not_interpret_as": "the note's Nyquist frequency.",
-      "metric_family": "validation",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "subfundamental_cutoff_selection_rule",
-      "status": "canonical",
-      "formula": "constant SUBFUNDAMENTAL_CUTOFF_SELECTION_RULE string from low_frequency_policy (human-readable algebra)",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "low_frequency_policy.SUBFUNDAMENTAL_CUTOFF_SELECTION_RULE",
-      "interpretation": "Static documentation of how min floor, percentage line, optional leakage guard, and f0·max_fraction interact.",
-      "do_not_interpret_as": "a per-note numeric result.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "subfundamental_cutoff_selected_by",
-      "status": "canonical",
-      "formula": "which branch won the max-stage / cap-stage (e.g. min_floor_hz, percentage_subfundamental_cutoff_hz, leakage_guard_cutoff_hz, max_fraction_of_f0_cap, per_note_analysis_export)",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "low_frequency_policy.calculate_adaptive_subfundamental_cutoff_hz; compile_metrics tie-break logic",
-      "interpretation": "Audit field: which input dominated the final adaptive_subfundamental_cutoff_hz after caps.",
-      "do_not_interpret_as": "the cutoff frequency in Hz.",
-      "metric_family": "provenance",
-      "derived_from": [
-        "adaptive_subfundamental_cutoff_hz",
-        "f0_final_hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "discrete_metric_d3",
-      "status": "diagnostic",
-      "formula": "discrete density score at d=3 detector level (see density.discrete_density_metrics)",
-      "quantity_type": "count",
-      "denominator": "n/a (discrete partial detector)",
-      "unit": "dimensionless",
-      "source": "density.discrete_density_metrics",
-      "interpretation": "diagnostic discrete-density score using the d=3 detector (legacy parameter sweep). Kept as a numeric feature for exploratory PCA.",
-      "do_not_interpret_as": "the canonical density; refer to canonical_density_v5_adapted.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "discrete_metric_d10",
-      "status": "diagnostic",
-      "formula": "discrete density score at d=10 detector level",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "dimensionless",
-      "source": "density.discrete_density_metrics",
-      "interpretation": "diagnostic discrete-density score using the d=10 detector.",
-      "do_not_interpret_as": "the canonical density.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "discrete_metric_d17",
-      "status": "diagnostic",
-      "formula": "discrete density score at d=17 detector level",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "dimensionless",
-      "source": "density.discrete_density_metrics",
-      "interpretation": "diagnostic discrete-density score using the d=17 detector.",
-      "do_not_interpret_as": "the canonical density.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "discrete_metric_d24",
-      "status": "diagnostic",
-      "formula": "discrete density score at d=24 detector level",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "dimensionless",
-      "source": "density.discrete_density_metrics",
-      "interpretation": "diagnostic discrete-density score using the d=24 detector.",
-      "do_not_interpret_as": "the canonical density.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "harmonic_order_count",
-      "status": "diagnostic",
-      "formula": "count of detected harmonic orders (unique partial indices ≥ 1)",
-      "quantity_type": "count",
-      "denominator": "n/a (raw count)",
-      "unit": "integer count",
-      "source": "proc_audio._calculate_metrics / super_audio_analyzer",
-      "interpretation": "number of detected harmonic orders for the analysed note. Independent of energy distribution.",
-      "do_not_interpret_as": "energy or amplitude; this is a raw integer count.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "harmonic_energy_sum",
-      "status": "diagnostic",
-      "formula": "Σ harmonic_amps^2",
-      "quantity_type": "energy",
-      "denominator": "n/a (absolute sum)",
-      "unit": "power (linear, arbitrary STFT calibration)",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "intermediate H used to compute component_harmonic_energy_ratio.",
-      "do_not_interpret_as": "an absolute energy with physical units; STFT amplitude calibration depends on window + n_fft.",
-      "metric_family": "component_energy",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "inharmonic_energy_sum",
-      "status": "diagnostic",
-      "formula": "Σ ih_amps_eff^2",
-      "quantity_type": "energy",
-      "denominator": "n/a",
-      "unit": "power (linear, arbitrary STFT calibration)",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "intermediate I.",
-      "do_not_interpret_as": "an absolute energy with physical units.",
-      "metric_family": "component_energy",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "subbass_energy_sum",
-      "status": "diagnostic",
-      "formula": "aggregate_subbass_noise_peak_power(complete_list_df, harmonic_list_df, …)",
-      "quantity_type": "energy",
-      "denominator": "n/a",
-      "unit": "power (linear)",
-      "source": "density.aggregate_subbass_noise_peak_power",
-      "interpretation": "intermediate S.",
-      "do_not_interpret_as": "a calibrated dB SPL.",
-      "metric_family": "component_energy",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "total_component_energy",
-      "status": "diagnostic",
-      "formula": "H + I + S",
-      "quantity_type": "energy",
-      "denominator": "n/a",
-      "unit": "power (linear)",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "denominator audit for the component_* ratios.",
-      "do_not_interpret_as": "total signal energy; this excludes content outside the analysed peak / sub-bass aggregation.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "harmonic_energy_sum",
-        "inharmonic_energy_sum",
-        "subbass_energy_sum"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "total_filtered_spectral_energy",
-      "status": "diagnostic",
-      "formula": "Σ A² over filtered_list_df (peaks surviving noise-floor rejection)",
-      "quantity_type": "energy",
-      "denominator": "n/a",
-      "unit": "power (linear)",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "total spectral energy in the filtered (noise-rejected) peak list. Audit/intermediate quantity used to derive the residual diffuse non-harmonic bucket.",
-      "do_not_interpret_as": "the calibrated total signal energy (depends on STFT window and n_fft normalisation).",
-      "metric_family": "component_energy",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "residual_noise_energy_sum",
-      "status": "diagnostic",
-      "formula": "max(0, total_filtered_spectral_energy − (H + I + S))",
-      "quantity_type": "energy",
-      "denominator": "n/a",
-      "unit": "power (linear)",
-      "source": "proc_audio._calculate_metrics",
-      "interpretation": "diffuse non-harmonic residual: spectral energy that survived the noise-floor rejection but is NOT in the accepted harmonic peaks, NOT in the discrete inharmonic peaks, and NOT in the sub-bass region.",
-      "do_not_interpret_as": "an alias of inharmonic_energy_sum; this is a separate residual bucket.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "total_filtered_spectral_energy",
-        "harmonic_energy_sum",
-        "inharmonic_energy_sum",
-        "subbass_energy_sum"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "component_energy_denominator",
-      "status": "diagnostic",
-      "formula": "literal string 'H+I+S'",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "denominator label for the component_* fields; readers should verify this matches their interpretation.",
-      "do_not_interpret_as": "a numeric quantity.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "component_energy_method",
-      "status": "diagnostic",
-      "formula": "literal string 'single_pass_proc_audio_energy'",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "documents that the component partition was computed by proc_audio's single-pass helper.",
-      "do_not_interpret_as": "a numeric quantity.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "component_profile_source",
-      "status": "diagnostic",
-      "formula": "literal 'integrated_single_pass' or 'legacy_batch'",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "documents the orchestration mode that produced the component_* fields.",
-      "do_not_interpret_as": "a numeric quantity.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "component_energy_quantity",
-      "status": "diagnostic",
-      "formula": "literal 'power_sum_amplitude_squared'",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "audit flag asserting that H, I, S were computed as Σ A^2 (power), not Σ |A| (amplitude).",
-      "do_not_interpret_as": "a numeric quantity.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "model_weight_denominator",
-      "status": "diagnostic",
-      "formula": "literal 'harmonic_plus_inharmonic'",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio._set_model_weights_from_current_component_energy",
-      "interpretation": "documents the H+I denominator of the model_*_weight pair.",
-      "do_not_interpret_as": "a numeric quantity.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "n_fft",
-      "status": "diagnostic",
-      "formula": "STFT frame size requested",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "samples",
-      "source": "proc_audio.apply_filters_and_generate_data",
-      "interpretation": "FFT length used per frame.",
-      "do_not_interpret_as": "the effective number of analysed bins; see n_fft_effective when zero-padding is in use.",
-      "metric_family": "stft_parameter",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "hop_length",
-      "status": "diagnostic",
-      "formula": "STFT hop length",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "samples",
-      "source": "proc_audio.apply_filters_and_generate_data",
-      "interpretation": "frame advance for the STFT.",
-      "do_not_interpret_as": "audio block size for I/O.",
-      "metric_family": "stft_parameter",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "snr_threshold_db",
-      "status": "diagnostic",
-      "formula": "SNR threshold used for peak acceptance",
-      "quantity_type": "psychoacoustic",
-      "denominator": "n/a (dB margin)",
-      "unit": "dB",
-      "source": "constants.SNR_THRESHOLD_DB",
-      "interpretation": "minimum SNR for a spectral peak to be considered a partial.",
-      "do_not_interpret_as": "a multiplicative gain; this is a dB margin added to the local noise floor.",
-      "metric_family": "psychoacoustic",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "harmonic_tolerance",
-      "status": "diagnostic",
-      "formula": "tolerance in Hz applied around expected harmonic frequencies",
-      "quantity_type": "frequency",
-      "denominator": "n/a",
-      "unit": "Hz",
-      "source": "proc_audio.apply_filters_and_generate_data",
-      "interpretation": "frequency window for harmonic/inharmonic classification.",
-      "do_not_interpret_as": "a perceptual just-noticeable difference; this is an analytical tolerance.",
-      "metric_family": "stft_parameter",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "energy_conservation_status",
-      "status": "diagnostic",
-      "formula": "categorical: 'ok' | 'warning' | 'error' | 'not_available_at_compile_stage'",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio._verify_energy_conservation",
-      "interpretation": "validation flag for the STFT energy budget.",
-      "do_not_interpret_as": "a numeric quality score.",
-      "metric_family": "validation",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "model_weights_source",
-      "status": "diagnostic",
-      "formula": "categorical: 'single_pass_proc_audio_energy' | 'apply_filters_arguments' | 'fallback_default' | …",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio / orchestrator",
-      "interpretation": "documents where the model_*_weight values came from.",
-      "do_not_interpret_as": "a numeric quantity.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "legacy_harmonic_density",
-      "status": "legacy",
-      "formula": "Σ |A_h| (sum of linear amplitudes of harmonic peaks)",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (absolute sum)",
-      "unit": "amplitude sum (arbitrary calibration)",
-      "source": "super_audio_analyzer._calculate_metrics (legacy alias)",
-      "interpretation": "deprecated: historical proxy for 'harmonic density'.",
-      "do_not_interpret_as": "energy or a fraction; this is a raw Σ|A|, NOT Σ A^2 nor a normalised ratio.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "legacy_inharmonic_density",
-      "status": "legacy",
-      "formula": "Σ |A_ih|",
-      "quantity_type": "amplitude",
-      "denominator": "n/a",
-      "unit": "amplitude sum",
-      "source": "super_audio_analyzer._calculate_metrics (legacy alias)",
-      "interpretation": "deprecated: historical proxy.",
-      "do_not_interpret_as": "energy.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "legacy_combined_density",
-      "status": "legacy",
-      "formula": "log-weighted blend of legacy_harmonic_density and legacy_inharmonic_density (see _calculate_metrics)",
-      "quantity_type": "amplitude",
-      "denominator": "harmonic_weight + inharmonic_weight = 1",
-      "unit": "amplitude-derived score",
-      "source": "super_audio_analyzer._calculate_metrics (legacy alias)",
-      "interpretation": "deprecated: amplitude-based combined density.",
-      "do_not_interpret_as": "an energy ratio or canonical density.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "legacy_harmonic_density",
-        "legacy_inharmonic_density"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "legacy_harmonic_density_percentage",
-      "status": "legacy",
-      "formula": "100 · Σ|A_h| / (Σ|A_h| + Σ|A_ih|)",
-      "quantity_type": "ratio",
-      "denominator": "Σ|A_h| + Σ|A_ih| (amplitude-sum denominator, NOT H + I + S)",
-      "unit": "percent",
-      "source": "super_audio_analyzer / compile_metrics legacy export",
-      "interpretation": "deprecated: 'harmonic percentage' computed on amplitude sums.",
-      "do_not_interpret_as": "the same as component_harmonic_energy_ratio (different denominator AND quantity type).",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "legacy_harmonic_density",
-        "legacy_inharmonic_density"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "legacy_inharmonic_density_percentage",
-      "status": "legacy",
-      "formula": "100 · Σ|A_ih| / (Σ|A_h| + Σ|A_ih|)",
-      "quantity_type": "ratio",
-      "denominator": "Σ|A_h| + Σ|A_ih|",
-      "unit": "percent",
-      "source": "super_audio_analyzer / compile_metrics legacy export",
-      "interpretation": "deprecated: complement of legacy_harmonic_density_percentage.",
-      "do_not_interpret_as": "the same as component_inharmonic_energy_ratio.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "legacy_harmonic_density_percentage"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "batch_harmonic_energy_ratio",
-      "status": "legacy",
-      "formula": "alias of component_harmonic_energy_ratio (single-pass path); reads from Batch Excel in legacy_batch path",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio (alias) or batch_summary.xlsx (legacy)",
-      "interpretation": "compatibility alias; prefer component_harmonic_energy_ratio in new code.",
-      "do_not_interpret_as": "a separate or independent measurement.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "component_harmonic_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "batch_inharmonic_energy_ratio",
-      "status": "legacy",
-      "formula": "alias of component_inharmonic_energy_ratio",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S",
-      "unit": "dimensionless (0..1)",
-      "source": "alias",
-      "interpretation": "compatibility alias.",
-      "do_not_interpret_as": "an independent measurement.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "component_inharmonic_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "batch_subbass_energy_ratio",
-      "status": "legacy",
-      "formula": "alias of component_subbass_energy_ratio",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S",
-      "unit": "dimensionless (0..1)",
-      "source": "alias",
-      "interpretation": "compatibility alias.",
-      "do_not_interpret_as": "an independent measurement.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "component_subbass_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "batch_total_inharmonic_energy_ratio",
-      "status": "legacy",
-      "formula": "alias of component_total_inharmonic_energy_ratio",
-      "quantity_type": "ratio",
-      "denominator": "H + I + S",
-      "unit": "dimensionless (0..1)",
-      "source": "alias",
-      "interpretation": "compatibility alias.",
-      "do_not_interpret_as": "an independent measurement.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "component_total_inharmonic_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "Harmonic Partials sum",
-      "status": "legacy",
-      "formula": "Σ |A_h| over detected harmonic partials under the per-note weight_function (linear unless overridden)",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (raw sum)",
-      "unit": "amplitude units (unbounded)",
-      "source": "proc_audio Metrics export (partial_metric_sums_h_i_s_total)",
-      "interpretation": "per-band harmonic density D_H under the compile weight_function (display copy on Density_Metrics as Harmonic Partials sum). For linear weighting, equals harmonic_amplitude_sum; for log/sqrt/d3/etc., follows extract_density_component_sum.",
-      "do_not_interpret_as": "the final density metric. Plot density_metric_normalized (Density_Metrics) or density_normalized_global (Canonical_Metrics) instead.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "Inharmonic Partials sum",
-      "status": "legacy",
-      "formula": "Σ |A_i| over detected inharmonic partials under the per-note weight_function",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (raw sum)",
-      "unit": "amplitude units (unbounded)",
-      "source": "proc_audio Metrics export (partial_metric_sums_h_i_s_total)",
-      "interpretation": "per-band inharmonic density D_I under the compile weight_function (display copy as Inharmonic Partials sum).",
-      "do_not_interpret_as": "the final density metric.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "Sub-bass sum",
-      "status": "legacy",
-      "formula": "Σ |A_s| over the sub-bass aggregation under the per-note weight_function",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (raw sum)",
-      "unit": "amplitude units (unbounded)",
-      "source": "proc_audio Metrics export (partial_metric_sums_h_i_s_total)",
-      "interpretation": "per-band sub-bass density D_S under the compile weight_function (display copy as Sub-bass sum).",
-      "do_not_interpret_as": "the final density metric.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "Total sum",
-      "status": "legacy",
-      "formula": "Harmonic Partials sum + Inharmonic Partials sum + Sub-bass sum",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (raw sum)",
-      "unit": "amplitude units (unbounded)",
-      "source": "proc_audio Metrics export (partial_metric_sums_h_i_s_total) — also recomputed by compile_metrics from the per-band sums",
-      "interpretation": "unweighted diagnostic total of the three per-band partial sums.",
-      "do_not_interpret_as": "the final density metric; it ignores the canonical component_*_energy_ratio weighting. Plot density_metric_normalized (Density_Metrics) or density_normalized_global (Canonical_Metrics) instead.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "Harmonic Partials sum",
-        "Inharmonic Partials sum",
-        "Sub-bass sum"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "Total Metric",
-      "status": "legacy",
-      "formula": "legacy aggregate scalar exported for compatibility sheets",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "legacy scalar units",
-      "source": "Legacy_Compatibility export path",
-      "interpretation": "legacy compatibility scalar; not part of final-density architecture.",
-      "do_not_interpret_as": "final note density.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "Combined Density Metric",
-        "Weighted Combined Metric"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "legacy",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "Combined Density Metric",
-        "Weighted Combined Metric"
-      ]
-    },
-    {
-      "name": "weighted_harmonic_density_contribution",
-      "status": "diagnostic",
-      "formula": "D_H * w_H = harmonic_density_sum * component_harmonic_energy_ratio",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (product term, not a ratio)",
-      "unit": "same scale as Harmonic Partials sum (unbounded)",
-      "source": "compile_metrics._augment_density_metrics_with_weighted_metric",
-      "interpretation": "harmonic-band contribution to density_metric_raw under the single-pass component energy weighting.",
-      "do_not_interpret_as": "an independent canonical descriptor; it is an additive term of density_metric_raw and shares the latter's run-relative interpretation. NOT for publication.",
-      "metric_family": "density",
-      "derived_from": [
-        "Harmonic Partials sum",
-        "component_harmonic_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "weighted_inharmonic_density_contribution",
-      "status": "diagnostic",
-      "formula": "D_I * w_I = inharmonic_density_sum * component_inharmonic_energy_ratio",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (product term)",
-      "unit": "same scale as Inharmonic Partials sum (unbounded)",
-      "source": "compile_metrics._augment_density_metrics_with_weighted_metric",
-      "interpretation": "inharmonic-band contribution to density_metric_raw under the single-pass component energy weighting.",
-      "do_not_interpret_as": "an independent canonical descriptor; additive term of density_metric_raw.",
-      "metric_family": "density",
-      "derived_from": [
-        "Inharmonic Partials sum",
-        "component_inharmonic_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "weighted_subbass_density_contribution",
-      "status": "diagnostic",
-      "formula": "D_S * w_S = subbass_density_sum * component_subbass_energy_ratio",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (product term)",
-      "unit": "same scale as Sub-bass sum (unbounded)",
-      "source": "compile_metrics._augment_density_metrics_with_weighted_metric",
-      "interpretation": "sub-bass-band contribution to density_metric_raw under the single-pass component energy weighting.",
-      "do_not_interpret_as": "an independent canonical descriptor; additive term of density_metric_raw.",
-      "metric_family": "density",
-      "derived_from": [
-        "Sub-bass sum",
-        "component_subbass_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "density_weighted_sum",
-      "status": "diagnostic",
-      "formula": "harmonic_density_sum * w_H + inharmonic_density_sum * w_I + subbass_density_sum * w_S",
-      "quantity_type": "ratio",
-      "denominator": "n/a (raw, unbounded)",
-      "unit": "depends on compile weight_function (linear ~ amplitude scale; log ~ log-density scale)",
-      "source": "compile_metrics.extract_density_components_from_per_note_workbook",
-      "interpretation": "Stage-2 weighted note density using per-band D values under the compile weight_function and measured component energy ratios. Numerically equal to density_metric_raw when extraction status is ok.",
-      "do_not_interpret_as": "a linear sum of Amplitude_raw (see harmonic_amplitude_sum). Not invariant to weight_function changes. Not a canonical publication metric — prefer effective_partial_density on Canonical_Metrics.",
-      "metric_family": "density",
-      "derived_from": [
-        "Harmonic Partials sum",
-        "Inharmonic Partials sum",
-        "Sub-bass sum",
-        "component_harmonic_energy_ratio",
-        "component_inharmonic_energy_ratio",
-        "component_subbass_energy_ratio"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "diagnostic",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "Harmonic Partials sum",
-        "Inharmonic Partials sum",
-        "Sub-bass sum",
-        "component_harmonic_energy_ratio",
-        "component_inharmonic_energy_ratio",
-        "component_subbass_energy_ratio"
-      ]
-    },
-    {
-      "name": "density_log_weighted",
-      "status": "diagnostic",
-      "formula": "log10(1 + density_weighted_sum)",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "log10 scale (dimensionless argument)",
-      "source": "compile_metrics.extract_density_components_from_per_note_workbook",
-      "interpretation": "log-space view of density_weighted_sum. Default auto-plot preference on Density_Metrics sheet when present (publication_chart_policy).",
-      "do_not_interpret_as": "independent of compile weight_function; it inherits sensitivity from density_weighted_sum.",
-      "metric_family": "density",
-      "derived_from": [
-        "density_weighted_sum"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "density_metric_raw",
-      "status": "diagnostic",
-      "formula": "D_H * w_H + D_I * w_I + D_S * w_S where D_H,D_I,D_S are per-band densities from extract_density_component_sum under the compile weight_function; w_* are component_*_energy_ratio",
-      "quantity_type": "amplitude",
-      "denominator": "n/a (raw, unbounded)",
-      "unit": "same scale as the per-band partial sums (unbounded)",
-      "source": "compile_metrics._augment_density_metrics_with_weighted_metric",
-      "interpretation": "audit-grade intermediate value: equals density_weighted_sum. Reflects the compile weight_function. Useful for verification; cross-run comparison requires noting the weight_function key.",
-      "do_not_interpret_as": "a publication-grade density metric. Plot density_metric_normalized instead. Unbounded; not normalized; not comparable across runs.",
-      "metric_family": "density",
-      "derived_from": [
-        "weighted_harmonic_density_contribution",
-        "weighted_inharmonic_density_contribution",
-        "weighted_subbass_density_contribution"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "diagnostic",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "weighted_harmonic_density_contribution",
-        "weighted_inharmonic_density_contribution",
-        "weighted_subbass_density_contribution"
-      ]
-    },
-    {
-      "name": "density_metric_normalized",
-      "status": "diagnostic",
-      "formula": "density_metric_raw / max(density_metric_raw over the current compiled workbook)",
-      "quantity_type": "ratio",
-      "denominator": "max(density_metric_raw) in this compiled run",
-      "unit": "dimensionless (0..1) within the current run only",
-      "source": "compile_metrics._augment_density_metrics_with_weighted_metric",
-      "interpretation": "Density_Metrics-sheet default plotting metric. Run-relative normalization of density_metric_raw to [0, 1]; suitable for comparison *within* one compiled workbook. The canonical, corpus-wide normalized density descriptor for publication is density_normalized_global (Canonical_Metrics, derived from canonical_density_v5_adapted).",
-      "do_not_interpret_as": "comparable across different runs unless the normalization reference (max(density_metric_raw)) is identical. Not a canonical publication metric — prefer density_normalized_global for cross-run publication. Run-relative normalization; do not compare across different runs unless the normalization reference is identical. NOTE: previous versions aliased density_metric_normalized to density_normalized_global; the two are now distinct descriptors.",
-      "metric_family": "density",
-      "derived_from": [
-        "density_metric_raw"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "Combined Density Metric",
-      "status": "legacy",
-      "formula": "Stage-1 combined_density_metric_value (log/expm1 or calculate_combined_density_metric on harmonic + inharmonic legacy scalars)",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "legacy apply_density_metric scale (unbounded)",
-      "source": "proc_audio (Legacy_Density_Metrics sheet) / compile_metrics merge",
-      "interpretation": "v5-style combined harmonic/inharmonic density scalar. Stronger dynamic separation than density_weighted_sum under log compile on some corpora.",
-      "do_not_interpret_as": "equal to density_weighted_sum or the research mean (DWS+CDM)/2; not on Density_Metrics allow-list.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "Spectral Density Metric",
-        "Filtered Density Metric"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "legacy",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "Spectral Density Metric",
-        "Filtered Density Metric"
-      ]
-    },
-    {
-      "name": "Spectral Density Metric",
-      "status": "legacy",
-      "formula": "spectral_density_metric_value (whole-spectrum legacy path; masking off when spectral_masking_enabled=False)",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "legacy power/average density scale",
-      "source": "proc_audio (Legacy_Density_Metrics sheet)",
-      "interpretation": "Legacy whole-spectrum density input to Weighted Combined Metric (harmonic_col at compile).",
-      "do_not_interpret_as": "canonical_density or effective_partial_density.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "Filtered Density Metric",
-      "status": "legacy",
-      "formula": "filtered_density_metric_value = apply_density_metric on filtered_list_df amplitudes",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "legacy apply_density_metric scale",
-      "source": "proc_audio (Legacy_Density_Metrics sheet)",
-      "interpretation": "Legacy inharmonic/filtered-list density input to Weighted Combined Metric (inharmonic_col at compile).",
-      "do_not_interpret_as": "inharmonic_density_sum on Density_Metrics (different construction).",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "Weighted Combined Metric",
-      "status": "legacy",
-      "formula": "f(alpha * SDM + beta * FDM) with f from compile weight_function (e.g. log -> log1p)",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "depends on weight_function",
-      "source": "compile_metrics.apply_weighted_combination",
-      "interpretation": "v5-style weighted legacy combination using model_harmonic_weight / model_inharmonic_weight (H/(H+I)), not measured H+I+S energy ratios.",
-      "do_not_interpret_as": "density_weighted_sum_cdm_mean; forbidden on Density_Metrics sheet.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "Spectral Density Metric",
-        "Filtered Density Metric"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "legacy",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "Spectral Density Metric",
-        "Filtered Density Metric"
-      ]
-    },
-    {
-      "name": "density_weighted_sum_cdm_mean",
-      "status": "legacy",
-      "formula": "(density_weighted_sum + Combined Density Metric) / 2",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "mixed scale (editorial average of two unlike definitions)",
-      "source": "tools/export_research_density_workbook.build_spectral_density_metrics",
-      "interpretation": "Deprecated compatibility/editorial blend. Not computed at compile time and not publication-safe.",
-      "do_not_interpret_as": "a canonical acoustic measure, weighted density, or physically commensurable scalar.",
-      "metric_family": "legacy_compatibility",
-      "derived_from": [
-        "density_weighted_sum",
-        "Combined Density Metric"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "legacy",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "density_weighted_sum",
-        "Combined Density Metric"
-      ]
-    },
-    {
-      "name": "energy_weighted_component_density_diagnostic",
-      "status": "diagnostic",
-      "formula": "alias of density_metric_raw = D_H*w_H + D_I*w_I + D_S*w_S",
-      "quantity_type": "ratio",
-      "denominator": "n/a (unbounded weighted sum)",
-      "unit": "depends on compile weight_function",
-      "source": "tools/export_research_density_workbook.build_spectral_density_metrics",
-      "interpretation": "Explicitly labelled diagnostic alias for the weighted component density sum.",
-      "do_not_interpret_as": "a canonical publication metric.",
-      "metric_family": "density",
-      "derived_from": [
-        "density_metric_raw"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "diagnostic",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "density_metric_raw"
-      ]
-    },
-    {
-      "name": "harmonic_occupancy_ratio",
-      "status": "diagnostic",
-      "formula": "unique accepted harmonic-order bins (nearest n*f0 within tolerance, excluding subbass) / expected_harmonic_slot_count",
-      "quantity_type": "ratio",
-      "denominator": "expected_harmonic_slot_count from f0_used_for_density_hz and analysis ceiling",
-      "unit": "dimensionless (0..1)",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Acoustic-core occupancy descriptor for accepted harmonic-order bins; separate from validation-slot coverage.",
-      "do_not_interpret_as": "energy, loudness, or roughness.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": true,
-      "documentation_role": "secondary",
-      "bounded": true,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": [
-        "harmonic_occupancy_detected_order_count",
-        "expected_harmonic_slot_count"
-      ]
-    },
-    {
-      "name": "harmonic_occupancy_detected_order_count",
-      "status": "diagnostic",
-      "formula": "count(unique accepted harmonic-order bins used by harmonic_occupancy_ratio numerator)",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Occupancy numerator count (accepted harmonic-order bins), not harmonic validation-slot matched count.",
-      "do_not_interpret_as": "harmonic_slot_matched_count from validation alignment.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "harmonic_slot_coverage_ratio",
-      "status": "diagnostic",
-      "formula": "harmonic_slot_matched_count / harmonic_slot_expected_count",
-      "quantity_type": "ratio",
-      "denominator": "harmonic_slot_expected_count",
-      "unit": "dimensionless (0..1)",
-      "source": "tools/export_research_density_workbook.build_spectral_density_metrics",
-      "interpretation": "Validation-slot coverage ratio intended to match detected/expected slot counts exactly.",
-      "do_not_interpret_as": "the acoustic-core occupancy construct unless numerator semantics are identical.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "documentation_role": "secondary",
-      "bounded": true,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": [
-        "harmonic_slot_matched_count",
-        "harmonic_slot_expected_count"
-      ]
-    },
-    {
-      "name": "body_weighted_effective_density",
-      "status": "diagnostic",
-      "formula": "(Σ_i(w_body_i * sqrt(P_i)))^2 / Σ_i((w_body_i * sqrt(P_i))^2) over salient peaks in 20..5000 Hz",
-      "quantity_type": "count",
-      "denominator": "Σ_i((w_body_i * sqrt(P_i))^2)",
-      "unit": "dimensionless effective count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Body-focused effective participation count for salient low/mid peaks, designed for note-body/thickness analysis.",
-      "do_not_interpret_as": "full-spectrum effective_partial_density or loudness.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "documentation_role": "secondary",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": true,
-      "depends_on": [
-        "density_salience_threshold_db"
-      ]
-    },
-    {
-      "name": "low_mid_energy_ratio",
-      "status": "diagnostic",
-      "formula": "Σ_i sqrt(P_i) for 20<=f_i<=2000 Hz / Σ_i sqrt(P_i) for 20<=f_i<=5000 Hz (salient body peaks)",
-      "quantity_type": "ratio",
-      "denominator": "Σ_i sqrt(P_i) in 20..5000 Hz",
-      "unit": "dimensionless (0..1)",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Low/mid salience share in the body range.",
-      "do_not_interpret_as": "a direct psychoacoustic loudness ratio.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "documentation_role": "secondary",
-      "bounded": true,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": true,
-      "depends_on": []
-    },
-    {
-      "name": "harmonic_body_density_normalized",
-      "status": "diagnostic",
-      "formula": "harmonic_body_density / expected_harmonic_slots_up_to_5000hz",
-      "quantity_type": "ratio",
-      "denominator": "expected_harmonic_slots_up_to_5000hz",
-      "unit": "dimensionless",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Body-weighted harmonic effective density normalized by expected harmonic slots in the body band.",
-      "do_not_interpret_as": "harmonic occupancy ratio.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "documentation_role": "secondary",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": true,
-      "depends_on": [
-        "harmonic_body_density",
-        "expected_harmonic_slots_up_to_5000hz"
-      ]
-    },
-    {
-      "name": "residual_body_contribution_capped",
-      "status": "diagnostic",
-      "formula": "min(core_residual_energy_ratio * residual_log_frequency_occupancy, 0.25)",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "dimensionless",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Residual-body contribution term with bounded influence in thickness index.",
-      "do_not_interpret_as": "harmonic body thickness.",
-      "metric_family": "density",
-      "derived_from": [
-        "core_residual_energy_ratio",
-        "residual_log_frequency_occupancy"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "secondary",
-      "bounded": true,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": true,
-      "depends_on": [
-        "core_residual_energy_ratio",
-        "residual_log_frequency_occupancy"
-      ]
-    },
-    {
-      "name": "spectral_body_thickness_index",
-      "status": "diagnostic",
-      "formula": "0.45*z(body_weighted_effective_density)+0.25*z(low_mid_energy_ratio)+0.20*z(harmonic_body_density_normalized)+0.10*z(residual_body_contribution_capped)",
-      "quantity_type": "ratio",
-      "denominator": "n/a (corpus-relative z-score blend)",
-      "unit": "z-score blend (dimensionless)",
-      "source": "tools/export_research_density_workbook.build_spectral_density_metrics",
-      "interpretation": "Recommended corpus-relative note-body/thickness index for analysis dashboards and rankings.",
-      "do_not_interpret_as": "absolute SPL or a standalone physical law outside the analyzed corpus.",
-      "metric_family": "density",
-      "derived_from": [
-        "body_weighted_effective_density",
-        "low_mid_energy_ratio",
-        "harmonic_body_density_normalized",
-        "residual_body_contribution_capped"
-      ],
-      "independent_for_pca": false,
-      "documentation_role": "secondary",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": true,
-      "energy_weighted": true,
-      "publication_default": true,
-      "depends_on": [
-        "body_weighted_effective_density",
-        "low_mid_energy_ratio",
-        "harmonic_body_density_normalized",
-        "residual_body_contribution_capped"
-      ]
-    },
-    {
-      "name": "salient_harmonic_order_count_up_to_5000hz",
-      "status": "diagnostic",
-      "formula": "count(unique detected harmonic orders n where n*f0<=5000 Hz and order-power>=-45 dB relative to strongest note peak)",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Raw salient harmonic-order count in the low/mid band; intentionally register-dependent.",
-      "do_not_interpret_as": "a normalized coverage ratio.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "documentation_role": "control_harmonic_count_alias",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": true,
-      "depends_on": [
-        "f0_used_for_density_hz",
-        "density_frequency_ceiling_hz",
-        "density_salience_threshold_db"
-      ]
-    },
-    {
-      "name": "expected_harmonic_order_count_up_to_5000hz",
-      "status": "diagnostic",
-      "formula": "floor(5000 / f0_used_for_density_hz)",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Theoretical harmonic-order opportunity count up to 5000 Hz.",
-      "do_not_interpret_as": "detected count.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "salient_harmonic_coverage_up_to_5000hz",
-      "status": "diagnostic",
-      "formula": "salient_harmonic_order_count_up_to_5000hz / expected_harmonic_order_count_up_to_5000hz",
-      "quantity_type": "ratio",
-      "denominator": "expected_harmonic_order_count_up_to_5000hz",
-      "unit": "dimensionless (0..1)",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Normalized salient harmonic-order coverage in the low/mid band.",
-      "do_not_interpret_as": "a raw count.",
-      "metric_family": "harmonicity",
-      "derived_from": [
-        "salient_harmonic_order_count_up_to_5000hz",
-        "expected_harmonic_order_count_up_to_5000hz"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "salient_harmonic_mass_up_to_5000hz",
-      "status": "diagnostic",
-      "formula": "sum(sqrt(P_n)) over salient unique harmonic orders up to 5000 Hz",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "sqrt(power) mass (dimensionless relative scale)",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Compressed salient harmonic mass using one representative power per harmonic order.",
-      "do_not_interpret_as": "SPL or linear power sum.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "salient_odd_harmonic_count_up_to_5000hz",
-      "status": "diagnostic",
-      "formula": "count of salient harmonic orders n<=5000/f0 where n is odd",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Odd-order salient harmonic count (useful for clarinet-like odd/even analyses).",
-      "do_not_interpret_as": "energy ratio.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "salient_even_harmonic_count_up_to_5000hz",
-      "status": "diagnostic",
-      "formula": "count of salient harmonic orders n<=5000/f0 where n is even",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Even-order salient harmonic count (useful for clarinet-like odd/even analyses).",
-      "do_not_interpret_as": "energy ratio.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "odd_even_harmonic_energy_ratio",
-      "status": "diagnostic",
-      "formula": "sum(P_odd salient harmonic orders) / max(sum(P_even salient harmonic orders), eps)",
-      "quantity_type": "ratio",
-      "denominator": "salient even-harmonic power sum with epsilon protection",
-      "unit": "dimensionless",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Odd/even salient harmonic energy balance ratio.",
-      "do_not_interpret_as": "odd/even count ratio.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "salient_inharmonic_log_bin_count_up_to_5000hz",
-      "status": "diagnostic",
-      "formula": "count(occupied inharmonic log-frequency bins up to 5000 Hz with bin salience > 0)",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Register-aware count of salient inharmonic residual occupancy bins.",
-      "do_not_interpret_as": "harmonic-order count.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "documentation_role": "control_inharmonic_count_alias",
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": [
-        "density_frequency_ceiling_hz",
-        "density_salience_threshold_db"
-      ]
-    },
-    {
-      "name": "salient_subbass_particle_count",
-      "status": "diagnostic",
-      "formula": "count(subbass particles with salience > 0 under density salience threshold)",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Count of salient low-frequency subbass particles contributing to final note density.",
-      "do_not_interpret_as": "harmonic slot count.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": [
-        "density_salience_threshold_db"
-      ]
-    },
-    {
-      "name": "final_note_density_count_based",
-      "status": "diagnostic",
-      "formula": "wH*salient_harmonic_order_count_up_to_density_ceiling_hz + wI*salient_inharmonic_log_bin_count_up_to_density_ceiling_hz + wS*salient_subbass_particle_count",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "weighted count units",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Register-dependent final note density using weighted salient component counts.",
-      "do_not_interpret_as": "normalized coverage metric.",
-      "metric_family": "density",
-      "derived_from": [
-        "salient_harmonic_order_count_up_to_density_ceiling_hz",
-        "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz",
-        "salient_subbass_particle_count",
-        "harmonic_density_weight",
-        "inharmonic_density_weight",
-        "subbass_density_weight"
-      ],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": true,
-      "depends_on": [
-        "density_summation_mode",
-        "harmonic_density_weight",
-        "inharmonic_density_weight",
-        "subbass_density_weight"
-      ]
-    },
-    {
-      "name": "final_note_density_salience_weighted",
-      "status": "diagnostic",
-      "formula": "wH*harmonic_density_component + wI*inharmonic_density_component + wS*subbass_density_component",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "weighted salience units",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Final note density from salience-capped component masses; one partial contributes at most 1 by salience mapping.",
-      "do_not_interpret_as": "run-normalized chart metric.",
-      "metric_family": "density",
-      "derived_from": [
-        "harmonic_density_component",
-        "inharmonic_density_component",
-        "subbass_density_component"
-      ],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": true,
-      "depends_on": [
-        "density_summation_mode",
-        "harmonic_density_weight",
-        "inharmonic_density_weight",
-        "subbass_density_weight",
-        "density_salience_threshold_db",
-        "density_frequency_ceiling_hz"
-      ]
-    },
-    {
-      "name": "harmonic_density_component",
-      "status": "diagnostic",
-      "formula": "sum salience over unique harmonic orders (one strongest peak per order, up to density_frequency_ceiling_hz)",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "salience units",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "H component used by final_note_density_salience_weighted.",
-      "do_not_interpret_as": "raw harmonic-order count.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "density_salience_threshold_db",
-        "density_frequency_ceiling_hz"
-      ]
-    },
-    {
-      "name": "inharmonic_density_component",
-      "status": "diagnostic",
-      "formula": "sum max salience per occupied inharmonic log-frequency bin up to density_frequency_ceiling_hz",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "salience units",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "I component used by final_note_density_salience_weighted.",
-      "do_not_interpret_as": "raw residual occupancy ratio.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "density_salience_threshold_db",
-        "density_frequency_ceiling_hz"
-      ]
-    },
-    {
-      "name": "subbass_density_component",
-      "status": "diagnostic",
-      "formula": "sum salience over salient subbass particles",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "salience units",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "S component used by final_note_density_salience_weighted.",
-      "do_not_interpret_as": "subbass energy ratio.",
-      "metric_family": "density",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "density_salience_threshold_db",
-        "density_frequency_ceiling_hz"
-      ]
-    },
-    {
-      "name": "density_summation_mode",
-      "status": "diagnostic",
-      "formula": "categorical mode string (e.g., his_weighted, harmonic_only)",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "text",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Summation mode used to build final note density fields.",
-      "do_not_interpret_as": "numeric metric.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": true,
-      "register_dependent": false,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": []
-    },
-    {
-      "name": "harmonic_density_weight",
-      "status": "diagnostic",
-      "formula": "GUI/runtime scalar wH (default 1.0) used in final density sums",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "dimensionless",
-      "source": "pipeline_orchestrator_gui -> proc_audio -> acoustic_density_core",
-      "interpretation": "harmonic coefficient in final_note_density_count_based and final_note_density_salience_weighted.",
-      "do_not_interpret_as": "an energy-ratio estimate.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": false,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": []
-    },
-    {
-      "name": "inharmonic_density_weight",
-      "status": "diagnostic",
-      "formula": "GUI/runtime scalar wI (default 0.5) used in final density sums",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "dimensionless",
-      "source": "pipeline_orchestrator_gui -> proc_audio -> acoustic_density_core",
-      "interpretation": "inharmonic coefficient in final_note_density_count_based and final_note_density_salience_weighted.",
-      "do_not_interpret_as": "an energy-ratio estimate.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": false,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": []
-    },
-    {
-      "name": "subbass_density_weight",
-      "status": "diagnostic",
-      "formula": "GUI/runtime scalar wS (default 0.25) used in final density sums",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "dimensionless",
-      "source": "pipeline_orchestrator_gui -> proc_audio -> acoustic_density_core",
-      "interpretation": "subbass coefficient in final_note_density_count_based and final_note_density_salience_weighted.",
-      "do_not_interpret_as": "a subbass energy fraction.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": false,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": []
-    },
-    {
-      "name": "density_salience_threshold_db",
-      "status": "diagnostic",
-      "formula": "relative dB threshold T in salience mapping; default -45 dB",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "dB",
-      "source": "pipeline_orchestrator_gui -> proc_audio -> acoustic_density_core",
-      "interpretation": "components below this relative level contribute zero salience.",
-      "do_not_interpret_as": "absolute SPL threshold.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": false,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": []
-    },
-    {
-      "name": "density_frequency_ceiling_hz",
-      "status": "diagnostic",
-      "formula": "upper frequency limit Fc used for ceiling-aware count metrics; default 5000 Hz",
-      "quantity_type": "frequency",
-      "denominator": "n/a",
-      "unit": "Hz",
-      "source": "pipeline_orchestrator_gui -> proc_audio -> acoustic_density_core",
-      "interpretation": "ceiling for expected/salient harmonic and inharmonic count opportunities.",
-      "do_not_interpret_as": "Nyquist frequency.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": false,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": []
-    },
-    {
-      "name": "salient_harmonic_order_count_up_to_density_ceiling_hz",
-      "status": "diagnostic",
-      "formula": "count(unique salient harmonic orders n where n*f0_used_for_density_hz <= density_frequency_ceiling_hz)",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "primary harmonic raw-count metric under configurable ceiling.",
-      "do_not_interpret_as": "normalized harmonic coverage.",
-      "metric_family": "harmonicity",
-      "derived_from": [
-        "salient_harmonic_order_count_up_to_5000hz"
-      ],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": true,
-      "depends_on": [
-        "f0_used_for_density_hz",
-        "density_frequency_ceiling_hz",
-        "density_salience_threshold_db"
-      ]
-    },
-    {
-      "name": "expected_harmonic_order_count_up_to_density_ceiling_hz",
-      "status": "diagnostic",
-      "formula": "floor(density_frequency_ceiling_hz / f0_used_for_density_hz)",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "theoretical harmonic-order opportunities below density ceiling.",
-      "do_not_interpret_as": "detected or salient count.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": [
-        "f0_used_for_density_hz",
-        "density_frequency_ceiling_hz"
-      ]
-    },
-    {
-      "name": "salient_harmonic_coverage_up_to_density_ceiling_hz",
-      "status": "diagnostic",
-      "formula": "salient_harmonic_order_count_up_to_density_ceiling_hz / expected_harmonic_order_count_up_to_density_ceiling_hz",
-      "quantity_type": "ratio",
-      "denominator": "expected_harmonic_order_count_up_to_density_ceiling_hz",
-      "unit": "dimensionless",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "normalized harmonic salience coverage below density ceiling.",
-      "do_not_interpret_as": "raw harmonic count.",
-      "metric_family": "harmonicity",
-      "derived_from": [
-        "salient_harmonic_order_count_up_to_density_ceiling_hz",
-        "expected_harmonic_order_count_up_to_density_ceiling_hz"
-      ],
-      "independent_for_pca": false,
-      "bounded": true,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": [
-        "density_frequency_ceiling_hz"
-      ]
-    },
-    {
-      "name": "salient_harmonic_mass_up_to_density_ceiling_hz",
-      "status": "diagnostic",
-      "formula": "sum representative salient harmonic mass terms up to density_frequency_ceiling_hz",
-      "quantity_type": "ratio",
-      "denominator": "n/a",
-      "unit": "relative salience mass",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "harmonic salience mass below density ceiling.",
-      "do_not_interpret_as": "SPL or linear power sum.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": false,
-      "depends_on": [
-        "density_frequency_ceiling_hz",
-        "density_salience_threshold_db"
-      ]
-    },
-    {
-      "name": "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz",
-      "status": "diagnostic",
-      "formula": "count(occupied salient inharmonic log-frequency bins <= density_frequency_ceiling_hz)",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "ceiling-aware inharmonic occupancy count for final density control.",
-      "do_not_interpret_as": "harmonic-order count.",
-      "metric_family": "density",
-      "derived_from": [
-        "salient_inharmonic_log_bin_count_up_to_5000hz"
-      ],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": [
-        "density_frequency_ceiling_hz",
-        "density_salience_threshold_db"
-      ]
-    },
-    {
-      "name": "salient_subbass_particle_count_up_to_density_ceiling_hz",
-      "status": "diagnostic",
-      "formula": "ceiling-aware alias for subbass particle salience count when exported",
-      "quantity_type": "count",
-      "denominator": "n/a",
-      "unit": "count",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "subbass salient count under density-ceiling naming family.",
-      "do_not_interpret_as": "harmonic count.",
-      "metric_family": "density",
-      "derived_from": [
-        "salient_subbass_particle_count"
-      ],
-      "independent_for_pca": false,
-      "bounded": false,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": false,
-      "publication_default": false,
-      "depends_on": [
-        "density_salience_threshold_db"
-      ]
-    },
-    {
-      "name": "core_harmonic_energy_ratio",
-      "status": "diagnostic",
-      "formula": "harmonic peak-classification energy / total classified peak energy",
-      "quantity_type": "ratio",
-      "denominator": "core_harmonic + core_residual + core_subbass peak-classification energy",
-      "unit": "dimensionless (0..1)",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Core peak-classification harmonic energy family member; sums with core residual and core subbass to ~1.",
-      "do_not_interpret_as": "component-balance harmonic ratio.",
-      "metric_family": "component_energy",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "core_residual_energy_ratio",
-      "status": "diagnostic",
-      "formula": "residual peak-classification energy / total classified peak energy",
-      "quantity_type": "ratio",
-      "denominator": "core_harmonic + core_residual + core_subbass peak-classification energy",
-      "unit": "dimensionless (0..1)",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Core peak-classification residual energy family member; sums with core harmonic and core subbass to ~1.",
-      "do_not_interpret_as": "component_inharmonic_energy_ratio.",
-      "metric_family": "component_energy",
-      "derived_from": [],
-      "independent_for_pca": false,
-      "documentation_role": "secondary",
-      "bounded": true,
-      "register_dependent": true,
-      "run_relative": false,
-      "energy_weighted": true,
-      "publication_default": true,
-      "depends_on": [
-        "core_harmonic_energy_ratio",
-        "core_subbass_energy_ratio"
-      ]
-    },
-    {
-      "name": "core_subbass_energy_ratio",
-      "status": "diagnostic",
-      "formula": "subbass peak-classification energy / total classified peak energy",
-      "quantity_type": "ratio",
-      "denominator": "core_harmonic + core_residual + core_subbass peak-classification energy",
-      "unit": "dimensionless (0..1)",
-      "source": "acoustic_density_core.compute_acoustic_density_descriptors",
-      "interpretation": "Core peak-classification subbass energy family member; sums with core harmonic and core residual to ~1.",
-      "do_not_interpret_as": "component_subbass_energy_ratio when families are mixed.",
-      "metric_family": "component_energy",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "harmonic_effective_power_density_normalized",
-      "status": "diagnostic",
-      "formula": "harmonic_effective_power_density / harmonic_effective_power_density_component_count",
-      "quantity_type": "ratio",
-      "denominator": "harmonic_effective_power_density_component_count",
-      "unit": "dimensionless",
-      "source": "proc_audio main metrics export",
-      "interpretation": "Register-bias-reduced normalization of harmonic effective power density.",
-      "do_not_interpret_as": "absolute power or SPL.",
-      "metric_family": "harmonicity",
-      "derived_from": [
-        "harmonic_effective_power_density",
-        "harmonic_order_count"
-      ],
-      "independent_for_pca": true
-    },
-    {
-      "name": "residual_log_frequency_occupancy",
-      "status": "diagnostic",
-      "formula": "occupied_log_bins / total_log_bins over residual rows outside harmonic windows",
-      "quantity_type": "ratio",
-      "denominator": "total log-frequency bins in configured range",
-      "unit": "dimensionless (0..1)",
-      "source": "density.compute_residual_log_frequency_occupancy",
-      "interpretation": "Residual/non-harmonic occupancy descriptor independent of residual energy ratio.",
-      "do_not_interpret_as": "residual energy or roughness.",
-      "metric_family": "harmonicity",
-      "derived_from": [],
-      "independent_for_pca": true
-    },
-    {
-      "name": "residual_energy_ratio",
-      "status": "diagnostic",
-      "formula": "alias of component_residual_noise_energy_ratio",
-      "quantity_type": "ratio",
-      "denominator": "H+I+S+residual",
-      "unit": "dimensionless (0..1)",
-      "source": "proc_audio metrics export",
-      "interpretation": "Residual-energy share, kept separate from occupancy descriptors.",
-      "do_not_interpret_as": "residual density/occupancy.",
-      "metric_family": "component_energy",
-      "derived_from": [
-        "component_residual_noise_energy_ratio"
-      ],
-      "independent_for_pca": false
-    },
-    {
-      "name": "acoustic_f0_status",
-      "status": "diagnostic",
-      "formula": "categorical status from canonical f0 provenance triplet",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "proc_audio._canonical_f0_triplet_for_analysis",
-      "interpretation": "Acoustic confidence state (fit accepted vs explicit fallback not acoustically verified).",
-      "do_not_interpret_as": "a numeric tuning error.",
-      "metric_family": "provenance",
-      "derived_from": [],
-      "independent_for_pca": false
-    },
-    {
-      "name": "compilation_error",
-      "status": "diagnostic",
-      "formula": "n/a — placeholder column emitted when no exportable metrics are available",
-      "quantity_type": "metadata",
-      "denominator": "n/a",
-      "unit": "n/a",
-      "source": "compile_metrics fallback",
-      "interpretation": "indicates that the requested compilation failed or had no data; investigate logs.",
-      "do_not_interpret_as": "a metric. This column MUST NEVER appear in Canonical_Metrics.",
-      "metric_family": "validation",
-      "derived_from": [],
-      "independent_for_pca": false
+      "phase": "phase_2",
+      "description": "Corpus-level subbass model-density weight applied at compile stage.",
+      "sheet_or_export": "Validation_Summary / Analysis_Metadata",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
     }
-  ]
+  },
+  "canonical_density_and_energy": {
+    "density_metric_raw": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Canonical weighted density metric using model/corpus or per-note weights.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "density_metric_normalized": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Corpus-relative normalized form of density_metric_raw.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "density_metric_raw_per_note_balance": {
+      "status": "diagnostic",
+      "phase": "phase_2",
+      "description": "Per-note energy-ratio weighted density metric.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "density_weights_source": {
+      "status": "validation",
+      "phase": "phase_2",
+      "description": "Weight provenance token (phase2 profile vs per-note ratio).",
+      "sheet_or_export": "compiled Density_Metrics / Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "harmonic_density_sum": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Harmonic component density sum under configured transform.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonic_density_sum": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Inharmonic component density sum under configured transform.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "subbass_density_sum": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Subbass component density sum under configured transform.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "harmonic_density_component": {
+      "status": "diagnostic",
+      "phase": "phase_2",
+      "description": "Salience-weighted harmonic component term used in final-note density variants.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonic_density_component": {
+      "status": "diagnostic",
+      "phase": "phase_2",
+      "description": "Salience-weighted inharmonic component term used in final-note density variants.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "subbass_density_component": {
+      "status": "diagnostic",
+      "phase": "phase_2",
+      "description": "Salience-weighted subbass component term used in final-note density variants.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "weighted_harmonic_density_contribution": {
+      "status": "diagnostic",
+      "phase": "phase_2",
+      "description": "Weighted harmonic contribution in density composition.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics / Component_Balance",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "weighted_inharmonic_density_contribution": {
+      "status": "diagnostic",
+      "phase": "phase_2",
+      "description": "Weighted inharmonic contribution in density composition.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics / Component_Balance",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "weighted_subbass_density_contribution": {
+      "status": "diagnostic",
+      "phase": "phase_2",
+      "description": "Weighted subbass contribution in density composition.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics / Component_Balance",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "component_harmonic_energy_ratio": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Per-note harmonic energy share over H+I+S component energy.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics / Component_Balance",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "component_inharmonic_energy_ratio": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Per-note inharmonic energy share over H+I+S component energy.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics / Component_Balance",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "component_subbass_energy_ratio": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Per-note subbass energy share over H+I+S component energy.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics / Component_Balance",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "harmonic_energy_sum_tier_normalized": {
+      "status": "diagnostic",
+      "phase": "phase_3",
+      "description": "Tier-normalized harmonic energy sum using n_fft reference scaling.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonic_energy_sum_tier_normalized": {
+      "status": "diagnostic",
+      "phase": "phase_3",
+      "description": "Tier-normalized inharmonic energy sum using n_fft reference scaling.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "subbass_energy_sum_tier_normalized": {
+      "status": "diagnostic",
+      "phase": "phase_3",
+      "description": "Tier-normalized subbass energy sum using n_fft reference scaling.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "harmonic_amplitude_sum_tier_normalized": {
+      "status": "diagnostic",
+      "phase": "phase_3",
+      "description": "Tier-normalized harmonic amplitude sum using n_fft reference scaling.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonic_amplitude_sum_tier_normalized": {
+      "status": "diagnostic",
+      "phase": "phase_3",
+      "description": "Tier-normalized inharmonic amplitude sum using n_fft reference scaling.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "subbass_amplitude_sum_tier_normalized": {
+      "status": "diagnostic",
+      "phase": "phase_3",
+      "description": "Tier-normalized subbass amplitude sum using n_fft reference scaling.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    }
+  },
+  "phase_4_inharmonicity": {
+    "inharmonicity_coefficient_B": {
+      "status": "canonical",
+      "phase": "phase_4",
+      "description": "Estimated stiff-string inharmonicity coefficient from near-harmonic peak fit.",
+      "sheet_or_export": "compiled Density_Metrics / compiled Validation_Summary",
+      "citation": "Fletcher & Rossing (1998); implementation fit details in code"
+    },
+    "inharmonicity_fit_residual_std_cents": {
+      "status": "diagnostic",
+      "phase": "phase_4",
+      "description": "Residual spread of fitted stretched-harmonic model in cents.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonicity_fit_status": {
+      "status": "validation",
+      "phase": "phase_4",
+      "description": "Fit acceptance/rejection token for inharmonicity estimation.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonicity_fit_method": {
+      "status": "validation",
+      "phase": "phase_4",
+      "description": "Method string for inharmonicity fit implementation.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "Fletcher model family; implementation-defined string"
+    },
+    "inharmonicity_model_applied": {
+      "status": "validation",
+      "phase": "phase_4",
+      "description": "Boolean-like export field indicating whether model was applied/enabled for row context.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonicity_fit_source": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Source/provenance token for fit diagnostics extraction completeness.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonicity_validation_warning": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Tokenized warning field for suspicious/missing inharmonicity diagnostics.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    }
+  },
+  "phase_5_descriptors": {
+    "spectral_centroid_hz": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Peeters et al. (2011)",
+      "description": "Center of mass of the magnitude spectrum in Hz.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "spectral_spread_hz": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Peeters et al. (2011)",
+      "description": "Second central moment of spectral distribution in Hz.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "spectral_skewness": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Peeters et al. (2011)",
+      "description": "Third standardized spectral moment.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "spectral_kurtosis": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Peeters et al. (2011)",
+      "description": "Fourth standardized spectral moment.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "spectral_irregularity": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Krimphoff, McAdams, & Winsberg (1994)",
+      "description": "Local fluctuation irregularity across adjacent partial amplitudes.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "tristimulus_1_fundamental": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Pollard & Jansson (1982)",
+      "description": "Fundamental amplitude share of harmonic amplitude mass.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "tristimulus_2_low_harmonics_2_to_4": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Pollard & Jansson (1982)",
+      "description": "Combined harmonic amplitude share of orders 2 to 4.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "tristimulus_3_high_harmonics_5_plus": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Pollard & Jansson (1982)",
+      "description": "Combined harmonic amplitude share of orders >=5.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "spectral_flatness": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Peeters et al. (2011)",
+      "description": "Geometric mean over arithmetic mean of power spectrum.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "spectral_rolloff_hz_85": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Peeters et al. (2011)",
+      "description": "Frequency below which 85% cumulative spectral power is contained.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "spectral_rolloff_hz_95": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Peeters et al. (2011)",
+      "description": "Frequency below which 95% cumulative spectral power is contained.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "roughness_aures_1985": {
+      "status": "diagnostic",
+      "phase": "phase_5",
+      "citation": "Aures (1985)",
+      "description": "Psychoacoustic roughness estimator based on pairwise interaction.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "erb_weighted_spectral_density": {
+      "status": "canonical",
+      "phase": "phase_5",
+      "citation": "Moore & Glasberg (1983)",
+      "description": "Effective spectral density evaluated on ERB-rate grouped bins.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "log_attack_time_s": {
+      "status": "diagnostic",
+      "phase": "phase_5",
+      "citation": "Peeters (2004)",
+      "description": "Log attack time using MPEG-7 attack convention.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    }
+  },
+  "phase_7_export_audit_and_validation": {
+    "obs_wS_artifact_flag": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Conservative mismatch flag: high observation subbass weight with negligible subbass energy evidence.",
+      "sheet_or_export": "phase1_discovered_density_profiles.csv / compiled Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "obs_wS_artifact_reason": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Tokenized reason for obs_wS artifact decision.",
+      "sheet_or_export": "phase1_discovered_density_profiles.csv",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "subbass_component_interpretation": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Interpretation token distinguishing model residual from physical/mixed low-frequency evidence.",
+      "sheet_or_export": "phase1_discovered_density_profiles.csv",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "mir_descriptors_available": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Boolean-like MIR propagation availability indicator.",
+      "sheet_or_export": "compiled Density_Metrics / Validation_Summary aggregate",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "mir_descriptors_source": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Source token for MIR descriptor extraction path.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "mir_descriptors_missing_reason": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Human-readable reason for missing MIR descriptor availability.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "comparability_profile": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Workbook-level profile summary: PRIMARY or EXPLORATORY.",
+      "sheet_or_export": "compiled Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "tier_consistency_status_summary": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Workbook-level tier consistency aggregate string.",
+      "sheet_or_export": "compiled Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonicity_B_mean": {
+      "status": "diagnostic",
+      "phase": "phase_7",
+      "description": "Workbook-level mean inharmonicity coefficient.",
+      "sheet_or_export": "compiled Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "inharmonicity_B_max": {
+      "status": "diagnostic",
+      "phase": "phase_7",
+      "description": "Workbook-level maximum inharmonicity coefficient.",
+      "sheet_or_export": "compiled Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "obs_wS_artifact_count": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Workbook-level count of obs_wS artifacts from compiled data or Phase 1 history fallback.",
+      "sheet_or_export": "compiled Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "obs_wS_artifact_notes": {
+      "status": "validation",
+      "phase": "phase_7",
+      "description": "Workbook-level semicolon list of notes flagged as obs_wS artifacts.",
+      "sheet_or_export": "compiled Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    }
+  },
+  "validation_and_qc_fields": {
+    "arithmetic_validation_status": {
+      "status": "validation",
+      "phase": "phase_6_7",
+      "description": "Arithmetic consistency status token for per-note processing.",
+      "sheet_or_export": "compiled Validation_Metrics / research Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "acoustic_validation_status": {
+      "status": "validation",
+      "phase": "phase_6_7",
+      "description": "Acoustic plausibility/status token (including f0 fallback context).",
+      "sheet_or_export": "compiled Validation_Metrics / research Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "qc_status": {
+      "status": "validation",
+      "phase": "phase_6_7",
+      "description": "Tokenized quality-control status for per-note diagnostic checks.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "tier_consistency_status": {
+      "status": "validation",
+      "phase": "phase_3",
+      "description": "Per-row tier normalization consistency flag.",
+      "sheet_or_export": "compiled Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "f0_epistemic_status": {
+      "status": "validation",
+      "phase": "phase_6",
+      "description": "F0 provenance epistemic state token.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "f0_fit_accepted": {
+      "status": "validation",
+      "phase": "phase_6",
+      "description": "Boolean-like indicator of accepted f0 fit.",
+      "sheet_or_export": "compiled Validation_Metrics / research Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "f0_fit_rejection_reason": {
+      "status": "validation",
+      "phase": "phase_6",
+      "description": "Reason token when f0 fit is rejected.",
+      "sheet_or_export": "compiled Validation_Metrics / research Validation_Summary",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "valid_for_primary_statistics": {
+      "status": "validation",
+      "phase": "phase_6",
+      "description": "Boolean gate for inclusion in primary statistics subset.",
+      "sheet_or_export": "compiled Canonical_Primary_Filtered / research Primary_Statistics_Filtered",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "is_primary_comparable_profile": {
+      "status": "validation",
+      "phase": "phase_6",
+      "description": "Boolean indicating whether analysis parameters match primary comparability profile.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    }
+  },
+  "legacy_fields": {
+    "Combined Density Metric": {
+      "status": "legacy",
+      "phase": "legacy",
+      "description": "Legacy stage-1 scalar retained for compatibility sheets.",
+      "sheet_or_export": "compiled Legacy_Compatibility / research Legacy_Compatibility",
+      "citation": "implementation-defined legacy"
+    },
+    "Density Metric": {
+      "status": "legacy",
+      "phase": "legacy",
+      "description": "Legacy stage-1 scalar retained for compatibility.",
+      "sheet_or_export": "compiled Legacy_Compatibility",
+      "citation": "implementation-defined legacy"
+    },
+    "Total Metric": {
+      "status": "legacy",
+      "phase": "legacy",
+      "description": "Legacy aggregate scalar retained for compatibility.",
+      "sheet_or_export": "compiled Legacy_Compatibility / research Legacy_Compatibility",
+      "citation": "implementation-defined legacy"
+    }
+  }
 }

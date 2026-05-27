@@ -3,10 +3,17 @@ Constants for Signal Processing and Audio Analysis
 
 This module centralises all magic numbers and provides documented constants
 for use throughout the codebase.
+
+See `docs/CONSTANTS_PROVENANCE.md` for the per-constant provenance registry
+and `REFERENCES.md` for the canonical APA-7 bibliography.
 """
 
 import numpy as np
 from typing import Final
+import logging
+import warnings
+
+from subbass_policy import SubBassPolicy
 
 # ======================================================================
 # FFT and Spectral Analysis Constants
@@ -54,7 +61,27 @@ SMOOTHING_NOISE_FLOOR_MULTIPLIER: Final[float] = 1.3  # 1.3x multiplier for thre
 DEFAULT_STFT_MAGNITUDE_SMOOTHING_ENABLED: Final[bool] = False
 
 # Upper frequency (Hz) for aggregating sub-bass / noise-bed peak power not attributed to harmonics.
-SUBBASS_AGGREGATE_CUTOFF_HZ: Final[float] = 200.0
+# deprecated, see SubBassPolicy.upper_bound_hz
+SUBBASS_AGGREGATE_CUTOFF_HZ: Final[float] = 80.0
+_SUBBASS_AGGREGATE_SHIM_WARNED = False
+
+
+def deprecated_subbass_aggregate_cutoff_hz(
+    *,
+    f0_hz: float,
+    sr_hz: float,
+    n_fft: int,
+) -> float:
+    """deprecated, see SubBassPolicy.upper_bound_hz"""
+    global _SUBBASS_AGGREGATE_SHIM_WARNED
+    if not _SUBBASS_AGGREGATE_SHIM_WARNED:
+        warnings.warn(
+            "deprecated, see SubBassPolicy.upper_bound_hz",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        _SUBBASS_AGGREGATE_SHIM_WARNED = True
+    return float(SubBassPolicy.upper_bound_hz(f0_hz=f0_hz, sr_hz=sr_hz, n_fft=n_fft))
 
 # ======================================================================
 # Psychoacoustic Constants
@@ -163,6 +190,18 @@ HARMONIC_ALIGNMENT_GOOD_MAX_WEIGHTED_MEAN_ABS_CENTS: Final[float] = 18.0
 # Unweighted mean abs cents (same numeric caps as weighted; order + cents only)
 HARMONIC_ALIGNMENT_EXCELLENT_MAX_MEAN_ABS_CENTS: Final[float] = 10.0
 HARMONIC_ALIGNMENT_GOOD_MAX_MEAN_ABS_CENTS: Final[float] = 18.0
+
+# Inharmonicity-aware harmonic tolerance (McAulay & Quatieri, 1986;
+# Serra & Smith, 1990): per-partial tolerance floor can expand according to
+# local FFT-bin spacing in cents to prevent deterministic bin-quantization
+# from being mislabeled as inharmonic content.
+INHARMONICITY_FIT_ORDER_CAP: Final[int] = 40
+INHARMONICITY_FIT_CENTS_WINDOW: Final[float] = 80.0
+INHARMONICITY_B_ENABLE_THRESHOLD: Final[float] = 1e-5
+ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC: Final[str] = (
+    "tolerance_cents(n) = max(harmonic_tolerance_cents, 1200 * bin_spacing_hz / (n * f0_hz)); "
+    "enables robust harmonic assignment under finite FFT-bin resolution."
+)
 
 # Fixed frequency maximum for harmonic detection (comparability)
 FIXED_FREQ_MAX_HZ: Final[float] = 20000.0  # Fixed maximum frequency for summation (Option A: recommended)
@@ -306,6 +345,141 @@ REDACT_LOCAL_PATHS_FOR_PUBLICATION: Final[bool] = True
 # When True, publication/research Excel exports omit private paths, empty diagnostic-only
 # columns, row-wise provenance noise, and internal orchestrator labels (see ``metadata_sanitizer``).
 PUBLICATION_CLEAN_EXPORT: Final[bool] = True
+
+
+# ======================================================================
+# Phase 7 register-invariant strength formula
+# ======================================================================
+
+# Phase 7 (2026-05-26): default = 1.0. Three equal weights enforce
+# occupancy-ratio symmetry across the H/I/S strength terms. Changing
+# these weights tilts the H/I/S balance away from neutral occupancy
+# proportionality and should be done deliberately and documented.
+STRENGTH_OCCUPANCY_WEIGHT_HARMONIC: Final[float] = 1.0
+
+# Phase 7 (2026-05-26): default = 1.0. Three equal weights enforce
+# occupancy-ratio symmetry across the H/I/S strength terms. Changing
+# these weights tilts the H/I/S balance away from neutral occupancy
+# proportionality and should be done deliberately and documented.
+STRENGTH_OCCUPANCY_WEIGHT_INHARMONIC: Final[float] = 1.0
+
+# Phase 7 (2026-05-26): default = 1.0. Three equal weights enforce
+# occupancy-ratio symmetry across the H/I/S strength terms. Changing
+# these weights tilts the H/I/S balance away from neutral occupancy
+# proportionality and should be done deliberately and documented.
+STRENGTH_OCCUPANCY_WEIGHT_SUBBASS: Final[float] = 1.0
+
+
+# ======================================================================
+# Phase 6: provenance warning for unsourced numeric constants
+# ======================================================================
+
+_PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
+    {
+        "AMP_VALIDATION_MAX_DB",
+        "AMP_VALIDATION_MIN_DB",
+        "ATTACK_TIME_THRESHOLD",
+        "BARK_COEFFICIENT_1",
+        "BARK_COEFFICIENT_2",
+        "BARK_COEFFICIENT_3",
+        "BARK_COEFFICIENT_4",
+        "BARK_TO_HZ_HIGH_EXP_FACTOR",
+        "BARK_TO_HZ_HIGH_FREQ_BASE",
+        "BARK_TO_HZ_LOW_FREQ_BASE",
+        "BARK_TO_HZ_LOW_FREQ_SLOPE",
+        "BARK_TO_HZ_LOW_THRESHOLD",
+        "BARK_TO_HZ_MID_THRESHOLD",
+        "CLIP_MAX",
+        "CLIP_MIN",
+        "CRITICAL_BAND_MASKING_MODERATE_THRESHOLD",
+        "CRITICAL_BAND_MASKING_STRONG_THRESHOLD",
+        "CRITICAL_BAND_MASKING_WEAK_THRESHOLD",
+        "DEFAULT_HOP_LENGTH",
+        "DEFAULT_N_FFT",
+        "DEFAULT_PLOT_DPI",
+        "DEFAULT_ZERO_PADDING",
+        "DISSONANCE_PAIRWISE_PARTIAL_CAP",
+        "EPSILON",
+        "EPSILON_AMPLITUDE",
+        "EPSILON_FREQUENCY",
+        "EPSILON_POWER",
+        "EQUAL_LOUDNESS_HIGH_WEIGHT_MAX",
+        "FFT_MIN_SIZE",
+        "FIXED_FREQ_MAX_HZ",
+        "FREQ_MAX_HZ",
+        "FREQ_MID_HIGH_HZ",
+        "FREQ_MID_LOW_HZ",
+        "FREQ_MIN_HZ",
+        "FREQ_VALIDATION_MAX",
+        "FREQ_VALIDATION_MIN",
+        "GAUSSIAN_DEFAULT_STD_FACTOR",
+        "HARMONIC_COMPLETENESS_MAX_HARMONICS",
+        "HARMONIC_COMPLETENESS_WEIGHT_BASE",
+        "HARMONIC_DETECTION_THRESHOLD_DB",
+        "HARMONIC_MATCH_TOLERANCE_CENTS",
+        "HARMONIC_MAX_CHECK",
+        "HARMONIC_TOLERANCE_ADAPTIVE_FACTOR",
+        "HARMONIC_TOLERANCE_BASE",
+        "HARMONIC_VALIDATION_MAX_HARMONICS",
+        "INHARMONICITY_FIT_CENTS_WINDOW",
+        "INHARMONICITY_FIT_ORDER_CAP",
+        "KAISER_DEFAULT_BETA",
+        "MAIN_LOBE_THRESHOLD_DB",
+        "MASKING_ABSOLUTE_THRESHOLD_DB",
+        "MAX_ZERO_PADDING",
+        "NORMALIZATION_MIN_AMPLITUDE",
+        "NORMALIZATION_TARGET_RMS_DB",
+        "NUM_CRITICAL_BANDS",
+        "SMOOTHING_MIN_WINDOW_LENGTH",
+        "SMOOTHING_POLYORDER",
+        "SNR_THRESHOLD_DB",
+        "SPARSITY_BANDWIDTH_FACTOR",
+        "SPECTRAL_CONCENTRATION_DEFAULT_PEAKS",
+        "SPECTRAL_ROLLOFF_PERCENTILE",
+        "STRENGTH_OCCUPANCY_WEIGHT_HARMONIC",
+        "STRENGTH_OCCUPANCY_WEIGHT_INHARMONIC",
+        "STRENGTH_OCCUPANCY_WEIGHT_SUBBASS",
+        "SUBBASS_AGGREGATE_CUTOFF_HZ",
+        "TOLERANCE_MIN",
+        "TOTAL_METRIC_SCALE",
+        "WINDOW_CHAR_FFT_PADDING",
+    }
+)
+
+_UNSOURCED_PROVENANCE_WARNED = False
+_LOGGER = logging.getLogger(__name__)
+
+
+def _iter_numeric_constant_names() -> list[str]:
+    names: list[str] = []
+    for key, value in globals().items():
+        if not key.isupper():
+            continue
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, (int, float, np.integer, np.floating)):
+            names.append(key)
+    return sorted(set(names))
+
+
+def _warn_unsourced_constants_once() -> None:
+    global _UNSOURCED_PROVENANCE_WARNED
+    if _UNSOURCED_PROVENANCE_WARNED:
+        return
+    unsourced = [n for n in _iter_numeric_constant_names() if n not in _PROVENANCE_SOURCED_CONSTANTS]
+    if unsourced:
+        preview = ", ".join(unsourced[:12])
+        if len(unsourced) > 12:
+            preview += ", ..."
+        _LOGGER.info(
+            "Constants without primary-source provenance (%d, classified as internal_default in docs/CONSTANTS_PROVENANCE.md): %s",
+            len(unsourced),
+            preview,
+        )
+    _UNSOURCED_PROVENANCE_WARNED = True
+
+
+_warn_unsourced_constants_once()
 
 
 # ======================================================================
