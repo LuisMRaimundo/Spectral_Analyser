@@ -39,6 +39,17 @@ cd "SoundSpectrAnalyse"
 pip install -r requirements.txt
 ```
 
+### One-click installers (no Python required)
+
+For non-technical users, platform-specific launchers are available under [`installers/`](installers/).  
+These install a private runtime on first launch and then open the GUI directly:
+
+- Windows 10/11: `installers\windows\Install and Run.bat`
+- macOS: `installers/macos/Install and Run.command`
+- Linux: `installers/linux/install-and-run.sh`
+
+See [`installers/README.md`](installers/README.md) for step-by-step instructions.
+
 Principal runtime dependencies (versions pinned in `pyproject.toml`):
 
 - numerical: numpy, scipy, pandas, numba, scikit-learn
