@@ -2,6 +2,11 @@
 
 SoundSpectrAnalyse is a spectral-analysis pipeline developed in support of doctoral research in musicology at NOVA University of Lisbon, with a focus on musical texture in twentieth-century repertoire. The instrument analyses individual note recordings and produces an auditable per-note and corpus-level decomposition of spectral content into harmonic, inharmonic, and sub-bass components (H/I/S), supplemented by a battery of psychoacoustic and MIR descriptors. The H/I/S model is treated throughout as an operational measurement framework - anchored in primary sources in acoustics and psychoacoustics - rather than as a universal ontology of musical sound. The pipeline is designed for traceable, reproducible analysis at doctoral standard: every exported metric is accompanied by an epistemic contract, every numeric constant by a provenance class, and every methodological change by a versioned and tested phase entry in CHANGES.md.
 
+> **Documentation status (work in progress).** Several documents referenced below
+> are part of an ongoing documentation programme and are not yet present in this
+> repository. Links to such documents may not resolve until the corresponding
+> files are committed.
+
 ## Status
 
 - **Version**: 3.7.0.
