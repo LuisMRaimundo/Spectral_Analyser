@@ -107,7 +107,9 @@ MASKING_ABSOLUTE_THRESHOLD_DB: Final[float] = -80.0  # Minimum threshold
 FREQ_MIN_HZ: Final[float] = 20.0  # Minimum audible frequency
 FREQ_MAX_HZ: Final[float] = 20000.0  # Maximum audible frequency (Nyquist for 44.1kHz)
 FREQ_MID_LOW_HZ: Final[float] = 1000.0  # Low-mid boundary
-FREQ_MID_HIGH_HZ: Final[float] = 5000.0  # Mid-high boundary
+FREQ_MID_HIGH_HZ: Final[float] = FREQ_MAX_HZ / 4.0  # Mid-high boundary
+BODY_DENSITY_MAX_HZ: Final[float] = FREQ_MAX_HZ
+FULL_SPECTRUM_MAX_HZ: Final[float] = 20000.0
 
 # Equal loudness weighting
 EQUAL_LOUDNESS_LOW_WEIGHT_MIN: Final[float] = 0.5  # Minimum weight for low frequencies

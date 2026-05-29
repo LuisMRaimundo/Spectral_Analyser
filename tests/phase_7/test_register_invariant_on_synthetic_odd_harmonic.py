@@ -6,7 +6,7 @@ import pandas as pd
 from acoustic_density_core import compute_acoustic_density_descriptors
 
 
-def _odd_harmonic_peaks(f0_hz: float, ceiling_hz: float = 5000.0) -> pd.DataFrame:
+def _odd_harmonic_peaks(f0_hz: float, ceiling_hz: float = 20000.0) -> pd.DataFrame:
     amps = [1.0, 0.5, 0.3, 0.2, 0.1]
     odd_orders = [1, 3, 5, 7, 9]
     freqs = []

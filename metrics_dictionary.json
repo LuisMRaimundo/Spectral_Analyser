@@ -75,6 +75,41 @@
       "sheet_or_export": "compiled Density_Metrics",
       "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
     },
+    "note_density_final": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Principled per-note scalar density: component_harmonic_energy_ratio*harmonic_density_sum + component_inharmonic_energy_ratio*inharmonic_density_sum + component_subbass_energy_ratio*subbass_density_sum. Combines the GUI amplitude weight function (already applied inside each *_density_sum) with the per-note MEASURED component energy ratios (Component_Balance), NOT the Bayesian adaptive weights. Absolute (not corpus-normalized); RMS-referenced input audio makes it comparable across instruments only under an identical analysis profile. NaN propagates if any of the six inputs is NaN.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
+    },
+    "note_density_final_ci_low": {
+      "status": "validation",
+      "phase": "phase_3",
+      "description": "Lower bound of the per-note bootstrap confidence interval for note_density_final (transform-aware; resamples per-partial contributions AND recomputes component energy ratios inside each resample). NaN when the per-note workbook is unreadable.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "Efron & Tibshirani (1993), bootstrap CI"
+    },
+    "note_density_final_ci_high": {
+      "status": "validation",
+      "phase": "phase_3",
+      "description": "Upper bound of the per-note bootstrap confidence interval for note_density_final. See note_density_final_ci_low.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "Efron & Tibshirani (1993), bootstrap CI"
+    },
+    "note_density_final_rel_uncertainty": {
+      "status": "validation",
+      "phase": "phase_3",
+      "description": "Relative uncertainty of note_density_final (bootstrap std / |point estimate|). NaN if point ~ 0 or workbook unreadable.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "Efron & Tibshirani (1993), bootstrap CI"
+    },
+    "note_density_final_uncertainty_sources": {
+      "status": "validation",
+      "phase": "phase_3",
+      "description": "Provenance token for the note_density_final uncertainty: 'partials+ratios' (full UQ: per-partial sampling AND component-ratio uncertainty propagated jointly), 'partials' (ratios held fixed), or 'unavailable'.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics",
+      "citation": "implementation-defined"
+    },
     "density_weights_source": {
       "status": "validation",
       "phase": "phase_2",

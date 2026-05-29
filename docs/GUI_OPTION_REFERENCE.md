@@ -3,7 +3,7 @@
 This document covers visible options in:
 
 - canonical operational GUI: `pipeline_orchestrator_gui.py` (Tk),
-- legacy/reference GUI: `interface.py` (PyQt; not the default launcher).
+- legacy/reference GUI: `interface.py` (PyQt) — **archived to `Backup/root_modules/`**; not wired into the active package. Section B below is retained for historical reference only.
 
 ---
 
@@ -17,12 +17,12 @@ This document covers visible options in:
 | Harmonic weight | `harmonic_density_weight` | `1.0` | float >= 0 | acoustic density computation | multiplier for H term in weighted summaries | Stage 1 |
 | Inharmonic/noise weight | `inharmonic_density_weight` | `0.5` | float >= 0 | acoustic density computation | multiplier for I term | Stage 1 |
 | Subbass/particle weight | `subbass_density_weight` | `0.25` | float >= 0 | acoustic density computation | multiplier for S term | Stage 1 |
-| Salience threshold (dB) | `density_salience_threshold_db` | `-45.0` | float | salient-count and salience-weighted metrics | gates salient partial/bin population | Stage 1, comparability |
-| Density ceiling (Hz) | `density_frequency_ceiling_hz` | `5000.0` | float > 0 | salient metrics | upper bound for density salience families | Stage 1, comparability |
+| Salience threshold (dB) | `density_salience_threshold_db` | `runtime-configured` | float | salient-count and salience-weighted metrics | gates salient partial/bin population | Stage 1, comparability |
+| Density ceiling (Hz) | `density_frequency_ceiling_hz` | `runtime-configured` | float > 0 | salient metrics | upper bound for density salience families | Stage 1, comparability |
 
 Notes:
 
-- Primary comparable profile is operationally `wf=log`, threshold `-45 dB`, ceiling `5000 Hz`.
+- Primary comparable profile is operationally `wf=log`, threshold `-45 dB`, ceiling `body-ceiling Hz`.
 - GUI defaults are not fully primary-comparable by default (`wf` default is first combo label).
 
 ## A2. STFT and filtering controls
@@ -47,7 +47,7 @@ Notes:
 | UI label | Internal parameter | Default | Allowed values | Used in | Effect | Scope |
 |---|---|---:|---|---|---|---|
 | Dissonance model | `diss` | `sethares` | listed model slugs and `ALL` options | dissonance path | selects dissonance scalar model | Stage 1 + export sheets |
-| Amplitude weighting function | `wf` | combo default | UI labels mapped via `resolve_weight_key_from_user_label` | density sum transforms | selects $\phi(A)$ (linear/log/sqrt/etc.) | Stage 1 + Stage 2 comparability |
+| Amplitude weighting function | `wf` | `Logarithmic` (`log`, PRIMARY profile) | UI labels mapped via `resolve_weight_key_from_user_label` | density sum transforms | selects $\phi(A)$ (linear/log/sqrt/etc.) | Stage 1 + Stage 2 comparability |
 | Auto-compile Stage 2 | `compile` | `True` | bool | orchestrator | triggers compile after Stage 1 | workflow |
 | Use t-SNE (advanced) | `use_tsne` | `False` | bool | compile stage | computes `TSNE1/TSNE2` when possible | Stage 2 exploratory |
 | Use UMAP (advanced) | `use_umap` | `False` | bool | compile stage | computes `UMAP1/UMAP2` when possible | Stage 2 exploratory |
@@ -57,9 +57,11 @@ Notes:
 
 ---
 
-## B. PyQt GUI (`interface.py`) — reference/legacy surface
+## B. PyQt GUI (`interface.py`) — reference/legacy surface (ARCHIVED)
 
-This GUI is still useful for manual experiments but is not the canonical launcher.
+This module has been archived to `Backup/root_modules/interface.py` and is no
+longer part of the active package. The section below is kept for historical
+reference; to use it, restore the file per `Backup/README.md`.
 
 ### B1. Shared analysis controls
 
@@ -96,10 +98,13 @@ This GUI is still useful for manual experiments but is not the canonical launche
 ## C. Option interpretation and comparability guidance
 
 - **Weight function (`wf`) is comparability-critical.**  
-  Primary profile requires `log`.
+  Primary profile requires `log`, and the GUI now **defaults** to `Logarithmic`
+  so an isolated single run is cross-instrument comparable by default. Selecting
+  any other weighting downgrades the run to the EXPLORATORY profile (logged at
+  run start and flagged in the compiled comparability verdict).
 
 - **Salience threshold and ceiling are comparability-critical.**  
-  Primary profile requires `-45 dB` and `5000 Hz`.
+  Primary profile requires `-45 dB` and `body-ceiling Hz`.
 
 - **Tier mode affects low-level STFT settings.**  
   In tier mode, fixed `n_fft/hop/zero_padding` entries are not directly applied per note.

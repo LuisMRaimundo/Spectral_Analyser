@@ -31,8 +31,8 @@ def _write_compiled_workbook(path: Path) -> None:
         {
             "analysis_version": ["test"],
             "weight_function": ["log"],
-            "density_salience_threshold_db": [-45.0],
-            "density_frequency_ceiling_hz": [5000.0],
+            "density_salience_threshold_db": [-60.0],
+            "density_frequency_ceiling_hz": [20000.0],
         }
     )
     with pd.ExcelWriter(path, engine="openpyxl") as writer:

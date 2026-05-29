@@ -19,9 +19,13 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 - Pollard, H. F., & Jansson, E. V. (1982). A tristimulus method for the specification of musical timbre. *Acustica, 51*(3), 162–171.
 - Peeters, G., Giordano, B. L., Susini, P., Misdariis, N., & McAdams, S. (2011). The Timbre Toolbox: Extracting audio descriptors from musical signals. *Journal of the Acoustical Society of America, 130*(5), 2902–2916.
 
-## Bayesian inference and information theory
+## Detection theory and signal detection
+- Rohling, H. (1983). Radar CFAR thresholding in clutter and multiple target situations. *IEEE Transactions on Aerospace and Electronic Systems, AES-19*(4), 608–621.
+
+## Statistical inference and resampling
 - Lin, J. (1991). Divergence measures based on the Shannon entropy. *IEEE Transactions on Information Theory, 37*(1), 145–151.
 - Gelman, A., Carlin, J. B., Stern, H. S., Dunson, D. B., Vehtari, A., & Rubin, D. B. (2013). *Bayesian data analysis* (3rd ed.). CRC Press.
+- Efron, B., & Tibshirani, R. J. (1993). *An introduction to the bootstrap*. Chapman & Hall/CRC.
 
 ## Scientific software methodology
 - Hatton, L. (1997). The T-experiments: Errors in scientific software. *IEEE Computational Science and Engineering, 4*(2), 27–38.
@@ -33,6 +37,8 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 |---|---|
 | `spectral_normalization.py` | Harris (1978); Heinzel et al. (2002) |
 | `inharmonicity_model.py` | Fletcher (1962); Fletcher & Rossing (1998) |
+| `harmonic_peak_validation.py` (CFAR acceptance) | Rohling (1983) |
+| `density_uncertainty.py` (bootstrap CI / UQ) | Efron & Tibshirani (1993) |
 | `subbass_policy.py` | Zwicker & Fastl (1990) |
 | `mir_descriptors.py` | Moore & Glasberg (1983); Aures (1985); Pollard & Jansson (1982); Peeters et al. (2011) |
 | `adaptive_density_engine.py` | Lin (1991); Gelman et al. (2013) |

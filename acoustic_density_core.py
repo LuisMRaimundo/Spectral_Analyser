@@ -69,6 +69,8 @@ from subbass_policy import SubBassPolicy
 from inharmonicity_model import fit_inharmonicity_coefficient
 from constants import (
     ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC,
+    BODY_DENSITY_MAX_HZ,
+    FULL_SPECTRUM_MAX_HZ,
     INHARMONICITY_B_ENABLE_THRESHOLD,
     INHARMONICITY_FIT_CENTS_WINDOW,
     INHARMONICITY_FIT_ORDER_CAP,
@@ -228,6 +230,46 @@ def _extract_peak_vectors(peaks_df: pd.DataFrame) -> tuple[np.ndarray, np.ndarra
     return freq[ok].astype(float), power[ok].astype(float)
 
 
+def _local_maxima_peak_centers(
+    freq: np.ndarray,
+    power: np.ndarray,
+    rel_power_threshold: float,
+) -> np.ndarray:
+    """Return parabola-refined frequencies of local-maximum peaks above threshold.
+
+    A "peak" is a bin whose power strictly exceeds both neighbours and is at or
+    above ``rel_power_threshold``. The peak frequency is refined with a 3-point
+    parabolic interpolation in power (standard QIFFT), giving a sub-bin centre
+    that preserves any harmonic stretch instead of snapping to the nearest bin.
+    """
+    f = np.asarray(freq, dtype=float).ravel()
+    p = np.asarray(power, dtype=float).ravel()
+    n = f.size
+    if n < 3 or p.size != n:
+        return np.asarray([], dtype=float)
+    # Local maxima (interior bins) at/above the threshold.
+    interior = np.arange(1, n - 1)
+    is_peak = (
+        (p[interior] >= float(rel_power_threshold))
+        & (p[interior] > p[interior - 1])
+        & (p[interior] > p[interior + 1])
+    )
+    idx = interior[is_peak]
+    if idx.size == 0:
+        return np.asarray([], dtype=float)
+    centers = []
+    for k in idx:
+        y0, y1, y2 = float(p[k - 1]), float(p[k]), float(p[k + 1])
+        denom = (y0 - 2.0 * y1 + y2)
+        delta = 0.5 * (y0 - y2) / denom if abs(denom) > 1e-30 else 0.0
+        if not np.isfinite(delta) or abs(delta) > 0.5:
+            delta = 0.0
+        # Local bin spacing around k (handles non-uniform axes defensively).
+        df = float(f[k + 1] - f[k]) if (f[k + 1] - f[k]) > 0 else float(f[k] - f[k - 1])
+        centers.append(float(f[k]) + delta * df)
+    return np.asarray(centers, dtype=float)
+
+
 def _normalized_entropy(power: np.ndarray) -> float:
     p = np.asarray(power, dtype=float)
     p = p[np.isfinite(p) & (p > 0.0)]
@@ -327,19 +369,20 @@ def compute_acoustic_density_descriptors(
     residual_log_bin_cents: float = 100.0,
     subbass_upper_ratio: float = 0.75,
     body_freq_min_hz: float = 20.0,
-    body_freq_max_hz: float = 5000.0,
-    body_peak_relative_db: float = -45.0,
+    body_freq_max_hz: Optional[float] = None,
+    body_peak_relative_db: Optional[float] = None,
     body_weight_knee_hz: float = 1800.0,
     low_mid_upper_hz: float = 2000.0,
     residual_body_contribution_cap: float = 0.25,
-    salient_harmonic_relative_db: float = -45.0,
-    salient_harmonic_ceiling_hz: float = 5000.0,
+    salient_harmonic_relative_db: Optional[float] = None,
+    salient_harmonic_ceiling_hz: Optional[float] = None,
     density_summation_mode: str = "his_note_adaptive",
     harmonic_density_weight: float = 1.0,
     inharmonic_density_weight: float = 0.5,
     subbass_density_weight: float = 0.25,
-    density_salience_threshold_db: float = -45.0,
-    density_frequency_ceiling_hz: float = 5000.0,
+    density_salience_threshold_db: Optional[float] = None,
+    density_frequency_ceiling_hz: Optional[float] = None,
+    full_spectrum_max_hz: float = FULL_SPECTRUM_MAX_HZ,
     sr_hz: float = 44100.0,
     n_fft: int = 4096,
 ) -> dict[str, Any]:
@@ -358,6 +401,39 @@ def compute_acoustic_density_descriptors(
     # path resolves sub-bass boundary via SubBassPolicy directly.
     del subbass_upper_ratio
     freq, power = _extract_peak_vectors(peaks_df)
+
+    _freq_max_runtime = float(freq_max_hz) if np.isfinite(float(freq_max_hz)) else float(FULL_SPECTRUM_MAX_HZ)
+    _body_ceiling_default_hz = float(max(1.0, min(_freq_max_runtime, float(BODY_DENSITY_MAX_HZ))))
+    _body_freq_max_hz = (
+        float(body_freq_max_hz)
+        if body_freq_max_hz is not None and np.isfinite(float(body_freq_max_hz))
+        else _body_ceiling_default_hz
+    )
+    _body_peak_relative_db = (
+        float(body_peak_relative_db)
+        if body_peak_relative_db is not None and np.isfinite(float(body_peak_relative_db))
+        else float(min_relative_db)
+    )
+    _salient_harmonic_relative_db = (
+        float(salient_harmonic_relative_db)
+        if salient_harmonic_relative_db is not None and np.isfinite(float(salient_harmonic_relative_db))
+        else float(min_relative_db)
+    )
+    _salient_harmonic_ceiling_hz = (
+        float(salient_harmonic_ceiling_hz)
+        if salient_harmonic_ceiling_hz is not None and np.isfinite(float(salient_harmonic_ceiling_hz))
+        else _body_freq_max_hz
+    )
+    _density_salience_threshold_db = (
+        float(density_salience_threshold_db)
+        if density_salience_threshold_db is not None and np.isfinite(float(density_salience_threshold_db))
+        else float(min_relative_db)
+    )
+    _density_frequency_ceiling_hz = (
+        float(density_frequency_ceiling_hz)
+        if density_frequency_ceiling_hz is not None and np.isfinite(float(density_frequency_ceiling_hz))
+        else _body_ceiling_default_hz
+    )
 
     out: dict[str, Any] = {
         "f0_used_for_density_hz": float(f0_hz) if _finite_positive(f0_hz) else float("nan"),
@@ -378,25 +454,39 @@ def compute_acoustic_density_descriptors(
         "body_weighted_effective_density": 0.0,
         "low_mid_energy_ratio": 0.0,
         "harmonic_body_density": 0.0,
-        "expected_harmonic_slots_up_to_5000hz": 0,
+        "expected_harmonic_slots_up_to_body_ceiling": 0,
         "harmonic_body_density_normalized": 0.0,
         "residual_body_contribution": 0.0,
         "residual_body_contribution_capped": 0.0,
-        "salient_harmonic_order_count_up_to_5000hz": 0,
-        "expected_harmonic_order_count_up_to_5000hz": 0,
-        "salient_harmonic_coverage_up_to_5000hz": 0.0,
-        "salient_harmonic_mass_up_to_5000hz": 0.0,
+        "salient_harmonic_order_count_up_to_body_ceiling": 0,
+        "expected_harmonic_order_count_up_to_body_ceiling": 0,
+        "salient_harmonic_coverage_up_to_body_ceiling": 0.0,
+        "theoretical_harmonic_order_count_up_to_body_ceiling": 0,
+        "detected_salient_harmonic_order_count_up_to_body_ceiling": 0,
+        "salient_harmonic_coverage_ratio_up_to_body_ceiling": 0.0,
+        "salient_harmonic_mass_up_to_body_ceiling": 0.0,
         "salient_harmonic_order_count_up_to_density_ceiling_hz": 0,
         "expected_harmonic_order_count_up_to_density_ceiling_hz": 0,
         "salient_harmonic_coverage_up_to_density_ceiling_hz": 0.0,
         "salient_harmonic_mass_up_to_density_ceiling_hz": 0.0,
-        "salient_odd_harmonic_count_up_to_5000hz": 0,
-        "salient_even_harmonic_count_up_to_5000hz": 0,
+        "salient_odd_harmonic_count_up_to_body_ceiling": 0,
+        "salient_even_harmonic_count_up_to_body_ceiling": 0,
         "odd_even_harmonic_energy_ratio": 0.0,
-        "salient_inharmonic_log_bin_count_up_to_5000hz": 0,
+        "salient_inharmonic_log_bin_count_up_to_body_ceiling": 0,
         "salient_subbass_particle_count": 0,
         "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz": 0,
         "salient_subbass_particle_count_up_to_density_ceiling_hz": 0,
+        "harmonic_body_energy_sum_body_ceiling": 0.0,
+        "inharmonic_body_energy_sum_body_ceiling": 0.0,
+        "subbass_rumble_energy_sum": 0.0,
+        "density_body_weighted_sum_body_ceiling": 0.0,
+        "harmonic_full_spectrum_energy_sum_20khz": 0.0,
+        "inharmonic_full_spectrum_energy_sum_20khz": 0.0,
+        "density_full_spectrum_weighted_sum_20khz": 0.0,
+        "high_frequency_spectral_activity_sum": 0.0,
+        "spectral_extension_index_20khz": 0.0,
+        "brightness_or_upper_spectral_activity_index_20khz": 0.0,
+        "full_spectrum_harmonic_candidate_count_20khz": 0,
         "final_note_density_count_based": 0.0,
         "final_note_density_salience_weighted": 0.0,
         "harmonic_density_component": 0.0,
@@ -418,8 +508,8 @@ def compute_acoustic_density_descriptors(
         "component_strength_i": float("nan"),
         "component_strength_s": float("nan"),
         "density_summation_mode": str(density_summation_mode or "his_note_adaptive"),
-        "density_salience_threshold_db": float(density_salience_threshold_db),
-        "density_frequency_ceiling_hz": float(density_frequency_ceiling_hz),
+        "density_salience_threshold_db": float(_density_salience_threshold_db),
+        "density_frequency_ceiling_hz": float(_density_frequency_ceiling_hz),
         "density_metric_raw": float("nan"),
         "effective_components_weighted_diagnostic": float("nan"),
         "diagnostic_effective_components_h": float("nan"),
@@ -475,9 +565,19 @@ def compute_acoustic_density_descriptors(
     expected_count = int(orders_expected.size)
     out["expected_harmonic_slot_count"] = expected_count
 
-    # Inharmonicity fit on significant peaks (near-harmonic candidates only).
+    # Inharmonicity fit on PEAK CENTERS, not the raw significant-bin cloud.
+    # ``freq``/``power`` arrive as the full spectrum (one row per FFT bin), so a
+    # partial spans several adjacent bins. Feeding all of them to the fit lets
+    # the order matcher pick the bin nearest the *nominal* n*f0 (a lobe flank),
+    # which biases the joint (f0, B) fit toward B≈0 and destroys end-to-end
+    # inharmonicity recovery. Reducing to local-maximum centers (with parabolic
+    # sub-bin refinement) gives the fit the true — possibly stretched — partial
+    # frequencies.
+    inharm_freqs = _local_maxima_peak_centers(freq, power, rel_power_threshold)
+    if inharm_freqs.size < 3:
+        inharm_freqs = freq_sig
     fit_result = fit_inharmonicity_coefficient(
-        candidate_freqs_hz=freq_sig,
+        candidate_freqs_hz=inharm_freqs,
         f0_hz=float(f0_hz),
         order_cap=int(INHARMONICITY_FIT_ORDER_CAP),
         cents_window=float(INHARMONICITY_FIT_CENTS_WINDOW),
@@ -576,15 +676,15 @@ def compute_acoustic_density_descriptors(
     out["spectral_entropy"] = _normalized_entropy(power_sig)
     out["effective_partial_density"] = _effective_count(power_sig)
 
-    # Body-focused thickness descriptors (salient peaks, 20..5000 Hz default).
+    # Body-focused thickness descriptors (salient peaks up to configured body ceiling).
     bmin = float(max(body_freq_min_hz, freq_min_hz, 1e-6))
-    bmax = float(max(bmin, min(body_freq_max_hz, freq_max_hz)))
+    bmax = float(max(bmin, min(_body_freq_max_hz, freq_max_hz)))
     bmask = (freq_sig >= bmin) & (freq_sig <= bmax)
     body_freq = freq_sig[bmask]
     body_power = power_sig[bmask]
     if body_power.size > 0:
         bpmax = float(np.max(body_power))
-        body_rel_thr = bpmax * (10.0 ** (float(body_peak_relative_db) / 10.0))
+        body_rel_thr = bpmax * (10.0 ** (float(_body_peak_relative_db) / 10.0))
         salient_mask = body_power >= body_rel_thr
         body_freq = body_freq[salient_mask]
         body_power = body_power[salient_mask]
@@ -603,7 +703,7 @@ def compute_acoustic_density_descriptors(
             out["low_mid_energy_ratio"] = low_mid_salience / total_body_salience
 
     body_orders = _expected_harmonic_orders(float(f0_hz), freq_min_hz=bmin, freq_max_hz=bmax)
-    out["expected_harmonic_slots_up_to_5000hz"] = int(body_orders.size)
+    out["expected_harmonic_slots_up_to_body_ceiling"] = int(body_orders.size)
     harmonic_body_mask = harmonic_peak_mask & (freq_sig >= bmin) & (freq_sig <= bmax)
     harmonic_body_power = power_sig[harmonic_body_mask]
     if harmonic_body_power.size > 0:
@@ -612,16 +712,17 @@ def compute_acoustic_density_descriptors(
         knee = float(max(body_weight_knee_hz, 1e-6))
         w_harm_body = 1.0 / (1.0 + np.square(harmonic_body_freq / knee))
         out["harmonic_body_density"] = _effective_count(w_harm_body * harmonic_salience)
-    if out["expected_harmonic_slots_up_to_5000hz"] > 0:
+    if out["expected_harmonic_slots_up_to_body_ceiling"] > 0:
         out["harmonic_body_density_normalized"] = float(
-            out["harmonic_body_density"] / out["expected_harmonic_slots_up_to_5000hz"]
+            out["harmonic_body_density"] / out["expected_harmonic_slots_up_to_body_ceiling"]
         )
 
-    # Register-dependent salient raw harmonic-count family (up to 5000 Hz by default).
-    salient_ceiling_hz = float(max(salient_harmonic_ceiling_hz, 1e-6))
+    # Register-dependent salient raw harmonic-count family (up to body ceiling).
+    salient_ceiling_hz = float(max(_salient_harmonic_ceiling_hz, 1e-6))
     expected_harmonic_order_count = int(math.floor(salient_ceiling_hz / float(f0_hz))) if _finite_positive(f0_hz) else 0
     expected_harmonic_order_count = max(expected_harmonic_order_count, 0)
-    out["expected_harmonic_order_count_up_to_5000hz"] = expected_harmonic_order_count
+    out["expected_harmonic_order_count_up_to_body_ceiling"] = expected_harmonic_order_count
+    out["theoretical_harmonic_order_count_up_to_body_ceiling"] = expected_harmonic_order_count
 
     if expected_harmonic_order_count > 0:
         harmonic_orders = nearest_order[harmonic_peak_mask]
@@ -642,27 +743,29 @@ def compute_acoustic_density_descriptors(
             if prev is None or pf > prev:
                 order_power_max[ni] = pf
 
-        salient_threshold = pmax * (10.0 ** (float(salient_harmonic_relative_db) / 10.0))
+        salient_threshold = pmax * (10.0 ** (float(_salient_harmonic_relative_db) / 10.0))
         salient_orders = sorted(n for n, p in order_power_max.items() if p >= salient_threshold)
         salient_count = int(len(salient_orders))
-        out["salient_harmonic_order_count_up_to_5000hz"] = salient_count
-        out["salient_harmonic_coverage_up_to_5000hz"] = float(salient_count / expected_harmonic_order_count)
+        out["salient_harmonic_order_count_up_to_body_ceiling"] = salient_count
+        out["detected_salient_harmonic_order_count_up_to_body_ceiling"] = salient_count
+        out["salient_harmonic_coverage_up_to_body_ceiling"] = float(salient_count / expected_harmonic_order_count)
+        out["salient_harmonic_coverage_ratio_up_to_body_ceiling"] = out["salient_harmonic_coverage_up_to_body_ceiling"]
 
         salient_powers = np.array([order_power_max[n] for n in salient_orders], dtype=float)
         if salient_powers.size > 0:
-            out["salient_harmonic_mass_up_to_5000hz"] = float(np.sum(np.sqrt(np.maximum(salient_powers, 0.0))))
+            out["salient_harmonic_mass_up_to_body_ceiling"] = float(np.sum(np.sqrt(np.maximum(salient_powers, 0.0))))
 
         odd_orders = [n for n in salient_orders if (n % 2) == 1]
         even_orders = [n for n in salient_orders if (n % 2) == 0]
-        out["salient_odd_harmonic_count_up_to_5000hz"] = int(len(odd_orders))
-        out["salient_even_harmonic_count_up_to_5000hz"] = int(len(even_orders))
+        out["salient_odd_harmonic_count_up_to_body_ceiling"] = int(len(odd_orders))
+        out["salient_even_harmonic_count_up_to_body_ceiling"] = int(len(even_orders))
         odd_power = float(np.sum([order_power_max[n] for n in odd_orders])) if odd_orders else 0.0
         even_power = float(np.sum([order_power_max[n] for n in even_orders])) if even_orders else 0.0
         out["odd_even_harmonic_energy_ratio"] = float(odd_power / max(even_power, EPS))
 
     # Final user-facing density family (count-based and salience-weighted).
-    d_ceiling_hz = float(max(density_frequency_ceiling_hz, 1e-6))
-    d_thr_db = float(density_salience_threshold_db)
+    d_ceiling_hz = float(max(_density_frequency_ceiling_hz, 1e-6))
+    d_thr_db = float(_density_salience_threshold_db)
     mode = str(density_summation_mode or "his_note_adaptive").strip().lower()
     manual_w_h = float(harmonic_density_weight)
     manual_w_i = float(inharmonic_density_weight)
@@ -738,7 +841,7 @@ def compute_acoustic_density_descriptors(
     salient_subbass_particle_count = int(np.count_nonzero(subbass_sal > 0.0))
     subbass_density = float(np.sum(subbass_sal)) if subbass_sal.size > 0 else 0.0
 
-    out["salient_inharmonic_log_bin_count_up_to_5000hz"] = int(salient_inharmonic_bin_count)
+    out["salient_inharmonic_log_bin_count_up_to_body_ceiling"] = int(salient_inharmonic_bin_count)
     out["salient_subbass_particle_count"] = int(salient_subbass_particle_count)
     out["salient_harmonic_order_count_up_to_density_ceiling_hz"] = int(h_count)
     out["expected_harmonic_order_count_up_to_density_ceiling_hz"] = int(
@@ -758,6 +861,38 @@ def compute_acoustic_density_descriptors(
     out["harmonic_density_component"] = float(h_density)
     out["inharmonic_density_component"] = float(inharmonic_density)
     out["subbass_density_component"] = float(subbass_density)
+
+    body_ceiling_hz = float(max(BODY_DENSITY_MAX_HZ, 1.0))
+    full_ceiling_hz = float(max(full_spectrum_max_hz, body_ceiling_hz))
+    body_harmonic_band = harmonic_orders * float(f0_hz) <= body_ceiling_hz + EPS
+    body_harmonic_energy = float(np.sum(harmonic_pow[body_harmonic_band])) if harmonic_pow.size > 0 else 0.0
+    body_inharmonic_band = inharmonic_freq <= body_ceiling_hz + EPS
+    body_inharmonic_energy = float(np.sum(inharmonic_pow[body_inharmonic_band])) if inharmonic_pow.size > 0 else 0.0
+    body_subbass_energy = float(np.sum(subbass_pow)) if subbass_pow.size > 0 else 0.0
+    out["harmonic_body_energy_sum_body_ceiling"] = body_harmonic_energy
+    out["inharmonic_body_energy_sum_body_ceiling"] = body_inharmonic_energy
+    out["subbass_rumble_energy_sum"] = body_subbass_energy
+
+    harmonic_freq_all = nearest_order[harmonic_peak_mask] * float(f0_hz)
+    harmonic_pow_all = power_sig[harmonic_peak_mask]
+    full_harmonic_band = harmonic_freq_all <= full_ceiling_hz + EPS
+    full_harmonic_energy = float(np.sum(harmonic_pow_all[full_harmonic_band])) if harmonic_pow_all.size > 0 else 0.0
+    full_inharmonic_band = inharmonic_freq <= full_ceiling_hz + EPS
+    full_inharmonic_energy = float(np.sum(inharmonic_pow[full_inharmonic_band])) if inharmonic_pow.size > 0 else 0.0
+    out["harmonic_full_spectrum_energy_sum_20khz"] = full_harmonic_energy
+    out["inharmonic_full_spectrum_energy_sum_20khz"] = full_inharmonic_energy
+
+    above_body_harmonic_energy = max(0.0, full_harmonic_energy - body_harmonic_energy)
+    above_body_inharmonic_energy = max(0.0, full_inharmonic_energy - body_inharmonic_energy)
+    out["high_frequency_spectral_activity_sum"] = float(
+        above_body_harmonic_energy + above_body_inharmonic_energy
+    )
+    full_orders = nearest_order[harmonic_peak_mask]
+    if full_orders.size > 0:
+        full_orders = full_orders[
+            (full_orders.astype(float) * float(f0_hz) <= full_ceiling_hz + EPS) & (full_orders >= 1)
+        ]
+    out["full_spectrum_harmonic_candidate_count_20khz"] = int(np.unique(full_orders).size)
 
     w_h, w_i, w_s = manual_w_h, manual_w_i, manual_w_s
     pure_observation_triplet: tuple[float, float, float] | None = None
@@ -948,6 +1083,27 @@ def compute_acoustic_density_descriptors(
     out["harmonic_density_weight"] = float(w_h)
     out["inharmonic_density_weight"] = float(w_i)
     out["subbass_density_weight"] = float(w_s)
+    out["density_body_weighted_sum_body_ceiling"] = float(
+        w_h * out["harmonic_body_energy_sum_body_ceiling"]
+        + w_i * out["inharmonic_body_energy_sum_body_ceiling"]
+        + w_s * out["subbass_rumble_energy_sum"]
+    )
+    out["density_full_spectrum_weighted_sum_20khz"] = float(
+        w_h * out["harmonic_full_spectrum_energy_sum_20khz"]
+        + w_i * out["inharmonic_full_spectrum_energy_sum_20khz"]
+        + w_s * out["subbass_rumble_energy_sum"]
+    )
+    out["spectral_extension_index_20khz"] = float(
+        out["density_full_spectrum_weighted_sum_20khz"]
+        / max(out["density_body_weighted_sum_body_ceiling"], EPS)
+    )
+    out["brightness_or_upper_spectral_activity_index_20khz"] = float(
+        out["high_frequency_spectral_activity_sum"]
+        / max(
+            out["harmonic_full_spectrum_energy_sum_20khz"] + out["inharmonic_full_spectrum_energy_sum_20khz"],
+            EPS,
+        )
+    )
     out["final_note_density_count_based"] = float(
         w_h * h_count + w_i * float(salient_inharmonic_bin_count) + w_s * float(salient_subbass_particle_count)
     )

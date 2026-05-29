@@ -597,7 +597,7 @@ class SuperAudioAnalyzer:
             'Tier_77': {'max_freq': 4100, 'n_fft': 512, 'tolerance': 20.0, 'zp': 2},
             'Tier_78': {'max_freq': 4400, 'n_fft': 512, 'tolerance': 20.5, 'zp': 2},
             'Tier_79': {'max_freq': 4700, 'n_fft': 512, 'tolerance': 21.0, 'zp': 2},
-            'Tier_80': {'max_freq': 5000, 'n_fft': 512, 'tolerance': 21.5, 'zp': 2},
+            'Tier_80': {'max_freq': 5050, 'n_fft': 512, 'tolerance': 21.5, 'zp': 2},
             'Tier_81': {'max_freq': 5400, 'n_fft': 512, 'tolerance': 22.0, 'zp': 2},
             'Tier_82': {'max_freq': 5800, 'n_fft': 512, 'tolerance': 22.5, 'zp': 2},
             'Tier_83': {'max_freq': 6300, 'n_fft': 512, 'tolerance': 23.0, 'zp': 2},
@@ -2079,7 +2079,7 @@ class SuperAudioAnalyzer:
             elif f0_candidates:
                 # No prior available, use priority order
                 # CRITICAL FIX: Still test octave corrections even without prior
-                # If f0 is outside reasonable range (20-5000 Hz), test ±octaves
+                # If f0 is outside reasonable range (20 Hz to analysis ceiling), test ±octaves
                 f0_raw = None
                 if detection_results['pyin'] is not None:
                     f0_raw = detection_results['pyin']['f0']
@@ -2092,18 +2092,19 @@ class SuperAudioAnalyzer:
                     method_used = 'autocorrelation'
                 
                 if f0_raw is not None:
-                    # Test if f0 is in reasonable range (20-5000 Hz for musical instruments)
+                    # Test if f0 is in reasonable range (20 Hz to analysis ceiling)
                     # If outside, test octave corrections
-                    if f0_raw < 20.0 or f0_raw > 5000.0:
+                    f0_ceiling_hz = float(getattr(self, "freq_max", 20000.0))
+                    if f0_raw < 20.0 or f0_raw > f0_ceiling_hz:
                         logger.warning(f"f0 {f0_raw:.2f} Hz outside reasonable range, testing octave corrections")
                         best_f0 = f0_raw
-                        best_err = abs(440.0 - f0_raw) if 20 <= f0_raw <= 5000 else float('inf')  # Use A4 as reference
+                        best_err = abs(440.0 - f0_raw) if 20 <= f0_raw <= f0_ceiling_hz else float('inf')  # Use A4 as reference
                         
                         # Test ±1, ±2 octaves
                         for shift in [1.0, 2.0]:
                             for direction in [1, -1]:
                                 adj = f0_raw * (2 ** (direction * shift))
-                                if 20.0 <= adj <= 5000.0:
+                                if 20.0 <= adj <= f0_ceiling_hz:
                                     # Prefer values closer to typical instrument range (80-2000 Hz)
                                     ref = 440.0  # A4 as reference
                                     err = abs(adj - ref)
@@ -3648,10 +3649,11 @@ class SuperAudioAnalyzer:
                 )
                 logger.warning("Using component count for pie chart (energy percentages not available)")
         
-        # 7. Complete spectrum (0-5 kHz)
+        # 7. Complete spectrum (0-analysis ceiling)
         ax7 = fig.add_subplot(gs[2, 2])
         if not self.complete_spectrum_df.empty:
-            mask = self.complete_spectrum_df['Frequency (Hz)'] <= 5000
+            plot_ceiling_hz = float(getattr(self, "freq_max", 20000.0))
+            mask = self.complete_spectrum_df['Frequency (Hz)'] <= plot_ceiling_hz
             ax7.plot(
                 self.complete_spectrum_df[mask]['Frequency (Hz)'],
                 self.complete_spectrum_df[mask]['Magnitude_dB'],
@@ -3660,7 +3662,7 @@ class SuperAudioAnalyzer:
             )
             ax7.set_xlabel('Frequency (Hz)')
             ax7.set_ylabel('Magnitude (dB)')
-            ax7.set_title('Spectrum (0–5 kHz)', fontsize=10, fontweight='bold')
+            ax7.set_title(f'Spectrum (0-{plot_ceiling_hz:.0f} Hz)', fontsize=10, fontweight='bold')
             ax7.grid(True, alpha=0.3)
         
         # 8. Statistical summary

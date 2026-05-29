@@ -43,3 +43,6 @@
 | F-039 | $D_{ERB}=1/\sum_b q_b^2$ | ERB effective density | MIR ERB grouping logic | `erb_weighted_spectral_density` |
 | F-040 | $\mathrm{LAT}=\log_{10}(t_{attack})$ | Log attack time | `temporal_segmentation.segment_attack_sustain_release` | `log_attack_time_s` |
 | F-041 | $\text{SBTI}=0.45z(BWED)+0.25z(LMER)+0.20z(HBDN)+0.10z(RBCC)$ | Research workbook body-thickness index | `build_spectral_density_metrics` | `spectral_body_thickness_index` |
+| F-042 | $D_{final}=r_HD_H+r_ID_I+r_SD_S$ (with $r_*$ = measured `component_*_energy_ratio`, $D_*$ = `*_density_sum`) | Principled per-note scalar density (measured component balance × GUI-weighted per-band sums) | `compile_metrics._compute_note_density_final` | `note_density_final` |
+| F-043 | $T=\alpha\,\hat{\mu}_{noise}$, $\alpha=N(P_{fa}^{-1/N}-1)$; detect iff $P_{peak}\ge T$ | Cell-averaging CFAR harmonic acceptance gate (adaptive, stated false-alarm rate; replaces fixed 3 dB SNR) | `harmonic_peak_validation.cfar_peak_detection` | `cfar_margin_db`, `cfar_detected` |
+| F-044 | $\text{CI}_{95\%}$ via non-parametric bootstrap of per-partial contributions with ratios recomputed per resample | Uncertainty of `note_density_final` (partials + ratios propagated jointly) | `density_uncertainty.bootstrap_note_density_final` | `note_density_final_ci_low/ci_high/rel_uncertainty/uncertainty_sources` |

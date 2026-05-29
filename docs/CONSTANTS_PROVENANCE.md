@@ -52,11 +52,11 @@ Provenance classes:
 - `FREQ_MIN_HZ` (`20.0`) - `convention` - Standard nominal lower audible bound.
 - `FREQ_MAX_HZ` (`20000.0`) - `convention` - Standard nominal upper audible bound.
 - `FREQ_MID_LOW_HZ` (`1000.0`) - `convention` - Common low/mid split in audio descriptors.
-- `FREQ_MID_HIGH_HZ` (`5000.0`) - `convention` - Common mid/high split in audio descriptors.
+- `FREQ_MID_HIGH_HZ` (`runtime-configured`) - `convention` - Common mid/high split in audio descriptors.
 - `EQUAL_LOUDNESS_LOW_WEIGHT_MIN` (`0.5`) - `internal_default` - Tuned lower clamp for project-specific weighting.
 - `EQUAL_LOUDNESS_HIGH_WEIGHT_MAX` (`1.0`) - `convention` - Unit-gain cap convention.
 - `EQUAL_LOUDNESS_HIGH_WEIGHT_DECAY` (`0.5`) - `internal_default` - Tuned decay constant for this implementation.
-- `EQUAL_LOUDNESS_HIGH_FREQ_RANGE` (`15000.0`) - `internal_default` - Tuned frequency span for this implementation.
+- `EQUAL_LOUDNESS_HIGH_FREQ_RANGE` (`1runtime-configured`) - `internal_default` - Tuned frequency span for this implementation.
 
 ## Harmonic, inharmonicity, and validation constants
 

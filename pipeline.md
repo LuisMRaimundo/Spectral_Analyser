@@ -8,8 +8,8 @@ This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orche
 
 | Phase | What happens | Main scripts |
 |---|---|---|
-| P0 Intake/IO | Audio and metadata are loaded, IDs/paths are normalized/sanitized | `audio_utils.py`, `public_audio_identifiers.py`, `export_paths.py`, `metadata_sanitizer.py` |
-| P1 Per-note spectral extraction | Peaks, harmonic/non-harmonic split, f0 provenance, component energies, density descriptors are computed | `proc_audio.py`, `acoustic_density_core.py`, `density.py`, `harmonic_alignment.py`, `harmonic_validation.py`, `spectral_leakage_guards.py`, `peak_component_counts.py` |
+| P0 Intake/IO | Audio and metadata are loaded, IDs/paths are normalized/sanitized | `audio_utils.py`, `metadata_sanitizer.py` |
+| P1 Per-note spectral extraction | Peaks, harmonic/non-harmonic split, f0 provenance, component energies, density descriptors are computed | `proc_audio.py`, `acoustic_density_core.py`, `density.py`, `harmonic_alignment.py`, `harmonic_peak_validation.py`, `harmonic_validation.py`, `spectral_leakage_guards.py`, `peak_component_counts.py` |
 | P2 Adaptive profile | Pure per-note observation triplet updates adaptive H/I/S profile | `adaptive_density_engine.py`, `pipeline_orchestrator_gui.py` |
 | P3 Tier normalization | Cross-note FFT-tier normalization for absolute amplitude/power sums | `spectral_normalization.py`, `compile_metrics.py` |
 | P4 Inharmonicity model | Stiff-string `B` coefficient fit and adaptive harmonic tolerance behavior | `inharmonicity_model.py`, `acoustic_density_core.py`, `proc_audio.py`, `compile_metrics.py` |
@@ -50,11 +50,11 @@ This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orche
 | `dissonance_export.py` | canonical dissonance frame builders | Export harmonized dissonance comparison sheets | Correlation/reshape ops |
 | `dissonance_models.py` | `SetharesDissonance`, `HutchinsonKnopoffDissonance`, `VassilakisDissonance` | Pairwise sensory dissonance models | Model-specific pairwise kernels |
 | `energy_accounting.py` | `describe_component_energy_balance` | Summarizes component energy balance | Ratio/accounting |
-| `export_paths.py` | path redaction/sanitization | Publication-safe path handling | String/path sanitation |
+| `density_uncertainty.py` | `bootstrap_note_density_final`, `bootstrap_density_ci`, `nfft_sensitivity` | Uncertainty quantification for `note_density_final` (transform-aware bootstrap CI; partials + ratios propagated jointly) | Non-parametric bootstrap; dispersion summaries |
 | `gui_compile_stage2_worker.py` | `main` | Stage-2 compile worker entry | Orchestration |
 | `gui_model_weight_policy.py` | `resolve_analysis_model_weights` | Resolves GUI model-weight policy | Rule resolution |
-| `harmonic_validation.py` | `validate_harmonic_series_matched` | Harmonic series validation utilities | Tolerance-window checks |
-| `interface.py` | `SpectrumAnalyzer`, workers | Main desktop UI implementation | UI/worker orchestration |
+| `harmonic_peak_validation.py` | `cfar_peak_detection`, `_is_local_peak_valid`, `_local_peak_metrics`, `_classify_harmonic_candidate`, `_saddle_prominence_db` | Per-bin spectral-peak refinement and per-order harmonic-candidate classification (re-exported by `proc_audio`) | CFAR noise-significance gate (Pfa-based) + saddle prominence + f0-adaptive window |
+| `harmonic_validation.py` | `validate_harmonic_series_matched` | Harmonic series validation utilities (peak table → cents-alignment metrics) | Tolerance-window checks |
 | `log_config.py` | `configure_root_logger` | Logging bootstrap | Logging config |
 | `main.py` | `main` | Primary app entrypoint | Bootstrapping |
 | `metadata_sanitizer.py` | publication sanitation functions | Redaction, clean exports, leakage checks | Policy-driven transformations |
@@ -65,13 +65,10 @@ This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orche
 | `pipeline_orchestrator_gui.py` | `RobustOrchestratorApp` + helpers | Full GUI orchestration over Phase 1/2/compile/export | Stage orchestration and adaptive handoff |
 | `pipeline_orchestrator_integrated.py` | `RobustOrchestrator`, `main` | Integrated orchestrator runner | CLI orchestration |
 | `post_compile_research_export.py` | `run_research_workbook_export` | Generates research workbook variant after compile | Export transform |
-| `public_audio_identifiers.py` | hashing and ID builders | Stable public IDs and sample identifiers | SHA-256 based ID construction |
 | `publication_chart_policy.py` | chart metric policies | Publication-safe metric selection and warnings | Policy rules |
 | `publication_metric_columns.py` | metrics-sheet filters | Column allow-listing for publication sheets | Deterministic filtering |
-| `reference_signal_utils.py` | synthetic signal generators | Reference sine/harmonic/inharmonic synthetic signals | Signal synthesis formulas |
 | `result_cache.py` | `ResultCache`, `get_cache` | Runtime caching utility | Key/value cache behavior |
 | `run_orchestrator.py` | `main` | CLI orchestrator entry script | Runner bootstrapping |
-| `runtime_versions.py` | runtime fingerprint functions | Runtime package/version fingerprinting | Metadata generation |
 | `spectral_leakage_guards.py` | leakage guard functions | Leakage halfwidth and candidate filtering | Frequency-window rejection |
 | `validate_canonical_metrics.py` | validation/report generators | Canonical workbook validation and report generation | Coverage/stats/PCA checks |
 | `verify_runtime_schema.py` | `_main` | Runtime schema verifier CLI | Contract verification |
@@ -79,7 +76,22 @@ This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orche
 | `audio_analysis/super_audio_analyzer.py` | `SuperAudioAnalyzer`, export helpers | Super-analysis engine and summaries | Aggregation and summary formulas |
 | `audio_analysis/super_audio_analyzer_gui.py` | `SuperAudioAnalyzerGUI`, workers | GUI front-end for super analyzer | GUI orchestration |
 | `audio_analysis/batch_audio_analyzer.py` | `BatchAudioAnalyzer`, `main` | Batch analysis runner and row deduplication | Batch traversal |
-| `audio_analysis/batch_example.py` | `main` | Example batch execution script | Example orchestration |
+
+## Archived modules (moved to `Backup/`)
+
+The following modules were removed from the active tree (no Python importer;
+not entry points; not tests) and archived under `Backup/`. See
+`Backup/README.md` for provenance and restore instructions.
+
+| Module | Reason |
+|---|---|
+| `interface.py` | Legacy/reference PyQt GUI; `main.py` forwards to the Tk orchestrator. |
+| `export_paths.py` | Unused path-sanitization helper (active sanitization is in `metadata_sanitizer.py`). |
+| `public_audio_identifiers.py` | Unused ID/hash builders. |
+| `reference_signal_utils.py` | Unused synthetic-signal generators. |
+| `runtime_versions.py` | Unused runtime version fingerprint. |
+| `audio_analysis/batch_example.py` | Example/demo script. |
+| `scripts/harmonic_count_audit.py` | Standalone developer audit CLI. |
 
 ## Notes on formula coverage
 
