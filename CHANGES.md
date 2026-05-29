@@ -1,3 +1,28 @@
+# Wide-frame density single source of truth (2026-05-29)
+
+Resolves the previously-deferred internal inconsistency: the wide compiled frame
+(and the `Diagnostic_Metrics` / `Compiled_Metrics_All` sheets derived from it)
+reported `density_metric_raw`, `weighted_*_density_contribution` and the per-band
+`* Partials sum` on a RAW scale, diverging from the canonical `Density_Metrics`
+sheet. Root cause: `_compute_weighted_density_columns_for_wide_df` consumed the
+per-note `Metrics` `Harmonic Partials sum` (a raw partial sum, e.g. cello C2 =
+174178) as if it were the GUI-weighted band density, whereas the Density_Metrics
+builder re-reads each spectrum and produces the log-weighted band density (3.22).
+
+Fix (`compile_metrics._write_compiled_excel`): after the authoritative
+`Density_Metrics` sheet is built (re-extracted per note, independent of the wide
+frame), its density family is merged back into `base_df` by `Note`, overwriting
+the raw-scale wide-frame values. Every sheet now reports the same single source
+of truth. Verified end-to-end on the cello corpus: `Diagnostic_Metrics` now
+matches `Density_Metrics` exactly — e.g. C2 `density_metric_raw` 3.2199 ==
+3.2199, `weighted_harmonic_density_contribution` 3.2123 == 3.2123 (was 95304),
+`Harmonic Partials sum` 3.2226 == 3.2226 (was 174178). Full suite: 112 passed,
+2 skipped.
+
+(This supersedes the "Known, deferred" note recorded in the previous entry.)
+
+---
+
 # note_density_final scale-consistency fix (2026-05-29)
 
 Fixes a cross-sheet scale inconsistency in `note_density_final` surfaced on the
