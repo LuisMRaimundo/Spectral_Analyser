@@ -57,6 +57,7 @@ from metadata_sanitizer import (
     publication_clean_export_enabled,
     publication_research_canonical_density_columns,
 )
+from constants import BODY_DENSITY_MAX_HZ, FULL_SPECTRUM_MAX_HZ
 
 SCRIPT_NAME = "export_research_density_workbook.py"
 SCRIPT_VERSION = "1.1.2"
@@ -124,6 +125,10 @@ COLUMN_ALIASES: Dict[str, Tuple[str, ...]] = {
     ),
     "Source_Workbook": ("Source_Workbook", "source_workbook", "workbook_path", "compiled_from"),
     "f0_final_hz": ("f0_final_hz", "f0_estimated", "f0_final"),
+    "harmonic_region_occupancy_count": (
+        "harmonic_region_occupancy_count",
+        "harmonic_occupancy_detected_order_count",
+    ),
     "Instrument": ("Instrument", "instrument", "instrument_detected"),
     "Dynamic": ("Dynamic", "dynamic", "dynamic_detected"),
 }
@@ -149,6 +154,8 @@ F0_FALSE_FILL = PatternFill("solid", fgColor="FFEB9C")
 RESEARCH_FILL_DENSITY_WEIGHTED_SUM = PatternFill("solid", fgColor="D6E4F0")
 RESEARCH_FILL_COMBINED_DENSITY_METRIC = PatternFill("solid", fgColor="FFF2CC")
 RESEARCH_FILL_DWS_CDM_MEAN = PatternFill("solid", fgColor="E8D5F2")
+# Light blue highlight for the principled per-note scalar note_density_final.
+RESEARCH_FILL_NOTE_DENSITY_FINAL = PatternFill("solid", fgColor="ADD8E6")
 RESEARCH_HIGHLIGHT_HEADER_FONT = Font(bold=True, color="1F4E79", size=11)
 
 
@@ -299,8 +306,19 @@ def merge_workbook_frames(path: Path, warnings: List[str]) -> pd.DataFrame:
 
     merged: Optional[pd.DataFrame] = None
     note_key = "Note"
+    density_raw = pd.read_excel(path, sheet_name="Density_Metrics", engine="openpyxl")
+    if density_raw.empty:
+        raise ValueError("Required sheet 'Density_Metrics' is empty.")
+    density_nc = find_note_column(density_raw)
+    if density_nc is None:
+        raise ValueError("Required sheet 'Density_Metrics' has no 'Note' column.")
+    merged = _rename_frame_to_canonical(density_raw.rename(columns={density_nc: note_key}))
+    merged = merged.reset_index(drop=True).copy()
+    merged["__source_density_row_id"] = np.arange(len(merged), dtype=int)
 
     for sheet in MERGE_SHEETS:
+        if sheet == "Density_Metrics":
+            continue
         if sheet not in names:
             warnings.append(f"Optional sheet '{sheet}' not found; skipped.")
             continue
@@ -314,11 +332,11 @@ def merge_workbook_frames(path: Path, warnings: List[str]) -> pd.DataFrame:
             continue
         frame = raw.rename(columns={nc: note_key})
         frame = _rename_frame_to_canonical(frame)
-        if merged is None:
-            merged = frame
-            continue
-        # Outer merge on Note
-        merged = merged.merge(frame, on=note_key, how="outer", suffixes=("", "_y"))
+        if frame.duplicated(subset=[note_key]).any():
+            # Prevent cartesian expansion in Spectral_Density_Metrics.
+            frame = frame.groupby(note_key, as_index=False, sort=False).last()
+        # Left merge anchored to Density_Metrics row cardinality.
+        merged = merged.merge(frame, on=note_key, how="left", suffixes=("", "_y"))
         drop_y: List[str] = []
         for col in list(merged.columns):
             if not col.endswith("_y"):
@@ -685,6 +703,18 @@ def build_analysis_settings_by_note(
         "MIDI",
         "f0_used_for_density_hz",
         "f0_used_for_density_source",
+        "density_component_body_weighted_sum_body_ceiling",
+        "harmonic_component_energy_sum_body_ceiling",
+        "inharmonic_component_energy_sum_body_ceiling",
+        "density_component_body_weighted_sum_body_ceiling",
+        "harmonic_component_energy_sum_body_ceiling",
+        "inharmonic_component_energy_sum_body_ceiling",
+        "subbass_component_energy_sum",
+        "spectral_slope_db_per_harmonic",
+        "density_body_weighted_sum_body_ceiling",
+        "harmonic_body_energy_sum_body_ceiling",
+        "inharmonic_body_energy_sum_body_ceiling",
+        "subbass_rumble_energy_sum",
         "acoustic_f0_status",
         "tier_name",
         "n_fft",
@@ -702,8 +732,19 @@ def build_analysis_settings_by_note(
         "subbass_density_weight",
         "density_salience_threshold_db",
         "density_frequency_ceiling_hz",
+        "body_density_frequency_ceiling_hz",
+        "full_spectrum_frequency_ceiling_hz",
+        "density_full_spectrum_weighted_sum_20khz",
+        "harmonic_full_spectrum_energy_sum_20khz",
+        "inharmonic_full_spectrum_energy_sum_20khz",
+        "high_frequency_spectral_activity_sum",
+        "spectral_extension_index_20khz",
+        "brightness_or_upper_spectral_activity_index_20khz",
+        "full_spectrum_harmonic_candidate_count_20khz",
+        "probable_harmonic_component_count_body_ceiling",
+        "probable_harmonic_component_energy_sum_body_ceiling",
     ]
-    out = out[cols]
+    out = out[[c for c in cols if c in out.columns]]
     return out.sort_values("MIDI", na_position="last", kind="mergesort")
 
 
@@ -1253,12 +1294,15 @@ def build_spectral_density_metrics(
     if harmonic_slot_expected_count.isna().all():
         harmonic_slot_expected_count = expected_harmonic_slot_count
 
-    harmonic_occupancy_detected_order_count = _series_or_nan(merged, "harmonic_occupancy_detected_order_count")
-    if harmonic_occupancy_detected_order_count.isna().all():
-        harmonic_occupancy_detected_order_count = _series_or_nan(merged, "detected_harmonic_slot_count")
-    if harmonic_occupancy_detected_order_count.isna().all():
-        harmonic_occupancy_detected_order_count = _series_or_nan(merged, "harmonic_order_count")
-    detected_harmonic_slot_count = harmonic_occupancy_detected_order_count
+    harmonic_region_occupancy_count = _series_or_nan(merged, "harmonic_region_occupancy_count")
+    if harmonic_region_occupancy_count.isna().all():
+        harmonic_region_occupancy_count = _series_or_nan(merged, "harmonic_occupancy_detected_order_count")
+    if harmonic_region_occupancy_count.isna().all():
+        harmonic_region_occupancy_count = _series_or_nan(merged, "detected_harmonic_slot_count")
+    if harmonic_region_occupancy_count.isna().all():
+        harmonic_region_occupancy_count = _series_or_nan(merged, "harmonic_order_count")
+    harmonic_occupancy_detected_order_count = harmonic_region_occupancy_count
+    detected_harmonic_slot_count = harmonic_region_occupancy_count
 
     harmonic_slot_matched_count = _series_or_nan(merged, "harmonic_slot_matched_count")
     if harmonic_slot_matched_count.isna().all():
@@ -1310,7 +1354,7 @@ def build_spectral_density_metrics(
     low_mid_energy_ratio = _series_or_nan(merged, "low_mid_energy_ratio")
     harmonic_body_density = _series_or_nan(merged, "harmonic_body_density")
     harmonic_body_density_normalized = _series_or_nan(merged, "harmonic_body_density_normalized")
-    expected_harmonic_slots_up_to_5000hz = _series_or_nan(merged, "expected_harmonic_slots_up_to_5000hz")
+    expected_harmonic_slots_up_to_body_ceiling = _series_or_nan(merged, "expected_harmonic_slots_up_to_body_ceiling")
     residual_body_contribution = _series_or_nan(merged, "residual_body_contribution")
     if residual_body_contribution.isna().all():
         residual_body_contribution = (
@@ -1320,36 +1364,45 @@ def build_spectral_density_metrics(
     residual_body_contribution_capped = _series_or_nan(merged, "residual_body_contribution_capped")
     if residual_body_contribution_capped.isna().all():
         residual_body_contribution_capped = pd.to_numeric(residual_body_contribution, errors="coerce").clip(upper=0.25)
-    salient_harmonic_order_count_up_to_5000hz = _series_or_nan(
-        merged, "salient_harmonic_order_count_up_to_5000hz"
+    salient_harmonic_order_count_up_to_body_ceiling = _series_or_nan(
+        merged, "salient_harmonic_order_count_up_to_body_ceiling"
     )
-    expected_harmonic_order_count_up_to_5000hz = _series_or_nan(
-        merged, "expected_harmonic_order_count_up_to_5000hz"
+    expected_harmonic_order_count_up_to_body_ceiling = _series_or_nan(
+        merged, "expected_harmonic_order_count_up_to_body_ceiling"
     )
-    salient_harmonic_coverage_up_to_5000hz = _series_or_nan(
-        merged, "salient_harmonic_coverage_up_to_5000hz"
+    salient_harmonic_coverage_up_to_body_ceiling = _series_or_nan(
+        merged, "salient_harmonic_coverage_up_to_body_ceiling"
     )
-    if salient_harmonic_coverage_up_to_5000hz.isna().all():
+    if salient_harmonic_coverage_up_to_body_ceiling.isna().all():
         with np.errstate(divide="ignore", invalid="ignore"):
-            salient_harmonic_coverage_up_to_5000hz = pd.to_numeric(
-                salient_harmonic_order_count_up_to_5000hz, errors="coerce"
-            ) / pd.to_numeric(expected_harmonic_order_count_up_to_5000hz, errors="coerce").replace(0, np.nan)
-    salient_harmonic_mass_up_to_5000hz = _series_or_nan(
-        merged, "salient_harmonic_mass_up_to_5000hz"
+            salient_harmonic_coverage_up_to_body_ceiling = pd.to_numeric(
+                salient_harmonic_order_count_up_to_body_ceiling, errors="coerce"
+            ) / pd.to_numeric(expected_harmonic_order_count_up_to_body_ceiling, errors="coerce").replace(0, np.nan)
+    theoretical_harmonic_order_count_up_to_body_ceiling = pd.to_numeric(
+        expected_harmonic_order_count_up_to_body_ceiling, errors="coerce"
+    )
+    detected_salient_harmonic_order_count_up_to_body_ceiling = pd.to_numeric(
+        salient_harmonic_order_count_up_to_body_ceiling, errors="coerce"
+    )
+    salient_harmonic_coverage_ratio_up_to_body_ceiling = pd.to_numeric(
+        salient_harmonic_coverage_up_to_body_ceiling, errors="coerce"
+    )
+    salient_harmonic_mass_up_to_body_ceiling = _series_or_nan(
+        merged, "salient_harmonic_mass_up_to_body_ceiling"
     )
     salient_harmonic_order_count_up_to_density_ceiling_hz = _series_or_nan(
         merged, "salient_harmonic_order_count_up_to_density_ceiling_hz"
     )
     if salient_harmonic_order_count_up_to_density_ceiling_hz.isna().all():
         salient_harmonic_order_count_up_to_density_ceiling_hz = pd.to_numeric(
-            salient_harmonic_order_count_up_to_5000hz, errors="coerce"
+            salient_harmonic_order_count_up_to_body_ceiling, errors="coerce"
         )
     expected_harmonic_order_count_up_to_density_ceiling_hz = _series_or_nan(
         merged, "expected_harmonic_order_count_up_to_density_ceiling_hz"
     )
     if expected_harmonic_order_count_up_to_density_ceiling_hz.isna().all():
         expected_harmonic_order_count_up_to_density_ceiling_hz = pd.to_numeric(
-            expected_harmonic_order_count_up_to_5000hz, errors="coerce"
+            expected_harmonic_order_count_up_to_body_ceiling, errors="coerce"
         )
     salient_harmonic_coverage_up_to_density_ceiling_hz = _series_or_nan(
         merged, "salient_harmonic_coverage_up_to_density_ceiling_hz"
@@ -1366,17 +1419,17 @@ def build_spectral_density_metrics(
     )
     if salient_harmonic_mass_up_to_density_ceiling_hz.isna().all():
         salient_harmonic_mass_up_to_density_ceiling_hz = pd.to_numeric(
-            salient_harmonic_mass_up_to_5000hz, errors="coerce"
+            salient_harmonic_mass_up_to_body_ceiling, errors="coerce"
         )
-    salient_odd_harmonic_count_up_to_5000hz = _series_or_nan(
-        merged, "salient_odd_harmonic_count_up_to_5000hz"
+    salient_odd_harmonic_count_up_to_body_ceiling = _series_or_nan(
+        merged, "salient_odd_harmonic_count_up_to_body_ceiling"
     )
-    salient_even_harmonic_count_up_to_5000hz = _series_or_nan(
-        merged, "salient_even_harmonic_count_up_to_5000hz"
+    salient_even_harmonic_count_up_to_body_ceiling = _series_or_nan(
+        merged, "salient_even_harmonic_count_up_to_body_ceiling"
     )
     odd_even_harmonic_energy_ratio = _series_or_nan(merged, "odd_even_harmonic_energy_ratio")
-    salient_inharmonic_log_bin_count_up_to_5000hz = _series_or_nan(
-        merged, "salient_inharmonic_log_bin_count_up_to_5000hz"
+    salient_inharmonic_log_bin_count_up_to_body_ceiling = _series_or_nan(
+        merged, "salient_inharmonic_log_bin_count_up_to_body_ceiling"
     )
     salient_subbass_particle_count = _series_or_nan(merged, "salient_subbass_particle_count")
     salient_inharmonic_log_bin_count_up_to_density_ceiling_hz = _series_or_nan(
@@ -1384,7 +1437,7 @@ def build_spectral_density_metrics(
     )
     if salient_inharmonic_log_bin_count_up_to_density_ceiling_hz.isna().all():
         salient_inharmonic_log_bin_count_up_to_density_ceiling_hz = pd.to_numeric(
-            salient_inharmonic_log_bin_count_up_to_5000hz, errors="coerce"
+            salient_inharmonic_log_bin_count_up_to_body_ceiling, errors="coerce"
         )
     salient_subbass_particle_count_up_to_density_ceiling_hz = _series_or_nan(
         merged, "salient_subbass_particle_count_up_to_density_ceiling_hz"
@@ -1404,6 +1457,98 @@ def build_spectral_density_metrics(
     density_frequency_ceiling_hz = _series_or_nan(merged, "density_frequency_ceiling_hz")
     final_note_density_count_based = _series_or_nan(merged, "final_note_density_count_based")
     final_note_density_salience_weighted = _series_or_nan(merged, "final_note_density_salience_weighted")
+    density_body_weighted_sum_body_ceiling = _series_or_nan(merged, "density_body_weighted_sum_body_ceiling")
+    density_component_body_weighted_sum_body_ceiling = _series_or_nan(
+        merged, "density_component_body_weighted_sum_body_ceiling"
+    )
+    if density_component_body_weighted_sum_body_ceiling.isna().all():
+        density_component_body_weighted_sum_body_ceiling = _series_or_nan(
+            merged, "density_component_body_weighted_sum_body_ceiling"
+        )
+    density_component_body_weighted_sum_body_ceiling = _series_or_nan(
+        merged, "density_component_body_weighted_sum_body_ceiling"
+    )
+    if density_component_body_weighted_sum_body_ceiling.isna().all():
+        density_component_body_weighted_sum_body_ceiling = pd.to_numeric(
+            density_component_body_weighted_sum_body_ceiling, errors="coerce"
+        )
+    if density_body_weighted_sum_body_ceiling.isna().all():
+        density_body_weighted_sum_body_ceiling = pd.to_numeric(final_note_density_salience_weighted, errors="coerce")
+    if density_body_weighted_sum_body_ceiling.isna().all():
+        density_body_weighted_sum_body_ceiling = _series_or_nan(merged, "density_metric_raw")
+    harmonic_effective_component_count_body_ceiling = _series_or_nan(
+        merged, "harmonic_effective_component_count_body_ceiling"
+    )
+    normalized_harmonic_richness_body_ceiling = _series_or_nan(
+        merged, "normalized_harmonic_richness_body_ceiling"
+    )
+    body_density_per_expected_harmonic_slot_body_ceiling = _series_or_nan(
+        merged, "body_density_per_expected_harmonic_slot_body_ceiling"
+    )
+    pitch_normalized_harmonic_component_energy_body_ceiling = _series_or_nan(
+        merged, "pitch_normalized_harmonic_component_energy_body_ceiling"
+    )
+    richness_weighted_body_density_body_ceiling = _series_or_nan(
+        merged, "richness_weighted_body_density_body_ceiling"
+    )
+    harmonic_component_energy_sum_body_ceiling = _series_or_nan(
+        merged, "harmonic_component_energy_sum_body_ceiling"
+    )
+    if harmonic_component_energy_sum_body_ceiling.isna().all():
+        harmonic_component_energy_sum_body_ceiling = _series_or_nan(merged, "harmonic_component_energy_sum_body_ceiling")
+    inharmonic_component_energy_sum_body_ceiling = _series_or_nan(
+        merged, "inharmonic_component_energy_sum_body_ceiling"
+    )
+    if inharmonic_component_energy_sum_body_ceiling.isna().all():
+        inharmonic_component_energy_sum_body_ceiling = _series_or_nan(merged, "inharmonic_component_energy_sum_body_ceiling")
+    subbass_component_energy_sum_body_ceiling = _series_or_nan(
+        merged, "subbass_component_energy_sum_body_ceiling"
+    )
+    if subbass_component_energy_sum_body_ceiling.isna().all():
+        subbass_component_energy_sum_body_ceiling = _series_or_nan(merged, "subbass_component_energy_sum")
+    harmonic_component_energy_sum_body_ceiling = _series_or_nan(merged, "harmonic_component_energy_sum_body_ceiling")
+    inharmonic_component_energy_sum_body_ceiling = _series_or_nan(merged, "inharmonic_component_energy_sum_body_ceiling")
+    subbass_component_energy_sum = _series_or_nan(merged, "subbass_component_energy_sum")
+    harmonic_body_energy_sum_body_ceiling = _series_or_nan(merged, "harmonic_body_energy_sum_body_ceiling")
+    inharmonic_body_energy_sum_body_ceiling = _series_or_nan(merged, "inharmonic_body_energy_sum_body_ceiling")
+    subbass_rumble_energy_sum = _series_or_nan(merged, "subbass_rumble_energy_sum")
+    harmonic_full_spectrum_energy_sum_20khz = _series_or_nan(merged, "harmonic_full_spectrum_energy_sum_20khz")
+    inharmonic_full_spectrum_energy_sum_20khz = _series_or_nan(merged, "inharmonic_full_spectrum_energy_sum_20khz")
+    density_full_spectrum_weighted_sum_20khz = _series_or_nan(merged, "density_full_spectrum_weighted_sum_20khz")
+    high_frequency_spectral_activity_sum = _series_or_nan(merged, "high_frequency_spectral_activity_sum")
+    spectral_extension_index_20khz = _series_or_nan(merged, "spectral_extension_index_20khz")
+    brightness_or_upper_spectral_activity_index_20khz = _series_or_nan(
+        merged, "brightness_or_upper_spectral_activity_index_20khz"
+    )
+    full_spectrum_harmonic_candidate_count_20khz = _series_or_nan(
+        merged, "full_spectrum_harmonic_candidate_count_20khz"
+    )
+    harmonic_candidate_count_20khz = _series_or_nan(merged, "harmonic_candidate_count_20khz")
+    validated_harmonic_component_count_body_ceiling = _series_or_nan(
+        merged, "validated_harmonic_component_count_body_ceiling"
+    )
+    probable_harmonic_component_count_body_ceiling = _series_or_nan(
+        merged, "probable_harmonic_component_count_body_ceiling"
+    )
+    probable_harmonic_component_energy_sum_body_ceiling = _series_or_nan(
+        merged, "probable_harmonic_component_energy_sum_body_ceiling"
+    )
+    if validated_harmonic_component_count_body_ceiling.isna().all():
+        validated_harmonic_component_count_body_ceiling = _series_or_nan(
+            merged, "validated_harmonic_component_count_body_ceiling"
+        )
+    validated_harmonic_component_count_body_ceiling = _series_or_nan(
+        merged, "validated_harmonic_component_count_body_ceiling"
+    )
+    spectral_slope_db_per_harmonic = _series_or_nan(merged, "spectral_slope_db_per_harmonic")
+    body_density_frequency_ceiling_hz = _series_or_nan(merged, "body_density_frequency_ceiling_hz")
+    if body_density_frequency_ceiling_hz.isna().all():
+        body_density_frequency_ceiling_hz = pd.to_numeric(density_frequency_ceiling_hz, errors="coerce")
+    if body_density_frequency_ceiling_hz.isna().all():
+        body_density_frequency_ceiling_hz = pd.Series(float(BODY_DENSITY_MAX_HZ), index=merged.index)
+    full_spectrum_frequency_ceiling_hz = _series_or_nan(merged, "full_spectrum_frequency_ceiling_hz")
+    if full_spectrum_frequency_ceiling_hz.isna().all():
+        full_spectrum_frequency_ceiling_hz = pd.Series(float(FULL_SPECTRUM_MAX_HZ), index=merged.index)
 
     if harmonic_density_weight.isna().all():
         harmonic_density_weight = pd.Series(1.0, index=merged.index)
@@ -1414,9 +1559,13 @@ def build_spectral_density_metrics(
     if density_summation_mode.isna().all() or density_summation_mode.astype(str).str.strip().eq("").all():
         density_summation_mode = pd.Series("his_note_adaptive", index=merged.index)
     if density_salience_threshold_db.isna().all():
-        density_salience_threshold_db = pd.Series(-45.0, index=merged.index)
+        density_salience_threshold_db = _series_or_nan(merged, "db_min")
+    if density_salience_threshold_db.isna().all():
+        density_salience_threshold_db = pd.Series(-80.0, index=merged.index)
     if density_frequency_ceiling_hz.isna().all():
-        density_frequency_ceiling_hz = pd.Series(5000.0, index=merged.index)
+        density_frequency_ceiling_hz = pd.to_numeric(full_spectrum_frequency_ceiling_hz, errors="coerce")
+    if density_frequency_ceiling_hz.isna().all():
+        density_frequency_ceiling_hz = pd.Series(float(FULL_SPECTRUM_MAX_HZ), index=merged.index)
     _valid_primary_str = _series_str(merged, "valid_for_primary_statistics").fillna("")
     valid_for_primary_statistics = _valid_primary_str.astype(str).str.strip().str.lower().isin(
         {"true", "1", "yes", "y"}
@@ -1436,8 +1585,8 @@ def build_spectral_density_metrics(
 
     if final_note_density_count_based.isna().all():
         final_note_density_count_based = (
-            _w_h_eff * pd.to_numeric(salient_harmonic_order_count_up_to_5000hz, errors="coerce").fillna(0.0)
-            + _w_i_eff * pd.to_numeric(salient_inharmonic_log_bin_count_up_to_5000hz, errors="coerce").fillna(0.0)
+            _w_h_eff * pd.to_numeric(salient_harmonic_order_count_up_to_body_ceiling, errors="coerce").fillna(0.0)
+            + _w_i_eff * pd.to_numeric(salient_inharmonic_log_bin_count_up_to_body_ceiling, errors="coerce").fillna(0.0)
             + _w_s_eff * pd.to_numeric(salient_subbass_particle_count, errors="coerce").fillna(0.0)
         )
     if final_note_density_salience_weighted.isna().all():
@@ -1459,6 +1608,23 @@ def build_spectral_density_metrics(
         )
 
     cdm_series = _pick_series(merged, "Combined Density Metric")
+
+    # note_density_final — principled scalar density for each note:
+    #   ER_H * harmonic_density_sum + ER_I * inharmonic_density_sum
+    #   + ER_S * subbass_density_sum
+    # Recomputed here from this sheet's own (normalized) measured energy
+    # ratios and per-band density sums so the displayed columns stay
+    # internally consistent. NaN in any of the six inputs propagates to NaN.
+    _ndf_h = pd.to_numeric(component_harmonic_energy_ratio, errors="coerce") * pd.to_numeric(
+        _pick_series(merged, "harmonic_density_sum"), errors="coerce"
+    )
+    _ndf_i = pd.to_numeric(component_inharmonic_energy_ratio, errors="coerce") * pd.to_numeric(
+        _pick_series(merged, "inharmonic_density_sum"), errors="coerce"
+    )
+    _ndf_s = pd.to_numeric(component_subbass_energy_ratio, errors="coerce") * pd.to_numeric(
+        _pick_series(merged, "subbass_density_sum"), errors="coerce"
+    )
+    note_density_final = _ndf_h + _ndf_i + _ndf_s
 
     out = pd.DataFrame(
         {
@@ -1500,39 +1666,85 @@ def build_spectral_density_metrics(
             "acoustic_validation_status": _series_str(merged, "acoustic_validation_status"),
             "f0_detuning_cents_from_nominal": _series_or_nan(merged, "f0_detuning_cents_from_nominal"),
             "density_metric_raw": _series_or_nan(merged, "density_metric_raw"),
+            "density_component_body_weighted_sum_body_ceiling": density_component_body_weighted_sum_body_ceiling,
+            "density_component_body_weighted_sum_body_ceiling": density_component_body_weighted_sum_body_ceiling,
+            "density_body_weighted_sum_body_ceiling": density_body_weighted_sum_body_ceiling,
+            "harmonic_effective_component_count_body_ceiling": harmonic_effective_component_count_body_ceiling,
+            "normalized_harmonic_richness_body_ceiling": normalized_harmonic_richness_body_ceiling,
+            "body_density_per_expected_harmonic_slot_body_ceiling": body_density_per_expected_harmonic_slot_body_ceiling,
+            "pitch_normalized_harmonic_component_energy_body_ceiling": pitch_normalized_harmonic_component_energy_body_ceiling,
+            "richness_weighted_body_density_body_ceiling": richness_weighted_body_density_body_ceiling,
+            "harmonic_component_energy_sum_body_ceiling": harmonic_component_energy_sum_body_ceiling,
+            "inharmonic_component_energy_sum_body_ceiling": inharmonic_component_energy_sum_body_ceiling,
+            "subbass_component_energy_sum_body_ceiling": subbass_component_energy_sum_body_ceiling,
+            "harmonic_component_energy_sum_body_ceiling": harmonic_component_energy_sum_body_ceiling,
+            "inharmonic_component_energy_sum_body_ceiling": inharmonic_component_energy_sum_body_ceiling,
+            "subbass_component_energy_sum": subbass_component_energy_sum,
+            "harmonic_body_energy_sum_body_ceiling": harmonic_body_energy_sum_body_ceiling,
+            "inharmonic_body_energy_sum_body_ceiling": inharmonic_body_energy_sum_body_ceiling,
+            "subbass_rumble_energy_sum": subbass_rumble_energy_sum,
+            "spectral_slope_db_per_harmonic": spectral_slope_db_per_harmonic,
+            "density_full_spectrum_weighted_sum_20khz": density_full_spectrum_weighted_sum_20khz,
+            "harmonic_full_spectrum_energy_sum_20khz": harmonic_full_spectrum_energy_sum_20khz,
+            "inharmonic_full_spectrum_energy_sum_20khz": inharmonic_full_spectrum_energy_sum_20khz,
+            "high_frequency_spectral_activity_sum": high_frequency_spectral_activity_sum,
+            "spectral_extension_index_20khz": spectral_extension_index_20khz,
+            "brightness_or_upper_spectral_activity_index_20khz": brightness_or_upper_spectral_activity_index_20khz,
+            "full_spectrum_harmonic_candidate_count_20khz": full_spectrum_harmonic_candidate_count_20khz,
+            "harmonic_candidate_count_20khz": harmonic_candidate_count_20khz,
+            "validated_harmonic_component_count_body_ceiling": validated_harmonic_component_count_body_ceiling,
+            "probable_harmonic_component_count_body_ceiling": probable_harmonic_component_count_body_ceiling,
+            "probable_harmonic_component_energy_sum_body_ceiling": probable_harmonic_component_energy_sum_body_ceiling,
+            "validated_harmonic_component_count_body_ceiling": validated_harmonic_component_count_body_ceiling,
             "density_metric_raw_source_sheet": "Density_Metrics",
             "energy_weighted_component_density_diagnostic": _series_or_nan(
                 merged, "density_metric_raw"
             ),
             "density_metric_normalized": _series_or_nan(merged, "density_metric_normalized"),
-            "density_weighted_sum": _series_or_nan(merged, "density_weighted_sum"),
+            "density_weighted_sum": (
+                richness_weighted_body_density_body_ceiling
+                if not richness_weighted_body_density_body_ceiling.isna().all()
+                else _series_or_nan(merged, "density_weighted_sum")
+            ),
             "density_log_weighted": _series_or_nan(merged, "density_log_weighted"),
             "Total sum": _series_or_nan(merged, "Total sum"),
             "effective_partial_density": _series_or_nan(merged, "effective_partial_density"),
             "body_weighted_effective_density": body_weighted_effective_density,
             "low_mid_energy_ratio": low_mid_energy_ratio,
             "harmonic_body_density": harmonic_body_density,
-            "expected_harmonic_slots_up_to_5000hz": expected_harmonic_slots_up_to_5000hz,
+            "expected_harmonic_slots_up_to_body_ceiling": expected_harmonic_slots_up_to_body_ceiling,
             "harmonic_body_density_normalized": harmonic_body_density_normalized,
             "residual_body_contribution": residual_body_contribution,
             "residual_body_contribution_capped": residual_body_contribution_capped,
-            "salient_harmonic_order_count_up_to_5000hz": salient_harmonic_order_count_up_to_5000hz,
-            "expected_harmonic_order_count_up_to_5000hz": expected_harmonic_order_count_up_to_5000hz,
-            "salient_harmonic_coverage_up_to_5000hz": salient_harmonic_coverage_up_to_5000hz,
-            "salient_harmonic_mass_up_to_5000hz": salient_harmonic_mass_up_to_5000hz,
+            "salient_harmonic_order_count_up_to_body_ceiling": salient_harmonic_order_count_up_to_body_ceiling,
+            "expected_harmonic_order_count_up_to_body_ceiling": expected_harmonic_order_count_up_to_body_ceiling,
+            "salient_harmonic_coverage_up_to_body_ceiling": salient_harmonic_coverage_up_to_body_ceiling,
+            "theoretical_harmonic_order_count_up_to_body_ceiling": theoretical_harmonic_order_count_up_to_body_ceiling,
+            "detected_salient_harmonic_order_count_up_to_body_ceiling": detected_salient_harmonic_order_count_up_to_body_ceiling,
+            "salient_harmonic_coverage_ratio_up_to_body_ceiling": salient_harmonic_coverage_ratio_up_to_body_ceiling,
+            "salient_harmonic_mass_up_to_body_ceiling": salient_harmonic_mass_up_to_body_ceiling,
             "salient_harmonic_order_count_up_to_density_ceiling_hz": salient_harmonic_order_count_up_to_density_ceiling_hz,
             "expected_harmonic_order_count_up_to_density_ceiling_hz": expected_harmonic_order_count_up_to_density_ceiling_hz,
             "salient_harmonic_coverage_up_to_density_ceiling_hz": salient_harmonic_coverage_up_to_density_ceiling_hz,
             "salient_harmonic_mass_up_to_density_ceiling_hz": salient_harmonic_mass_up_to_density_ceiling_hz,
-            "salient_odd_harmonic_count_up_to_5000hz": salient_odd_harmonic_count_up_to_5000hz,
-            "salient_even_harmonic_count_up_to_5000hz": salient_even_harmonic_count_up_to_5000hz,
+            "salient_odd_harmonic_count_up_to_body_ceiling": salient_odd_harmonic_count_up_to_body_ceiling,
+            "salient_even_harmonic_count_up_to_body_ceiling": salient_even_harmonic_count_up_to_body_ceiling,
             "odd_even_harmonic_energy_ratio": odd_even_harmonic_energy_ratio,
-            "salient_inharmonic_log_bin_count_up_to_5000hz": salient_inharmonic_log_bin_count_up_to_5000hz,
+            "salient_inharmonic_log_bin_count_up_to_body_ceiling": salient_inharmonic_log_bin_count_up_to_body_ceiling,
             "salient_subbass_particle_count": salient_subbass_particle_count,
             "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz": salient_inharmonic_log_bin_count_up_to_density_ceiling_hz,
             "salient_subbass_particle_count_up_to_density_ceiling_hz": salient_subbass_particle_count_up_to_density_ceiling_hz,
             "final_note_density_count_based": final_note_density_count_based,
             "final_note_density_salience_weighted": final_note_density_salience_weighted,
+            "note_density_final": note_density_final,
+            "note_density_final_ci_low": _series_or_nan(merged, "note_density_final_ci_low"),
+            "note_density_final_ci_high": _series_or_nan(merged, "note_density_final_ci_high"),
+            "note_density_final_rel_uncertainty": _series_or_nan(
+                merged, "note_density_final_rel_uncertainty"
+            ),
+            "note_density_final_uncertainty_sources": _series_or_nan(
+                merged, "note_density_final_uncertainty_sources"
+            ),
             "harmonic_density_component": harmonic_density_component,
             "inharmonic_density_component": inharmonic_density_component,
             "subbass_density_component": subbass_density_component,
@@ -1566,6 +1778,9 @@ def build_spectral_density_metrics(
             "density_weighted_sum_semantic_status": _series_str(merged, "density_weighted_sum_semantic_status"),
             "density_salience_threshold_db": density_salience_threshold_db,
             "density_frequency_ceiling_hz": density_frequency_ceiling_hz,
+            "body_density_frequency_ceiling_hz": body_density_frequency_ceiling_hz,
+            "full_spectrum_frequency_ceiling_hz": full_spectrum_frequency_ceiling_hz,
+            "harmonic_region_occupancy_count": harmonic_region_occupancy_count,
             "harmonic_occupancy_detected_order_count": harmonic_occupancy_detected_order_count,
             "harmonic_occupancy_ratio": _series_or_nan(merged, "harmonic_occupancy_ratio"),
             "expected_harmonic_slot_count": expected_harmonic_slot_count,
@@ -1598,7 +1813,6 @@ def build_spectral_density_metrics(
             "component_harmonic_energy_ratio": component_harmonic_energy_ratio,
             "component_inharmonic_energy_ratio": component_inharmonic_energy_ratio,
             "component_subbass_energy_ratio": component_subbass_energy_ratio,
-            "harmonic_order_count": _series_or_nan(merged, "harmonic_order_count"),
             "harmonic_alignment_status": _series_str(merged, "harmonic_alignment_status"),
             "harmonic_alignment_coverage_ratio": _series_or_nan(merged, "harmonic_alignment_coverage_ratio"),
             "mean_abs_harmonic_deviation_cents": _series_or_nan(merged, "mean_abs_harmonic_deviation_cents"),
@@ -1688,7 +1902,7 @@ def build_spectral_density_metrics(
             warnings.append(
                 "Run-parameter comparability warning: "
                 f"{_pp_total - _pp_true}/{_pp_total} note rows are not in the primary "
-                "comparable profile (wf=log, threshold=-45 dB, ceiling=5000 Hz). "
+                "comparable profile (wf=log, threshold/ceiling runtime-configured). "
                 "Use Primary_Statistics_Filtered for thesis-grade primary statistics."
             )
 
@@ -1907,13 +2121,13 @@ def build_charts_data(sd: pd.DataFrame) -> pd.DataFrame:
         "harmonic_body_density_normalized",
         "core_residual_energy_ratio",
         "spectral_entropy",
-        "salient_harmonic_order_count_up_to_5000hz",
-        "expected_harmonic_order_count_up_to_5000hz",
-        "salient_harmonic_coverage_up_to_5000hz",
+        "salient_harmonic_order_count_up_to_body_ceiling",
+        "expected_harmonic_order_count_up_to_body_ceiling",
+        "salient_harmonic_coverage_up_to_body_ceiling",
         "salient_harmonic_order_count_up_to_density_ceiling_hz",
         "expected_harmonic_order_count_up_to_density_ceiling_hz",
         "salient_harmonic_coverage_up_to_density_ceiling_hz",
-        "salient_inharmonic_log_bin_count_up_to_5000hz",
+        "salient_inharmonic_log_bin_count_up_to_body_ceiling",
         "salient_subbass_particle_count",
         "final_note_density_count_based",
         "final_note_density_salience_weighted",
@@ -2213,7 +2427,95 @@ def build_metadata_rows(
         "notes_count": len(sd),
         "pitch_range": pitch_range,
         "harmonic_slot_coverage_ratio_formula": "harmonic_slot_matched_count / harmonic_slot_expected_count",
-        "harmonic_occupancy_detected_order_count_definition": "count of unique accepted harmonic-order bins from acoustic occupancy path",
+        "harmonic_region_occupancy_count_definition": (
+            "Occupancy/slot-derived descriptor; not a strict count of detected harmonic partial orders "
+            "and not bounded by floor(ceiling/f0)."
+        ),
+        "harmonic_occupancy_detected_order_count_definition": (
+            "DEPRECATED alias of harmonic_region_occupancy_count. "
+            "Occupancy/slot-derived descriptor; not a strict count of detected harmonic partial orders "
+            "and not bounded by floor(ceiling/f0)."
+        ),
+        "theoretical_harmonic_order_count_up_to_body_ceiling_definition": (
+            "alias of expected_harmonic_order_count_up_to_body_ceiling (= floor(body_density_frequency_ceiling_hz/f0))"
+        ),
+        "detected_salient_harmonic_order_count_up_to_body_ceiling_definition": (
+            "alias of salient_harmonic_order_count_up_to_body_ceiling"
+        ),
+        "salient_harmonic_coverage_ratio_up_to_body_ceiling_definition": (
+            "alias of salient_harmonic_coverage_up_to_body_ceiling"
+        ),
+        "legacy_high_ceiling_harmonic_slot_index_count_definition": (
+            "legacy high-ceiling harmonic-slot index count (historical Harmonic Count/Harmonic Count (N)); "
+            "not a fixed-ceiling physical harmonic-order count"
+        ),
+        "density_body_weighted_sum_body_ceiling_definition": (
+            "alias of density_component_body_weighted_sum_body_ceiling (component-based body metric)"
+        ),
+        "density_component_body_weighted_sum_body_ceiling_definition": (
+            "canonical component-based body metric at configured body ceiling "
+            "(see body_density_frequency_ceiling_hz); legacy *_body_ceiling field is an alias"
+        ),
+        "density_component_body_weighted_sum_body_ceiling_definition": (
+            "legacy alias of density_component_body_weighted_sum_body_ceiling"
+        ),
+        "harmonic_component_energy_sum_body_ceiling_definition": (
+            "sum Power_raw of Harmonic Spectrum rows where include_for_density=True and "
+            "Frequency<=body_density_frequency_ceiling_hz"
+        ),
+        "harmonic_component_energy_sum_body_ceiling_definition": (
+            "legacy alias of harmonic_component_energy_sum_body_ceiling"
+        ),
+        "inharmonic_component_energy_sum_body_ceiling_definition": (
+            "sum Power_raw of inharmonic/nonharmonic peak-candidate rows with "
+            "Frequency<=body_density_frequency_ceiling_hz"
+        ),
+        "inharmonic_component_energy_sum_body_ceiling_definition": (
+            "legacy alias of inharmonic_component_energy_sum_body_ceiling"
+        ),
+        "subbass_component_energy_sum_body_ceiling_definition": (
+            "sum Power_raw of accepted subbass residual candidates under subbass policy "
+            "with current body-ceiling configuration"
+        ),
+        "subbass_component_energy_sum_definition": (
+            "legacy alias of subbass_component_energy_sum_body_ceiling"
+        ),
+        "harmonic_body_energy_sum_body_ceiling_definition": "harmonic component energy sum with runtime body ceiling",
+        "inharmonic_body_energy_sum_body_ceiling_definition": "inharmonic component energy sum with runtime body ceiling",
+        "subbass_rumble_energy_sum_definition": "subbass/rumble component energy sum used in body-density weighting",
+        "body_band_harmonic_bin_energy_sum_body_ceiling_definition": (
+            "diagnostic-only bin-integrated harmonic-band energy within runtime body ceiling"
+        ),
+        "body_band_residual_bin_energy_sum_body_ceiling_definition": (
+            "diagnostic-only bin-integrated residual-band energy within runtime body ceiling"
+        ),
+        "body_band_total_bin_energy_sum_body_ceiling_definition": (
+            "diagnostic-only total bin-integrated body-band energy within runtime body ceiling"
+        ),
+        "density_body_band_bin_integrated_index_body_ceiling_definition": (
+            "diagnostic-only weighted index from bin-integrated body-band energies; not the primary fatness metric"
+        ),
+        "density_full_spectrum_weighted_sum_20khz_definition": (
+            "full-spectrum weighted diagnostic sum (<=20000 Hz); not the primary body/fatness metric"
+        ),
+        "harmonic_full_spectrum_energy_sum_20khz_definition": (
+            "harmonic full-spectrum energy sum (<=20000 Hz diagnostic/extension family)"
+        ),
+        "inharmonic_full_spectrum_energy_sum_20khz_definition": (
+            "inharmonic full-spectrum energy sum (<=20000 Hz diagnostic/extension family)"
+        ),
+        "high_frequency_spectral_activity_sum_definition": (
+            "upper-band spectral activity above body ceiling; diagnostic for brightness/extension"
+        ),
+        "spectral_extension_index_20khz_definition": (
+            "ratio-like extension indicator comparing full-spectrum to body-limited weighted energy"
+        ),
+        "brightness_or_upper_spectral_activity_index_20khz_definition": (
+            "upper-band activity index in the full-spectrum diagnostic family (20 kHz ceiling)"
+        ),
+        "full_spectrum_harmonic_candidate_count_20khz_definition": (
+            "harmonic candidate count under full-spectrum ceiling (20 kHz); not a body-density harmonic-order metric"
+        ),
         "harmonic_occupancy_ratio_formula": (
             "unique harmonic-order bins (nearest n*f0 within harmonic_tolerance_cents, excluding subbass) "
             "/ expected_harmonic_slot_count"
@@ -2224,7 +2526,7 @@ def build_metadata_rows(
         ),
         "body_weighted_effective_density_formula": (
             "(sum(w_body_i*sqrt(P_i))^2)/sum((w_body_i*sqrt(P_i))^2), "
-            "with w_body(f)=1/(1+(f/1800)^2) on salient 20..5000 Hz peaks"
+            "with w_body(f)=1/(1+(f/1800)^2) on salient peaks up to runtime body ceiling"
         ),
         "spectral_body_thickness_index_formula": (
             "0.45*z(body_weighted_effective_density)+0.25*z(low_mid_energy_ratio)"
@@ -2684,12 +2986,12 @@ def _write_dashboard_layout(
         ("Mean low_mid_energy_ratio", mean_col("low_mid_energy_ratio")),
         ("Mean harmonic_body_density_normalized", mean_col("harmonic_body_density_normalized")),
         (
-            "Mean salient_harmonic_order_count_up_to_5000hz",
-            mean_col("salient_harmonic_order_count_up_to_5000hz"),
+            "Mean salient_harmonic_order_count_up_to_body_ceiling",
+            mean_col("salient_harmonic_order_count_up_to_body_ceiling"),
         ),
         (
-            "Corr(MIDI, salient_harmonic_order_count_up_to_5000hz)",
-            corr_with_midi("salient_harmonic_order_count_up_to_5000hz"),
+            "Corr(MIDI, salient_harmonic_order_count_up_to_body_ceiling)",
+            corr_with_midi("salient_harmonic_order_count_up_to_body_ceiling"),
         ),
         (
             "Mean final_note_density_salience_weighted",
@@ -2700,10 +3002,10 @@ def _write_dashboard_layout(
             corr_with_midi("final_note_density_salience_weighted"),
         ),
         (
-            "Corr(final_note_density_salience_weighted, salient_harmonic_order_count_up_to_5000hz)",
+            "Corr(final_note_density_salience_weighted, salient_harmonic_order_count_up_to_body_ceiling)",
             corr_between(
                 "final_note_density_salience_weighted",
-                "salient_harmonic_order_count_up_to_5000hz",
+                "salient_harmonic_order_count_up_to_body_ceiling",
             ),
         ),
         ("Mean harmonic_occupancy_ratio", mean_col("harmonic_occupancy_ratio")),
@@ -2776,27 +3078,27 @@ def _write_dashboard_layout(
                 v = dash.cell(rr, 8, float(row["spectral_body_thickness_index"]))
                 v.number_format = "0.000"
                 rr += 1
-    if {"Note", "salient_harmonic_order_count_up_to_5000hz"}.issubset(sd.columns):
-        rank_df2 = sd[["Note", "salient_harmonic_order_count_up_to_5000hz"]].copy()
-        rank_df2["salient_harmonic_order_count_up_to_5000hz"] = pd.to_numeric(
-            rank_df2["salient_harmonic_order_count_up_to_5000hz"], errors="coerce"
+    if {"Note", "salient_harmonic_order_count_up_to_body_ceiling"}.issubset(sd.columns):
+        rank_df2 = sd[["Note", "salient_harmonic_order_count_up_to_body_ceiling"]].copy()
+        rank_df2["salient_harmonic_order_count_up_to_body_ceiling"] = pd.to_numeric(
+            rank_df2["salient_harmonic_order_count_up_to_body_ceiling"], errors="coerce"
         )
-        rank_df2 = rank_df2.dropna(subset=["salient_harmonic_order_count_up_to_5000hz"])
+        rank_df2 = rank_df2.dropna(subset=["salient_harmonic_order_count_up_to_body_ceiling"])
         if not rank_df2.empty:
-            top5c = rank_df2.nlargest(5, "salient_harmonic_order_count_up_to_5000hz")
-            bot5c = rank_df2.nsmallest(5, "salient_harmonic_order_count_up_to_5000hz")
+            top5c = rank_df2.nlargest(5, "salient_harmonic_order_count_up_to_body_ceiling")
+            bot5c = rank_df2.nsmallest(5, "salient_harmonic_order_count_up_to_body_ceiling")
             start_row2 = r0 + max(half, len(kpis) - half) + 10
-            dash.cell(start_row2, 4, "Top 5 by salient_harmonic_order_count_up_to_5000hz").font = SUBHEADER_FONT
+            dash.cell(start_row2, 4, "Top 5 by salient_harmonic_order_count_up_to_body_ceiling").font = SUBHEADER_FONT
             rr = start_row2 + 1
             for _, row in top5c.iterrows():
                 dash.cell(rr, 4, str(row["Note"]))
-                dash.cell(rr, 5, float(row["salient_harmonic_order_count_up_to_5000hz"]))
+                dash.cell(rr, 5, float(row["salient_harmonic_order_count_up_to_body_ceiling"]))
                 rr += 1
-            dash.cell(start_row2, 7, "Bottom 5 by salient_harmonic_order_count_up_to_5000hz").font = SUBHEADER_FONT
+            dash.cell(start_row2, 7, "Bottom 5 by salient_harmonic_order_count_up_to_body_ceiling").font = SUBHEADER_FONT
             rr = start_row2 + 1
             for _, row in bot5c.iterrows():
                 dash.cell(rr, 7, str(row["Note"]))
-                dash.cell(rr, 8, float(row["salient_harmonic_order_count_up_to_5000hz"]))
+                dash.cell(rr, 8, float(row["salient_harmonic_order_count_up_to_body_ceiling"]))
                 rr += 1
     if {"Note", "final_note_density_salience_weighted"}.issubset(sd.columns):
         rank_df3 = sd[["Note", "final_note_density_salience_weighted"]].copy()
@@ -2929,14 +3231,14 @@ def _dashboard_charts(wb: Workbook, ws, charts_df: pd.DataFrame, data_start_row:
     ws.add_chart(chart5, f"A{anchor_row}")
     anchor_row += 22
 
-    if "salient_harmonic_order_count_up_to_5000hz" in charts_df.columns:
+    if "salient_harmonic_order_count_up_to_body_ceiling" in charts_df.columns:
         chart6 = LineChart()
-        chart6.title = "MIDI vs salient_harmonic_order_count_up_to_5000hz"
-        chart6.y_axis.title = "salient_harmonic_order_count_up_to_5000hz"
+        chart6.title = "MIDI vs salient_harmonic_order_count_up_to_body_ceiling"
+        chart6.y_axis.title = "salient_harmonic_order_count_up_to_body_ceiling"
         chart6.x_axis.title = "MIDI"
         v = Reference(
             cd_sheet,
-            min_col=ref_col("salient_harmonic_order_count_up_to_5000hz"),
+            min_col=ref_col("salient_harmonic_order_count_up_to_body_ceiling"),
             min_row=1,
             max_row=data_end,
         )
@@ -2976,6 +3278,49 @@ def build_workbook(
         meta,
         include_legacy_cdm_mean=include_legacy_cdm_mean,
     )
+    _dws_candidates = (
+        "richness_weighted_body_density_body_ceiling",
+        "body_density_per_expected_harmonic_slot_body_ceiling",
+        "density_component_body_weighted_sum_body_ceiling",
+        "density_component_body_weighted_sum_body_ceiling",
+        "density_body_weighted_sum_body_ceiling",
+    )
+    _dws_selected = None
+    for _c in _dws_candidates:
+        if _c not in sd.columns:
+            continue
+        _s = pd.to_numeric(sd[_c], errors="coerce")
+        if _s.notna().any():
+            sd["density_weighted_sum"] = _s
+            _dws_selected = _c
+            break
+    if _dws_selected is not None:
+        sd["density_weighted_sum_alias_of"] = _dws_selected
+        sd["density_weighted_sum_semantic_status"] = "body_limited_runtime_ceiling_primary_metric"
+    # Keep debug/bin/candidate counts out of research-facing sheets.
+    for _diag_col in ("harmonic_bin_count", "harmonic_peak_candidate_count"):
+        if _diag_col in sd.columns:
+            sd = sd.drop(columns=[_diag_col], errors="ignore")
+    if "legacy_high_ceiling_harmonic_slot_index_count" not in sd.columns:
+        if "Harmonic Count (N)" in sd.columns:
+            sd["legacy_high_ceiling_harmonic_slot_index_count"] = pd.to_numeric(
+                sd["Harmonic Count (N)"], errors="coerce"
+            )
+        elif "Harmonic Count" in sd.columns:
+            sd["legacy_high_ceiling_harmonic_slot_index_count"] = pd.to_numeric(
+                sd["Harmonic Count"], errors="coerce"
+            )
+    sd = sd.drop(
+        columns=[
+            "Harmonic Count",
+            "Harmonic Count (N)",
+            "Harmonic Count (relative)",
+            "Harmonic Ceiling (relative)",
+            "harmonic_order_count",
+            "harmonic_occupancy_detected_order_count",
+        ],
+        errors="ignore",
+    )
     apply_per_note_chart_paths(sd, source, merged, warnings)
     required_front_cols = [
         "Technique",
@@ -2987,22 +3332,41 @@ def build_workbook(
         "f0_used_for_density_hz",
         "f0_used_for_density_source",
         "acoustic_f0_status",
+        "density_weighted_sum",
+        "density_weighted_sum_alias_of",
+        "density_weighted_sum_semantic_status",
+        "density_component_body_weighted_sum_body_ceiling",
+        "harmonic_component_energy_sum_body_ceiling",
+        "inharmonic_component_energy_sum_body_ceiling",
+        "density_component_body_weighted_sum_body_ceiling",
+        "harmonic_component_energy_sum_body_ceiling",
+        "inharmonic_component_energy_sum_body_ceiling",
+        "subbass_component_energy_sum",
+        "spectral_slope_db_per_harmonic",
+        "validated_harmonic_component_count_body_ceiling",
+        "probable_harmonic_component_count_body_ceiling",
+        "probable_harmonic_component_energy_sum_body_ceiling",
+        "validated_harmonic_component_count_body_ceiling",
+        "harmonic_candidate_count_20khz",
         "spectral_body_thickness_index",
         "body_weighted_effective_density",
         "low_mid_energy_ratio",
         "harmonic_body_density_normalized",
-        "salient_harmonic_order_count_up_to_5000hz",
-        "expected_harmonic_order_count_up_to_5000hz",
-        "salient_harmonic_coverage_up_to_5000hz",
-        "salient_harmonic_mass_up_to_5000hz",
+        "salient_harmonic_order_count_up_to_body_ceiling",
+        "expected_harmonic_order_count_up_to_body_ceiling",
+        "salient_harmonic_coverage_up_to_body_ceiling",
+        "theoretical_harmonic_order_count_up_to_body_ceiling",
+        "detected_salient_harmonic_order_count_up_to_body_ceiling",
+        "salient_harmonic_coverage_ratio_up_to_body_ceiling",
+        "salient_harmonic_mass_up_to_body_ceiling",
         "salient_harmonic_order_count_up_to_density_ceiling_hz",
         "expected_harmonic_order_count_up_to_density_ceiling_hz",
         "salient_harmonic_coverage_up_to_density_ceiling_hz",
         "salient_harmonic_mass_up_to_density_ceiling_hz",
-        "salient_odd_harmonic_count_up_to_5000hz",
-        "salient_even_harmonic_count_up_to_5000hz",
+        "salient_odd_harmonic_count_up_to_body_ceiling",
+        "salient_even_harmonic_count_up_to_body_ceiling",
         "odd_even_harmonic_energy_ratio",
-        "salient_inharmonic_log_bin_count_up_to_5000hz",
+        "salient_inharmonic_log_bin_count_up_to_body_ceiling",
         "salient_subbass_particle_count",
         "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz",
         "salient_subbass_particle_count_up_to_density_ceiling_hz",
@@ -3018,7 +3382,8 @@ def build_workbook(
         "density_summation_mode",
         "density_salience_threshold_db",
         "density_frequency_ceiling_hz",
-        "harmonic_occupancy_detected_order_count",
+        "harmonic_region_occupancy_count",
+        "legacy_high_ceiling_harmonic_slot_index_count",
         "harmonic_occupancy_ratio",
         "expected_harmonic_slot_count",
         "detected_harmonic_slot_count",
@@ -3046,6 +3411,9 @@ def build_workbook(
         for c, s in required_front_backup.items():
             if c not in sd.columns:
                 sd[c] = s
+    _front = [c for c in required_front_cols if c in sd.columns]
+    _rest = [c for c in sd.columns if c not in _front]
+    sd = sd.loc[:, _front + _rest].copy()
     cb = build_component_balance(sd, warnings)
     vs = build_validation_summary(merged, sd, warnings)
     try:
@@ -3083,8 +3451,8 @@ def build_workbook(
         # Keep key final-density plotting columns visible in Charts_Data even when
         # a specific source workbook leaves them all-missing.
         for _cc in (
-            "salient_harmonic_order_count_up_to_5000hz",
-            "salient_inharmonic_log_bin_count_up_to_5000hz",
+            "salient_harmonic_order_count_up_to_body_ceiling",
+            "salient_inharmonic_log_bin_count_up_to_body_ceiling",
             "salient_subbass_particle_count",
             "final_note_density_count_based",
             "final_note_density_salience_weighted",
@@ -3176,6 +3544,22 @@ def build_workbook(
         "arithmetic_validation_status",
         "acoustic_validation_status",
         "density_metric_raw",
+        "density_component_body_weighted_sum_body_ceiling",
+        "harmonic_component_energy_sum_body_ceiling",
+        "inharmonic_component_energy_sum_body_ceiling",
+        "density_component_body_weighted_sum_body_ceiling",
+        "harmonic_component_energy_sum_body_ceiling",
+        "inharmonic_component_energy_sum_body_ceiling",
+        "subbass_component_energy_sum",
+        "spectral_slope_db_per_harmonic",
+        "density_body_weighted_sum_body_ceiling",
+        "harmonic_body_energy_sum_body_ceiling",
+        "inharmonic_body_energy_sum_body_ceiling",
+        "subbass_rumble_energy_sum",
+        "body_band_harmonic_bin_energy_sum_body_ceiling",
+        "body_band_residual_bin_energy_sum_body_ceiling",
+        "body_band_total_bin_energy_sum_body_ceiling",
+        "density_body_band_bin_integrated_index_body_ceiling",
         "density_metric_raw_source_sheet",
         "energy_weighted_component_density_diagnostic",
         "density_weighted_sum",
@@ -3189,23 +3573,31 @@ def build_workbook(
         "low_mid_energy_ratio",
         "harmonic_body_density",
         "harmonic_body_density_normalized",
-        "salient_harmonic_order_count_up_to_5000hz",
-        "expected_harmonic_order_count_up_to_5000hz",
-        "salient_harmonic_coverage_up_to_5000hz",
-        "salient_harmonic_mass_up_to_5000hz",
+        "salient_harmonic_order_count_up_to_body_ceiling",
+        "expected_harmonic_order_count_up_to_body_ceiling",
+        "salient_harmonic_coverage_up_to_body_ceiling",
+        "theoretical_harmonic_order_count_up_to_body_ceiling",
+        "detected_salient_harmonic_order_count_up_to_body_ceiling",
+        "salient_harmonic_coverage_ratio_up_to_body_ceiling",
+        "salient_harmonic_mass_up_to_body_ceiling",
         "salient_harmonic_order_count_up_to_density_ceiling_hz",
         "expected_harmonic_order_count_up_to_density_ceiling_hz",
         "salient_harmonic_coverage_up_to_density_ceiling_hz",
         "salient_harmonic_mass_up_to_density_ceiling_hz",
-        "salient_odd_harmonic_count_up_to_5000hz",
-        "salient_even_harmonic_count_up_to_5000hz",
+        "salient_odd_harmonic_count_up_to_body_ceiling",
+        "salient_even_harmonic_count_up_to_body_ceiling",
         "odd_even_harmonic_energy_ratio",
-        "salient_inharmonic_log_bin_count_up_to_5000hz",
+        "salient_inharmonic_log_bin_count_up_to_body_ceiling",
         "salient_subbass_particle_count",
         "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz",
         "salient_subbass_particle_count_up_to_density_ceiling_hz",
         "final_note_density_count_based",
         "final_note_density_salience_weighted",
+        "note_density_final",
+        "note_density_final_ci_low",
+        "note_density_final_ci_high",
+        "note_density_final_rel_uncertainty",
+        "note_density_final_uncertainty_sources",
         "final_note_density_salience_weighted_norm_for_chart",
         "harmonic_density_component",
         "inharmonic_density_component",
@@ -3230,10 +3622,25 @@ def build_workbook(
         "sethares_plot_status",
         "density_salience_threshold_db",
         "density_frequency_ceiling_hz",
+        "body_density_frequency_ceiling_hz",
+        "full_spectrum_frequency_ceiling_hz",
+        "density_full_spectrum_weighted_sum_20khz",
+        "harmonic_full_spectrum_energy_sum_20khz",
+        "inharmonic_full_spectrum_energy_sum_20khz",
+        "high_frequency_spectral_activity_sum",
+        "spectral_extension_index_20khz",
+        "brightness_or_upper_spectral_activity_index_20khz",
+        "full_spectrum_harmonic_candidate_count_20khz",
+        "harmonic_candidate_count_20khz",
+        "validated_harmonic_component_count_body_ceiling",
+        "probable_harmonic_component_count_body_ceiling",
+        "probable_harmonic_component_energy_sum_body_ceiling",
+        "validated_harmonic_component_count_body_ceiling",
         "residual_body_contribution",
         "residual_body_contribution_capped",
         "effective_partial_density",
-        "harmonic_occupancy_detected_order_count",
+        "harmonic_region_occupancy_count",
+        "legacy_high_ceiling_harmonic_slot_index_count",
         "harmonic_occupancy_ratio",
         "expected_harmonic_slot_count",
         "detected_harmonic_slot_count",
@@ -3274,6 +3681,7 @@ def build_workbook(
     hdrs = [sdm_ws.cell(1, c).value for c in range(1, sdm_ws.max_column + 1)]
     _hl = [
         ("density_weighted_sum", RESEARCH_FILL_DENSITY_WEIGHTED_SUM),
+        ("note_density_final", RESEARCH_FILL_NOTE_DENSITY_FINAL),
     ]
     if include_legacy_cdm_mean:
         _hl.append(("density_weighted_sum_cdm_mean", RESEARCH_FILL_DWS_CDM_MEAN))
@@ -3369,9 +3777,9 @@ def build_workbook(
             "harmonic_body_density_normalized",
             "core_residual_energy_ratio",
             "spectral_entropy",
-            "salient_harmonic_order_count_up_to_5000hz",
-            "expected_harmonic_order_count_up_to_5000hz",
-            "salient_harmonic_coverage_up_to_5000hz",
+            "salient_harmonic_order_count_up_to_body_ceiling",
+            "expected_harmonic_order_count_up_to_body_ceiling",
+            "salient_harmonic_coverage_up_to_body_ceiling",
             "final_note_density_salience_weighted",
             "final_note_density_count_based",
             "final_note_density_salience_weighted_norm_for_chart",

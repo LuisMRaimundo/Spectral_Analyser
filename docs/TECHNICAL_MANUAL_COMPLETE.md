@@ -258,7 +258,41 @@ $$
 
 Residual assignment occurs after harmonic matching and candidate filters; counts and occupancy diagnostics are exported.
 
-### 5.4 Subbass policy
+### 5.4 Per-order candidate classification and density inclusion
+
+**Code location.** `harmonic_peak_validation.py`
+(`_local_peak_metrics`, `cfar_peak_detection`, `_classify_harmonic_candidate`,
+`_saddle_prominence_db`, `_prominence_saddle_window_bins`), re-exported by
+`proc_audio` and driven from `proc_audio._generate_harmonic_list`.
+
+For each expected order, the candidate nearest to `n·f0` (within the tolerance
+window) is refined to the local spectral peak and classified. A candidate is
+promoted to `strict_validated` (and only then `include_for_density = True`)
+when it is **CFAR-detected AND clears the saddle-prominence criterion**. The
+noise-significance gate is a cell-averaging **CFAR** (constant false-alarm-rate)
+test (`cfar_peak_detection`): the peak power must exceed an adaptive threshold
+derived from a stated false-alarm probability (`Pfa`, default `1e-2`) against a
+locally-estimated, peak-trimmed noise floor — replacing the previous ad-hoc
+fixed `SNR ≥ 3 dB` margin with a detection-theoretic, register- and
+noise-adaptive criterion (the same significance-gate philosophy used for the
+inharmonicity coefficient `B`; see §F3/F7 in `FORMULA_VALIDATION_STATUS.md`).
+`cfar_margin_db = 10·log10(peak_power / threshold)` and `cfar_detected` are
+exported in the audit. Prominence is measured against a saddle window scaled to
+the inter-harmonic half-spacing (±f0/2), not a fixed bin count — a fixed window
+collapses prominence on low-pitched, densely packed spectra (e.g. cello C2) and
+was the cause of severe harmonic under-counting in the low register. The ±1-bin
+"local maximum" flag is reported (`local_peak_valid`) but is **not** a strict
+gate, because on windowed FFTs it measures main-lobe curvature rather than
+partial validity.
+
+Candidate-status taxonomy (`candidate_status`): `strict_validated`,
+`snr_validated`, `weak_candidate`, `below_noise_floor`, `missing_window`,
+`rejected_bad_f0`, `off_frequency`. Candidates are re-aligned to the fitted f0
+before final classification so detuned partials are not mislabelled
+`off_frequency`. Every order's decision (and its reason) is exported, read-only,
+to the per-note `Harmonic_Inclusion_Audit` sheet (see §14).
+
+### 5.5 Subbass policy
 
 **Code location.**
 - Module: `subbass_policy.py`
@@ -400,6 +434,53 @@ Export: `density_metric_raw_per_note_balance`.
 
 - `density_weights_source`: `phase2_corpus_profile` or `per_note_energy_ratio`.
 - `density_metric_raw` remains canonical compile output.
+
+### 7.7 Principled per-note scalar density (`note_density_final`)
+
+$$
+D_{\mathrm{final}} = r_H D_H + r_I D_I + r_S D_S
+$$
+
+where $r_H, r_I, r_S$ are the per-note **measured** component energy ratios
+(`component_*_energy_ratio`, from `Component_Balance`, summing to 1) and
+$D_H, D_I, D_S$ are the per-band density sums (`*_density_sum`) under the active
+GUI amplitude weight function.
+
+**Code location.** `compile_metrics._compute_note_density_final` (compiled
+`Density_Metrics`); mirrored in
+`tools/export_research_density_workbook.build_spectral_density_metrics`
+(research `Spectral_Density_Metrics`, highlighted light blue).
+
+**Properties.**
+- Combines the GUI weight function (already inside each $D_*$) with the per-note
+  **physical** component balance — it does **not** use the Bayesian adaptive
+  weights.
+- Absolute (not corpus-normalized). Input audio is RMS-referenced, so it
+  describes spectral shape at a reference level; cross-instrument comparison is
+  valid only under an identical analysis profile.
+- NaN-propagating: if any of the six inputs is NaN, the result is NaN.
+- Algebraically identical in form to §7.5 but sourced explicitly from the
+  canonical `*_density_sum` + `component_*_energy_ratio` columns and exported as
+  a distinct, clearly-named primary column. It does not modify
+  `density_metric_raw`, `density_metric_normalized`, or
+  `final_note_density_salience_weighted`.
+
+**Uncertainty quantification.** Each note carries a transform-aware,
+non-parametric bootstrap confidence interval for `note_density_final`
+(`density_uncertainty.bootstrap_note_density_final`): per-partial contributions
+are resampled within each band **and** the component energy ratios are
+recomputed inside each resample from the bootstrapped band energies
+(`propagate_ratio_uncertainty=True`), so both the band-sum and the ratio
+uncertainty are propagated jointly. Exported columns:
+`note_density_final_ci_low`, `note_density_final_ci_high`,
+`note_density_final_rel_uncertainty` (std/|point|), and
+`note_density_final_uncertainty_sources` (`partials+ratios`). The window/n_fft
+sensitivity component is an **opt-in** study tool
+(`tools/note_density_nfft_sensitivity.py`, built on
+`density_uncertainty.nfft_sensitivity`), kept out of the hot path because
+re-analysis at multiple resolutions multiplies per-note runtime.
+
+Export: `note_density_final` (+ the four uncertainty columns above).
 
 ---
 
@@ -636,7 +717,7 @@ Export family includes segmented descriptor suffixes:
 
 `compiled_density_metrics.xlsx` major sheets:
 
-- `Density_Metrics`
+- `Density_Metrics` (includes `density_metric_raw`, `density_metric_normalized`, `density_metric_raw_per_note_balance`, and `note_density_final` — see §7.7)
 - `Canonical_Metrics`
 - `Canonical_Primary_Filtered`
 - `Diagnostic_Metrics`
@@ -653,7 +734,7 @@ Export family includes segmented descriptor suffixes:
 
 `compiled_density_metrics_research.xlsx` major sheets:
 
-- `Spectral_Density_Metrics`
+- `Spectral_Density_Metrics` (includes `note_density_final` — see §7.7)
 - `Primary_Statistics_Filtered`
 - `Component_Balance`
 - `Validation_Summary`
@@ -663,12 +744,26 @@ Export family includes segmented descriptor suffixes:
 - `Metadata`
 - `Dashboard`, `README`.
 
+### Per-note workbook (`spectral_analysis.xlsx`)
+
+Beyond the spectral sheets (`Harmonic Spectrum`, `Strict_Harmonic_Peaks`,
+`Inharmonic Spectrum`, `Sub-bass band`, `Metrics`, `Analysis_Metadata`), each
+per-note workbook carries a read-only **`Harmonic_Inclusion_Audit`** sheet: one
+row per harmonic order exposing exactly why each candidate is included in or
+excluded from the density computation (`exclusion_reason`, `snr_db`,
+`prominence_db`, `cfar_margin_db`, `cfar_detected`, `local_peak_valid`,
+`candidate_status`, `include_for_density`, `included_in_strict_peaks`,
+`included_in_body_density_5khz`, deviation in Hz and cents, and the search/body
+ceilings). The count of `included` rows equals
+`harmonic_density_included_count` in `Analysis_Metadata`. See §5.4 and
+`docs/DENSITY_EXPORT_SCHEMA.md` §2b.
+
 ---
 
 ## 15. GUI option tutorial (advanced user)
 
 Primary operational GUI: `pipeline_orchestrator_gui.py` (Tk).  
-Legacy/reference GUI: `interface.py` (PyQt).
+Legacy/reference GUI: `interface.py` (PyQt) — archived to `Backup/root_modules/` (no longer in the active package).
 
 Core controls (Tk):
 
@@ -679,17 +774,23 @@ Core controls (Tk):
 - Frequency range (`freq_min`, `freq_max`).
 - Harmonic tolerance (`tolerance`) + adaptive tolerance toggle.
 - STFT controls: window, `n_fft`, hop, zero padding, averaging.
-- Amplitude weighting function (`wf`) mapped by label.
+- Amplitude weighting function (`wf`) mapped by label. **Defaults to
+  `Logarithmic` (`log`, the PRIMARY comparable profile)**, so an isolated single
+  run is cross-instrument comparable by default; any other choice downgrades the
+  run to `EXPLORATORY`.
 - Dissonance model (`diss`).
 - Compile/advanced toggles: auto-compile, t-SNE, UMAP, anomaly detection, contamination, manual model-weight override.
 
-Comparability-critical controls:
+Comparability-critical controls (primary comparable profile):
 
 - `wf=log`
-- threshold `-45 dB`
-- ceiling `5000 Hz`
+- `density_salience_threshold_db` = runtime-configured (no hardcoded value)
+- `density_frequency_ceiling_hz` = runtime-configured (no hardcoded value)
 
-Only this profile is considered primary comparable profile in current policy.
+Per current policy the primary comparable profile is
+`wf=log|dst=runtime_configured|ceil=runtime_configured`
+(`primary_comparable_profile_definition`). Runs on other profiles are flagged
+`EXPLORATORY` and must not be compared directly against primary-profile runs.
 
 ---
 
@@ -776,7 +877,7 @@ Numeric constants are now explicitly classified as `primary_source`, `derived`, 
    Sheets such as `Compiled Metrics`, `Compiled_Metrics_All`, PCA outputs, and optional dissonance/debug/correlation sheets are generated conditionally. Their exact column sets vary with runtime options, data sufficiency, and enabled analysis branches.
 
 4. **GUI surface mismatch remains by design.**  
-   The Tk orchestrator (`pipeline_orchestrator_gui.py`) is the canonical operational interface. The PyQt interface (`interface.py`) remains a legacy/reference surface with overlapping but non-identical options and visualization paths.
+   The Tk orchestrator (`pipeline_orchestrator_gui.py`) is the canonical operational interface. The PyQt interface (`interface.py`) was a legacy/reference surface and has been archived to `Backup/root_modules/`.
 
 5. **Research workbook inharmonicity family gap.**  
    `compiled_density_metrics_research.xlsx` currently does not expose the full `inharmonicity_*` diagnostic family present in compiled `Density_Metrics`; inharmonicity audit should therefore reference the compiled workbook until research mapping is extended.

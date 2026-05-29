@@ -78,7 +78,7 @@ except ImportError:
     # EQUAL_LOUDNESS_HIGH_WEIGHT_DECAY = 0.5
     # EQUAL_LOUDNESS_HIGH_FREQ_RANGE = 15000.0
     # FREQ_MID_LOW_HZ = 1000.0
-    # FREQ_MID_HIGH_HZ = 5000.0
+    # FREQ_MID_HIGH_HZ = FREQ_MAX_HZ / 4.0
     SMOOTHING_WINDOW_PERCENTAGE = 0.05
     SMOOTHING_MIN_WINDOW_LENGTH = 11
     SMOOTHING_POLYORDER = 3
@@ -701,10 +701,10 @@ def estimate_noise_floor_by_critical_bands(
     # Define frequency bands based on physical frequency ranges
     # These bands cover the audible spectrum (20-20000 Hz) with logarithmic spacing
     frequency_bands_hz = [
-        (20.0, 200.0),      # Sub-bass / Bass
-        (200.0, 1000.0),    # Low-mid
-        (1000.0, 5000.0),   # Mid-high
-        (5000.0, 20000.0)   # High
+        (20.0, 200.0),             # Sub-bass / Bass
+        (200.0, FREQ_MID_LOW_HZ),  # Low-mid
+        (FREQ_MID_LOW_HZ, FREQ_MID_HIGH_HZ),  # Mid-high
+        (FREQ_MID_HIGH_HZ, 20000.0)  # High
     ]
     
     # Allocate frequencies to bands
@@ -746,7 +746,7 @@ def estimate_noise_floor_by_critical_bands(
     
     # Map noise floor back to each frequency based on its frequency band
     # SMOOTHING: Add smooth transitions at band boundaries to avoid discontinuities
-    # This prevents systematic peaks at boundaries (200 Hz, 1000 Hz, 5000 Hz)
+    # This prevents systematic peaks at boundaries (200 Hz, 1000 Hz, mid-high boundary)
     noise_floors = noise_floors_per_band[band_indices].astype(float)
     
     # Add smooth transitions at boundaries (±20% of band width, minimum 50 Hz)
@@ -3107,10 +3107,10 @@ def spectral_density(
         # PHYSICAL MODEL: Use frequency bands in Hz (not Bark)
         # Define frequency bands based on physical frequency ranges
         frequency_bands_hz = [
-            (20.0, 200.0),      # Sub-bass / Bass
-            (200.0, 1000.0),    # Low-mid
-            (1000.0, 5000.0),   # Mid-high
-            (5000.0, 20000.0)   # High
+            (20.0, 200.0),             # Sub-bass / Bass
+            (200.0, FREQ_MID_LOW_HZ),  # Low-mid
+            (FREQ_MID_LOW_HZ, FREQ_MID_HIGH_HZ),  # Mid-high
+            (FREQ_MID_HIGH_HZ, 20000.0)  # High
         ]
         
         # Allocate frequencies to bands

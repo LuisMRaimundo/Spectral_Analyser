@@ -74,9 +74,11 @@ from dissonance_export import (
 )
 from dissonance_models import list_available_models as _list_all_dissonance_models
 from constants import (
+    BODY_DENSITY_MAX_HZ,
     COUNT_SEMANTICS_NOTE_DOC,
     DISSONANCE_CAP_COMPUTATION_NOTE as CONST_DISSONANCE_CAP_NOTE,
     EFFECTIVE_DENSITY_COMPONENT_POLICY_DOC,
+    FULL_SPECTRUM_MAX_HZ,
     INHARMONIC_MODE_FOR_EFFECTIVE_DENSITY,
     LEGACY_PARTIAL_COUNT_ALIASES_NOTE,
     SUBBASS_POLICY_FOR_EFFECTIVE_DENSITY_DOC,
@@ -240,6 +242,34 @@ def _ensure_adaptive_subfundamental_cutoff(row: Dict[str, Any]) -> Dict[str, Any
 # PCA / export (define before _write_compiled_excel to avoid fragile import-time dependencies)
 METRIC_COLUMNS: List[str] = [
     "effective_partial_density",
+    "density_component_body_weighted_sum_body_ceiling",
+    "harmonic_component_energy_sum_body_ceiling",
+    "inharmonic_component_energy_sum_body_ceiling",
+    "subbass_component_energy_sum_body_ceiling",
+    "harmonic_effective_component_count_body_ceiling",
+    "harmonic_effective_component_count_normalized_body_ceiling",
+    "normalized_harmonic_richness_body_ceiling",
+    "body_density_per_expected_harmonic_slot_body_ceiling",
+    "pitch_normalized_component_density_body_ceiling",
+    "pitch_normalized_component_body_density_body_ceiling",
+    "pitch_normalized_harmonic_component_energy_body_ceiling",
+    "richness_weighted_body_density_body_ceiling",
+    "density_component_body_weighted_sum_body_ceiling",
+    "harmonic_component_energy_sum_body_ceiling",
+    "inharmonic_component_energy_sum_body_ceiling",
+    "subbass_component_energy_sum",
+    "spectral_slope_db_per_harmonic",
+    "density_body_weighted_sum_body_ceiling",
+    "harmonic_body_energy_sum_body_ceiling",
+    "inharmonic_body_energy_sum_body_ceiling",
+    "subbass_rumble_energy_sum",
+    "density_full_spectrum_weighted_sum_20khz",
+    "harmonic_full_spectrum_energy_sum_20khz",
+    "inharmonic_full_spectrum_energy_sum_20khz",
+    "high_frequency_spectral_activity_sum",
+    "spectral_extension_index_20khz",
+    "brightness_or_upper_spectral_activity_index_20khz",
+    "full_spectrum_harmonic_candidate_count_20khz",
     "Density Metric",
     "Weighted Combined Metric",
 ]
@@ -268,8 +298,15 @@ _OMIT_FROM_COMPILED_METRICS_EXPORT: frozenset[str] = frozenset(
 )
 
 # Main compiled / export sheet: core physical density/fatness only (no dissonance, no PCA).
-# Primary discrete harmonic count: harmonic_order_count (n·f₀ orders detected). Bin/candidate/peak-list
-# counts belong on Debug_Counts, not here.
+# Primary discrete harmonic count family (body-ceiling scoped):
+#   - expected_harmonic_order_count_up_to_body_ceiling
+#   - salient_harmonic_order_count_up_to_body_ceiling
+#   - salient_harmonic_coverage_up_to_body_ceiling
+# with explicit research aliases:
+#   - theoretical_harmonic_order_count_up_to_body_ceiling
+#   - detected_salient_harmonic_order_count_up_to_body_ceiling
+#   - salient_harmonic_coverage_ratio_up_to_body_ceiling
+# Bin/candidate/peak-list counts belong on Debug_Counts, not here.
 DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
     "Note",
     "canonical_density_v5_adapted",
@@ -302,8 +339,14 @@ DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
     "linear_amplitude_fraction_nonharmonic_of_total",
     "linear_amplitude_batch_alignment_factor",
     "harmonic_order_count",
+    "harmonic_candidate_count_20khz",
+    "validated_harmonic_component_count_body_ceiling",
+    "probable_harmonic_component_count_body_ceiling",
+    "probable_harmonic_component_energy_sum_body_ceiling",
     "acoustic_f0_status",
     "f0_used_for_density_source",
+    "harmonic_region_occupancy_count",
+    # Deprecated alias retained for one release cycle.
     "harmonic_occupancy_detected_order_count",
     "expected_harmonic_slot_count",
     "detected_harmonic_slot_count",
@@ -313,23 +356,26 @@ DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
     "body_weighted_effective_density",
     "low_mid_energy_ratio",
     "harmonic_body_density",
-    "expected_harmonic_slots_up_to_5000hz",
+    "expected_harmonic_slots_up_to_body_ceiling",
     "harmonic_body_density_normalized",
     "residual_body_contribution",
     "residual_body_contribution_capped",
     "spectral_body_thickness_index",
-    "salient_harmonic_order_count_up_to_5000hz",
-    "expected_harmonic_order_count_up_to_5000hz",
-    "salient_harmonic_coverage_up_to_5000hz",
-    "salient_harmonic_mass_up_to_5000hz",
+    "salient_harmonic_order_count_up_to_body_ceiling",
+    "expected_harmonic_order_count_up_to_body_ceiling",
+    "salient_harmonic_coverage_up_to_body_ceiling",
+    "theoretical_harmonic_order_count_up_to_body_ceiling",
+    "detected_salient_harmonic_order_count_up_to_body_ceiling",
+    "salient_harmonic_coverage_ratio_up_to_body_ceiling",
+    "salient_harmonic_mass_up_to_body_ceiling",
     "salient_harmonic_order_count_up_to_density_ceiling_hz",
     "expected_harmonic_order_count_up_to_density_ceiling_hz",
     "salient_harmonic_coverage_up_to_density_ceiling_hz",
     "salient_harmonic_mass_up_to_density_ceiling_hz",
-    "salient_odd_harmonic_count_up_to_5000hz",
-    "salient_even_harmonic_count_up_to_5000hz",
+    "salient_odd_harmonic_count_up_to_body_ceiling",
+    "salient_even_harmonic_count_up_to_body_ceiling",
     "odd_even_harmonic_energy_ratio",
-    "salient_inharmonic_log_bin_count_up_to_5000hz",
+    "salient_inharmonic_log_bin_count_up_to_body_ceiling",
     "salient_subbass_particle_count",
     "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz",
     "salient_subbass_particle_count_up_to_density_ceiling_hz",
@@ -408,6 +454,24 @@ DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
 DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "Note",
     "density_metric_raw",
+    "density_component_body_weighted_sum_body_ceiling",
+    "harmonic_component_energy_sum_body_ceiling",
+    "inharmonic_component_energy_sum_body_ceiling",
+    "subbass_component_energy_sum_body_ceiling",
+    "harmonic_effective_component_count_body_ceiling",
+    "harmonic_effective_component_count_normalized_body_ceiling",
+    "normalized_harmonic_richness_body_ceiling",
+    "body_density_per_expected_harmonic_slot_body_ceiling",
+    "pitch_normalized_component_density_body_ceiling",
+    "pitch_normalized_component_body_density_body_ceiling",
+    "pitch_normalized_harmonic_component_energy_body_ceiling",
+    "richness_weighted_body_density_body_ceiling",
+    "density_component_body_weighted_sum_body_ceiling",
+    "harmonic_component_energy_sum_body_ceiling",
+    "inharmonic_component_energy_sum_body_ceiling",
+    "subbass_component_energy_sum",
+    "spectral_slope_db_per_harmonic",
+    "density_body_weighted_sum_body_ceiling",
     "energy_weighted_component_density_diagnostic",
     "density_metric_normalized",
     "weighted_harmonic_density_contribution",
@@ -420,6 +484,13 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "density_weights_source",
     "acoustic_f0_status",
     "f0_used_for_density_source",
+    "harmonic_region_occupancy_count",
+    "harmonic_candidate_count_20khz",
+    "validated_harmonic_component_count_body_ceiling",
+    "probable_harmonic_component_count_body_ceiling",
+    "probable_harmonic_component_energy_sum_body_ceiling",
+    "validated_harmonic_component_count_body_ceiling",
+    # Deprecated alias retained for one release cycle.
     "harmonic_occupancy_detected_order_count",
     "expected_harmonic_slot_count",
     "detected_harmonic_slot_count",
@@ -429,26 +500,37 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "body_weighted_effective_density",
     "low_mid_energy_ratio",
     "harmonic_body_density",
+    "harmonic_body_energy_sum_body_ceiling",
+    "inharmonic_body_energy_sum_body_ceiling",
+    "subbass_rumble_energy_sum",
     "harmonic_body_density_normalized",
     "residual_body_contribution_capped",
     "spectral_body_thickness_index",
-    "salient_harmonic_order_count_up_to_5000hz",
-    "expected_harmonic_order_count_up_to_5000hz",
-    "salient_harmonic_coverage_up_to_5000hz",
-    "salient_harmonic_mass_up_to_5000hz",
+    "salient_harmonic_order_count_up_to_body_ceiling",
+    "expected_harmonic_order_count_up_to_body_ceiling",
+    "salient_harmonic_coverage_up_to_body_ceiling",
+    "theoretical_harmonic_order_count_up_to_body_ceiling",
+    "detected_salient_harmonic_order_count_up_to_body_ceiling",
+    "salient_harmonic_coverage_ratio_up_to_body_ceiling",
+    "salient_harmonic_mass_up_to_body_ceiling",
     "salient_harmonic_order_count_up_to_density_ceiling_hz",
     "expected_harmonic_order_count_up_to_density_ceiling_hz",
     "salient_harmonic_coverage_up_to_density_ceiling_hz",
     "salient_harmonic_mass_up_to_density_ceiling_hz",
-    "salient_odd_harmonic_count_up_to_5000hz",
-    "salient_even_harmonic_count_up_to_5000hz",
+    "salient_odd_harmonic_count_up_to_body_ceiling",
+    "salient_even_harmonic_count_up_to_body_ceiling",
     "odd_even_harmonic_energy_ratio",
-    "salient_inharmonic_log_bin_count_up_to_5000hz",
+    "salient_inharmonic_log_bin_count_up_to_body_ceiling",
     "salient_subbass_particle_count",
     "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz",
     "salient_subbass_particle_count_up_to_density_ceiling_hz",
     "final_note_density_count_based",
     "final_note_density_salience_weighted",
+    "note_density_final",
+    "note_density_final_ci_low",
+    "note_density_final_ci_high",
+    "note_density_final_rel_uncertainty",
+    "note_density_final_uncertainty_sources",
     "harmonic_density_component",
     "inharmonic_density_component",
     "subbass_density_component",
@@ -458,6 +540,15 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "density_summation_mode",
     "density_salience_threshold_db",
     "density_frequency_ceiling_hz",
+    "body_density_frequency_ceiling_hz",
+    "full_spectrum_frequency_ceiling_hz",
+    "density_full_spectrum_weighted_sum_20khz",
+    "harmonic_full_spectrum_energy_sum_20khz",
+    "inharmonic_full_spectrum_energy_sum_20khz",
+    "high_frequency_spectral_activity_sum",
+    "spectral_extension_index_20khz",
+    "brightness_or_upper_spectral_activity_index_20khz",
+    "full_spectrum_harmonic_candidate_count_20khz",
     "core_harmonic_energy_ratio",
     "core_residual_energy_ratio",
     "core_subbass_energy_ratio",
@@ -1434,6 +1525,14 @@ def _prepare_df_for_density_export(df: pd.DataFrame) -> pd.DataFrame:
         out["harmonic_occupancy_detected_order_count"] = pd.to_numeric(
             out["detected_harmonic_slot_count"], errors="coerce"
         )
+    if "harmonic_region_occupancy_count" not in out.columns and "harmonic_occupancy_detected_order_count" in out.columns:
+        out["harmonic_region_occupancy_count"] = pd.to_numeric(
+            out["harmonic_occupancy_detected_order_count"], errors="coerce"
+        )
+    if "harmonic_occupancy_detected_order_count" not in out.columns and "harmonic_region_occupancy_count" in out.columns:
+        out["harmonic_occupancy_detected_order_count"] = pd.to_numeric(
+            out["harmonic_region_occupancy_count"], errors="coerce"
+        )
     if "expected_harmonic_slot_count" not in out.columns and "harmonic_slot_expected_count" in out.columns:
         out["expected_harmonic_slot_count"] = pd.to_numeric(out["harmonic_slot_expected_count"], errors="coerce")
     if "harmonic_slot_expected_count" not in out.columns and "expected_harmonic_slot_count" in out.columns:
@@ -1446,6 +1545,41 @@ def _prepare_df_for_density_export(df: pd.DataFrame) -> pd.DataFrame:
         )
     if "harmonic_occupancy_detected_order_count" not in out.columns and "harmonic_order_count" in out.columns:
         out["harmonic_occupancy_detected_order_count"] = pd.to_numeric(out["harmonic_order_count"], errors="coerce")
+    if "harmonic_region_occupancy_count" not in out.columns and "harmonic_order_count" in out.columns:
+        out["harmonic_region_occupancy_count"] = pd.to_numeric(out["harmonic_order_count"], errors="coerce")
+    if "theoretical_harmonic_order_count_up_to_body_ceiling" not in out.columns and "expected_harmonic_order_count_up_to_body_ceiling" in out.columns:
+        out["theoretical_harmonic_order_count_up_to_body_ceiling"] = pd.to_numeric(
+            out["expected_harmonic_order_count_up_to_body_ceiling"], errors="coerce"
+        )
+    if (
+        "detected_salient_harmonic_order_count_up_to_body_ceiling" not in out.columns
+        and "salient_harmonic_order_count_up_to_body_ceiling" in out.columns
+    ):
+        out["detected_salient_harmonic_order_count_up_to_body_ceiling"] = pd.to_numeric(
+            out["salient_harmonic_order_count_up_to_body_ceiling"], errors="coerce"
+        )
+    if "salient_harmonic_coverage_ratio_up_to_body_ceiling" not in out.columns and "salient_harmonic_coverage_up_to_body_ceiling" in out.columns:
+        out["salient_harmonic_coverage_ratio_up_to_body_ceiling"] = pd.to_numeric(
+            out["salient_harmonic_coverage_up_to_body_ceiling"], errors="coerce"
+        )
+    if "density_body_weighted_sum_body_ceiling" not in out.columns and "density_metric_raw" in out.columns:
+        out["density_body_weighted_sum_body_ceiling"] = pd.to_numeric(out["density_metric_raw"], errors="coerce")
+    if "body_density_frequency_ceiling_hz" not in out.columns:
+        if "density_frequency_ceiling_hz" in out.columns:
+            out["body_density_frequency_ceiling_hz"] = pd.to_numeric(
+                out["density_frequency_ceiling_hz"], errors="coerce"
+            )
+        else:
+            out["body_density_frequency_ceiling_hz"] = float(BODY_DENSITY_MAX_HZ)
+    if "full_spectrum_frequency_ceiling_hz" not in out.columns:
+        out["full_spectrum_frequency_ceiling_hz"] = float(FULL_SPECTRUM_MAX_HZ)
+    if "legacy_high_ceiling_harmonic_slot_index_count" not in out.columns:
+        legacy_slot = pd.Series(np.nan, index=out.index, dtype=float)
+        if "Harmonic Count (N)" in out.columns:
+            legacy_slot = pd.to_numeric(out["Harmonic Count (N)"], errors="coerce")
+        elif "Harmonic Count" in out.columns:
+            legacy_slot = pd.to_numeric(out["Harmonic Count"], errors="coerce")
+        out["legacy_high_ceiling_harmonic_slot_index_count"] = legacy_slot
     if "harmonic_slot_coverage_ratio" not in out.columns:
         exp = (
             pd.to_numeric(out["harmonic_slot_expected_count"], errors="coerce")
@@ -1488,6 +1622,118 @@ def _prepare_df_for_density_export(df: pd.DataFrame) -> pd.DataFrame:
             acc = acc + pd.to_numeric(out[c], errors="coerce").fillna(0.0)
         out[pub_t] = acc
     return out
+
+
+# ---------------------------------------------------------------------------
+# note_density_final — principled per-note scalar density metric.
+#
+#   note_density_final =
+#         component_harmonic_energy_ratio   * harmonic_density_sum
+#       + component_inharmonic_energy_ratio * inharmonic_density_sum
+#       + component_subbass_energy_ratio    * subbass_density_sum
+#
+# Combines (a) the GUI amplitude weight function — already baked into each
+# ``*_density_sum`` term — with (b) the per-note physical component balance
+# expressed by the MEASURED energy ratios (Component_Balance), NOT the
+# Bayesian adaptive weights (harmonic_density_weight / inharmonic_density_weight).
+# Pure derived column: it composes values already present in the output and
+# changes no existing metric, threshold, ceiling, or validation rule.
+# ---------------------------------------------------------------------------
+_NOTE_DENSITY_FINAL_SOURCE_LOGGED = False
+
+_NOTE_DENSITY_FINAL_SUM_DISPLAY_FALLBACK: Dict[str, str] = {
+    "harmonic": "Harmonic Partials sum",
+    "inharmonic": "Inharmonic Partials sum",
+    "subbass": "Sub-bass sum",
+}
+
+
+def _resolve_note_density_sum_column(df: pd.DataFrame, component: str) -> Optional[str]:
+    """Resolve the per-band density-sum column for ``component``.
+
+    Priority (per task Step 1):
+      1. exact canonical ``{component}_density_sum``;
+      2. unique case-insensitive column containing both the component name
+         and ``density_sum``;
+      3. display-name fallback (``Harmonic Partials sum`` / …) used by the
+         wide compiled frame, which carries the same per-band D values.
+    """
+    exact = f"{component}_density_sum"
+    if exact in df.columns:
+        return exact
+    comp_l = component.lower()
+    ci = [
+        c
+        for c in df.columns
+        if comp_l in str(c).lower() and "density_sum" in str(c).lower()
+    ]
+    if len(ci) == 1:
+        return ci[0]
+    fallback = _NOTE_DENSITY_FINAL_SUM_DISPLAY_FALLBACK.get(component)
+    if fallback is not None and fallback in df.columns:
+        return fallback
+    return None
+
+
+def _resolve_note_density_ratio_column(df: pd.DataFrame, component: str) -> Optional[str]:
+    """Resolve the measured energy-ratio column for ``component``.
+
+    Priority: canonical ``component_{component}_energy_ratio`` then the
+    diagnostic alias ``{component}_energy_ratio`` (mathematically identical
+    in single-pass mode). Never sources the Bayesian adaptive weights.
+    """
+    canonical = f"component_{component}_energy_ratio"
+    if canonical in df.columns:
+        return canonical
+    alias = f"{component}_energy_ratio"
+    if alias in df.columns:
+        return alias
+    return None
+
+
+def _compute_note_density_final(df: pd.DataFrame, *, context: str = "") -> pd.Series:
+    """Compute the ``note_density_final`` Series for ``df``.
+
+    Rows where any of the six source values (three ratios, three sums) is
+    NaN produce NaN (missing values are never silently treated as zero).
+    Returns an all-NaN Series when any source column cannot be resolved.
+    """
+    global _NOTE_DENSITY_FINAL_SOURCE_LOGGED
+    if df is None or df.empty:
+        return pd.Series(dtype="float64")
+
+    components = ("harmonic", "inharmonic", "subbass")
+    sum_cols = {c: _resolve_note_density_sum_column(df, c) for c in components}
+    ratio_cols = {c: _resolve_note_density_ratio_column(df, c) for c in components}
+
+    if not _NOTE_DENSITY_FINAL_SOURCE_LOGGED:
+        logger.info(
+            "note_density_final source columns%s: sums=%s ratios=%s",
+            f" [{context}]" if context else "",
+            sum_cols,
+            ratio_cols,
+        )
+        _NOTE_DENSITY_FINAL_SOURCE_LOGGED = True
+
+    if any(v is None for v in sum_cols.values()) or any(
+        v is None for v in ratio_cols.values()
+    ):
+        logger.warning(
+            "note_density_final: could not resolve all source columns "
+            "(sums=%s ratios=%s); emitting NaN.",
+            sum_cols,
+            ratio_cols,
+        )
+        return pd.Series(np.nan, index=df.index)
+
+    total = pd.Series(0.0, index=df.index, dtype="float64")
+    for comp in components:
+        ratio = pd.to_numeric(df[ratio_cols[comp]], errors="coerce")
+        dsum = pd.to_numeric(df[sum_cols[comp]], errors="coerce")
+        # ``ratio * dsum`` is NaN whenever either factor is NaN; adding NaN
+        # propagates to the row total — the required missing-value policy.
+        total = total + (ratio * dsum)
+    return total.astype(float)
 
 
 def _add_canonical_and_global_density_columns(
@@ -1551,6 +1797,10 @@ def _add_canonical_and_global_density_columns(
         harmonic_weight=harmonic_weight,
         inharmonic_weight=inharmonic_weight,
         subbass_weight=subbass_weight,
+    )
+    # Derived principled scalar density (energy-ratio-weighted band sums).
+    out["note_density_final"] = _compute_note_density_final(
+        out, context="wide_compiled_frame"
     )
     return out
 
@@ -2697,6 +2947,8 @@ def extract_density_component_sum(
     workbook_path: Union[str, Path],
     sheet_name: str,
     weight_function: str,
+    *,
+    max_frequency_hz: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Canonical density-component sum extractor.
 
@@ -2822,6 +3074,26 @@ def extract_density_component_sum(
         if str(c).strip().lower() not in _FORBIDDEN_DISPLAY_SCALED_COLUMN_NAMES_LOWER
     ]
     cols_lower = {str(c).strip().lower(): c for c in usable_cols}
+    freq_col = cols_lower.get("frequency (hz)")
+    if freq_col is not None and max_frequency_hz is not None:
+        try:
+            fmax = float(max_frequency_hz)
+        except (TypeError, ValueError):
+            fmax = float("nan")
+        if np.isfinite(fmax) and fmax > 0.0:
+            _fq = pd.to_numeric(df[freq_col], errors="coerce")
+            df = df.loc[_fq <= fmax].copy()
+            if df.empty:
+                result["sheet"] = sheet
+                result["status"] = "no_numeric_values"
+                result["density_component_sum_source"] = (
+                    f"sheet={sheet};column=<filtered_by_frequency>;weight_function={wf};max_frequency_hz={fmax}"
+                )
+                return result
+            usable_cols = [
+                c for c in df.columns if str(c).strip().lower() not in _FORBIDDEN_DISPLAY_SCALED_COLUMN_NAMES_LOWER
+            ]
+            cols_lower = {str(c).strip().lower(): c for c in usable_cols}
 
     amp_col = cols_lower.get("amplitude_raw") or cols_lower.get("amplitude")
     power_col = cols_lower.get("power_raw") or cols_lower.get("power")
@@ -2907,9 +3179,9 @@ def extract_density_component_sum(
         result["sheet"] = sheet
         result["column"] = column_used or ""
         result["status"] = "no_numeric_values"
-        source_str = (
-            f"sheet={sheet};column={column_used};weight_function={wf}"
-        )
+        source_str = f"sheet={sheet};column={column_used};weight_function={wf}"
+        if max_frequency_hz is not None:
+            source_str += f";max_frequency_hz={max_frequency_hz}"
         if is_harmonic_sheet and inclusion_policy_label:
             source_str += f";inclusion_policy={inclusion_policy_label}"
         result["density_component_sum_source"] = source_str
@@ -2949,6 +3221,8 @@ def extract_density_component_sum(
         f"sheet={sheet};column={column_used};weight_function={wf_label};"
         f"strategy={sum_strategy}"
     )
+    if max_frequency_hz is not None:
+        source_str += f";max_frequency_hz={max_frequency_hz}"
     if is_harmonic_sheet and inclusion_policy_label:
         source_str += f";inclusion_policy={inclusion_policy_label}"
     result["density_component_sum_source"] = source_str
@@ -3075,6 +3349,37 @@ def extract_density_components_from_per_note_workbook(
         "harmonic_density_sum": None,
         "inharmonic_density_sum": None,
         "subbass_density_sum": None,
+        "harmonic_component_energy_sum_body_ceiling": None,
+        "inharmonic_component_energy_sum_body_ceiling": None,
+        "subbass_component_energy_sum": None,
+        "density_component_body_weighted_sum_body_ceiling": None,
+        "harmonic_component_energy_sum_body_ceiling": None,
+        "inharmonic_component_energy_sum_body_ceiling": None,
+        "subbass_component_energy_sum_body_ceiling": None,
+        "density_component_body_weighted_sum_body_ceiling": None,
+        "harmonic_effective_component_count_body_ceiling": None,
+        "harmonic_effective_component_count_normalized_body_ceiling": None,
+        "normalized_harmonic_richness_body_ceiling": None,
+        "body_density_per_expected_harmonic_slot_body_ceiling": None,
+        "pitch_normalized_component_density_body_ceiling": None,
+        "pitch_normalized_component_body_density_body_ceiling": None,
+        "pitch_normalized_harmonic_component_energy_body_ceiling": None,
+        "richness_weighted_body_density_body_ceiling": None,
+        "harmonic_body_energy_sum_body_ceiling": None,
+        "inharmonic_body_energy_sum_body_ceiling": None,
+        "subbass_rumble_energy_sum": None,
+        "density_body_weighted_sum_body_ceiling": None,
+        "harmonic_full_spectrum_energy_sum_20khz": None,
+        "inharmonic_full_spectrum_energy_sum_20khz": None,
+        "density_full_spectrum_weighted_sum_20khz": None,
+        "high_frequency_spectral_activity_sum": None,
+        "spectral_extension_index_20khz": None,
+        "brightness_or_upper_spectral_activity_index_20khz": None,
+        "full_spectrum_harmonic_candidate_count_20khz": None,
+        "probable_harmonic_component_count_body_ceiling": None,
+        "probable_harmonic_component_energy_sum_body_ceiling": None,
+        "body_density_frequency_ceiling_hz": None,
+        "full_spectrum_frequency_ceiling_hz": float(FULL_SPECTRUM_MAX_HZ),
         "density_formula": (
             "density_metric_raw = D_H*w_H + D_I*w_I + D_S*w_S; "
             "D_band per weight_function (see "
@@ -3218,6 +3523,30 @@ def extract_density_components_from_per_note_workbook(
                     "harmonic_energy_sum",
                     "inharmonic_energy_sum",
                     "subbass_energy_sum",
+                    "harmonic_component_energy_sum_body_ceiling",
+                    "inharmonic_component_energy_sum_body_ceiling",
+                    "subbass_component_energy_sum",
+                    "density_component_body_weighted_sum_body_ceiling",
+                    "harmonic_component_energy_sum_body_ceiling",
+                    "inharmonic_component_energy_sum_body_ceiling",
+                    "subbass_component_energy_sum_body_ceiling",
+                    "density_component_body_weighted_sum_body_ceiling",
+                    "harmonic_effective_component_count_body_ceiling",
+                    "harmonic_effective_component_count_normalized_body_ceiling",
+                    "normalized_harmonic_richness_body_ceiling",
+                    "body_density_per_expected_harmonic_slot_body_ceiling",
+                    "pitch_normalized_component_density_body_ceiling",
+                    "pitch_normalized_component_body_density_body_ceiling",
+                    "pitch_normalized_harmonic_component_energy_body_ceiling",
+                    "richness_weighted_body_density_body_ceiling",
+                    "spectral_slope_db_per_harmonic",
+                    "density_frequency_ceiling_hz",
+                    "body_density_frequency_ceiling_hz",
+                    "harmonic_candidate_count_20khz",
+                    "validated_harmonic_component_count_body_ceiling",
+                    "probable_harmonic_component_count_body_ceiling",
+                    "probable_harmonic_component_energy_sum_body_ceiling",
+                    "validated_harmonic_component_count_body_ceiling",
                     "inharmonicity_coefficient_B",
                     "inharmonicity_fit_residual_std_cents",
                     "pure_observation_w_h",
@@ -3567,9 +3896,46 @@ def extract_density_components_from_per_note_workbook(
     # ------------------------------------------------------------------
     wf_op = _compile_operator_weight_function_key(weight_function)
     wf_components = "power" if basis == "power_sum" else wf_op
-    wf_h = extract_density_component_sum(p, "Harmonic Spectrum", wf_components)
-    wf_i = extract_density_component_sum(p, "Inharmonic Spectrum", wf_components)
-    wf_s = extract_density_component_sum(p, "Sub-bass band", wf_components)
+    def _as_finite_float(v: Any) -> float:
+        try:
+            x = float(v)
+        except (TypeError, ValueError):
+            return float("nan")
+        return x if np.isfinite(x) else float("nan")
+
+    _body_ceiling_hz = _as_finite_float(result.get("density_frequency_ceiling_hz"))
+    if not np.isfinite(_body_ceiling_hz):
+        _body_ceiling_hz = _as_finite_float(result.get("body_density_frequency_ceiling_hz"))
+    if not np.isfinite(_body_ceiling_hz):
+        _meta_ceil = _read_analysis_metadata_scalar(p, "density_frequency_ceiling_hz")
+        _body_ceiling_hz = _as_finite_float(_meta_ceil)
+    if not np.isfinite(_body_ceiling_hz) or _body_ceiling_hz <= 0.0:
+        _body_ceiling_hz = float(BODY_DENSITY_MAX_HZ)
+    result["body_density_frequency_ceiling_hz"] = _body_ceiling_hz
+    wf_h = extract_density_component_sum(
+        p, "Harmonic Spectrum", wf_components, max_frequency_hz=_body_ceiling_hz
+    )
+    wf_i = extract_density_component_sum(
+        p, "Inharmonic Spectrum", wf_components, max_frequency_hz=_body_ceiling_hz
+    )
+    wf_s = extract_density_component_sum(
+        p, "Sub-bass band", wf_components, max_frequency_hz=_body_ceiling_hz
+    )
+    wf_h_full = extract_density_component_sum(
+        p, "Harmonic Spectrum", wf_components, max_frequency_hz=FULL_SPECTRUM_MAX_HZ
+    )
+    wf_i_full = extract_density_component_sum(
+        p, "Inharmonic Spectrum", wf_components, max_frequency_hz=FULL_SPECTRUM_MAX_HZ
+    )
+    cmp_h = extract_density_component_sum(
+        p, "Harmonic Spectrum", "power", max_frequency_hz=_body_ceiling_hz
+    )
+    cmp_i = extract_density_component_sum(
+        p, "Inharmonic Spectrum", "power", max_frequency_hz=_body_ceiling_hz
+    )
+    cmp_s = extract_density_component_sum(
+        p, "Sub-bass band", "power", max_frequency_hz=_body_ceiling_hz
+    )
 
     result["density_weight_function"] = str(wf_h.get("weight_function") or wf_op)
     result["harmonic_density_sum"] = wf_h.get("D")
@@ -3639,12 +4005,82 @@ def extract_density_components_from_per_note_workbook(
     result["harmonic_spectrum_source"] = src_H
     result["inharmonic_spectrum_source"] = src_I
     result["subbass_spectrum_source"] = src_S
+    result["harmonic_body_energy_sum_body_ceiling"] = wf_h.get("D")
+    result["inharmonic_body_energy_sum_body_ceiling"] = wf_i.get("D")
+    result["subbass_rumble_energy_sum"] = wf_s.get("D")
+    result["harmonic_component_energy_sum_body_ceiling"] = cmp_h.get("D")
+    result["inharmonic_component_energy_sum_body_ceiling"] = cmp_i.get("D")
+    result["subbass_component_energy_sum"] = cmp_s.get("D")
+    result["harmonic_component_energy_sum_body_ceiling"] = cmp_h.get("D")
+    result["inharmonic_component_energy_sum_body_ceiling"] = cmp_i.get("D")
+    result["subbass_component_energy_sum_body_ceiling"] = cmp_s.get("D")
+    result["harmonic_full_spectrum_energy_sum_20khz"] = wf_h_full.get("D")
+    result["inharmonic_full_spectrum_energy_sum_20khz"] = wf_i_full.get("D")
+    result["full_spectrum_harmonic_candidate_count_20khz"] = int(wf_h_full.get("n", 0) or 0)
 
     w_H, w_I, w_S, legacy_only = _read_component_weights_from_analysis_metadata(p)
     result["w_H"] = w_H
     result["w_I"] = w_I
     result["w_S"] = w_S
     result["legacy_aliases_only"] = legacy_only
+    try:
+        _wh = float(w_H) if w_H is not None else float("nan")
+        _wi = float(w_I) if w_I is not None else float("nan")
+        _ws = float(w_S) if w_S is not None else float("nan")
+        _h_body = float(result["harmonic_body_energy_sum_body_ceiling"] or 0.0)
+        _i_body = float(result["inharmonic_body_energy_sum_body_ceiling"] or 0.0)
+        _s_body = float(result["subbass_rumble_energy_sum"] or 0.0)
+        _h_comp = float(result.get("harmonic_component_energy_sum_body_ceiling") or 0.0)
+        _i_comp = float(result.get("inharmonic_component_energy_sum_body_ceiling") or 0.0)
+        _s_comp = float(result.get("subbass_component_energy_sum") or 0.0)
+        _h_full = float(result["harmonic_full_spectrum_energy_sum_20khz"] or 0.0)
+        _i_full = float(result["inharmonic_full_spectrum_energy_sum_20khz"] or 0.0)
+        if np.isfinite(_wh) and np.isfinite(_wi) and np.isfinite(_ws):
+            result["density_component_body_weighted_sum_body_ceiling"] = float(
+                _wh * _h_comp + _wi * _i_comp + _ws * _s_comp
+            )
+            result["density_component_body_weighted_sum_body_ceiling"] = float(
+                result["density_component_body_weighted_sum_body_ceiling"]
+            )
+            result["density_body_weighted_sum_body_ceiling"] = float(
+                result["density_component_body_weighted_sum_body_ceiling"]
+            )
+            result["density_full_spectrum_weighted_sum_20khz"] = float(
+                _wh * _h_full + _wi * _i_full + _ws * _s_comp
+            )
+        else:
+            result["density_component_body_weighted_sum_body_ceiling"] = float("nan")
+            result["density_component_body_weighted_sum_body_ceiling"] = float("nan")
+            result["density_body_weighted_sum_body_ceiling"] = float("nan")
+            result["density_full_spectrum_weighted_sum_20khz"] = float("nan")
+        result["high_frequency_spectral_activity_sum"] = float(
+            max(0.0, _h_full - _h_body) + max(0.0, _i_full - _i_body)
+        )
+        result["spectral_extension_index_20khz"] = float(
+            float(result["density_full_spectrum_weighted_sum_20khz"])
+            / max(float(result["density_body_weighted_sum_body_ceiling"]), 1e-12)
+        )
+        result["brightness_or_upper_spectral_activity_index_20khz"] = float(
+            float(result["high_frequency_spectral_activity_sum"])
+            / max(_h_full + _i_full, 1e-12)
+        )
+    except Exception:
+        result["density_component_body_weighted_sum_body_ceiling"] = float("nan")
+        result["density_component_body_weighted_sum_body_ceiling"] = float("nan")
+        result["density_body_weighted_sum_body_ceiling"] = float("nan")
+        result["density_full_spectrum_weighted_sum_20khz"] = float("nan")
+        result["high_frequency_spectral_activity_sum"] = float("nan")
+        result["spectral_extension_index_20khz"] = float("nan")
+        result["brightness_or_upper_spectral_activity_index_20khz"] = float("nan")
+
+    # Keep legacy body-* aliases mapped to the component-based family.
+    result["harmonic_body_energy_sum_body_ceiling"] = result.get("harmonic_component_energy_sum_body_ceiling")
+    result["inharmonic_body_energy_sum_body_ceiling"] = result.get("inharmonic_component_energy_sum_body_ceiling")
+    result["subbass_rumble_energy_sum"] = result.get("subbass_component_energy_sum")
+    if result.get("validated_harmonic_component_count_body_ceiling") is None:
+        result["validated_harmonic_component_count_body_ceiling"] = result.get(
+            "validated_harmonic_component_count_body_ceiling"
+        )
 
     # AUDIT FIX (canonical note-source provenance) — surface
     # ``note_source`` from Analysis_Metadata (set by proc_audio when the
@@ -3831,6 +4267,83 @@ def extract_density_components_from_per_note_workbook(
 
     result["density_extraction_status"] = "ok"
     return result
+
+
+def _note_density_final_bootstrap_ci(
+    workbook_path: Union[str, Path],
+    *,
+    ratio_h: float,
+    ratio_i: float,
+    ratio_s: float,
+    weight_function: str,
+    n_boot: int = 1200,
+    seed: int = 0,
+) -> Dict[str, float]:
+    """Guarded per-note bootstrap CI for ``note_density_final``.
+
+    Reads the per-partial ``Amplitude_raw`` of the three component sheets from a
+    per-note workbook (Harmonic Spectrum restricted to ``include_for_density``)
+    and returns ``{ci_low, ci_high, rel_uncertainty}`` for ``note_density_final``
+    under ``weight_function``. Returns NaNs on any failure so compile never
+    breaks on a malformed/absent workbook.
+    """
+    nan = float("nan")
+    fail = {
+        "note_density_final_ci_low": nan,
+        "note_density_final_ci_high": nan,
+        "note_density_final_rel_uncertainty": nan,
+        "note_density_final_uncertainty_sources": "unavailable",
+    }
+    try:
+        from density_uncertainty import bootstrap_note_density_final
+
+        xls = pd.ExcelFile(workbook_path)
+
+        def _amps(sheet_prefs, *, harmonic: bool) -> np.ndarray:
+            sheet = _pick_sheet_case_insensitive(xls.sheet_names, sheet_prefs)
+            if sheet is None:
+                return np.asarray([], dtype=float)
+            df = xls.parse(sheet)
+            if "Amplitude_raw" not in df.columns:
+                return np.asarray([], dtype=float)
+            a = pd.to_numeric(df["Amplitude_raw"], errors="coerce")
+            if harmonic and "include_for_density" in df.columns:
+                mask = df["include_for_density"].astype(str).str.strip().str.lower().isin(
+                    _INCLUDE_FOR_DENSITY_TRUE_TOKENS
+                ) | (df["include_for_density"] == True)  # noqa: E712
+                a = a[mask.to_numpy()]
+            arr = a.to_numpy(dtype=float)
+            return arr[np.isfinite(arr) & (arr > 0.0)]
+
+        h = _amps(HARMONIC_SPECTRUM_SHEET_PREFERENCES, harmonic=True)
+        i = _amps(INHARMONIC_SPECTRUM_SHEET_PREFERENCES, harmonic=False)
+        s = _amps(SUBBASS_SPECTRUM_SHEET_PREFERENCES, harmonic=False)
+        if h.size + i.size + s.size < 2:
+            return fail
+        res = bootstrap_note_density_final(
+            {
+                "H": (h, float(ratio_h) if np.isfinite(ratio_h) else 0.0),
+                "I": (i, float(ratio_i) if np.isfinite(ratio_i) else 0.0),
+                "S": (s, float(ratio_s) if np.isfinite(ratio_s) else 0.0),
+            },
+            weight_function=str(weight_function or "linear"),
+            n_boot=int(n_boot),
+            seed=int(seed),
+            # Full UQ: propagate BOTH the per-partial sampling uncertainty and
+            # the component-ratio uncertainty (ratios recomputed inside each
+            # resample), instead of holding the ratios fixed.
+            propagate_ratio_uncertainty=True,
+        )
+        return {
+            "note_density_final_ci_low": float(res["ci_low"]),
+            "note_density_final_ci_high": float(res["ci_high"]),
+            "note_density_final_rel_uncertainty": float(res["relative_uncertainty"]),
+            "note_density_final_uncertainty_sources": str(
+                res.get("uncertainty_sources", "partials+ratios")
+            ),
+        }
+    except Exception:
+        return fail
 
 
 def _build_density_metrics_sheet_from_per_note_files(
@@ -4069,9 +4582,30 @@ def _build_density_metrics_sheet_from_per_note_files(
             #   density_metric_raw       = D_H*w_H + D_I*w_I + D_S*w_S
             #   density_metric_normalized = density_metric_raw / max(raw)
             "density_metric_raw": raw,
+            "density_body_weighted_sum_body_ceiling": _f(info.get("density_body_weighted_sum_body_ceiling", raw)),
+            "density_component_body_weighted_sum_body_ceiling": _f(
+                info.get("density_component_body_weighted_sum_body_ceiling", info.get("density_body_weighted_sum_body_ceiling", raw))
+            ),
+            "density_component_body_weighted_sum_body_ceiling": _f(
+                info.get(
+                    "density_component_body_weighted_sum_body_ceiling",
+                    info.get("density_component_body_weighted_sum_body_ceiling", info.get("density_body_weighted_sum_body_ceiling", raw)),
+                )
+            ),
             "density_metric_raw_per_note_balance": raw_per_note,
             "density_weights_source": density_weights_source,
             "density_metric_normalized": float("nan"),  # filled after the loop
+            # === note_density_final UNCERTAINTY (bootstrap CI) ============
+            #   Per-note non-parametric bootstrap CI for note_density_final,
+            #   resampling per-partial contributions (ratios fixed). NaN when
+            #   the per-note workbook cannot be read. See density_uncertainty.py.
+            **_note_density_final_bootstrap_ci(
+                fpath,
+                ratio_h=w_Hf,
+                ratio_i=w_If,
+                ratio_s=w_Sf,
+                weight_function=wf,
+            ),
             # === PER-COMPONENT WEIGHTED CONTRIBUTIONS ====================
             #   D_x * w_x; sum to density_metric_raw.
             "weighted_harmonic_density_contribution": wh_c,
@@ -4089,6 +4623,70 @@ def _build_density_metrics_sheet_from_per_note_files(
             "harmonic_density_sum": _f(info.get("harmonic_density_sum")),
             "inharmonic_density_sum": _f(info.get("inharmonic_density_sum")),
             "subbass_density_sum": _f(info.get("subbass_density_sum")),
+            "harmonic_body_energy_sum_body_ceiling": _f(info.get("harmonic_body_energy_sum_body_ceiling")),
+            "inharmonic_body_energy_sum_body_ceiling": _f(info.get("inharmonic_body_energy_sum_body_ceiling")),
+            "subbass_rumble_energy_sum": _f(info.get("subbass_rumble_energy_sum")),
+            "harmonic_component_energy_sum_body_ceiling": _f(info.get("harmonic_component_energy_sum_body_ceiling")),
+            "inharmonic_component_energy_sum_body_ceiling": _f(info.get("inharmonic_component_energy_sum_body_ceiling")),
+            "subbass_component_energy_sum": _f(info.get("subbass_component_energy_sum")),
+            "harmonic_component_energy_sum_body_ceiling": _f(
+                info.get("harmonic_component_energy_sum_body_ceiling", info.get("harmonic_component_energy_sum_body_ceiling"))
+            ),
+            "inharmonic_component_energy_sum_body_ceiling": _f(
+                info.get("inharmonic_component_energy_sum_body_ceiling", info.get("inharmonic_component_energy_sum_body_ceiling"))
+            ),
+            "subbass_component_energy_sum_body_ceiling": _f(
+                info.get("subbass_component_energy_sum_body_ceiling", info.get("subbass_component_energy_sum"))
+            ),
+            "harmonic_effective_component_count_body_ceiling": _f(
+                info.get("harmonic_effective_component_count_body_ceiling")
+            ),
+            "harmonic_effective_component_count_normalized_body_ceiling": _f(
+                info.get("harmonic_effective_component_count_normalized_body_ceiling")
+            ),
+            "normalized_harmonic_richness_body_ceiling": _f(
+                info.get("normalized_harmonic_richness_body_ceiling")
+            ),
+            "body_density_per_expected_harmonic_slot_body_ceiling": _f(
+                info.get("body_density_per_expected_harmonic_slot_body_ceiling")
+            ),
+            "pitch_normalized_component_density_body_ceiling": _f(
+                info.get("pitch_normalized_component_density_body_ceiling")
+            ),
+            "pitch_normalized_component_body_density_body_ceiling": _f(
+                info.get("pitch_normalized_component_body_density_body_ceiling")
+            ),
+            "pitch_normalized_harmonic_component_energy_body_ceiling": _f(
+                info.get("pitch_normalized_harmonic_component_energy_body_ceiling")
+            ),
+            "richness_weighted_body_density_body_ceiling": _f(
+                info.get("richness_weighted_body_density_body_ceiling")
+            ),
+            "validated_harmonic_component_count_body_ceiling": _f(
+                info.get(
+                    "validated_harmonic_component_count_body_ceiling",
+                    info.get("validated_harmonic_component_count_body_ceiling"),
+                )
+            ),
+            "probable_harmonic_component_count_body_ceiling": _f(
+                info.get("probable_harmonic_component_count_body_ceiling")
+            ),
+            "probable_harmonic_component_energy_sum_body_ceiling": _f(
+                info.get("probable_harmonic_component_energy_sum_body_ceiling")
+            ),
+            "harmonic_full_spectrum_energy_sum_20khz": _f(info.get("harmonic_full_spectrum_energy_sum_20khz")),
+            "inharmonic_full_spectrum_energy_sum_20khz": _f(info.get("inharmonic_full_spectrum_energy_sum_20khz")),
+            "density_full_spectrum_weighted_sum_20khz": _f(
+                info.get("density_full_spectrum_weighted_sum_20khz")
+            ),
+            "high_frequency_spectral_activity_sum": _f(info.get("high_frequency_spectral_activity_sum")),
+            "spectral_extension_index_20khz": _f(info.get("spectral_extension_index_20khz")),
+            "brightness_or_upper_spectral_activity_index_20khz": _f(
+                info.get("brightness_or_upper_spectral_activity_index_20khz")
+            ),
+            "full_spectrum_harmonic_candidate_count_20khz": _f(
+                info.get("full_spectrum_harmonic_candidate_count_20khz")
+            ),
             # === LEGACY DISPLAY COPIES (back-compat, do NOT use) =========
             #   Identical values to the canonical *_density_sum columns
             #   above, kept here under historical names. ``Total sum`` is
@@ -4111,6 +4709,12 @@ def _build_density_metrics_sheet_from_per_note_files(
                     "density_formula",
                     "density_metric_raw = D_H*w_H + D_I*w_I + D_S*w_S",
                 )
+            ),
+            "body_density_frequency_ceiling_hz": _f(
+                info.get("body_density_frequency_ceiling_hz", BODY_DENSITY_MAX_HZ)
+            ),
+            "full_spectrum_frequency_ceiling_hz": _f(
+                info.get("full_spectrum_frequency_ceiling_hz", FULL_SPECTRUM_MAX_HZ)
             ),
             "density_metric_name": "his_energy_ratio_weighted_log_density",
             "density_metric_basis": (
@@ -4308,6 +4912,12 @@ def _build_density_metrics_sheet_from_per_note_files(
         )
 
     out_df = pd.DataFrame(rows)
+
+    # Derived principled scalar density: energy-ratio-weighted band sums
+    # (component_*_energy_ratio × *_density_sum). NaN-propagating.
+    out_df["note_density_final"] = _compute_note_density_final(
+        out_df, context="density_metrics_direct_extraction"
+    )
 
     # Run-relative max-normalisation across the compiled workbook.
     raw_series = pd.to_numeric(out_df["density_metric_raw"], errors="coerce")
@@ -5484,6 +6094,118 @@ def _classify_compiled_column(col: str) -> str:
 _DEAD_COLUMN_PROTECTED_NAMES: frozenset[str] = frozenset({"Note"})
 
 
+def _corpus_comparability_audit(df: pd.DataFrame) -> Dict[str, Any]:
+    """Corpus-level cross-profile comparability verdict (Phase 1 guard).
+
+    Density metrics are only directly comparable across notes/instruments when
+    every row was produced under the SAME analysis profile (weight function +
+    salience threshold + density ceiling), and that profile is the primary
+    comparable one (``is_primary_comparable_profile``). A compiled workbook that
+    silently mixes profiles (e.g. some EXPLORATORY ``wf=linear`` runs and some
+    ``wf=log`` runs) must NOT be treated as a single comparable dataset.
+
+    This returns metadata keys describing the corpus and emits a WARNING when
+    the corpus is not a single, fully primary-comparable profile. It does not
+    drop or alter any row; ``Canonical_Primary_Filtered`` remains the sheet that
+    physically isolates the comparable subset.
+    """
+    out: Dict[str, Any] = {
+        "corpus_profile_count": 0,
+        "corpus_is_single_profile": False,
+        "corpus_profile_ids": "",
+        "corpus_all_primary_comparable": False,
+        "corpus_primary_comparable_row_count": 0,
+        "corpus_row_count": 0,
+        "corpus_comparability_status": "unknown",
+        "corpus_comparability_policy": (
+            "Direct cross-note/cross-instrument comparison of density metrics is "
+            "valid only within a single primary-comparable profile "
+            "(wf=log|dst=runtime_configured|ceil=runtime_configured). Use "
+            "Canonical_Primary_Filtered for inferential statistics."
+        ),
+    }
+    if df is None or getattr(df, "empty", True):
+        out["corpus_comparability_status"] = "empty_corpus"
+        return out
+
+    n_rows = int(len(df))
+    out["corpus_row_count"] = n_rows
+
+    # Distinct analysis profiles present.
+    prof_ids: List[str] = []
+    if "analysis_parameter_profile_id" in df.columns:
+        prof_ids = sorted(
+            {
+                str(v).strip()
+                for v in df["analysis_parameter_profile_id"].tolist()
+                if str(v).strip() not in ("", "nan", "None", "<NA>")
+            }
+        )
+    out["corpus_profile_count"] = int(len(prof_ids))
+    out["corpus_is_single_profile"] = bool(len(prof_ids) == 1)
+    out["corpus_profile_ids"] = " | ".join(prof_ids)
+
+    # Primary-comparable row count (accepts bool/str/int encodings).
+    primary_rows = 0
+    if "is_primary_comparable_profile" in df.columns:
+        _pp = df["is_primary_comparable_profile"]
+        _num = pd.to_numeric(_pp, errors="coerce")
+        if _num.notna().any():
+            primary_rows = int((_num.fillna(0) != 0).sum())
+        else:
+            primary_rows = int(
+                _pp.astype(str).str.strip().str.lower().isin({"true", "1", "yes", "y"}).sum()
+            )
+    out["corpus_primary_comparable_row_count"] = primary_rows
+    out["corpus_all_primary_comparable"] = bool(primary_rows == n_rows and n_rows > 0)
+
+    if out["corpus_all_primary_comparable"] and out["corpus_is_single_profile"]:
+        out["corpus_comparability_status"] = "ok_single_primary_profile"
+    elif len(prof_ids) > 1:
+        out["corpus_comparability_status"] = "mixed_profiles_not_directly_comparable"
+        logger.warning(
+            "Corpus comparability: %d distinct analysis profiles mixed in this "
+            "compiled workbook (%s). Density metrics are NOT directly comparable "
+            "across profiles. Use Canonical_Primary_Filtered (%d/%d rows are "
+            "primary-comparable).",
+            len(prof_ids), out["corpus_profile_ids"], primary_rows, n_rows,
+        )
+    elif primary_rows < n_rows:
+        out["corpus_comparability_status"] = "single_non_primary_profile_exploratory"
+        logger.warning(
+            "Corpus comparability: all rows share one profile but it is NOT the "
+            "primary-comparable profile (%d/%d primary-comparable). Treat as "
+            "EXPLORATORY; do not compare against primary-profile runs.",
+            primary_rows, n_rows,
+        )
+    else:
+        out["corpus_comparability_status"] = "ok_single_primary_profile"
+    return out
+
+
+def _restrict_primary_subset_to_single_profile(
+    df: pd.DataFrame,
+) -> Tuple[pd.DataFrame, bool, object]:
+    """Restrict a primary-statistics subset to a single analysis profile.
+
+    Returns ``(restricted_df, was_restricted, kept_profile_id)``. When the input
+    contains rows from more than one ``analysis_parameter_profile_id``, only the
+    most-populated profile is kept (refusing cross-profile aggregation in the
+    primary inferential/descriptive sheet). ``kept_profile_id`` is ``None`` when
+    no usable profile id is present.
+    """
+    if df is None or df.empty or "analysis_parameter_profile_id" not in df.columns:
+        return df, False, None
+    pids = df["analysis_parameter_profile_id"].astype(str).str.strip()
+    distinct = sorted({p for p in pids.tolist() if p not in ("", "nan", "None", "<NA>")})
+    if not distinct:
+        return df, False, None
+    if len(distinct) == 1:
+        return df, False, distinct[0]
+    dominant = pids.value_counts().idxmax()
+    return df[pids == dominant].copy(), True, dominant
+
+
 def _drop_dead_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Return a copy of ``df`` with all-NaN / all-blank columns dropped.
 
@@ -5792,6 +6514,9 @@ def _write_compiled_excel(
         density_df = density_df.drop(columns=_strip, errors="ignore")
 
     meta_flat = _enrich_compiled_metadata_from_df(metadata, base_df)
+    # Phase 1 (cross-profile comparability guard): refuse to let mixed analysis
+    # profiles be compared silently. Surface a corpus-level verdict and warn.
+    meta_flat.update(_corpus_comparability_audit(base_df))
     scores_df, loadings_df, var_df, pca_status, pca_note = _compute_optional_pca_sheets(
         base_df,
         enable_pca_export=enable_pca_export,
@@ -5976,6 +6701,25 @@ def _write_compiled_excel(
                 _canon_primary = _canon_primary[
                     pd.to_numeric(_canon_primary["is_primary_comparable_profile"], errors="coerce").fillna(0).astype(int) == 1
                 ].copy()
+            # Block 2 (refuse cross-profile aggregation): the primary-statistics
+            # subset must never mix analysis profiles.
+            _canon_primary, _restricted, _kept_pid = _restrict_primary_subset_to_single_profile(
+                _canon_primary
+            )
+            meta_flat["canonical_primary_filtered_profile_restricted"] = bool(_restricted)
+            if _kept_pid is not None:
+                meta_flat["canonical_primary_filtered_profile_id"] = str(_kept_pid)
+            if _restricted:
+                logger.warning(
+                    "Canonical_Primary_Filtered: multiple primary-comparable "
+                    "profiles present; restricted primary statistics to the "
+                    "dominant profile %r to avoid cross-profile aggregation.",
+                    str(_kept_pid),
+                )
+            # Single authoritative verdict: is the corpus safe to compare as-is?
+            meta_flat["corpus_comparable_for_statistics"] = bool(
+                meta_flat.get("corpus_comparability_status") == "ok_single_primary_profile"
+            )
             if _canon_primary.empty:
                 _canon_primary = pd.DataFrame(
                     [

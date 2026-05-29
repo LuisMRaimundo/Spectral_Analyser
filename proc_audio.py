@@ -29,6 +29,8 @@ from audio_utils import harmonic_tolerance_hz
 from subbass_policy import SubBassPolicy
 import math
 from constants import (
+    BODY_DENSITY_MAX_HZ,
+    FULL_SPECTRUM_MAX_HZ,
     ROBUST_SALIENT_INHARMONIC_PEAK_PICKING_ENABLED,
     DEFAULT_N_FFT, DEFAULT_HOP_LENGTH, DEFAULT_WINDOW,
     ENERGY_CONSERVATION_TOLERANCE,
@@ -88,9 +90,9 @@ PUBLICATION_OUTPUT_ALLOWED = True
 # =====================================================================
 ANALYSIS_SCHEMA_VERSION = "single_pass_raw_export_v2"
 PRIMARY_COMPARABLE_WEIGHT_FUNCTION = "log"
-PRIMARY_COMPARABLE_DENSITY_SALIENCE_THRESHOLD_DB = -45.0
-PRIMARY_COMPARABLE_DENSITY_FREQUENCY_CEILING_HZ = 5000.0
-F0_VALIDATION_MAX_HZ_DEFAULT = 5000.0
+PRIMARY_COMPARABLE_DENSITY_SALIENCE_THRESHOLD_DB = float("nan")
+PRIMARY_COMPARABLE_DENSITY_FREQUENCY_CEILING_HZ = float("nan")
+F0_VALIDATION_MAX_HZ_DEFAULT = float(FULL_SPECTRUM_MAX_HZ)
 NOMINAL_GUIDED_SEARCH_CENTS = 35.0
 NOMINAL_GUIDED_ACCEPT_MAX_CENTS = 25.0
 NOMINAL_GUIDED_GRID_STEP_CENTS = 1.0
@@ -1023,452 +1025,25 @@ def _parabolic_peak(y, x):
 
 
 # ============================================================================
-# Harmonic detection: order-based grouping and local peak refinement
-# Mathematical validation: standard reference
+# Harmonic detection helpers — pure, numpy-only functions extracted to
+# ``harmonic_validation.py`` (cohesive, independently unit-tested cluster).
+# Re-imported here so existing references (``proc_audio._foo`` and
+# ``from proc_audio import _foo``) keep working unchanged.
 # ============================================================================
-
-def _parabolic_interpolation_log_magnitude(
-    magnitudes: np.ndarray,
-    peak_idx: int,
-    bin_spacing: float,
-    freq_base: float
-) -> Tuple[float, bool]:
-    """
-    Interpolação parabólica em log-magnitude para estimação sub-bin.
-    
-    Fundamentação Matemática (standard reference):
-    - Para um pico localizado no bin k: y[k-1], y[k], y[k+1]
-    - Assumindo forma parabólica em log-escala: log(y) = a·x² + b·x + c
-    - Posição do pico (máximo): x_peak = -b/(2a) = -(Y₃ - Y₁)/(2·(Y₁ - 2Y₂ + Y₃))
-    - Correção: f_corrected = f_bin + x_peak × Δf
-    
-    Args:
-        magnitudes: Array de magnitudes (linear)
-        peak_idx: Índice do bin de máximo
-        bin_spacing: Espaçamento entre bins (Hz)
-        freq_base: Frequência base (Hz) - para calcular frequência absoluta
-    
-    Returns:
-        Tuple (frequência corrigida, validade)
-    """
-    if peak_idx <= 0 or peak_idx >= len(magnitudes) - 1:
-        freq_corrected = freq_base + peak_idx * bin_spacing
-        return freq_corrected, False
-    
-    # Converter para log-magnitude (mais linear que magnitude linear)
-    log_mags = 20 * np.log10(np.maximum(magnitudes, 1e-10))
-    
-    # Amostras: k-1, k, k+1
-    y1, y2, y3 = log_mags[peak_idx-1], log_mags[peak_idx], log_mags[peak_idx+1]
-    
-    # Parâmetros da parábola: y = a·x² + b·x + c
-    # Resolvendo: a = (Y₁ - 2Y₂ + Y₃)/2, b = (Y₃ - Y₁)/2, c = Y₂
-    a = (y1 - 2*y2 + y3) / 2.0
-    b = (y3 - y1) / 2.0
-    
-    # Posição do pico: x_peak = -b/(2a)
-    if abs(a) < 1e-10:  # Parábola degenerada (linha reta)
-        x_peak = 0.0
-    else:
-        x_peak = -b / (2 * a)
-    
-    # Validar: x_peak deve estar em [-0.5, +0.5]
-    if abs(x_peak) > 0.5:
-        freq_corrected = freq_base + peak_idx * bin_spacing
-        return freq_corrected, False
-    
-    # Calcular frequência corrigida
-    freq_bin = freq_base + peak_idx * bin_spacing
-    freq_corrected = freq_bin + x_peak * bin_spacing
-    
-    return freq_corrected, True
-
-
-def _refine_peak_index(
-    magnitudes: np.ndarray,
-    approx_idx: int,
-    *,
-    refine_radius: int = 2,
-) -> int:
-    """Snap ``approx_idx`` to the nearest local maximum within
-    ±``refine_radius`` bins.
-
-    When the candidate index comes from ``argmin(|freqs - n·f0|)`` the
-    expected harmonic frequency does not generally land on an FFT bin;
-    the true peak can sit one or two bins away. Without this refinement,
-    the ``mag[idx] > mag[idx±1]`` local-max check would fail for the
-    majority of legitimate harmonics simply because the index was
-    pointing at the lobe shoulder rather than the lobe top.
-    """
-    n = len(magnitudes)
-    if n == 0:
-        return int(approx_idx)
-    lo = max(0, int(approx_idx) - int(refine_radius))
-    hi = min(n, int(approx_idx) + int(refine_radius) + 1)
-    if hi <= lo:
-        return int(approx_idx)
-    return int(lo + int(np.argmax(magnitudes[lo:hi])))
-
-
-def _infer_bin_spacing_from_freqs(freqs: np.ndarray) -> float:
-    """Infer FFT-bin spacing (Hz) from the frequency axis."""
-    freqs = np.asarray(freqs, dtype=float)
-    if freqs.size < 2:
-        return float("nan")
-    diffs = np.diff(freqs)
-    diffs = diffs[np.isfinite(diffs) & (diffs > 0)]
-    if diffs.size == 0:
-        return float("nan")
-    return float(np.median(diffs))
-
-
-def _refine_candidate_to_interpolated_peak(
-    *,
-    candidate_freq_hz: float,
-    complete_magnitudes: np.ndarray,
-    complete_freqs: np.ndarray,
-    refine_radius: int = 2,
-) -> Dict[str, Any]:
-    """Snap a bin-centred candidate to a local magnitude peak and apply
-    log-magnitude parabolic interpolation (:func:`_parabolic_interpolation_log_magnitude`).
-
-    Returns audit fields for Harmonic Spectrum export: FFT bin index and
-    centre frequency, sub-bin interpolated frequency, and peak linear / dB
-    magnitude at the refined bin.
-    """
-    nan = float("nan")
-    result: Dict[str, Any] = {
-        "peak_bin_index": nan,
-        "bin_center_frequency_hz": float(candidate_freq_hz),
-        "interpolated_frequency_hz": float(candidate_freq_hz),
-        "subbin_offset_bins": 0.0,
-        "subbin_interpolation_valid": False,
-        "peak_amplitude_raw": nan,
-        "peak_magnitude_db": nan,
-    }
-    if complete_magnitudes is None or complete_freqs is None:
-        return result
-
-    mags = np.asarray(complete_magnitudes, dtype=float)
-    freqs = np.asarray(complete_freqs, dtype=float)
-
-    if mags.size == 0 or freqs.size == 0 or mags.size != freqs.size:
-        return result
-
-    idx0 = int(np.argmin(np.abs(freqs - float(candidate_freq_hz))))
-    idx_peak = _refine_peak_index(mags, idx0, refine_radius=int(refine_radius))
-
-    if idx_peak < 0 or idx_peak >= mags.size:
-        return result
-
-    bin_center = float(freqs[idx_peak])
-    amp = float(mags[idx_peak])
-    mag_db = float(20.0 * np.log10(max(amp, 1e-12)))
-
-    bin_spacing = _infer_bin_spacing_from_freqs(freqs)
-    if not np.isfinite(bin_spacing) or bin_spacing <= 0:
-        result.update(
-            {
-                "peak_bin_index": int(idx_peak),
-                "bin_center_frequency_hz": bin_center,
-                "interpolated_frequency_hz": bin_center,
-                "subbin_offset_bins": 0.0,
-                "subbin_interpolation_valid": False,
-                "peak_amplitude_raw": amp,
-                "peak_magnitude_db": mag_db,
-            }
-        )
-        return result
-
-    if idx_peak <= 0 or idx_peak >= mags.size - 1:
-        result.update(
-            {
-                "peak_bin_index": int(idx_peak),
-                "bin_center_frequency_hz": bin_center,
-                "interpolated_frequency_hz": bin_center,
-                "subbin_offset_bins": 0.0,
-                "subbin_interpolation_valid": False,
-                "peak_amplitude_raw": amp,
-                "peak_magnitude_db": mag_db,
-            }
-        )
-        return result
-
-    freq_base = float(freqs[0])
-    freq_interp, valid = _parabolic_interpolation_log_magnitude(
-        mags,
-        idx_peak,
-        bin_spacing,
-        freq_base,
-    )
-
-    if not valid or not np.isfinite(freq_interp):
-        freq_interp = bin_center
-        valid = False
-
-    offset_bins = float((float(freq_interp) - bin_center) / bin_spacing)
-
-    result.update(
-        {
-            "peak_bin_index": int(idx_peak),
-            "bin_center_frequency_hz": bin_center,
-            "interpolated_frequency_hz": float(freq_interp),
-            "subbin_offset_bins": offset_bins,
-            "subbin_interpolation_valid": bool(valid),
-            "peak_amplitude_raw": amp,
-            "peak_magnitude_db": mag_db,
-        }
-    )
-    return result
-
-
-def _saddle_prominence_db(
-    magnitudes: np.ndarray,
-    peak_idx: int,
-    *,
-    saddle_window: int = 10,
-) -> float:
-    """Saddle-based peak prominence (in dB).
-
-    Returns the peak height above the HIGHEST of the two local minima
-    found within ±``saddle_window`` bins on either side of ``peak_idx``.
-
-    Why a saddle window — and not the legacy ±1-bin comparison:
-
-        For a Blackman–Harris window the main lobe is ≈ 2 bins wide
-        between the −3 dB points, so even a perfectly clean sinusoid
-        produces immediate neighbours that sit only ~0.1–1.5 dB below
-        the peak. The legacy ``peak − max(left, right)`` formula
-        therefore measured *main-lobe curvature*, not prominence:
-        every real harmonic of a clarinet A♯3 came out at
-        ``prominence_db`` ≈ 0.04–0.63 dB and was rejected by a
-        ``> 3 dB`` strict gate — including the fundamental at SNR 75 dB.
-
-        Saddle-based prominence (the standard definition used by
-        ``scipy.signal.peak_prominences``) compares the peak to the
-        local minimum on each flank, which for an isolated harmonic
-        sits 20–40 dB below the peak. Real harmonics now pass the 3 dB
-        gate; only side-lobes / noise excursions fail.
-
-        ``saddle_window = 10`` bins is wide enough to step past the
-        Blackman–Harris main lobe and side lobes on every tier used
-        by this pipeline (smallest inter-harmonic spacing in the
-        Clarinete_mf corpus is 27 bins at D3, n_fft = 8192), so the
-        window never crosses into an adjacent harmonic.
-
-    Returns ``-inf`` on array edges or empty windows.
-    """
-    mags = np.asarray(magnitudes, dtype=float)
-    n = len(mags)
-    if n < 3 or peak_idx <= 0 or peak_idx >= n - 1:
-        return float("-inf")
-    ls = max(0, peak_idx - int(saddle_window))
-    rs = min(n, peak_idx + int(saddle_window) + 1)
-    left_slice = mags[ls:peak_idx] if peak_idx > ls else None
-    right_slice = mags[peak_idx + 1 : rs] if rs > peak_idx + 1 else None
-    if (
-        left_slice is None
-        or right_slice is None
-        or len(left_slice) == 0
-        or len(right_slice) == 0
-    ):
-        return float("-inf")
-    peak_db = 20.0 * np.log10(max(float(mags[peak_idx]), 1e-10))
-    left_min_db = 20.0 * np.log10(max(float(np.min(left_slice)), 1e-10))
-    right_min_db = 20.0 * np.log10(max(float(np.min(right_slice)), 1e-10))
-    return float(peak_db - max(left_min_db, right_min_db))
-
-
-def _is_local_peak_valid(
-    magnitudes: np.ndarray,
-    peak_idx: int,
-    threshold_db: float = 3.0,
-    noise_floor_percentile: float = 15.0,
-    window_size: int = 50,
-    saddle_window: int = 10,
-) -> Tuple[bool, float]:
-    """
-    Valida se índice corresponde a pico local válido (não lóbulo lateral).
-
-    Three independent checks:
-      * local maximum:      mag[k] > mag[k±1]
-      * saddle prominence:  peak − max(left_saddle, right_saddle) ≥ threshold_db
-                            (saddle defined via ``_saddle_prominence_db``)
-      * SNR vs noise floor: peak_db − percentile(local_window) ≥ 3 dB
-
-    Args:
-        magnitudes: Linear magnitude array.
-        peak_idx: Index to evaluate.
-        threshold_db: Minimum prominence above the saddle.
-        noise_floor_percentile: Percentile for noise-floor estimation.
-        window_size: Bin width of the noise-floor window (±).
-        saddle_window: Bin width used to locate the prominence saddle (±).
-
-    Returns:
-        Tuple (is_valid, snr_db).
-    """
-    if peak_idx <= 0 or peak_idx >= len(magnitudes) - 1:
-        return False, -np.inf
-
-    peak_idx = _refine_peak_index(magnitudes, peak_idx, refine_radius=2)
-    if peak_idx <= 0 or peak_idx >= len(magnitudes) - 1:
-        return False, -np.inf
-
-    log_mags = 20 * np.log10(np.maximum(magnitudes, 1e-10))
-
-    peak_mag_db = log_mags[peak_idx]
-    left_db = log_mags[peak_idx - 1]
-    right_db = log_mags[peak_idx + 1]
-
-    is_peak = peak_mag_db > left_db and peak_mag_db > right_db
-
-    prom_db = _saddle_prominence_db(
-        magnitudes, peak_idx, saddle_window=saddle_window
-    )
-    threshold_met = prom_db >= float(threshold_db)
-
-    start_idx = max(0, peak_idx - window_size)
-    end_idx = min(len(magnitudes), peak_idx + window_size)
-    local_magnitudes = magnitudes[start_idx:end_idx]
-    noise_floor_mag = np.percentile(local_magnitudes, noise_floor_percentile)
-    noise_floor_db = 20 * np.log10(noise_floor_mag + 1e-10)
-
-    snr_db = peak_mag_db - noise_floor_db
-    snr_valid = snr_db >= 3.0
-
-    is_valid = is_peak and threshold_met and snr_valid
-
-    return is_valid, snr_db
-
-
-# ---------------------------------------------------------------------------
-# Harmonic-spectrum candidate helpers (see _generate_harmonic_list).
-#
-# The strict harmonic acceptance test (``_is_local_peak_valid``) requires a
-# local maximum AND a ≥ 3 dB margin above both neighbours AND a SNR ≥ 3 dB
-# vs. the local noise floor. That criterion is appropriate for diagnostics
-# but rejects too many legitimate FFT-smeared harmonics for the density
-# metric. The two helpers below split harmonic acceptance into:
-#
-#   * strict_harmonic_peaks       — what ``_is_local_peak_valid`` accepts
-#                                   (drives ``harmonic_list_df`` / inharmonic
-#                                   classification / robust f0 fit);
-#   * harmonic_spectrum_candidates — one entry per expected harmonic order
-#                                   that drives the per-note ``Harmonic
-#                                   Spectrum`` sheet and the
-#                                   ``harmonic_log_amplitude_density`` metric
-#                                   used by Density_Metrics.
-# ---------------------------------------------------------------------------
-
-# Public list of candidate-status codes. Kept as a module-level tuple so
-# downstream tests / metadata writers can reference the canonical names
-# without re-implementing the enum.
-HARMONIC_CANDIDATE_STATUS_VALUES: Tuple[str, ...] = (
-    "strict_validated",
-    "snr_validated",
-    "weak_candidate",
-    "below_noise_floor",
-    "missing_window",
-    "rejected_bad_f0",
+from harmonic_peak_validation import (  # noqa: E402
+    HARMONIC_CANDIDATE_STATUS_VALUES,
+    cfar_peak_detection,
+    _classify_harmonic_candidate,
+    _harmonic_inclusion_audit_exclusion_reason,
+    _infer_bin_spacing_from_freqs,
+    _is_local_peak_valid,
+    _local_peak_metrics,
+    _parabolic_interpolation_log_magnitude,
+    _prominence_saddle_window_bins,
+    _refine_candidate_to_interpolated_peak,
+    _refine_peak_index,
+    _saddle_prominence_db,
 )
-
-
-def _local_peak_metrics(
-    magnitudes: np.ndarray,
-    peak_idx: int,
-    *,
-    noise_floor_percentile: float = 15.0,
-    window_size: int = 50,
-    saddle_window: int = 10,
-) -> Tuple[bool, float, float]:
-    """Compute ``(local_peak_valid, snr_db, prominence_db)`` for ``peak_idx``.
-
-    * ``local_peak_valid``: ``mag[idx] > mag[idx-1] AND mag[idx] > mag[idx+1]``
-      (strict local maximum on linear magnitudes).
-    * ``snr_db``: ``20 * log10(mag[idx])`` minus the noise-floor level
-      estimated as ``percentile(noise_floor_percentile)`` over a ±``window_size``
-      bin window around ``peak_idx``.
-    * ``prominence_db``: saddle-based prominence (see
-      :func:`_saddle_prominence_db`). The legacy "peak − max(left, right)"
-      formula measured Blackman–Harris main-lobe curvature, NOT prominence,
-      which caused every real harmonic to fall below a 3 dB strict gate.
-
-    Returns ``(False, -inf, -inf)`` when ``peak_idx`` is at an array edge.
-    """
-    mags = np.asarray(magnitudes, dtype=float)
-    if peak_idx <= 0 or peak_idx >= len(mags) - 1:
-        return False, float("-inf"), float("-inf")
-    peak_idx = _refine_peak_index(mags, peak_idx, refine_radius=2)
-    if peak_idx <= 0 or peak_idx >= len(mags) - 1:
-        return False, float("-inf"), float("-inf")
-    peak_lin = float(max(mags[peak_idx], 1e-10))
-    left_lin = float(max(mags[peak_idx - 1], 1e-10))
-    right_lin = float(max(mags[peak_idx + 1], 1e-10))
-    peak_db = 20.0 * np.log10(peak_lin)
-    left_db = 20.0 * np.log10(left_lin)
-    right_db = 20.0 * np.log10(right_lin)
-    is_local_peak = bool((peak_db > left_db) and (peak_db > right_db))
-    prominence_db = _saddle_prominence_db(
-        mags, peak_idx, saddle_window=saddle_window
-    )
-    s = max(0, peak_idx - window_size)
-    e = min(len(mags), peak_idx + window_size)
-    if e <= s:
-        return is_local_peak, float("-inf"), prominence_db
-    nf_mag = float(np.percentile(mags[s:e], noise_floor_percentile))
-    nf_db = 20.0 * np.log10(max(nf_mag, 1e-10))
-    snr_db = float(peak_db - nf_db)
-    return is_local_peak, snr_db, prominence_db
-
-
-def _classify_harmonic_candidate(
-    *,
-    amplitude_raw: float,
-    local_peak_valid: bool,
-    snr_db: float,
-    prominence_db: float,
-    strict_snr_db: float = 3.0,
-    strict_prominence_db: float = 3.0,
-    minimum_snr_db: float = 3.0,
-    rejected_bad_f0: bool = False,
-) -> Tuple[str, bool]:
-    """Classify a per-order harmonic candidate.
-
-    Returns ``(candidate_status, include_for_density)``.
-
-    Density inclusion is deliberately stricter than candidate labelling:
-
-        include_for_density == True iff candidate_status == ``strict_validated``.
-
-    SNR can say that a spectral component is salient; it cannot by itself prove
-    that the component is a valid harmonic partial. Therefore ``snr_validated``
-    and ``weak_candidate`` remain useful diagnostic labels but are excluded from
-    the harmonic density sum.
-
-    This prevents harmonic density from being inflated by side-lobes, broadband
-    shoulders, or non-harmonic peaks that happen to fall inside a wide harmonic
-    search window.
-
-    The prominence + local-peak + SNR gate that promotes ``strict_validated``
-    is the only path that sets ``include_for_density`` to True.
-    """
-    if rejected_bad_f0:
-        return "rejected_bad_f0", False
-    if (
-        amplitude_raw is None
-        or not np.isfinite(amplitude_raw)
-        or float(amplitude_raw) <= 0.0
-    ):
-        return "missing_window", False
-    snr = float(snr_db) if np.isfinite(snr_db) else float("-inf")
-    prom = float(prominence_db) if np.isfinite(prominence_db) else float("-inf")
-    if local_peak_valid and snr >= strict_snr_db and prom >= strict_prominence_db:
-        return "strict_validated", True
-    if snr >= minimum_snr_db:
-        return "snr_validated", False
-    if snr > 0.0 or local_peak_valid:
-        return "weak_candidate", False
-    return "below_noise_floor", False
 
 
 def _estimate_f0_global_robust(
@@ -2183,11 +1758,21 @@ class AudioProcessor:
         # for the per-note ``Harmonic Spectrum`` sheet and for the
         # ``harmonic_log_amplitude_density`` metric used by Density_Metrics.
         self.harmonic_spectrum_candidates_df: Optional[pd.DataFrame] = None
+        self.harmonic_search_ceiling_hz: Optional[float] = None
         self.expected_harmonic_count: Optional[int] = None
         self.strict_harmonic_count: Optional[int] = None
         self.harmonic_candidate_count_density: Optional[int] = None
         self.harmonic_amplitude_sum: Optional[float] = None
         self.harmonic_log_amplitude_density: Optional[float] = None
+        self.spectral_slope_db_per_harmonic: Optional[float] = None
+        self.harmonic_effective_component_count_body_ceiling: Optional[float] = None
+        self.harmonic_effective_component_count_normalized_body_ceiling: Optional[float] = None
+        self.normalized_harmonic_richness_body_ceiling: Optional[float] = None
+        self.body_density_per_expected_harmonic_slot_body_ceiling: Optional[float] = None
+        self.pitch_normalized_component_density_body_ceiling: Optional[float] = None
+        self.pitch_normalized_component_body_density_body_ceiling: Optional[float] = None
+        self.pitch_normalized_harmonic_component_energy_body_ceiling: Optional[float] = None
+        self.richness_weighted_body_density_body_ceiling: Optional[float] = None
         self.f0_initial: Optional[float] = None
         self.f0_prior_note: Optional[str] = None
         self.f0_prior_source: Optional[str] = None
@@ -3098,8 +2683,8 @@ class AudioProcessor:
         harmonic_density_weight: float = 1.0,
         inharmonic_density_weight: float = 0.5,
         subbass_density_weight: float = 0.25,
-        density_salience_threshold_db: float = -45.0,
-        density_frequency_ceiling_hz: float = 5000.0,
+        density_salience_threshold_db: Optional[float] = None,
+        density_frequency_ceiling_hz: Optional[float] = None,
         spectral_masking_enabled: bool = False,  # NEW: Control spectral masking (default: OFF for physical model)
         spectral_magnitude_smoothing_enabled: bool = DEFAULT_STFT_MAGNITUDE_SMOOTHING_ENABLED,
         parallel_processing: bool = False,
@@ -3176,8 +2761,27 @@ class AudioProcessor:
         self.harmonic_density_weight = float(harmonic_density_weight)
         self.inharmonic_density_weight = float(inharmonic_density_weight)
         self.subbass_density_weight = float(subbass_density_weight)
-        self.density_salience_threshold_db = float(density_salience_threshold_db)
-        self.density_frequency_ceiling_hz = float(density_frequency_ceiling_hz)
+        self.density_salience_threshold_db = (
+            float(density_salience_threshold_db)
+            if density_salience_threshold_db is not None
+            else float(self.db_min)
+        )
+        self.density_frequency_ceiling_hz = (
+            float(density_frequency_ceiling_hz)
+            if density_frequency_ceiling_hz is not None
+            else float(min(float(self.freq_max), float(BODY_DENSITY_MAX_HZ)))
+        )
+        self.logger.info(
+            "Resolved density parameters: salience_threshold_db=%.2f "
+            "(input=%s), frequency_ceiling_hz=%.1f (input=%s), "
+            "freq_max=%.1f, density_summation_mode=%s",
+            float(self.density_salience_threshold_db),
+            "auto" if density_salience_threshold_db is None else "explicit",
+            float(self.density_frequency_ceiling_hz),
+            "auto" if density_frequency_ceiling_hz is None else "explicit",
+            float(self.freq_max),
+            str(self.density_summation_mode),
+        )
 
         # Directories
         results_directory = self.results_directory
@@ -4137,7 +3741,21 @@ class AudioProcessor:
             f"freq_max={freq_max:.1f} Hz). Strict acceptance requires a validated local peak; "
             f"density candidates use more permissive criteria."
         )
+        self.harmonic_search_ceiling_hz = float(freq_max)
         self.expected_harmonic_count = int(len(expected))
+        _validation_f0_hz = float(f0)
+        _validation_bin_hz = float(bin_spacing) if bin_spacing else float("nan")
+        if not np.isfinite(_validation_bin_hz) or _validation_bin_hz <= 0.0:
+            try:
+                _sr_v = float(getattr(self, "sr", 0.0) or 0.0)
+                _nfft_v = int(getattr(self, "n_fft", 0) or 0)
+                _zp_v = int(getattr(self, "zero_padding", 1) or 1)
+                if _sr_v > 0.0 and _nfft_v > 0:
+                    _validation_bin_hz = float(
+                        _calculate_bin_spacing(_sr_v, _nfft_v, _zp_v)
+                    )
+            except Exception:
+                _validation_bin_hz = float("nan")
         
         # Mathematical reasoning (standard reference):
         # Harmonic series: f_n = n * f0 (where n = 1, 2, 3, ...)
@@ -4177,6 +3795,8 @@ class AudioProcessor:
                     tol_hz=float(tol_hz),
                     complete_magnitudes=complete_magnitudes,
                     complete_freqs=complete_freqs,
+                    f0_hz=_validation_f0_hz,
+                    bin_spacing_hz=_validation_bin_hz,
                 )
             )
             
@@ -4206,7 +3826,9 @@ class AudioProcessor:
                     # Validate local peak
                     is_valid_peak, snr_db = _is_local_peak_valid(
                         complete_magnitudes, freq_idx,
-                        threshold_db=3.0, noise_floor_percentile=15.0, window_size=50
+                        threshold_db=3.0, noise_floor_percentile=15.0, window_size=50,
+                        f0_hz=_validation_f0_hz,
+                        bin_spacing_hz=_validation_bin_hz,
                     )
                     
                     if not is_valid_peak:
@@ -4280,6 +3902,8 @@ class AudioProcessor:
                         complete_freqs=complete_freqs,
                         harmonic_list=harmonic_list,
                         hnum=hnum,
+                        f0_hz=_validation_f0_hz,
+                        bin_spacing_hz=_validation_bin_hz,
                     )
                     if not accepted_fallback:
                         self.logger.debug(
@@ -4298,6 +3922,8 @@ class AudioProcessor:
                     complete_freqs=complete_freqs,
                     harmonic_list=harmonic_list,
                     hnum=hnum,
+                    f0_hz=_validation_f0_hz,
+                    bin_spacing_hz=_validation_bin_hz,
                 )
                 if not accepted_fallback:
                     self.logger.debug(
@@ -4342,7 +3968,11 @@ class AudioProcessor:
         f0_validation_max_hz = float(
             min(
                 F0_VALIDATION_MAX_HZ_DEFAULT,
-                float(getattr(self, "density_frequency_ceiling_hz", 5000.0) or 5000.0),
+                float(
+                    getattr(self, "density_frequency_ceiling_hz", None)
+                    if getattr(self, "density_frequency_ceiling_hz", None) is not None
+                    else getattr(self, "freq_max", FULL_SPECTRUM_MAX_HZ)
+                ),
             )
         )
         if strict_peak_count_for_fit >= 3:
@@ -4521,17 +4151,29 @@ class AudioProcessor:
                 f"fit_quality={fit_quality:.6f} (limit={max_fit_quality:.4f})."
             )
 
-        self.harmonic_list_df = pd.DataFrame(harmonic_list).reset_index(drop=True) if harmonic_list else pd.DataFrame()
-        strict_n = int(len(self.harmonic_list_df))
-        self.strict_harmonic_count = strict_n
-        if not self.harmonic_list_df.empty:
-            self.logger.info(
-                "%d strict_harmonic_peaks accepted out of up to %d expected orders "
-                "(local-peak + SNR ≥ 3 dB + prominence > 3 dB; "
-                "orders without a validated peak are left out of the strict list).",
-                strict_n,
-                len(expected),
+        # Re-align harmonic candidates to the published f0 (nominal or fitted).
+        # The first-pass loop uses the nominal note f0 for expected=n·f0; after
+        # f0 fit the comb shifts and mid-register orders (e.g. cello H10) were
+        # mis-labelled off_frequency despite strong SNR/prominence.
+        try:
+            _f0_for_candidates = float(getattr(self, "f0_final", float("nan")))
+        except (TypeError, ValueError):
+            _f0_for_candidates = float("nan")
+        if not np.isfinite(_f0_for_candidates) or _f0_for_candidates <= 0.0:
+            _f0_for_candidates = float(f0)
+        if candidate_rows and np.isfinite(_f0_for_candidates) and _f0_for_candidates > 0.0:
+            candidate_rows = self._rebuild_harmonic_candidate_rows(
+                f0_hz=float(_f0_for_candidates),
+                freq_max=float(freq_max),
+                tolerance=float(tolerance),
+                use_adaptive_tolerance=bool(use_adaptive_tolerance),
+                bin_spacing=bin_spacing,
+                has_sub_bin_interpolation=bool(has_sub_bin_interpolation),
+                complete_magnitudes=complete_magnitudes,
+                complete_freqs=complete_freqs,
             )
+
+        self.harmonic_list_df = pd.DataFrame(harmonic_list).reset_index(drop=True) if harmonic_list else pd.DataFrame()
 
         # Materialise the harmonic_spectrum_candidates_df and surface the
         # density-bound aggregates. The Harmonic Spectrum sheet exported
@@ -4557,21 +4199,105 @@ class AudioProcessor:
                 cand_df.loc[_fq_h < _cut_h, "include_for_density"] = False
         self.harmonic_spectrum_candidates_df = cand_df
         candidate_n = int(len(cand_df))
+        self.harmonic_candidate_count_20khz = int(candidate_n)
+        try:
+            _component_ceiling_hz = float(
+                getattr(self, "density_frequency_ceiling_hz", BODY_DENSITY_MAX_HZ)
+            )
+        except (TypeError, ValueError):
+            _component_ceiling_hz = float(BODY_DENSITY_MAX_HZ)
+        if not np.isfinite(_component_ceiling_hz) or _component_ceiling_hz <= 0.0:
+            _component_ceiling_hz = float(BODY_DENSITY_MAX_HZ)
+        _component_ceiling_hz = float(min(_component_ceiling_hz, float(BODY_DENSITY_MAX_HZ)))
         if candidate_n > 0 and "include_for_density" in cand_df.columns:
-            inc_mask = cand_df["include_for_density"].astype(bool)
-            density_included_n = int(inc_mask.sum())
+            density_included_n = int(cand_df["include_for_density"].astype(bool).sum())
+            self.strict_harmonic_count = int(density_included_n)
+            strict_n = int(density_included_n)
             amp_for_density = pd.to_numeric(
-                cand_df.loc[inc_mask, "Amplitude_raw"], errors="coerce"
+                cand_df.loc[cand_df["include_for_density"].astype(bool), "Amplitude_raw"], errors="coerce"
             )
             harm_amp_sum = float(np.nansum(amp_for_density.to_numpy(dtype=float)))
         else:
             density_included_n = 0
+            strict_n = 0
+            self.strict_harmonic_count = 0
             harm_amp_sum = 0.0
         self.harmonic_candidate_count_density = density_included_n
+        self.logger.info(
+            "%d density-validated harmonic components on f0-aligned comb "
+            "(SNR ≥ 3 dB + saddle prominence ≥ 3 dB) out of %d expected orders.",
+            int(density_included_n),
+            int(candidate_n),
+        )
+        self.validated_harmonic_component_count_body_ceiling = int(
+            pd.to_numeric(
+                cand_df.loc[
+                    cand_df["include_for_density"].astype(bool)
+                    & (pd.to_numeric(cand_df["Frequency (Hz)"], errors="coerce") <= _component_ceiling_hz),
+                    "Harmonic Number",
+                ],
+                errors="coerce",
+            ).notna().sum()
+        ) if candidate_n > 0 and {"include_for_density", "Frequency (Hz)", "Harmonic Number"}.issubset(cand_df.columns) else 0
+        self.validated_harmonic_component_count_body_ceiling = int(
+            getattr(self, "validated_harmonic_component_count_body_ceiling", 0) or 0
+        )
+        # Diagnostic-only "probable harmonic" family:
+        # strict_validated + high-order near-harmonic candidates that pass
+        # local-peak and minimal SNR gates.
+        self.probable_harmonic_component_count_body_ceiling = 0
+        self.probable_harmonic_component_energy_sum_body_ceiling = 0.0
+        if candidate_n > 0 and {"Frequency (Hz)", "Harmonic Number", "candidate_status"}.issubset(cand_df.columns):
+            _status = cand_df["candidate_status"].astype(str).str.lower()
+            _hnum = pd.to_numeric(cand_df["Harmonic Number"], errors="coerce")
+            _fq = pd.to_numeric(cand_df["Frequency (Hz)"], errors="coerce")
+            _lp = (
+                cand_df["local_peak_valid"].astype(bool)
+                if "local_peak_valid" in cand_df.columns
+                else pd.Series(False, index=cand_df.index)
+            )
+            _snr = (
+                pd.to_numeric(cand_df["snr_db"], errors="coerce")
+                if "snr_db" in cand_df.columns
+                else pd.Series(float("nan"), index=cand_df.index)
+            )
+            _strict_mask = cand_df.get("include_for_density", pd.Series(False, index=cand_df.index)).astype(bool)
+            _probable_extra = (
+                _status.isin(["snr_validated", "weak_candidate"])
+                & (_hnum > 10)
+                & _lp
+                & (_snr >= 1.5)
+            )
+            _probable_mask = (_strict_mask | _probable_extra) & (_fq <= _component_ceiling_hz)
+            self.probable_harmonic_component_count_body_ceiling = int(pd.to_numeric(
+                cand_df.loc[_probable_mask, "Harmonic Number"], errors="coerce"
+            ).notna().sum())
+            if "Power_raw" in cand_df.columns:
+                _pp = pd.to_numeric(cand_df.loc[_probable_mask, "Power_raw"], errors="coerce").fillna(0.0)
+                self.probable_harmonic_component_energy_sum_body_ceiling = float(
+                    np.sum(np.maximum(_pp.to_numpy(dtype=float), 0.0))
+                )
         self.harmonic_amplitude_sum = float(harm_amp_sum)
         self.harmonic_log_amplitude_density = float(
             np.log10(1.0 + max(0.0, harm_amp_sum))
         )
+        # Single authoritative slope implementation: validated harmonics only
+        # (candidate_status strict_validated -> include_for_density=True).
+        self.spectral_slope_db_per_harmonic = float("nan")
+        if (
+            candidate_n > 0
+            and "include_for_density" in cand_df.columns
+            and "Harmonic Number" in cand_df.columns
+            and "Magnitude (dB)" in cand_df.columns
+        ):
+            _valid_h = cand_df.loc[cand_df["include_for_density"].astype(bool)].copy()
+            _orders = pd.to_numeric(_valid_h["Harmonic Number"], errors="coerce").to_numpy(dtype=float)
+            _dbs = pd.to_numeric(_valid_h["Magnitude (dB)"], errors="coerce").to_numpy(dtype=float)
+            _ok = np.isfinite(_orders) & np.isfinite(_dbs)
+            if int(np.count_nonzero(_ok)) >= 3:
+                self.spectral_slope_db_per_harmonic = float(
+                    np.polyfit(_orders[_ok], _dbs[_ok], 1)[0]
+                )
 
         self.logger.info(
             "Harmonic extraction summary: expected=%d strict=%d candidates=%d "
@@ -4584,9 +4310,9 @@ class AudioProcessor:
         )
         if strict_n == 0:
             self.logger.warning(
-                "No strict harmonics accepted (searched up to %d orders; "
-                "strict criterion: local peak + SNR ≥ 3 dB + prominence > 3 dB). "
-                "Density candidates: %d / %d included.",
+                "No density-validated harmonics (searched up to %d orders; "
+                "criterion: SNR ≥ 3 dB + saddle prominence ≥ 3 dB). "
+                "Included: %d / %d.",
                 len(expected),
                 density_included_n,
                 candidate_n,
@@ -4966,6 +4692,55 @@ class AudioProcessor:
             raise RuntimeError(msg)
 
     # ---------------------------------------------------------------------
+    # Rebuild harmonic candidates on the final f0 comb.
+    # ---------------------------------------------------------------------
+    def _rebuild_harmonic_candidate_rows(
+        self,
+        *,
+        f0_hz: float,
+        freq_max: float,
+        tolerance: float,
+        use_adaptive_tolerance: bool,
+        bin_spacing: Optional[float],
+        has_sub_bin_interpolation: bool,
+        complete_magnitudes: Optional[np.ndarray],
+        complete_freqs: Optional[np.ndarray],
+    ) -> list:
+        _bin_hz = float(bin_spacing) if bin_spacing else float("nan")
+        if not np.isfinite(_bin_hz) or _bin_hz <= 0.0:
+            try:
+                _sr_v = float(getattr(self, "sr", 0.0) or 0.0)
+                _nfft_v = int(getattr(self, "n_fft", 0) or 0)
+                _zp_v = int(getattr(self, "zero_padding", 1) or 1)
+                if _sr_v > 0.0 and _nfft_v > 0:
+                    _bin_hz = float(_calculate_bin_spacing(_sr_v, _nfft_v, _zp_v))
+            except Exception:
+                _bin_hz = float("nan")
+
+        max_harm = int(float(freq_max) / float(f0_hz)) + 1
+        rows: list = []
+        for hnum, ef in enumerate((float(f0_hz) * n for n in range(1, max_harm + 1)), 1):
+            if bin_spacing and has_sub_bin_interpolation:
+                tolerance_bins = 0.5 if has_sub_bin_interpolation else 1.0
+                tol_hz_from_bin = float(bin_spacing) * tolerance_bins
+                tol_hz_adaptive = ef * 0.02 if use_adaptive_tolerance else tolerance
+                tol_hz = max(tol_hz_from_bin, tol_hz_adaptive)
+            else:
+                tol_hz = max(tolerance, ef * 0.02) if use_adaptive_tolerance else tolerance
+            rows.append(
+                self._build_harmonic_candidate_row(
+                    hnum=int(hnum),
+                    expected_freq_hz=float(ef),
+                    tol_hz=float(tol_hz),
+                    complete_magnitudes=complete_magnitudes,
+                    complete_freqs=complete_freqs,
+                    f0_hz=float(f0_hz),
+                    bin_spacing_hz=_bin_hz,
+                )
+            )
+        return rows
+
+    # ---------------------------------------------------------------------
     # Harmonic spectrum candidate row builder.
     # ---------------------------------------------------------------------
     def _build_harmonic_candidate_row(
@@ -4976,6 +4751,8 @@ class AudioProcessor:
         tol_hz: float,
         complete_magnitudes: Optional[np.ndarray],
         complete_freqs: Optional[np.ndarray],
+        f0_hz: Optional[float] = None,
+        bin_spacing_hz: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Build one ``harmonic_spectrum_candidates`` row for harmonic order
         ``hnum`` (expected frequency = ``expected_freq_hz``).
@@ -5015,6 +4792,8 @@ class AudioProcessor:
             "Power_raw": nan,
             "snr_db": nan,
             "prominence_db": nan,
+            "cfar_margin_db": nan,
+            "cfar_detected": False,
             "local_peak_valid": False,
             "candidate_status": "missing_window",
             "include_for_density": False,
@@ -5040,8 +4819,10 @@ class AudioProcessor:
         if cand is None:
             return row
 
-        # Pick the strongest finite-amplitude bin inside the window
-        # (audit rule: "extract strongest finite amplitude candidate").
+        # Pick the candidate closest to the expected harmonic frequency.
+        # Using "strongest in window" can mis-assign a nearby louder bin to
+        # the wrong order at high n, which then triggers off-frequency
+        # rejection and drops real harmonic partials from density.
         amp_col: Optional[str] = None
         if "Amplitude" in cand.columns:
             amp_col = "Amplitude"
@@ -5060,7 +4841,18 @@ class AudioProcessor:
         finite_mask = amp_series.notna() & (amp_series > 0)
         if not finite_mask.any():
             return row
-        best_idx = amp_series[finite_mask].idxmax()
+        cand_valid = cand.loc[finite_mask].copy()
+        cand_valid["_freq_dev_abs"] = (
+            pd.to_numeric(cand_valid["Frequency (Hz)"], errors="coerce")
+            - float(expected_freq_hz)
+        ).abs()
+        cand_valid["_amp_sort"] = pd.to_numeric(cand_valid[amp_col], errors="coerce")
+        cand_valid = cand_valid.sort_values(
+            by=["_freq_dev_abs", "_amp_sort"],
+            ascending=[True, False],
+            kind="mergesort",
+        )
+        best_idx = cand_valid.index[0]
         best = cand.loc[best_idx]
         bin_candidate_freq = float(best["Frequency (Hz)"])
         amplitude_raw = float(amp_series.loc[best_idx])
@@ -5082,11 +4874,33 @@ class AudioProcessor:
             and complete_freqs is not None
             and len(complete_freqs) > 0
         ):
+            # Refine across the FULL harmonic tolerance window, not a fixed
+            # ±2 bins. The candidate above is the bin *closest to n·f0*; when
+            # the true partial is detuned from nominal n·f0 (vibrato, tuning
+            # offset) the actual spectral peak can sit several bins away, and
+            # a fixed ±2-bin snap reaches it only at coarse FFT resolutions.
+            # That made the extracted amplitude FFT-resolution dependent
+            # (e.g. a 1000 Hz tone labelled B5=987.77 Hz: ±2 bins reaches the
+            # peak at n_fft=4096 but undershoots at 8192). Scaling the snap
+            # radius to ``tol_hz`` makes the extraction land on the same
+            # physical peak across tiers (FFT-invariant amplitude) while
+            # never searching beyond the harmonic window itself.
+            _bin_hz_ref = _infer_bin_spacing_from_freqs(complete_freqs)
+            if (
+                np.isfinite(_bin_hz_ref)
+                and _bin_hz_ref > 0.0
+                and float(tol_hz) > 0.0
+            ):
+                _refine_radius = int(
+                    max(2, min(64, int(np.ceil(float(tol_hz) / float(_bin_hz_ref)))))
+                )
+            else:
+                _refine_radius = 2
             peak_refinement = _refine_candidate_to_interpolated_peak(
                 candidate_freq_hz=bin_candidate_freq,
                 complete_magnitudes=complete_magnitudes,
                 complete_freqs=complete_freqs,
-                refine_radius=2,
+                refine_radius=_refine_radius,
             )
 
         extracted_freq = (
@@ -5101,6 +4915,8 @@ class AudioProcessor:
         local_peak_valid = False
         snr_db = float("nan")
         prominence_db = float("nan")
+        cfar_detected: Optional[bool] = None
+        cfar_margin_db = float("nan")
         if (
             complete_magnitudes is not None
             and complete_freqs is not None
@@ -5112,8 +4928,17 @@ class AudioProcessor:
             else:
                 idx = int(np.argmin(np.abs(complete_freqs - extracted_freq)))
             local_peak_valid, snr_db, prominence_db = _local_peak_metrics(
+                complete_magnitudes, idx,
+                f0_hz=f0_hz,
+                bin_spacing_hz=bin_spacing_hz,
+            )
+            # CFAR (constant false-alarm-rate) noise-significance test at the
+            # refined peak bin: principled, locally-adaptive replacement for the
+            # ad-hoc fixed-dB SNR margin (see harmonic_peak_validation.cfar_peak_detection).
+            _cfar_det, cfar_margin_db, _cfar_thr_db = cfar_peak_detection(
                 complete_magnitudes, idx
             )
+            cfar_detected = bool(_cfar_det)
 
         # AUDIT FIX (acoustic-physics correction, Clarinete_mf finding
         # #3, revised) — frequency-deviation gate. The candidate search
@@ -5134,12 +4959,12 @@ class AudioProcessor:
         #     h=2 (10 Hz) would over-reject at h=34 (where 0.5% of
         #     16 kHz is ~80 Hz — well within musical normality).
         #
-        # We therefore combine both into a SINGLE tolerance:
-        #     tol = max(5 Hz, 2.5 × bin_width, 0.01 × expected_freq)
-        # which is ~1 % relative — comfortably below a quarter-tone
-        # (~3 %) so the n·f₀ harmonic-identity constraint still
-        # rejects pure broadband peaks, but does not punish real
-        # upper-partial drift.
+        # We therefore combine both into a SINGLE tolerance with adaptive
+        # relative slack for higher orders:
+        #     tol = max(5 Hz, 2.5 × bin_width, rel(n) × expected_freq)
+        # where rel(n)=1% for lower orders and 2.5% for higher orders.
+        # This keeps low-order harmonic identity strict while avoiding
+        # over-rejection of valid upper partials.
         try:
             _sr_hz_gate = float(
                 getattr(self, "sr", None)
@@ -5154,7 +4979,8 @@ class AudioProcessor:
         except Exception:
             _bin_hz_gate = 0.0
         _abs_floor_hz = max(5.0, 2.5 * _bin_hz_gate) if _bin_hz_gate > 0 else 5.0
-        _rel_floor_hz = 0.01 * float(expected_freq_hz)
+        _rel_ratio = 0.01 if int(hnum) <= 10 else 0.025
+        _rel_floor_hz = _rel_ratio * float(expected_freq_hz)
         _max_dev_hz_gate = max(_abs_floor_hz, _rel_floor_hz)
         _freq_deviation_abs = abs(float(extracted_freq) - float(expected_freq_hz))
         if _freq_deviation_abs > _max_dev_hz_gate:
@@ -5166,6 +4992,8 @@ class AudioProcessor:
                 local_peak_valid=local_peak_valid,
                 snr_db=snr_db,
                 prominence_db=prominence_db,
+                harmonic_number=int(hnum),
+                cfar_detected=cfar_detected,
             )
 
         row.update(
@@ -5193,6 +5021,8 @@ class AudioProcessor:
                 "Power_raw": amplitude_raw ** 2,
                 "snr_db": float(snr_db),
                 "prominence_db": float(prominence_db),
+                "cfar_margin_db": float(cfar_margin_db),
+                "cfar_detected": (bool(cfar_detected) if cfar_detected is not None else False),
                 "local_peak_valid": bool(local_peak_valid),
                 "candidate_status": str(status),
                 "include_for_density": bool(include),
@@ -5219,6 +5049,8 @@ class AudioProcessor:
         harmonic_list: list,
         hnum: int,
         snr_threshold_db: float = 3.0,
+        f0_hz: Optional[float] = None,
+        bin_spacing_hz: Optional[float] = None,
     ) -> bool:
         """Attempt to accept a harmonic order from ``complete_list_df`` when
         the strict ``_is_local_peak_valid`` check failed (or there was no
@@ -5279,8 +5111,24 @@ class AudioProcessor:
         left_db = float(log_mags[freq_idx2 - 1])
         right_db = float(log_mags[freq_idx2 + 1])
         is_local_max = (peak_db > left_db) and (peak_db > right_db)
-        # Local noise floor (15th percentile over ±50-bin window).
         ws = 50
+        if (
+            f0_hz is not None
+            and bin_spacing_hz is not None
+            and np.isfinite(float(f0_hz))
+            and float(f0_hz) > 0.0
+            and np.isfinite(float(bin_spacing_hz))
+            and float(bin_spacing_hz) > 0.0
+        ):
+            ws = max(
+                5,
+                int(
+                    _prominence_saddle_window_bins(
+                        f0_hz=float(f0_hz),
+                        bin_spacing_hz=float(bin_spacing_hz),
+                    )
+                ),
+            )
         s = max(0, freq_idx2 - ws)
         e = min(len(mags), freq_idx2 + ws)
         local_mags = mags[s:e]
@@ -5289,7 +5137,16 @@ class AudioProcessor:
         nf_mag = float(np.percentile(local_mags, 15.0))
         nf_db = 20.0 * np.log10(max(nf_mag, 1e-10))
         snr2 = peak_db - nf_db
-        if not (is_local_max and snr2 >= float(snr_threshold_db)):
+        prom2 = _saddle_prominence_db(
+            mags,
+            freq_idx2,
+            saddle_window=max(3, ws),
+        )
+        if not (
+            is_local_max
+            and snr2 >= float(snr_threshold_db)
+            and prom2 >= 3.0
+        ):
             return False
         # Reflect the refinement back into the row so the harmonic_list
         # stores the actual peak frequency, not the candidate's snapped
@@ -6563,14 +6420,22 @@ class AudioProcessor:
                                     else 0.25
                                 ),
                                 density_salience_threshold_db=float(
-                                    getattr(self, "density_salience_threshold_db", -45.0)
-                                    if getattr(self, "density_salience_threshold_db", -45.0) is not None
-                                    else -45.0
+                                    getattr(self, "density_salience_threshold_db", None)
+                                    if getattr(self, "density_salience_threshold_db", None) is not None
+                                    else float(getattr(self, "db_min", -80.0))
                                 ),
                                 density_frequency_ceiling_hz=float(
-                                    getattr(self, "density_frequency_ceiling_hz", 5000.0)
-                                    if getattr(self, "density_frequency_ceiling_hz", 5000.0) is not None
-                                    else 5000.0
+                                    min(
+                                        float(
+                                            getattr(self, "density_frequency_ceiling_hz", BODY_DENSITY_MAX_HZ)
+                                            if getattr(self, "density_frequency_ceiling_hz", BODY_DENSITY_MAX_HZ) is not None
+                                            else float(getattr(self, "freq_max", BODY_DENSITY_MAX_HZ))
+                                        ),
+                                        float(BODY_DENSITY_MAX_HZ),
+                                    )
+                                ),
+                                full_spectrum_max_hz=float(
+                                    getattr(self, "freq_max", FULL_SPECTRUM_MAX_HZ) or FULL_SPECTRUM_MAX_HZ
                                 ),
                             )
                             self._acoustic_density_desc = dict(_desc)
@@ -6997,6 +6862,154 @@ class AudioProcessor:
                     _e_smw,
                 )
 
+            # Component-based body density family (research primary):
+            # use validated components / candidates, not dense FFT-bin clouds.
+            try:
+                _body_diag_h = float(getattr(self, "harmonic_body_energy_sum_body_ceiling", float("nan")))
+                _body_diag_i = float(getattr(self, "inharmonic_body_energy_sum_body_ceiling", float("nan")))
+                _body_diag_s = float(getattr(self, "subbass_rumble_energy_sum", float("nan")))
+                _body_diag_d = float(getattr(self, "density_body_weighted_sum_body_ceiling", float("nan")))
+                self.body_band_harmonic_bin_energy_sum_body_ceiling = _body_diag_h
+                self.body_band_residual_bin_energy_sum_body_ceiling = _body_diag_i
+                self.body_band_subbass_bin_energy_sum_body_ceiling = _body_diag_s
+                self.body_band_total_bin_energy_sum_body_ceiling = float(
+                    max(0.0, (_body_diag_h if np.isfinite(_body_diag_h) else 0.0))
+                    + max(0.0, (_body_diag_i if np.isfinite(_body_diag_i) else 0.0))
+                    + max(0.0, (_body_diag_s if np.isfinite(_body_diag_s) else 0.0))
+                )
+                self.density_body_band_bin_integrated_index_body_ceiling = _body_diag_d
+            except Exception:
+                self.body_band_harmonic_bin_energy_sum_body_ceiling = float("nan")
+                self.body_band_residual_bin_energy_sum_body_ceiling = float("nan")
+                self.body_band_subbass_bin_energy_sum_body_ceiling = float("nan")
+                self.body_band_total_bin_energy_sum_body_ceiling = float("nan")
+                self.density_body_band_bin_integrated_index_body_ceiling = float("nan")
+
+            try:
+                try:
+                    _component_ceiling_hz = float(
+                        getattr(self, "density_frequency_ceiling_hz", BODY_DENSITY_MAX_HZ)
+                    )
+                except (TypeError, ValueError):
+                    _component_ceiling_hz = float(BODY_DENSITY_MAX_HZ)
+                if not np.isfinite(_component_ceiling_hz) or _component_ceiling_hz <= 0.0:
+                    _component_ceiling_hz = float(BODY_DENSITY_MAX_HZ)
+                _component_ceiling_hz = float(min(_component_ceiling_hz, float(BODY_DENSITY_MAX_HZ)))
+                _harm_comp_5k = 0.0
+                _hpow_vec_5k = np.asarray([], dtype=float)
+                _cand = getattr(self, "harmonic_spectrum_candidates_df", None)
+                if isinstance(_cand, pd.DataFrame) and not _cand.empty:
+                    if {"include_for_density", "Frequency (Hz)"}.issubset(_cand.columns):
+                        _hmask = (
+                            _cand["include_for_density"].astype(bool)
+                            & (pd.to_numeric(_cand["Frequency (Hz)"], errors="coerce") <= _component_ceiling_hz)
+                        )
+                        if "Power_raw" in _cand.columns:
+                            _hp = pd.to_numeric(_cand.loc[_hmask, "Power_raw"], errors="coerce").fillna(0.0)
+                            _hpow_vec_5k = np.maximum(_hp.to_numpy(dtype=float), 0.0)
+                            _harm_comp_5k = float(np.sum(_hpow_vec_5k))
+                        elif "Amplitude_raw" in _cand.columns:
+                            _ha = pd.to_numeric(_cand.loc[_hmask, "Amplitude_raw"], errors="coerce").fillna(0.0)
+                            _hpow_vec_5k = np.square(np.maximum(_ha.to_numpy(dtype=float), 0.0))
+                            _harm_comp_5k = float(np.sum(_hpow_vec_5k))
+
+                _inh_comp_5k = 0.0
+                _ih_amp = np.asarray(getattr(self, "_metrics_ih_amps_eff", np.asarray([], dtype=float)), dtype=float)
+                _ih_freq = getattr(self, "_metrics_ih_freqs_eff", None)
+                if _ih_amp.size > 0:
+                    if isinstance(_ih_freq, np.ndarray) and _ih_freq.size == _ih_amp.size:
+                        _imask = np.isfinite(_ih_freq) & (_ih_freq <= _component_ceiling_hz)
+                        _inh_comp_5k = float(np.sum(np.square(np.maximum(_ih_amp[_imask], 0.0))))
+                    else:
+                        _inh_comp_5k = float(np.sum(np.square(np.maximum(_ih_amp, 0.0))))
+
+                _sub_comp = 0.0
+                _sub_df = getattr(self, "subbass_list_df", None)
+                if isinstance(_sub_df, pd.DataFrame) and not _sub_df.empty:
+                    if "Power_raw" in _sub_df.columns:
+                        _sp = pd.to_numeric(_sub_df["Power_raw"], errors="coerce").fillna(0.0)
+                        _sub_comp = float(np.sum(np.maximum(_sp.to_numpy(dtype=float), 0.0)))
+                    elif "Amplitude_raw" in _sub_df.columns:
+                        _sa = pd.to_numeric(_sub_df["Amplitude_raw"], errors="coerce").fillna(0.0)
+                        _sub_comp = float(np.sum(np.square(np.maximum(_sa.to_numpy(dtype=float), 0.0))))
+                    elif "Amplitude" in _sub_df.columns:
+                        _sa = pd.to_numeric(_sub_df["Amplitude"], errors="coerce").fillna(0.0)
+                        _sub_comp = float(np.sum(np.square(np.maximum(_sa.to_numpy(dtype=float), 0.0))))
+                if _sub_comp <= 0.0:
+                    _sub_comp = float(max(0.0, sub_energy))
+                self.harmonic_component_energy_sum_body_ceiling = float(_harm_comp_5k)
+                self.inharmonic_component_energy_sum_body_ceiling = float(_inh_comp_5k)
+                self.subbass_component_energy_sum = float(_sub_comp)
+                self.harmonic_component_energy_sum_body_ceiling = float(self.harmonic_component_energy_sum_body_ceiling)
+                self.inharmonic_component_energy_sum_body_ceiling = float(self.inharmonic_component_energy_sum_body_ceiling)
+                self.subbass_component_energy_sum_body_ceiling = float(self.subbass_component_energy_sum)
+
+                _w_h = float(getattr(self, "component_harmonic_energy_ratio", float("nan")))
+                _w_i = float(getattr(self, "component_inharmonic_energy_ratio", float("nan")))
+                _w_s = float(getattr(self, "component_subbass_energy_ratio", float("nan")))
+                if not (np.isfinite(_w_h) and np.isfinite(_w_i) and np.isfinite(_w_s)):
+                    _w_h = float(getattr(self, "harmonic_energy_ratio", 0.0) or 0.0)
+                    _w_i = float(getattr(self, "inharmonic_energy_ratio", 0.0) or 0.0)
+                    _w_s = float(getattr(self, "subbass_energy_ratio", 0.0) or 0.0)
+                _wsum = _w_h + _w_i + _w_s
+                if _wsum > 1e-12:
+                    _w_h, _w_i, _w_s = _w_h / _wsum, _w_i / _wsum, _w_s / _wsum
+                self.density_component_body_weighted_sum_body_ceiling = float(
+                    _w_h * self.harmonic_component_energy_sum_body_ceiling
+                    + _w_i * self.inharmonic_component_energy_sum_body_ceiling
+                    + _w_s * self.subbass_component_energy_sum
+                )
+                self.density_component_body_weighted_sum_body_ceiling = float(
+                    self.density_component_body_weighted_sum_body_ceiling
+                )
+
+                # Pitch-normalized harmonic richness family (validated harmonics <= 5 kHz).
+                _eff_h = float("nan")
+                if _hpow_vec_5k.size > 0:
+                    _sum_h = float(np.sum(_hpow_vec_5k))
+                    _sum_h2 = float(np.sum(_hpow_vec_5k * _hpow_vec_5k))
+                    if _sum_h > 0.0 and _sum_h2 > 0.0:
+                        _eff_h = float((_sum_h * _sum_h) / _sum_h2)
+                _expected_h = float(
+                    getattr(self, "expected_harmonic_order_count_up_to_body_ceiling", float("nan"))
+                )
+                _norm_rich = float("nan")
+                _body_per_slot = float("nan")
+                _harm_per_slot = float("nan")
+                if np.isfinite(_expected_h) and _expected_h > 0.0:
+                    if np.isfinite(_eff_h):
+                        _norm_rich = float(_eff_h / _expected_h)
+                        if _norm_rich < 0.0 and _norm_rich > -1e-12:
+                            _norm_rich = 0.0
+                        if _norm_rich > 1.0 and _norm_rich < 1.0 + 1e-12:
+                            _norm_rich = 1.0
+                    _body_per_slot = float(self.density_component_body_weighted_sum_body_ceiling / _expected_h)
+                    _harm_per_slot = float(self.harmonic_component_energy_sum_body_ceiling / _expected_h)
+                _rich_weighted = (
+                    float(self.density_component_body_weighted_sum_body_ceiling * _norm_rich)
+                    if np.isfinite(_norm_rich)
+                    else float("nan")
+                )
+                self.harmonic_effective_component_count_body_ceiling = _eff_h
+                self.harmonic_effective_component_count_normalized_body_ceiling = _norm_rich
+                self.normalized_harmonic_richness_body_ceiling = _norm_rich
+                self.body_density_per_expected_harmonic_slot_body_ceiling = _body_per_slot
+                self.pitch_normalized_component_density_body_ceiling = _body_per_slot
+                self.pitch_normalized_component_body_density_body_ceiling = _body_per_slot
+                self.pitch_normalized_harmonic_component_energy_body_ceiling = _harm_per_slot
+                self.richness_weighted_body_density_body_ceiling = _rich_weighted
+
+                # Backward-compatible alias now pinned to component-based metric.
+                self.harmonic_body_energy_sum_body_ceiling = float(self.harmonic_component_energy_sum_body_ceiling)
+                self.inharmonic_body_energy_sum_body_ceiling = float(self.inharmonic_component_energy_sum_body_ceiling)
+                self.subbass_rumble_energy_sum = float(self.subbass_component_energy_sum)
+                self.density_body_weighted_sum_body_ceiling = float(self.density_component_body_weighted_sum_body_ceiling)
+            except Exception as _e_body_component:
+                self.logger.debug(
+                    "Component-based body density computation failed: %s",
+                    _e_body_component,
+                )
+
             try:
                 _eb = describe_component_energy_balance(
                     float(self.harmonic_energy_sum or 0.0),
@@ -7316,6 +7329,7 @@ class AudioProcessor:
                 self.harmonic_occupancy_detected_order_count = int(
                     _ac_desc.get("detected_harmonic_slot_count", 0) or 0
                 )
+                self.harmonic_region_occupancy_count = int(self.harmonic_occupancy_detected_order_count or 0)
                 self.harmonic_effective_partial_count = float(
                     _ac_desc.get("harmonic_effective_partial_count", float("nan"))
                 )
@@ -7366,6 +7380,7 @@ class AudioProcessor:
                     self.harmonic_occupancy_detected_order_count = int(
                         _occ.get("detected_harmonic_slot_count", 0) or 0
                     )
+                    self.harmonic_region_occupancy_count = int(self.harmonic_occupancy_detected_order_count or 0)
                     self.harmonic_occupancy_status = str(
                         _occ.get("harmonic_occupancy_status", "unknown")
                     )
@@ -7375,6 +7390,7 @@ class AudioProcessor:
                     self.expected_harmonic_slot_count = 0
                     self.detected_harmonic_slot_count = 0
                     self.harmonic_occupancy_detected_order_count = 0
+                    self.harmonic_region_occupancy_count = 0
                     self.harmonic_occupancy_status = "failed_exception"
 
                 try:
@@ -9069,8 +9085,8 @@ class AudioProcessor:
             ),
             "low_mid_energy_ratio": metric_float_or_nan(getattr(self, "low_mid_energy_ratio", None)),
             "harmonic_body_density": metric_float_or_nan(getattr(self, "harmonic_body_density", None)),
-            "expected_harmonic_slots_up_to_5000hz": metric_int_or_nan(
-                getattr(self, "expected_harmonic_slots_up_to_5000hz", None)
+            "expected_harmonic_slots_up_to_body_ceiling": metric_int_or_nan(
+                getattr(self, "expected_harmonic_slots_up_to_body_ceiling", None)
             ),
             "harmonic_body_density_normalized": metric_float_or_nan(
                 getattr(self, "harmonic_body_density_normalized", None)
@@ -9081,17 +9097,122 @@ class AudioProcessor:
             "residual_body_contribution_capped": metric_float_or_nan(
                 getattr(self, "residual_body_contribution_capped", None)
             ),
-            "salient_harmonic_order_count_up_to_5000hz": metric_int_or_nan(
-                getattr(self, "salient_harmonic_order_count_up_to_5000hz", None)
+            "salient_harmonic_order_count_up_to_body_ceiling": metric_int_or_nan(
+                getattr(self, "salient_harmonic_order_count_up_to_body_ceiling", None)
             ),
-            "expected_harmonic_order_count_up_to_5000hz": metric_int_or_nan(
-                getattr(self, "expected_harmonic_order_count_up_to_5000hz", None)
+            "expected_harmonic_order_count_up_to_body_ceiling": metric_int_or_nan(
+                getattr(self, "expected_harmonic_order_count_up_to_body_ceiling", None)
             ),
-            "salient_harmonic_coverage_up_to_5000hz": metric_float_or_nan(
-                getattr(self, "salient_harmonic_coverage_up_to_5000hz", None)
+            "salient_harmonic_coverage_up_to_body_ceiling": metric_float_or_nan(
+                getattr(self, "salient_harmonic_coverage_up_to_body_ceiling", None)
             ),
-            "salient_harmonic_mass_up_to_5000hz": metric_float_or_nan(
-                getattr(self, "salient_harmonic_mass_up_to_5000hz", None)
+            "theoretical_harmonic_order_count_up_to_body_ceiling": metric_int_or_nan(
+                getattr(self, "expected_harmonic_order_count_up_to_body_ceiling", None)
+            ),
+            "detected_salient_harmonic_order_count_up_to_body_ceiling": metric_int_or_nan(
+                getattr(self, "salient_harmonic_order_count_up_to_body_ceiling", None)
+            ),
+            "salient_harmonic_coverage_ratio_up_to_body_ceiling": metric_float_or_nan(
+                getattr(self, "salient_harmonic_coverage_up_to_body_ceiling", None)
+            ),
+            "spectral_slope_db_per_harmonic": metric_float_or_nan(
+                getattr(self, "spectral_slope_db_per_harmonic", None)
+            ),
+            "harmonic_component_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "harmonic_component_energy_sum_body_ceiling", None)
+            ),
+            "harmonic_component_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "harmonic_component_energy_sum_body_ceiling", None)
+            ),
+            "inharmonic_component_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "inharmonic_component_energy_sum_body_ceiling", None)
+            ),
+            "inharmonic_component_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "inharmonic_component_energy_sum_body_ceiling", None)
+            ),
+            "subbass_component_energy_sum": metric_float_or_nan(
+                getattr(self, "subbass_component_energy_sum", None)
+            ),
+            "subbass_component_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "subbass_component_energy_sum_body_ceiling", None)
+            ),
+            "density_component_body_weighted_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "density_component_body_weighted_sum_body_ceiling", None)
+            ),
+            "density_component_body_weighted_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "density_component_body_weighted_sum_body_ceiling", None)
+            ),
+            "harmonic_effective_component_count_body_ceiling": metric_float_or_nan(
+                getattr(self, "harmonic_effective_component_count_body_ceiling", None)
+            ),
+            "harmonic_effective_component_count_normalized_body_ceiling": metric_float_or_nan(
+                getattr(self, "harmonic_effective_component_count_normalized_body_ceiling", None)
+            ),
+            "normalized_harmonic_richness_body_ceiling": metric_float_or_nan(
+                getattr(self, "normalized_harmonic_richness_body_ceiling", None)
+            ),
+            "body_density_per_expected_harmonic_slot_body_ceiling": metric_float_or_nan(
+                getattr(self, "body_density_per_expected_harmonic_slot_body_ceiling", None)
+            ),
+            "pitch_normalized_component_density_body_ceiling": metric_float_or_nan(
+                getattr(self, "pitch_normalized_component_density_body_ceiling", None)
+            ),
+            "pitch_normalized_component_body_density_body_ceiling": metric_float_or_nan(
+                getattr(self, "pitch_normalized_component_body_density_body_ceiling", None)
+            ),
+            "pitch_normalized_harmonic_component_energy_body_ceiling": metric_float_or_nan(
+                getattr(self, "pitch_normalized_harmonic_component_energy_body_ceiling", None)
+            ),
+            "richness_weighted_body_density_body_ceiling": metric_float_or_nan(
+                getattr(self, "richness_weighted_body_density_body_ceiling", None)
+            ),
+            "harmonic_body_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "harmonic_body_energy_sum_body_ceiling", None)
+            ),
+            "inharmonic_body_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "inharmonic_body_energy_sum_body_ceiling", None)
+            ),
+            "subbass_rumble_energy_sum": metric_float_or_nan(
+                getattr(self, "subbass_rumble_energy_sum", None)
+            ),
+            "density_body_weighted_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "density_body_weighted_sum_body_ceiling", None)
+            ),
+            "harmonic_full_spectrum_energy_sum_20khz": metric_float_or_nan(
+                getattr(self, "harmonic_full_spectrum_energy_sum_20khz", None)
+            ),
+            "inharmonic_full_spectrum_energy_sum_20khz": metric_float_or_nan(
+                getattr(self, "inharmonic_full_spectrum_energy_sum_20khz", None)
+            ),
+            "density_full_spectrum_weighted_sum_20khz": metric_float_or_nan(
+                getattr(self, "density_full_spectrum_weighted_sum_20khz", None)
+            ),
+            "high_frequency_spectral_activity_sum": metric_float_or_nan(
+                getattr(self, "high_frequency_spectral_activity_sum", None)
+            ),
+            "spectral_extension_index_20khz": metric_float_or_nan(
+                getattr(self, "spectral_extension_index_20khz", None)
+            ),
+            "brightness_or_upper_spectral_activity_index_20khz": metric_float_or_nan(
+                getattr(self, "brightness_or_upper_spectral_activity_index_20khz", None)
+            ),
+            "full_spectrum_harmonic_candidate_count_20khz": metric_int_or_nan(
+                getattr(self, "full_spectrum_harmonic_candidate_count_20khz", None)
+            ),
+            "body_band_harmonic_bin_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "body_band_harmonic_bin_energy_sum_body_ceiling", None)
+            ),
+            "body_band_residual_bin_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "body_band_residual_bin_energy_sum_body_ceiling", None)
+            ),
+            "body_band_total_bin_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "body_band_total_bin_energy_sum_body_ceiling", None)
+            ),
+            "density_body_band_bin_integrated_index_body_ceiling": metric_float_or_nan(
+                getattr(self, "density_body_band_bin_integrated_index_body_ceiling", None)
+            ),
+            "salient_harmonic_mass_up_to_body_ceiling": metric_float_or_nan(
+                getattr(self, "salient_harmonic_mass_up_to_body_ceiling", None)
             ),
             "salient_harmonic_order_count_up_to_density_ceiling_hz": metric_int_or_nan(
                 getattr(self, "salient_harmonic_order_count_up_to_density_ceiling_hz", None)
@@ -9105,17 +9226,17 @@ class AudioProcessor:
             "salient_harmonic_mass_up_to_density_ceiling_hz": metric_float_or_nan(
                 getattr(self, "salient_harmonic_mass_up_to_density_ceiling_hz", None)
             ),
-            "salient_odd_harmonic_count_up_to_5000hz": metric_int_or_nan(
-                getattr(self, "salient_odd_harmonic_count_up_to_5000hz", None)
+            "salient_odd_harmonic_count_up_to_body_ceiling": metric_int_or_nan(
+                getattr(self, "salient_odd_harmonic_count_up_to_body_ceiling", None)
             ),
-            "salient_even_harmonic_count_up_to_5000hz": metric_int_or_nan(
-                getattr(self, "salient_even_harmonic_count_up_to_5000hz", None)
+            "salient_even_harmonic_count_up_to_body_ceiling": metric_int_or_nan(
+                getattr(self, "salient_even_harmonic_count_up_to_body_ceiling", None)
             ),
             "odd_even_harmonic_energy_ratio": metric_float_or_nan(
                 getattr(self, "odd_even_harmonic_energy_ratio", None)
             ),
-            "salient_inharmonic_log_bin_count_up_to_5000hz": metric_int_or_nan(
-                getattr(self, "salient_inharmonic_log_bin_count_up_to_5000hz", None)
+            "salient_inharmonic_log_bin_count_up_to_body_ceiling": metric_int_or_nan(
+                getattr(self, "salient_inharmonic_log_bin_count_up_to_body_ceiling", None)
             ),
             "salient_subbass_particle_count": metric_int_or_nan(
                 getattr(self, "salient_subbass_particle_count", None)
@@ -9185,14 +9306,47 @@ class AudioProcessor:
             "density_frequency_ceiling_hz": metric_float_or_nan(
                 getattr(self, "density_frequency_ceiling_hz", None)
             ),
+            "body_density_frequency_ceiling_hz": metric_float_or_nan(
+                min(
+                    float(getattr(self, "density_frequency_ceiling_hz", BODY_DENSITY_MAX_HZ))
+                    if getattr(self, "density_frequency_ceiling_hz", None) is not None
+                    else float(BODY_DENSITY_MAX_HZ),
+                    float(BODY_DENSITY_MAX_HZ),
+                )
+            ),
+            "full_spectrum_frequency_ceiling_hz": metric_float_or_nan(
+                getattr(self, "freq_max", FULL_SPECTRUM_MAX_HZ)
+            ),
             "spectral_body_thickness_index": metric_float_or_nan(
                 getattr(self, "spectral_body_thickness_index", None)
             ),
             "harmonic_occupancy_ratio": metric_float_or_nan(
                 getattr(self, "harmonic_occupancy_ratio", None)
             ),
+            "harmonic_candidate_count_20khz": metric_int_or_nan(
+                getattr(self, "harmonic_candidate_count_20khz", None)
+            ),
+            "validated_harmonic_component_count_body_ceiling": metric_int_or_nan(
+                getattr(self, "validated_harmonic_component_count_body_ceiling", None)
+            ),
+            "probable_harmonic_component_count_body_ceiling": metric_int_or_nan(
+                getattr(self, "probable_harmonic_component_count_body_ceiling", None)
+            ),
+            "probable_harmonic_component_energy_sum_body_ceiling": metric_float_or_nan(
+                getattr(self, "probable_harmonic_component_energy_sum_body_ceiling", None)
+            ),
+            "validated_harmonic_component_count_body_ceiling": metric_int_or_nan(
+                getattr(self, "validated_harmonic_component_count_body_ceiling", None)
+            ),
             "harmonic_occupancy_detected_order_count": metric_int_or_nan(
                 getattr(self, "harmonic_occupancy_detected_order_count", None)
+            ),
+            "harmonic_region_occupancy_count": metric_int_or_nan(
+                getattr(
+                    self,
+                    "harmonic_region_occupancy_count",
+                    getattr(self, "harmonic_occupancy_detected_order_count", None),
+                )
             ),
             "expected_harmonic_slot_count": metric_int_or_nan(
                 getattr(self, "expected_harmonic_slot_count", None)
@@ -9486,21 +9640,15 @@ class AudioProcessor:
         main_metrics["metric_contract_ontology_family"] = "composite_metric"
         main_metrics.update(metric_contract_export_fields("density_metric_raw"))
         _wf_cmp = str(getattr(self, "weight_function", "linear") or "linear").strip().lower()
-        _dst_cmp = float(getattr(self, "density_salience_threshold_db", -45.0))
-        _dceil_cmp = float(getattr(self, "density_frequency_ceiling_hz", 5000.0))
-        _is_primary_profile = (
-            _wf_cmp == PRIMARY_COMPARABLE_WEIGHT_FUNCTION
-            and abs(_dst_cmp - PRIMARY_COMPARABLE_DENSITY_SALIENCE_THRESHOLD_DB) <= 1e-9
-            and abs(_dceil_cmp - PRIMARY_COMPARABLE_DENSITY_FREQUENCY_CEILING_HZ) <= 1e-9
-        )
+        _dst_cmp = float(getattr(self, "density_salience_threshold_db", float("nan")))
+        _dceil_cmp = float(getattr(self, "density_frequency_ceiling_hz", float("nan")))
+        _is_primary_profile = (_wf_cmp == PRIMARY_COMPARABLE_WEIGHT_FUNCTION)
         main_metrics["analysis_parameter_profile_id"] = (
             f"wf={_wf_cmp}|dst={_dst_cmp:.1f}|ceil={_dceil_cmp:.1f}"
         )
         main_metrics["is_primary_comparable_profile"] = bool(_is_primary_profile)
         main_metrics["primary_comparable_profile_definition"] = (
-            f"wf={PRIMARY_COMPARABLE_WEIGHT_FUNCTION}|"
-            f"dst={PRIMARY_COMPARABLE_DENSITY_SALIENCE_THRESHOLD_DB:.1f}|"
-            f"ceil={PRIMARY_COMPARABLE_DENSITY_FREQUENCY_CEILING_HZ:.1f}"
+            "wf=log|dst=runtime_configured|ceil=runtime_configured"
         )
         self.analysis_parameter_profile_id = str(main_metrics["analysis_parameter_profile_id"])
         self.is_primary_comparable_profile = bool(main_metrics["is_primary_comparable_profile"])
@@ -9794,11 +9942,171 @@ class AudioProcessor:
                     len(harmonic_sheet_df),
                 )
 
+                # Read-only Harmonic_Inclusion_Audit (diagnostic; no metric changes).
+                _audit_strict_df = pd.DataFrame()
+                if "include_for_density" in harmonic_sheet_df.columns:
+                    _audit_strict_df = harmonic_sheet_df.loc[
+                        harmonic_sheet_df["include_for_density"].astype(bool)
+                    ].copy()
+                if _audit_strict_df.empty and isinstance(
+                    self.harmonic_list_df, pd.DataFrame
+                ) and not self.harmonic_list_df.empty:
+                    _audit_strict_df = self.harmonic_list_df.copy()
+                _audit_strict_hnums: set = set()
+                if (
+                    not _audit_strict_df.empty
+                    and "Harmonic Number" in _audit_strict_df.columns
+                ):
+                    _audit_strict_hnums = set(
+                        pd.to_numeric(
+                            _audit_strict_df["Harmonic Number"], errors="coerce"
+                        )
+                        .dropna()
+                        .astype(int)
+                        .tolist()
+                    )
+                _search_ceiling_hz = float(
+                    getattr(self, "harmonic_search_ceiling_hz", None)
+                    or getattr(self, "freq_max", 20000.0)
+                )
+                _body_density_ceiling_hz = 5000.0
+                _audit_rows: list = []
+                for _, _arow in harmonic_sheet_df.iterrows():
+                    _hnum_raw = _arow.get("Harmonic Number")
+                    try:
+                        _hnum = int(_hnum_raw)
+                    except (TypeError, ValueError):
+                        _hnum = _hnum_raw
+                    _expected_hz = pd.to_numeric(
+                        _arow.get("expected_frequency_hz"), errors="coerce"
+                    )
+                    _extracted_hz = pd.to_numeric(
+                        _arow.get("extracted_frequency_hz"), errors="coerce"
+                    )
+                    _freq_dev_hz = pd.to_numeric(
+                        _arow.get("frequency_deviation_hz"), errors="coerce"
+                    )
+                    if (
+                        not np.isfinite(_freq_dev_hz)
+                        and np.isfinite(_expected_hz)
+                        and np.isfinite(_extracted_hz)
+                    ):
+                        _freq_dev_hz = float(_extracted_hz - _expected_hz)
+                    if (
+                        np.isfinite(_extracted_hz)
+                        and np.isfinite(_expected_hz)
+                        and float(_expected_hz) > 0.0
+                    ):
+                        _freq_dev_cents = float(
+                            1200.0 * np.log2(float(_extracted_hz) / float(_expected_hz))
+                        )
+                    else:
+                        _freq_dev_cents = float("nan")
+                    _include_density = bool(_arow.get("include_for_density", False))
+                    _local_peak_val = _arow.get("local_peak_valid")
+                    _snr_val = _arow.get("snr_db")
+                    _prom_val = _arow.get("prominence_db")
+                    _status = str(_arow.get("candidate_status", "") or "")
+                    _exclusion = _harmonic_inclusion_audit_exclusion_reason(
+                        include_for_density=_include_density,
+                        expected_frequency_hz=float(_expected_hz)
+                        if np.isfinite(_expected_hz)
+                        else float("nan"),
+                        frequency_deviation_hz=float(_freq_dev_hz)
+                        if np.isfinite(_freq_dev_hz)
+                        else float("nan"),
+                        candidate_status=_status,
+                        local_peak_valid=_local_peak_val,
+                        snr_db=_snr_val,
+                        prominence_db=_prom_val,
+                    )
+                    try:
+                        _in_strict = int(_hnum) in _audit_strict_hnums
+                    except (TypeError, ValueError):
+                        _in_strict = False
+                    _included_body = bool(
+                        _include_density
+                        and np.isfinite(_expected_hz)
+                        and float(_expected_hz) <= _body_density_ceiling_hz
+                    )
+                    _audit_rows.append(
+                        {
+                            "harmonic_number": _hnum,
+                            "expected_frequency_hz": _expected_hz,
+                            "extracted_frequency_hz": _extracted_hz,
+                            "frequency_deviation_hz": _freq_dev_hz,
+                            "frequency_deviation_cents": _freq_dev_cents,
+                            "magnitude_db": _arow.get("Magnitude (dB)"),
+                            "power_raw": _arow.get("Power_raw"),
+                            "snr_db": _snr_val,
+                            "prominence_db": _prom_val,
+                            "cfar_margin_db": _arow.get("cfar_margin_db"),
+                            "cfar_detected": _arow.get("cfar_detected"),
+                            "local_peak_valid": _local_peak_val,
+                            "candidate_status": _status,
+                            "include_for_density": _include_density,
+                            "included_in_strict_peaks": _in_strict,
+                            "included_in_body_density_5khz": _included_body,
+                            "exclusion_reason": _exclusion,
+                            "search_ceiling_hz": _search_ceiling_hz,
+                            "body_density_ceiling_hz": _body_density_ceiling_hz,
+                        }
+                    )
+                if _audit_rows:
+                    _audit_df = pd.DataFrame(_audit_rows)
+                    _audit_cols = [
+                        "harmonic_number",
+                        "expected_frequency_hz",
+                        "extracted_frequency_hz",
+                        "frequency_deviation_hz",
+                        "frequency_deviation_cents",
+                        "magnitude_db",
+                        "power_raw",
+                        "snr_db",
+                        "prominence_db",
+                        "cfar_margin_db",
+                        "cfar_detected",
+                        "local_peak_valid",
+                        "candidate_status",
+                        "include_for_density",
+                        "included_in_strict_peaks",
+                        "included_in_body_density_5khz",
+                        "exclusion_reason",
+                        "search_ceiling_hz",
+                        "body_density_ceiling_hz",
+                    ]
+                    _pub_df(_audit_df[_audit_cols]).to_excel(
+                        writer, sheet_name="Harmonic_Inclusion_Audit", index=False
+                    )
+                    log.debug(
+                        "Harmonic_Inclusion_Audit exported: rows=%d", len(_audit_df)
+                    )
+
             # Strict diagnostics sheet (always written when at least one
             # strict-validated peak survived; the sheet is *not* read by
             # Density_Metrics).
-            if isinstance(self.harmonic_list_df, pd.DataFrame) and not self.harmonic_list_df.empty:
-                strict_df = _ensure_amp_column(self.harmonic_list_df).copy()
+            _strict_from_candidates = pd.DataFrame()
+            if (
+                isinstance(harmonic_sheet_df, pd.DataFrame)
+                and not harmonic_sheet_df.empty
+                and "include_for_density" in harmonic_sheet_df.columns
+            ):
+                _strict_from_candidates = harmonic_sheet_df.loc[
+                    harmonic_sheet_df["include_for_density"].astype(bool)
+                ].copy()
+            if (
+                isinstance(_strict_from_candidates, pd.DataFrame)
+                and not _strict_from_candidates.empty
+            ) or (
+                isinstance(self.harmonic_list_df, pd.DataFrame)
+                and not self.harmonic_list_df.empty
+            ):
+                strict_df = (
+                    _ensure_amp_column(_strict_from_candidates).copy()
+                    if isinstance(_strict_from_candidates, pd.DataFrame)
+                    and not _strict_from_candidates.empty
+                    else _ensure_amp_column(self.harmonic_list_df).copy()
+                )
                 if "Amplitude" in strict_df.columns:
                     _amps_raw_s = (
                         pd.to_numeric(strict_df["Amplitude"], errors="coerce")
@@ -9817,6 +10125,10 @@ class AudioProcessor:
                         "Amplitude_raw",
                         "Power_raw",
                         "SNR_dB",
+                        "snr_db",
+                        "prominence_db",
+                        "candidate_status",
+                        "include_for_density",
                         "SubBinCorrected",
                         "Note",
                     ]
@@ -10395,6 +10707,9 @@ class AudioProcessor:
                     "inharmonicity_coefficient_B": float(
                         fit_payload.get("inharmonicity_coefficient_B", float("nan"))
                     ),
+                    "inharmonicity_fit_f0_hz": float(
+                        fit_payload.get("inharmonicity_fit_f0_hz", float("nan"))
+                    ),
                     "inharmonicity_fit_residual_std_cents": float(
                         fit_payload.get("fit_residual_std_cents", float("nan"))
                     ),
@@ -10885,17 +11200,17 @@ class AudioProcessor:
                 (
                     "density_salience_threshold_db",
                     float(
-                        getattr(self, "density_salience_threshold_db", -45.0)
-                        if getattr(self, "density_salience_threshold_db", -45.0) is not None
-                        else -45.0
+                        getattr(self, "density_salience_threshold_db", None)
+                        if getattr(self, "density_salience_threshold_db", None) is not None
+                        else float(getattr(self, "db_min", -80.0))
                     ),
                 ),
                 (
                     "density_frequency_ceiling_hz",
                     float(
-                        getattr(self, "density_frequency_ceiling_hz", 5000.0)
-                        if getattr(self, "density_frequency_ceiling_hz", 5000.0) is not None
-                        else 5000.0
+                        getattr(self, "density_frequency_ceiling_hz", None)
+                        if getattr(self, "density_frequency_ceiling_hz", None) is not None
+                        else float(getattr(self, "freq_max", BODY_DENSITY_MAX_HZ))
                     ),
                 ),
                 (
@@ -10908,15 +11223,15 @@ class AudioProcessor:
                     "density_frequency_ceiling_hz defines density metric integration ceiling.",
                 ),
                 (
-                    "legacy_up_to_5000hz_columns_alias_density_ceiling",
+                    "legacy_up_to_body_ceiling_columns_alias_density_ceiling",
                     bool(
                         abs(
                             float(
-                                getattr(self, "density_frequency_ceiling_hz", 5000.0)
-                                if getattr(self, "density_frequency_ceiling_hz", 5000.0) is not None
-                                else 5000.0
+                                getattr(self, "density_frequency_ceiling_hz", None)
+                                if getattr(self, "density_frequency_ceiling_hz", None) is not None
+                                else float(getattr(self, "freq_max", BODY_DENSITY_MAX_HZ))
                             )
-                            - 5000.0
+                            - float(BODY_DENSITY_MAX_HZ)
                         )
                         > 1e-9
                     ),

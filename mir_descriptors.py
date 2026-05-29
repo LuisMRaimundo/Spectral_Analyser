@@ -41,24 +41,65 @@ def _erb_rate_hz(freq_hz: np.ndarray) -> np.ndarray:
     return 21.4 * np.log10(1.0 + 0.00437 * f)
 
 
-def _roughness_aures_1985(freq_hz: np.ndarray, amp: np.ndarray) -> float:
-    f = np.asarray(freq_hz, dtype=float)
-    a = np.maximum(np.asarray(amp, dtype=float), 0.0)
+def _roughness_aures_1985(
+    freq_hz: np.ndarray,
+    amp: np.ndarray,
+    *,
+    x_cutoff: float = 20.0,
+) -> float:
+    """Aures-style spectral roughness.
+
+    The pairwise dissonance kernel ``x * exp(1 - x)`` (with
+    ``x = |f_i - f_j| / (0.25 * min(f_i, f_j) + 24.7)``) decays to a
+    negligible value for ``x`` beyond a few units (e.g. ``x = 20`` →
+    ``20 * exp(-19) ≈ 1.1e-7``). Pairs whose frequency separation exceeds
+    ``x_cutoff`` critical-band-widths therefore contribute nothing
+    measurable to the sum.
+
+    This implementation sorts the spectrum by frequency and, for each
+    component ``i``, vectorises the inner sum over only the neighbouring
+    components ``j > i`` whose separation stays under the cutoff. That
+    replaces the previous Python ``O(n^2)`` double loop (which, on a full
+    ~16k-bin spectrum, executed hundreds of millions of scalar
+    ``min``/``max``/``abs`` calls and dominated per-note runtime) with a
+    handful of numpy operations per component, while preserving the
+    numerical result to ~1e-7.
+    """
+    f = np.asarray(freq_hz, dtype=float).ravel()
+    a = np.maximum(np.asarray(amp, dtype=float), 0.0).ravel()
     if f.size < 2 or a.size != f.size:
         return 0.0
-    s = 0.0
-    for i in range(f.size):
-        for j in range(i + 1, f.size):
-            fi, fj = float(f[i]), float(f[j])
-            if fi <= 0.0 or fj <= 0.0:
-                continue
-            fmin = min(fi, fj)
-            df = abs(fi - fj)
-            x = df / max(0.25 * fmin + 24.7, 1e-9)
-            # Aures-like roughness shape; bounded and positive.
-            dissonance = x * np.exp(1.0 - x)
-            s += float((a[i] * a[j]) * dissonance)
-    return float(max(s, 0.0))
+
+    valid = np.isfinite(f) & (f > 0.0) & np.isfinite(a)
+    f = f[valid]
+    a = a[valid]
+    if f.size < 2:
+        return 0.0
+
+    order = np.argsort(f, kind="mergesort")
+    f = f[order]
+    a = a[order]
+
+    denom = np.maximum(0.25 * f + 24.7, 1e-9)
+    # For component i (the lower frequency in each pair, since f is sorted
+    # ascending), contributions vanish once f_j - f_i > x_cutoff * denom_i.
+    df_max = float(x_cutoff) * denom
+    upper_freq = f + df_max
+    # First index strictly greater than i whose frequency is still within
+    # the cutoff window. searchsorted on the ascending frequency axis.
+    j_end = np.searchsorted(f, upper_freq, side="right")
+
+    n = f.size
+    total = 0.0
+    for i in range(n - 1):
+        k = int(j_end[i])
+        if k <= i + 1:
+            continue
+        fj = f[i + 1 : k]
+        aj = a[i + 1 : k]
+        x = (fj - f[i]) / denom[i]
+        total += float(a[i] * np.sum(aj * (x * np.exp(1.0 - x))))
+    return float(max(total, 0.0))
 
 
 def compute_mir_descriptors_from_spectrum(

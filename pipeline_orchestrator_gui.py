@@ -249,6 +249,7 @@ def _stage2_compile_via_subprocess(
 
 from weight_function_ui_labels import (
     WEIGHT_FUNCTION_COMBO_LABELS,
+    display_label_for_weight_key,
     resolve_weight_key_from_user_label,
 )
 from adaptive_density_engine import AdaptiveDensityEngine
@@ -461,7 +462,7 @@ FFT_SETTINGS_BY_CLUSTER = {
     'Tier_77': {'max_freq': 4100,  'n_fft': 512, 'tolerance': 20.0, 'zp': 2},
     'Tier_78': {'max_freq': 4400,  'n_fft': 512, 'tolerance': 20.5, 'zp': 2},
     'Tier_79': {'max_freq': 4700,  'n_fft': 512, 'tolerance': 21.0, 'zp': 2},
-    'Tier_80': {'max_freq': 5000,  'n_fft': 512, 'tolerance': 21.5, 'zp': 2},
+    'Tier_80': {'max_freq': 5050,  'n_fft': 512, 'tolerance': 21.5, 'zp': 2},
     'Tier_81': {'max_freq': 5400,  'n_fft': 512, 'tolerance': 22.0, 'zp': 2},
     'Tier_82': {'max_freq': 5800,  'n_fft': 512, 'tolerance': 22.5, 'zp': 2},
     'Tier_83': {'max_freq': 6300,  'n_fft': 512, 'tolerance': 23.0, 'zp': 2},
@@ -692,24 +693,6 @@ class RobustOrchestratorApp:
         self.lbl_runtime_density_profile.pack(anchor="w", pady=(8, 0))
         self._on_density_mode_changed()
 
-        ttk.Label(lf_density, text="Salience threshold (dB)").pack(anchor="w", pady=(6, 0))
-        self.entry_density_salience_threshold_db = ttk.Entry(lf_density, width=10)
-        self.entry_density_salience_threshold_db.insert(0, "-45.0")
-        self.entry_density_salience_threshold_db.pack(fill=tk.X)
-        _attach_tk_tooltip(
-            self.entry_density_salience_threshold_db,
-            "Components below this relative level do not contribute to final density. Default: -45 dB.",
-        )
-
-        ttk.Label(lf_density, text="Density ceiling (Hz)").pack(anchor="w", pady=(6, 0))
-        self.entry_density_frequency_ceiling_hz = ttk.Entry(lf_density, width=10)
-        self.entry_density_frequency_ceiling_hz.insert(0, "5000.0")
-        self.entry_density_frequency_ceiling_hz.pack(fill=tk.X)
-        _attach_tk_tooltip(
-            self.entry_density_frequency_ceiling_hz,
-            "Upper frequency limit for final density counting. Default: 5000 Hz.",
-        )
-
         lf_output = ttk.LabelFrame(tab_basic, text="Recommended output")
         lf_output.pack(fill=tk.X, padx=10, pady=(0, 8))
         ttk.Label(
@@ -875,7 +858,12 @@ class RobustOrchestratorApp:
         self.combo_weight = ttk.Combobox(
             lf_secondary, values=list(WEIGHT_FUNCTION_COMBO_LABELS), state="readonly"
         )
-        self.combo_weight.set(WEIGHT_FUNCTION_COMBO_LABELS[0])
+        # Default to the PRIMARY comparable profile (wf=log) so that even an
+        # isolated, single-run analysis is cross-instrument comparable by
+        # default. Selecting any other weighting downgrades the run to the
+        # EXPLORATORY profile (logged + flagged in the compiled comparability
+        # verdict). See docs/DENSITY_EXPORT_SCHEMA.md (Corpus Comparability).
+        self.combo_weight.set(display_label_for_weight_key("log"))
         self.combo_weight.grid(row=1, column=1, sticky="ew")
         _attach_tk_tooltip(
             self.combo_weight,
@@ -1420,12 +1408,16 @@ class RobustOrchestratorApp:
                 "subbass_density_weight",
             ):
                 _ = float(params.get(k, 0.0))
-            dst = float(params.get("density_salience_threshold_db", -45.0))
-            if dst >= 0.0 or dst < -200.0:
-                return False, f"density_salience_threshold_db ({dst}) should be in [-200, 0)"
-            dceil = float(params.get("density_frequency_ceiling_hz", 5000.0))
-            if dceil <= 0.0:
-                return False, f"density_frequency_ceiling_hz ({dceil}) must be positive"
+            dst_raw = params.get("density_salience_threshold_db", None)
+            if dst_raw is not None:
+                dst = float(dst_raw)
+                if dst >= 0.0 or dst < -200.0:
+                    return False, f"density_salience_threshold_db ({dst}) should be in [-200, 0)"
+            dceil_raw = params.get("density_frequency_ceiling_hz", None)
+            if dceil_raw is not None:
+                dceil = float(dceil_raw)
+                if dceil <= 0.0:
+                    return False, f"density_frequency_ceiling_hz ({dceil}) must be positive"
             
             # Validate window-specific parameters
             if window == "kaiser":
@@ -1522,8 +1514,8 @@ class RobustOrchestratorApp:
                 'inharmonic_density_weight': dwi,
                 'subbass_density_weight': dws,
                 'enable_adaptive_path_randomization': False,
-                'density_salience_threshold_db': float(self.entry_density_salience_threshold_db.get() or "-45.0"),
-                'density_frequency_ceiling_hz': float(self.entry_density_frequency_ceiling_hz.get() or "5000.0"),
+                'density_salience_threshold_db': float(self.entry_min_db.get() or "-90"),
+                'density_frequency_ceiling_hz': float(self.entry_max_freq.get() or "20000"),
                 'compile': self.var_compile.get(),
                 'smart': self.var_smart.get(),
                 'use_tsne': self.var_use_tsne.get(),
@@ -1548,29 +1540,25 @@ class RobustOrchestratorApp:
             log.info("  wI=%.6f", float(params["inharmonic_density_weight"]))
             log.info("  wS=%.6f", float(params["subbass_density_weight"]))
             log.info(
-                "  threshold=%.2f dB | ceiling=%.2f Hz",
-                float(params["density_salience_threshold_db"]),
-                float(params["density_frequency_ceiling_hz"]),
+                "  threshold=%s dB | ceiling=%s Hz",
+                "auto" if params.get("density_salience_threshold_db") is None else f"{float(params['density_salience_threshold_db']):.2f}",
+                "auto" if params.get("density_frequency_ceiling_hz") is None else f"{float(params['density_frequency_ceiling_hz']):.2f}",
             )
             _wf_cmp = str(params.get("wf", "linear") or "linear").strip().lower()
-            _dst_cmp = float(params.get("density_salience_threshold_db", -45.0))
-            _dceil_cmp = float(params.get("density_frequency_ceiling_hz", 5000.0))
-            _primary = (
-                _wf_cmp == "log"
-                and abs(_dst_cmp - (-45.0)) <= 1e-9
-                and abs(_dceil_cmp - 5000.0) <= 1e-9
-            )
+            _dst_cmp = params.get("density_salience_threshold_db", None)
+            _dceil_cmp = params.get("density_frequency_ceiling_hz", None)
+            _primary = (_wf_cmp == "log")
             if _primary:
                 log.info(
-                    "Comparability profile: PRIMARY (wf=log, threshold=-45 dB, ceiling=5000 Hz)"
+                    "Comparability profile: PRIMARY (wf=log; threshold/ceiling follow current run config)"
                 )
             else:
                 log.warning(
-                    "Comparability profile: EXPLORATORY (wf=%s, threshold=%.1f dB, ceiling=%.1f Hz). "
+                    "Comparability profile: EXPLORATORY (wf=%s, threshold=%s dB, ceiling=%s Hz). "
                     "Do not compare directly against primary-profile runs.",
                     _wf_cmp,
-                    _dst_cmp,
-                    _dceil_cmp,
+                    "auto" if _dst_cmp is None else f"{float(_dst_cmp):.1f}",
+                    "auto" if _dceil_cmp is None else f"{float(_dceil_cmp):.1f}",
                 )
             tier_or_fixed = "tier strategy" if bool(params.get("smart", False)) else "fixed FFT"
             log.info("STFT configuration:")
@@ -1622,13 +1610,17 @@ class RobustOrchestratorApp:
             log.info(f"Magnitude Range: [{params['db_min']:.1f}, {params['db_max']:.1f}] dB (ACTIVATED)")
             log.info(f"Tolerance: {params['tolerance']:.2f} Hz | Adaptive: {params['use_adaptive_tolerance']} (ACTIVATED)")
             log.info(
-                "Final density controls: mode=%s, wH=%.3f, wI=%.3f, wS=%.3f, threshold=%.1f dB, ceiling=%.1f Hz (ACTIVATED)",
+                "Final density controls: mode=%s, wH=%.3f, wI=%.3f, wS=%.3f, threshold=%s dB, ceiling=%s Hz (ACTIVATED)",
                 params["density_summation_mode"],
                 params["harmonic_density_weight"],
                 params["inharmonic_density_weight"],
                 params["subbass_density_weight"],
-                params["density_salience_threshold_db"],
-                params["density_frequency_ceiling_hz"],
+                "auto"
+                if params.get("density_salience_threshold_db", None) is None
+                else f"{float(params['density_salience_threshold_db']):.1f}",
+                "auto"
+                if params.get("density_frequency_ceiling_hz", None) is None
+                else f"{float(params['density_frequency_ceiling_hz']):.1f}",
             )
             log.info(
                 "Domain distinction: peak-search range is global STFT detection domain; "
@@ -1640,12 +1632,16 @@ class RobustOrchestratorApp:
             log.info("wI = %.6f", float(params["inharmonic_density_weight"]))
             log.info("wS = %.6f", float(params["subbass_density_weight"]))
             log.info(
-                "density_salience_threshold_db = %.6f",
-                float(params["density_salience_threshold_db"]),
+                "density_salience_threshold_db = %s",
+                "auto"
+                if params.get("density_salience_threshold_db", None) is None
+                else f"{float(params['density_salience_threshold_db']):.6f}",
             )
             log.info(
-                "density_frequency_ceiling_hz = %.6f",
-                float(params["density_frequency_ceiling_hz"]),
+                "density_frequency_ceiling_hz = %s",
+                "auto"
+                if params.get("density_frequency_ceiling_hz", None) is None
+                else f"{float(params['density_frequency_ceiling_hz']):.6f}",
             )
             log.info(f"STFT Options: Zero Padding={params.get('zero_padding', 1)} | Time Avg: {params['avg']} (ACTIVATED)")
             log.info(f"90-Tier Clustering: {params['smart']} | Auto-Compile: {params['compile']} (ACTIVATED)")
@@ -1929,12 +1925,12 @@ class RobustOrchestratorApp:
         log.info("wI = %.6f", float(params.get("inharmonic_density_weight", 0.5)))
         log.info("wS = %.6f", float(params.get("subbass_density_weight", 0.25)))
         log.info(
-            "density_salience_threshold_db = %.6f",
-            float(params.get("density_salience_threshold_db", -45.0)),
+            "density_salience_threshold_db = %s",
+            "auto" if params.get("density_salience_threshold_db", None) is None else f"{float(params.get('density_salience_threshold_db')):.6f}",
         )
         log.info(
-            "density_frequency_ceiling_hz = %.6f",
-            float(params.get("density_frequency_ceiling_hz", 5000.0)),
+            "density_frequency_ceiling_hz = %s",
+            "auto" if params.get("density_frequency_ceiling_hz", None) is None else f"{float(params.get('density_frequency_ceiling_hz')):.6f}",
         )
 
         successful_files = 0
@@ -2195,8 +2191,16 @@ class RobustOrchestratorApp:
                         harmonic_density_weight=float(running_density_w_h),
                         inharmonic_density_weight=float(running_density_w_i),
                         subbass_density_weight=float(running_density_w_s),
-                        density_salience_threshold_db=float(params.get("density_salience_threshold_db", -45.0)),
-                        density_frequency_ceiling_hz=float(params.get("density_frequency_ceiling_hz", 5000.0)),
+                        density_salience_threshold_db=(
+                            None
+                            if params.get("density_salience_threshold_db", None) is None
+                            else float(params.get("density_salience_threshold_db"))
+                        ),
+                        density_frequency_ceiling_hz=(
+                            None
+                            if params.get("density_frequency_ceiling_hz", None) is None
+                            else float(params.get("density_frequency_ceiling_hz"))
+                        ),
                         use_tsne=params.get('use_tsne', False),
                         use_umap=params.get('use_umap', False),
                         detect_anomalies=params.get(

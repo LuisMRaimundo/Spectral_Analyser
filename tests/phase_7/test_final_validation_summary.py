@@ -49,7 +49,7 @@ def _write_note_workbook(path: Path) -> None:
                 0.05,
                 "PRIMARY",
                 1,
-                "wf=log,threshold=-45,ceiling=5000",
+                "wf=log,threshold=auto,ceiling=auto",
             ],
         }
     )

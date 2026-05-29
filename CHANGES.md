@@ -1,3 +1,147 @@
+# Methodological closure: CFAR acceptance, primary-by-default, full UQ (2026-05-29)
+
+Closing the final three methodological inconsistencies flagged in the doctoral
+re-evaluation:
+
+- **Harmonic acceptance is now detection-theoretic (CFAR).** The ad-hoc fixed
+  3 dB SNR margin is replaced by a cell-averaging CFAR test
+  (`harmonic_peak_validation.cfar_peak_detection`): at each refined peak bin the
+  power must exceed a threshold derived from a stated false-alarm probability
+  (`pfa`, default `1e-2`) against a locally-estimated, peak-trimmed noise floor.
+  A candidate becomes `strict_validated` only when CFAR-detected **and** clearing
+  saddle prominence — the same significance-gate philosophy already applied to
+  the inharmonicity coefficient `B`. New audit columns `cfar_margin_db` /
+  `cfar_detected` in `Harmonic_Inclusion_Audit`. Calibrated to preserve the
+  validated acoustic chain (dense low-register recovery, FFT invariance,
+  ground-truth accuracy all green).
+- **Primary comparable profile is the analysis default.** The orchestrator GUI
+  now defaults the amplitude weighting to `Logarithmic` (the PRIMARY profile,
+  `wf=log`), so even an isolated single run is cross-instrument comparable by
+  default; any other choice downgrades the run to EXPLORATORY (logged and
+  flagged). Per-note `Analysis_Metadata` already self-declares
+  `is_primary_comparable_profile` / `analysis_parameter_profile_id`.
+- **Full uncertainty quantification.** `bootstrap_note_density_final` gains
+  `propagate_ratio_uncertainty` (default used by the pipeline = True): component
+  energy ratios are recomputed inside each resample from the bootstrapped band
+  energies, so the uncertainty of BOTH the band sums and the ratios is propagated
+  jointly. New column `note_density_final_uncertainty_sources`
+  (`partials+ratios`). The window/n_fft sensitivity is exposed as an opt-in study
+  tool `tools/note_density_nfft_sensitivity.py` (re-analysis at multiple FFT
+  sizes is intentionally kept out of the hot path).
+
+Full suite: 111 passed, 2 skipped.
+
+---
+
+# Scientific-robustness closure blocks (2026-05-29)
+
+Closing the three open robustness gaps surfaced by the earlier phases:
+
+- **Block 1 — joint (f0, B) inharmonicity fit.** `inharmonicity_model.fit_inharmonicity_coefficient`
+  now estimates `f0` and `B` jointly (linear OLS on `f_n^2 = a·n^2 + c·n^4`,
+  `f0=sqrt(a)`, `B=c/a`, iterative order reassignment) with a **t-test
+  significance gate** on the `n^4` term (keeps `B` only when `|t|>=2`). The
+  inharmonicity fit is now fed **local-maximum peak centers** (parabolic sub-bin,
+  `acoustic_density_core._local_maxima_peak_centers`) instead of the raw
+  significant-bin cloud. This closes the end-to-end B-magnitude under-recovery:
+  `tests/phase_11` now asserts recovery of a known `B=3e-4` within `[0.4x,2.5x]`
+  and `B≈0` (no false positive) on a pure-harmonic stack. New export:
+  `inharmonicity_fit_f0_hz`. FORMULA_VALIDATION_STATUS.md F3 updated (resolved).
+- **Block 2 — refuse cross-profile aggregation.** `Canonical_Primary_Filtered`
+  is now hard-restricted to a single analysis profile
+  (`_restrict_primary_subset_to_single_profile`; dominant profile kept, others
+  dropped), and a single authoritative `corpus_comparable_for_statistics`
+  boolean is written to `Analysis_Metadata`. Primary statistics can no longer be
+  silently computed across mixed profiles.
+- **Block 3 — uncertainty emitted with the metric.** Each compiled note now
+  carries a per-note non-parametric bootstrap CI for `note_density_final`
+  (`note_density_final_ci_low`, `note_density_final_ci_high`,
+  `note_density_final_rel_uncertainty`), computed transform-aware via
+  `density_uncertainty.bootstrap_note_density_final` (guarded; NaN if a per-note
+  workbook is unreadable). Surfaced on both `Density_Metrics` and research
+  `Spectral_Density_Metrics`.
+
+Full suite: 106 passed, 2 skipped.
+
+---
+
+# Scientific-robustness phases (2026-05-29)
+
+Three phased additions to harden acoustic/scientific robustness:
+
+- **Phase 1 — cross-profile comparability guard.** `compile_metrics._corpus_comparability_audit`
+  surfaces a corpus verdict (`corpus_comparability_status`, profile count,
+  primary-comparable row count) into `Analysis_Metadata` and WARNS when a
+  compiled workbook mixes analysis profiles or is single-but-EXPLORATORY.
+  Density metrics are only comparable within one primary profile;
+  `Canonical_Primary_Filtered` remains the physically isolated comparable subset.
+  Tests: `tests/phase_11/test_corpus_comparability_guard.py`.
+- **Phase 2 — end-to-end ground-truth accuracy.** New
+  `tests/phase_11/test_ground_truth_accuracy.py` synthesises signals with known
+  content and asserts the full pipeline recovers harmonic **frequencies** (<25
+  cents) and **amplitude ratios** (1/n within 35%), and produces **no false
+  inharmonicity** on a pure-harmonic stack. FINDING: end-to-end recovery of a
+  non-zero inharmonicity **B magnitude** is unreliable (the fit is anchored to
+  the stretch-absorbing robust-fitted f0; a joint f0–B fit is required). Logged
+  as an open limitation in `docs/validation/FORMULA_VALIDATION_STATUS.md` (F3).
+- **Phase 3 — uncertainty quantification.** New `density_uncertainty.py`
+  (`bootstrap_density_ci`, `nfft_sensitivity`) gives a non-parametric bootstrap
+  CI for `note_density_final` (resampling per-partial contributions; ratios held
+  fixed) and an n_fft/window sensitivity band (CV, relative range). Tests:
+  `tests/phase_11/test_density_uncertainty.py`, including an end-to-end check
+  that `note_density_final` is bounded-stable across n_fft on a fixed signal.
+
+Full suite: 102 passed, 2 skipped.
+
+---
+
+# Code + documentation synchronization (2026-05-29)
+
+## Functional changes
+
+- **`note_density_final`** (new primary per-note scalar density) on the compiled
+  `Density_Metrics` sheet and the research `Spectral_Density_Metrics` sheet:
+  `r_H·harmonic_density_sum + r_I·inharmonic_density_sum + r_S·subbass_density_sum`,
+  where `r_*` are the per-note **measured** `component_*_energy_ratio` values (not the
+  Bayesian adaptive weights) and each `*_density_sum` already carries the GUI amplitude
+  weight function. NaN-propagating. Source: `compile_metrics._compute_note_density_final`.
+  Highlighted light blue on the research sheet.
+- **`Harmonic_Inclusion_Audit`** read-only per-note sheet in each `spectral_analysis.xlsx`:
+  one row per harmonic order with `exclusion_reason` and the SNR/prominence/ceiling/
+  deviation diagnostics that explain density inclusion/exclusion.
+- **Harmonic validation correctness:** f0-adaptive saddle-prominence window (±f0/2),
+  removal of the asymmetric `n>10` gate, candidate re-alignment to the fitted f0, and
+  a tolerance-scaled refine radius (restores FFT-tier amplitude invariance). Fixes the
+  dense low-register (cello) under-counting.
+- **Performance:** `mir_descriptors._roughness_aures_1985` vectorised with a
+  critical-band window (per-note runtime ~333 s → ~20 s on cello C2; result unchanged
+  to ~1e-7).
+- **Module decomposition:** extracted the pure peak-validation cluster from
+  `proc_audio.py` into the new `harmonic_peak_validation.py` (re-exported by
+  `proc_audio`). Note: `harmonic_validation.py` is a DISTINCT pre-existing module
+  (`validate_harmonic_series_matched`) and is unchanged.
+- **New test guards:** `tests/perf/` (roughness + per-note budget) and
+  `tests/acoustic_validity/` (instrument-family harmonic-richness contracts).
+- **Cleanup:** unused modules archived to `Backup/` and removed from `pyproject.toml`
+  py-modules (`interface`, `export_paths`, `public_audio_identifiers`,
+  `reference_signal_utils`, `runtime_versions`, `audio_analysis/batch_example.py`,
+  `scripts/harmonic_count_audit.py`). See `Backup/README.md`.
+
+## Documentation updated for the above
+
+- `metrics_dictionary.json`: added `note_density_final` (canonical).
+- `docs/METRIC_FORMULA_INDEX.md`: added F-042 (`note_density_final`).
+- `docs/EXPORT_COLUMN_DICTIONARY.md`: interpretation row + column-inventory entries for
+  `note_density_final`.
+- `docs/DENSITY_EXPORT_SCHEMA.md`: normative §2.1 (`note_density_final`) and §2b
+  (per-note `Harmonic_Inclusion_Audit`).
+- `pipeline.md`: added `harmonic_peak_validation.py`, corrected the `harmonic_validation.py`
+  description, and added an "Archived modules (moved to `Backup/`)" section.
+- `docs/GUI_OPTION_REFERENCE.md`, `docs/TECHNICAL_MANUAL_COMPLETE.md`,
+  `docs/MANUAL_COVERAGE_REPORT.md`: annotated `interface.py` as archived to `Backup/`.
+
+---
+
 # Documentation synchronization to current code state (2026-05-27)
 
 ## Files touched and rationale

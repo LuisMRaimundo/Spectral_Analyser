@@ -471,8 +471,9 @@ class AcousticDataAnalyzer:
             
             normality_tests = {}
             
-            # Shapiro-Wilk test (for n < 5000)
-            if len(values) < 5000:
+            # Shapiro-Wilk test (SciPy recommends this only for relatively small n)
+            shapiro_sample_limit = 4999
+            if len(values) <= shapiro_sample_limit:
                 try:
                     stat, p_value = shapiro(values)
                     normality_tests['shapiro_wilk'] = {

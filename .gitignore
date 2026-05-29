@@ -25,5 +25,8 @@ dist/
 .coverage
 htmlcov/
 
+# Runtime logs
+*.log
+
 # Installer runtime (mirror of installers/.gitignore for safety)
 installers/runtime/

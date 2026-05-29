@@ -36,7 +36,7 @@ Generated deliverables:
 - `docs/validation/FORMULA_VALIDATION_STATUS.md`
 - `docs/parameter_provenance.md` (legacy Phase-6 ledger retained for historical context)
 - `CHANGES_PHASE_7.md`
-- `interface.py` (legacy GUI reference surface)
+- `interface.py` (legacy GUI reference surface; archived to `Backup/root_modules/`)
 
 Keyword sweep executed for:
 
@@ -72,7 +72,7 @@ Documented metric families include:
 Documented GUI option surfaces:
 
 - Tk orchestrator (`pipeline_orchestrator_gui.py`) complete core controls.
-- PyQt reference GUI (`interface.py`) exploratory/legacy controls.
+- PyQt reference GUI (`interface.py`) exploratory/legacy controls (archived to `Backup/root_modules/`).
 
 Covered controls:
 

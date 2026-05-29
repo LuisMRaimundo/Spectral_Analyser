@@ -1,0 +1,18 @@
+# SoundSpectrAnalyse - Development / test dependencies
+# Mirrors the [project.optional-dependencies] dev extra in pyproject.toml.
+# Install runtime deps first:  pip install -r requirements.txt
+# Then dev deps:               pip install -r requirements-dev.txt
+#   (equivalently: pip install -e .[dev])
+
+# Test runner and coverage
+pytest>=7.0.0,<8.0.0
+pytest-cov>=3.0.0,<4.0.0
+coverage>=6.0.0,<8.0.0
+
+# Used by the optional performance/memory probes in some tests/utilities
+psutil>=5.9.0,<6.0.0
+
+# Linting / formatting / typing
+black>=22.0.0
+flake8>=4.0.0
+mypy>=0.950
