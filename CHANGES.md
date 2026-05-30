@@ -34,6 +34,28 @@ collapsed toward a peak-only basis).
   (112 passed, 2 skipped), including the subbass-suppression regression and the
   strength-formula-units contract.
 
+# Unified single-scalar note density across H+I+S (2026-05-30)
+
+Adds `note_effective_component_density` — ONE per-note density that spans all
+three bands (harmonic + inharmonic + sub-bass), separates instruments, and is
+designed as the per-note basis for downstream chord/aggregate density.
+
+- **Definition.** Energy-weighted participation ratio (effective number of
+  energy-bearing spectral components) pooled over the validated harmonic peaks,
+  inharmonic peaks, and sub-bass particles using raw amplitudes:
+  `N_eff = (Σ Aᵢ²)² / Σ Aᵢ⁴`. One scalar; covers harmonics + inharmonics +
+  sub-noise; computed in `compile_metrics._energy_distribution_density`
+  (Density_Metrics column).
+- **Why this one.** It is timbre-discriminating (Orchidea pooled means
+  Trombone 5.08 > Cello 2.74 > Clarinet 1.82; clarinet lowest at matched pitch),
+  far less register-bound than `note_density_final` (pooled r≈−0.63 vs −0.96),
+  and **aggregates for chords**: applying the same formula to the pooled partials
+  of several notes yields the chord's effective component count, with coincident
+  partials fusing (modelling masking) rather than double-counting. 131/131 notes
+  populated across the three corpora.
+- `note_density_final` and the harmonic-only "fatness" columns are retained
+  unchanged; this is the unified cross-band density for aggregate work.
+
 # Energy-distribution density — timbral "fatness" restored (2026-05-30)
 
 Adds register-robust, energy-based density descriptors that separate timbres,

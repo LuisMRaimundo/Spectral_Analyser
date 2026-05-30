@@ -4295,55 +4295,94 @@ def extract_density_components_from_per_note_workbook(
 def _energy_distribution_density(workbook_path: Union[str, Path]) -> Dict[str, float]:
     """Energy-distribution ("fatness") density descriptors from a per-note workbook.
 
-    Computed from the validated harmonic peaks (Harmonic Spectrum sheet, linear
-    ``Amplitude`` per order, restricted to ``include_for_density`` when present).
-    These are register-robust and timbre-discriminating, complementing the
+    Register-robust, timbre-discriminating descriptors that complement the
     count/register-dominated ``note_density_final``:
 
-      * ``harmonic_effective_partial_count`` — participation ratio
-        ``(Σ Aₙ²)² / Σ Aₙ⁴`` (effective number of partials carrying energy;
-        1 ≈ a single dominant partial). Clarinet ≪ trombone/cello.
+      * ``note_effective_component_density`` — THE unified single-scalar note
+        density: the energy-weighted participation ratio (effective number of
+        energy-bearing spectral components) pooled over ALL THREE bands —
+        harmonic peaks + inharmonic peaks + sub-bass — using raw amplitudes:
+        ``N_eff = (Σ Aᵢ²)² / Σ Aᵢ⁴``. Covers harmonics + inharmonics + sub-noise
+        in one number, separates instruments (clarinet ≪ cello < trombone), is
+        far less register-bound than ``note_density_final``, and **aggregates for
+        chords**: the same formula over the pooled partials of several notes
+        gives the chord's effective component count (coincident partials fuse).
+      * ``harmonic_effective_partial_count`` — participation ratio over the
+        harmonic peaks only.
       * ``harmonic_energy_above_fundamental_ratio`` — fraction of harmonic
-        energy NOT in the fundamental (0 = all energy at f0; →1 = spread).
-      * ``harmonic_energy_centroid_order`` — energy-weighted mean harmonic
-        order (spectral brightness in harmonic-order units; 1 = all at f0).
+        energy NOT in the fundamental (0 = all at f0; →1 = spread).
+      * ``harmonic_energy_centroid_order`` — energy-weighted mean harmonic order.
 
+    Computed from the validated component sheets (no Stage-1 re-run needed).
     Returns NaNs on any failure so compile never breaks.
     """
     nan = float("nan")
     fail = {
+        "note_effective_component_density": nan,
         "harmonic_effective_partial_count": nan,
         "harmonic_energy_above_fundamental_ratio": nan,
         "harmonic_energy_centroid_order": nan,
     }
-    try:
-        hs = pd.read_excel(workbook_path, sheet_name="Harmonic Spectrum")
-        if hs.empty or "Harmonic Number" not in hs.columns:
-            return fail
-        amp_col = "Amplitude" if "Amplitude" in hs.columns else (
-            "Amplitude_raw" if "Amplitude_raw" in hs.columns else None
+
+    def _band_amps(xls: pd.ExcelFile, sheet: str) -> np.ndarray:
+        if sheet not in xls.sheet_names:
+            return np.array([], dtype=float)
+        d = pd.read_excel(xls, sheet_name=sheet)
+        if d.empty:
+            return np.array([], dtype=float)
+        col = "Amplitude_raw" if "Amplitude_raw" in d.columns else (
+            "Amplitude" if "Amplitude" in d.columns else None
         )
-        if amp_col is None:
-            return fail
-        if "include_for_density" in hs.columns:
-            inc = hs["include_for_density"].astype(str).str.lower().isin(["true", "1", "1.0"])
+        if col is None:
+            return np.array([], dtype=float)
+        if sheet == "Harmonic Spectrum" and "include_for_density" in d.columns:
+            inc = d["include_for_density"].astype(str).str.lower().isin(["true", "1", "1.0"])
             if inc.any():
-                hs = hs[inc]
-        order = pd.to_numeric(hs["Harmonic Number"], errors="coerce").to_numpy(dtype=float)
-        amp = pd.to_numeric(hs[amp_col], errors="coerce").to_numpy(dtype=float)
-        ok = np.isfinite(order) & np.isfinite(amp) & (amp > 0.0) & (order >= 1.0)
-        order, amp = order[ok], amp[ok]
-        p = amp * amp
+                d = d[inc]
+        a = pd.to_numeric(d[col], errors="coerce").to_numpy(dtype=float)
+        a = a[np.isfinite(a) & (a > 0.0)]
+        # keep order alongside for the harmonic sheet
+        if sheet == "Harmonic Spectrum" and "Harmonic Number" in d.columns:
+            order = pd.to_numeric(d["Harmonic Number"], errors="coerce").to_numpy(dtype=float)
+            order = order[np.isfinite(pd.to_numeric(d[col], errors="coerce").to_numpy(dtype=float))]
+        return a
+
+    def _neff(p: np.ndarray) -> float:
         ptot = float(np.sum(p))
-        if order.size == 0 or ptot <= 0.0:
-            return fail
-        neff = float((ptot * ptot) / max(float(np.sum(p * p)), 1e-30))
-        fund = float(np.sum(p[order == 1.0]))
-        return {
-            "harmonic_effective_partial_count": neff,
-            "harmonic_energy_above_fundamental_ratio": float(np.clip((ptot - fund) / ptot, 0.0, 1.0)),
-            "harmonic_energy_centroid_order": float(np.sum(order * p) / ptot),
-        }
+        return float((ptot * ptot) / max(float(np.sum(p * p)), 1e-30)) if ptot > 0 else nan
+
+    try:
+        xls = pd.ExcelFile(workbook_path)
+        # --- harmonic-only descriptors (need order) ---
+        out: Dict[str, float] = dict(fail)
+        hs = pd.read_excel(xls, sheet_name="Harmonic Spectrum") if "Harmonic Spectrum" in xls.sheet_names else pd.DataFrame()
+        h_amp = np.array([], dtype=float)
+        if not hs.empty and "Harmonic Number" in hs.columns:
+            amp_col = "Amplitude_raw" if "Amplitude_raw" in hs.columns else ("Amplitude" if "Amplitude" in hs.columns else None)
+            if amp_col is not None:
+                hh = hs
+                if "include_for_density" in hh.columns:
+                    inc = hh["include_for_density"].astype(str).str.lower().isin(["true", "1", "1.0"])
+                    if inc.any():
+                        hh = hh[inc]
+                order = pd.to_numeric(hh["Harmonic Number"], errors="coerce").to_numpy(dtype=float)
+                amp = pd.to_numeric(hh[amp_col], errors="coerce").to_numpy(dtype=float)
+                ok = np.isfinite(order) & np.isfinite(amp) & (amp > 0.0) & (order >= 1.0)
+                order, h_amp = order[ok], amp[ok]
+                p = h_amp * h_amp
+                ptot = float(np.sum(p))
+                if order.size > 0 and ptot > 0.0:
+                    fund = float(np.sum(p[order == 1.0]))
+                    out["harmonic_effective_partial_count"] = _neff(p)
+                    out["harmonic_energy_above_fundamental_ratio"] = float(np.clip((ptot - fund) / ptot, 0.0, 1.0))
+                    out["harmonic_energy_centroid_order"] = float(np.sum(order * p) / ptot)
+        # --- unified H+I+S effective component density ---
+        i_amp = _band_amps(xls, "Inharmonic Spectrum")
+        s_amp = _band_amps(xls, "Sub-bass band")
+        allc = np.concatenate([h_amp, i_amp, s_amp]) if (h_amp.size + i_amp.size + s_amp.size) > 0 else np.array([])
+        if allc.size > 0:
+            out["note_effective_component_density"] = _neff(allc * allc)
+        return out
     except Exception:
         return fail
 
