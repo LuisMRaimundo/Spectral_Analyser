@@ -1,3 +1,22 @@
+# Export hygiene — research merge fix + dead-column pruning (v4.0.2)
+
+Fixes blank columns in research exports when satellite compiled sheets lacked matching
+`sample_id` values, and enforces removal of never-populated columns from compiled and
+research workbooks.
+
+- **`merge_keys_for_frames`** (`export_row_identity.py`): merge on `sample_id` only when
+  anchor and satellite IDs overlap; otherwise fall back to `Note`. Research export no
+  longer synthesizes mismatched `sample_id` values on satellite sheets before merge.
+- **`drop_dead_columns`**: shared helper drops all-NaN / all-blank text columns (never
+  all-zero numerics). Applied to compiled `Density_Metrics`, `Canonical_Metrics`,
+  `Debug_Counts`, `Per_Note_Processing_Metadata`, and all major research data sheets.
+- **`sample_id` propagation**: Stage 2 attaches authoritative `sample_id` from
+  `Density_Metrics` onto `Canonical_Metrics`, `Diagnostic_Metrics`, `Debug_Counts`, and
+  `Per_Note_Processing_Metadata` before Excel write.
+- **Tests:** `tests/phase_11/test_research_export_merge_satellite_sheets.py`,
+  extended `test_export_row_identity.py`, updated EWSD skip test for pruned columns.
+- **Docs:** README, CHANGES, `EXPORT_SCHEMA_AUDIT_REPAIR.md`, `DENSITY_EXPORT_SCHEMA` §R.6.
+
 # Research export — EWSD data-bar formatting + documentation (v4.0.1)
 
 - **`EWSD_score_acoustic_balanced`:** red Excel **data bars** on research `Spectral_Density_Metrics` (conditional formatting, min–max scale, `#C00000`).

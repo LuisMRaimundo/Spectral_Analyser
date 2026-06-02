@@ -1,4 +1,4 @@
-# Export schema audit repair (v4.0.0+) + research formatting (v4.0.1)
+# Export schema audit repair (v4.0.0+) + research formatting (v4.0.1) + export hygiene (v4.0.2)
 
 Addresses the architecture-level incongruences identified in the compiled/research
 workbook audit (duplicate Note keys, `density_weighted_sum` semantic overload, phase-2
@@ -11,7 +11,35 @@ vs per-note weight conflation, Diagnostic column collisions, merge `_2` duplicat
 | **`sample_id`** | **Primary key for joins** — stable per row; survives duplicate `Note` labels (e.g. two G#4 samples) |
 | `Note` | Display / pitch label only — **not** safe as sole join key when duplicates exist |
 
-Computed in Stage 2 `Density_Metrics` and propagated to research exports.
+Computed in Stage 2 `Density_Metrics` and propagated to satellite compiled sheets and
+research exports (v4.0.2).
+
+### Merge key selection (v4.0.2)
+
+Research export (`merge_workbook_frames`) uses `merge_keys_for_frames`:
+
+1. **`sample_id`** when both anchor and satellite carry the same authoritative IDs
+   (full overlap with the anchor frame).
+2. **`Note`** otherwise — including when satellite sheets pre-date `sample_id` or were
+   written without it.
+
+Satellite sheets must **not** receive synthetic `sample_id` values before merge; doing so
+was the root cause of all-blank research columns (e.g. `f0_used_for_density_hz`, `n_fft`)
+despite populated source sheets.
+
+## Dead-column pruning (v4.0.2)
+
+Columns that are entirely NaN or blank-like text are **dropped at write time** — they
+are not retained as schema placeholders.
+
+| Scope | Sheets affected |
+|-------|-----------------|
+| Stage 2 compile | `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Debug_Counts`, `Per_Note_Processing_Metadata`, `Legacy_Compatibility` |
+| Stage 3 research | `Spectral_Density_Metrics`, `Primary_Statistics_Eligible`, `Analysis_Settings_By_Note`, `Legacy_Compatibility`, `Charts_Data`, `Component_Balance`, `Validation_Summary` |
+
+Protected columns (never dropped): `Note`, `sample_id`. All-zero numeric columns are kept.
+
+Implementation: `export_row_identity.drop_dead_columns`.
 
 ## Three density quantities (do not interchange)
 
@@ -51,6 +79,10 @@ On `Diagnostic_Metrics`, raw-power / wide-frame variants are prefixed, e.g.
 
 ## Re-export required
 
-Existing workbooks on disk retain old semantics until recompiled with **v4.0.0+** (schema) and re-exported for **v4.0.1** formatting (EWSD data bars).
+Existing workbooks on disk retain old semantics until recompiled with **v4.0.0+** (schema)
+and re-exported for **v4.0.1** formatting (EWSD data bars). Workbooks with blank research
+columns caused by the pre-v4.0.2 merge bug can be fixed by **re-running Stage 3 only**
+from an existing `compiled_density_metrics.xlsx` using **v4.0.2+** code; recompile Stage 2
+to prune dead columns on compiled sheets and propagate `sample_id`.
 
 See also: `docs/DENSITY_EXPORT_SCHEMA.md`, `docs/EXPORT_COLUMN_DICTIONARY.md`, `CHANGES.md`.

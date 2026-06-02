@@ -9,7 +9,7 @@ SoundSpectrAnalyse is a spectral-analysis pipeline developed in support of docto
 
 ## Status
 
-- **Version**: 4.0.1.
+- **Version**: 4.0.2.
 - **Python**: >=3.10,<3.12.
 - **Development status**: Beta.
 - **License**: Proprietary — see `LICENSE` at the repository root.
@@ -95,7 +95,7 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 |---|---|
 | `<note_name>/spectral_analysis.xlsx` | Per-note multi-sheet workbook (spectrum, peaks, partitioning, descriptors). |
 | `compiled_density_metrics.xlsx` | Corpus-level compiled workbook (16 sheets including `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Validation_Metrics`, `PCA_*`, `Dissonance_Metrics`, `Analysis_Metadata`). |
-| `compiled_density_metrics_research.xlsx` | Reduced research workbook. Includes **`note_effective_component_density`** (fatness), **`note_density_final`**, EWSD-R v18.1 with bootstrap CI, **`Primary_Statistics_Eligible`**, **`Stage3_Diagnostics`**, **`Stage3_Summary`**. Red **data bars** on **`EWSD_score_acoustic_balanced`**. Gate rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
+| `compiled_density_metrics_research.xlsx` | Reduced research workbook. Includes **`note_effective_component_density`** (fatness), **`note_density_final`**, EWSD-R v18.1 with bootstrap CI, **`Primary_Statistics_Eligible`**, **`Stage3_Diagnostics`**, **`Stage3_Summary`**. Red **data bars** on **`EWSD_score_acoustic_balanced`**. All-blank columns are pruned at export (v4.0.2). Gate rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
 | `phase1_discovered_density_profiles.csv` | Full adaptive trajectory per note (observation triplets, JS divergence, reliability, confidence). |
 | `adaptive_density_engine_state.json` | Final engine state (posterior profile, concentration, confidence). |
 | `phase2_application_profile.json` | The profile applied during Stage 2 compilation. |

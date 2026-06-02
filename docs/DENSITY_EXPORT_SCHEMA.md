@@ -236,3 +236,23 @@ Applied by `tools/export_research_density_workbook._apply_sdm_conditional` (rese
 Soft column fills (header + data): `density_weighted_sum`, `note_density_final`, `EWSD_score_total` (see §R.1).
 
 Primary thesis table sheet: **`Primary_Statistics_Eligible`** (replaces legacy `Primary_Statistics_Filtered` name; eligibility gate, not QC-warning exclusion).
+
+### R.6 Dead-column pruning and merge keys (v4.0.2)
+
+**Policy:** columns that are never populated in a given run are omitted from Excel output
+rather than exported as all-blank placeholders.
+
+**Stage 2:** `compile_metrics._drop_dead_columns` (delegates to
+`export_row_identity.drop_dead_columns`) runs on `Density_Metrics`, curated status sheets,
+`Debug_Counts`, and `Per_Note_Processing_Metadata`. `sample_id` is copied from
+`Density_Metrics` onto satellite sheets via `_attach_sample_id_from_density`.
+
+**Stage 3:** `tools/export_research_density_workbook.build_workbook` prunes dead columns on
+all major data sheets after assembly. Satellite sheet merge uses
+`export_row_identity.merge_keys_for_frames` — prefer `sample_id` when IDs match the anchor,
+otherwise merge on `Note`.
+
+**Re-export:** Stage 3 alone fixes research workbooks produced before v4.0.2 when the
+compiled workbook already contains the data on `Diagnostic_Metrics` /
+`Per_Note_Processing_Metadata`. Stage 2 recompile is required to prune compiled-sheet dead
+columns and attach `sample_id` on satellite sheets.

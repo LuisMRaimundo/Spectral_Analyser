@@ -58,7 +58,12 @@ from metadata_sanitizer import (
     publication_research_canonical_density_columns,
 )
 from constants import BODY_DENSITY_MAX_HZ, FULL_SPECTRUM_MAX_HZ
-from export_row_identity import assign_sample_ids, dedupe_identical_columns, primary_merge_keys
+from export_row_identity import (
+    assign_sample_ids,
+    dedupe_identical_columns,
+    drop_dead_columns,
+    merge_keys_for_frames,
+)
 
 SCRIPT_NAME = "export_research_density_workbook.py"
 SCRIPT_VERSION = "1.1.3"
@@ -338,16 +343,7 @@ def merge_workbook_frames(path: Path, warnings: List[str]) -> pd.DataFrame:
             continue
         frame = raw.rename(columns={nc: note_key})
         frame = _rename_frame_to_canonical(frame)
-        frame = assign_sample_ids(frame)
-        merge_keys = primary_merge_keys(merged)
-        if merge_keys == ["sample_id"] and "sample_id" not in frame.columns:
-            if frame.duplicated(subset=[note_key]).any():
-                warnings.append(
-                    f"Sheet '{sheet}' lacks sample_id and has duplicate Note keys; "
-                    "skipping merge to avoid G#4-style row collision."
-                )
-                continue
-            merge_keys = [note_key]
+        merge_keys = merge_keys_for_frames(merged, frame, note_key=note_key)
         if merge_keys == [note_key] and frame.duplicated(subset=[note_key]).any():
             warnings.append(
                 f"Sheet '{sheet}': duplicate Note keys without sample_id — "
@@ -3601,6 +3597,12 @@ def build_workbook(
     meta_map = load_analysis_metadata(source, warnings)
     meta_df = build_metadata_rows(source, meta_map, sd, merged, warnings)
     settings_by_note = build_analysis_settings_by_note(merged, sd, meta_map)
+    sd = drop_dead_columns(sd)
+    cb = drop_dead_columns(cb)
+    vs = drop_dead_columns(vs)
+    cd = drop_dead_columns(cd)
+    legacy_df = drop_dead_columns(legacy_df)
+    settings_by_note = drop_dead_columns(settings_by_note)
     generated = format_utc_publication_timestamp()
     pr = ""
     if sd["MIDI"].notna().any():

@@ -9,11 +9,16 @@ from typing import Optional
 
 import pandas as pd
 
+DEAD_COLUMN_PROTECTED_NAMES: frozenset[str] = frozenset({"Note", "sample_id"})
+
 __all__ = [
     "compute_sample_id",
     "assign_sample_ids",
     "dedupe_identical_columns",
+    "drop_dead_columns",
+    "merge_keys_for_frames",
     "primary_merge_keys",
+    "DEAD_COLUMN_PROTECTED_NAMES",
 ]
 
 
@@ -56,6 +61,65 @@ def assign_sample_ids(df: pd.DataFrame) -> pd.DataFrame:
         ids.append(compute_sample_id(note=note, source_file_name=src, row_index=int(i)))
     out["sample_id"] = ids
     return out
+
+
+def drop_dead_columns(
+    df: pd.DataFrame,
+    *,
+    protected: frozenset[str] = DEAD_COLUMN_PROTECTED_NAMES,
+) -> pd.DataFrame:
+    """Drop columns that are entirely NaN or blank-like text (never all-zero numerics)."""
+    if df is None or df.empty or df.shape[1] == 0:
+        return df
+    keep_indices: list[int] = []
+    for col_idx, c in enumerate(df.columns):
+        cs = str(c)
+        if cs in protected:
+            keep_indices.append(col_idx)
+            continue
+        series = df.iloc[:, col_idx]
+        if bool(series.isna().all()):
+            continue
+        if not pd.api.types.is_numeric_dtype(series):
+            stripped = series.astype(str).str.strip()
+            blank_like = stripped.isin(("", "nan", "None", "NaN", "<NA>"))
+            if bool(blank_like.all()):
+                continue
+        keep_indices.append(col_idx)
+    if len(keep_indices) == len(df.columns):
+        return df
+    return df.iloc[:, keep_indices].copy()
+
+
+def merge_keys_for_frames(
+    left: pd.DataFrame,
+    right: pd.DataFrame,
+    *,
+    note_key: str = "Note",
+) -> list[str]:
+    """Pick merge keys where anchor and satellite rows actually align."""
+    if left is None or left.empty:
+        return primary_merge_keys(left)
+    if (
+        right is not None
+        and not right.empty
+        and "sample_id" in left.columns
+        and "sample_id" in right.columns
+    ):
+        left_sid = left["sample_id"].astype(str).str.strip()
+        right_sid = right["sample_id"].astype(str).str.strip()
+        if (
+            left_sid.ne("").all()
+            and right_sid.ne("").all()
+            and left_sid.is_unique
+            and right_sid.is_unique
+        ):
+            overlap = set(left_sid) & set(right_sid)
+            if len(overlap) >= len(left):
+                return ["sample_id"]
+    if right is not None and note_key in left.columns and note_key in right.columns:
+        return [note_key]
+    return primary_merge_keys(left)
 
 
 def primary_merge_keys(df: pd.DataFrame) -> list[str]:

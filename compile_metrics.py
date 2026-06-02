@@ -6273,7 +6273,37 @@ def _classify_compiled_column(col: str) -> str:
 # Sheet presence is preserved by the caller; only the truly empty
 # columns are dropped. The ``Note`` column (row key) is never dropped
 # even if it happens to be empty.
-_DEAD_COLUMN_PROTECTED_NAMES: frozenset[str] = frozenset({"Note"})
+_DEAD_COLUMN_PROTECTED_NAMES: frozenset[str] = frozenset({"Note", "sample_id"})
+
+
+def _attach_sample_id_from_density(
+    df: pd.DataFrame,
+    density_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Copy authoritative ``sample_id`` from Density_Metrics onto satellite sheets."""
+    if df is None or df.empty or density_df is None or density_df.empty:
+        return df
+    if "sample_id" in df.columns and df["sample_id"].astype(str).str.strip().ne("").all():
+        return df
+    if "sample_id" not in density_df.columns or "Note" not in df.columns or "Note" not in density_df.columns:
+        return df
+    sid_map = density_df[["Note", "sample_id"]].drop_duplicates(subset=["Note"], keep="last")
+    out = df.merge(sid_map, on="Note", how="left", suffixes=("", "__sid"))
+    if "sample_id__sid" not in out.columns:
+        return out
+    if "sample_id" not in out.columns:
+        out["sample_id"] = out["sample_id__sid"]
+    else:
+        need = out["sample_id"].isna() | out["sample_id"].astype(str).str.strip().eq("")
+        out.loc[need, "sample_id"] = out.loc[need, "sample_id__sid"]
+    out = out.drop(columns=["sample_id__sid"], errors="ignore")
+    if "Note" in out.columns and "sample_id" in out.columns:
+        cols = list(out.columns)
+        cols.remove("sample_id")
+        note_idx = cols.index("Note")
+        cols.insert(note_idx + 1, "sample_id")
+        out = out.loc[:, cols]
+    return out
 
 
 def _corpus_comparability_audit(df: pd.DataFrame) -> Dict[str, Any]:
@@ -6389,41 +6419,12 @@ def _restrict_primary_subset_to_single_profile(
 
 
 def _drop_dead_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Return a copy of ``df`` with all-NaN / all-blank columns dropped.
-
-    A column is considered "dead" if every value satisfies one of:
-
-    * ``pd.isna(v)``                                      (NaN / NaT / None)
-    * for object dtypes: ``str(v).strip()`` in
-      ``{"", "nan", "None", "NaN", "<NA>"}``              (blank-like text)
-
-    All-zero numeric columns are intentionally **not** considered dead —
-    ``0`` is a legitimate observation and downstream code may rely on the
-    column being present.
-
-    Protected column names (e.g. ``"Note"``) are never dropped.
-    Returns the input unchanged when ``df`` is empty.
-    """
+    """Return a copy of ``df`` with all-NaN / all-blank columns dropped."""
     if df is None or df.empty or df.shape[1] == 0:
         return df
-    keep_cols: List[str] = []
-    for c in df.columns:
-        cs = str(c)
-        if cs in _DEAD_COLUMN_PROTECTED_NAMES:
-            keep_cols.append(c)
-            continue
-        series = df[c]
-        if series.isna().all():
-            continue
-        if not pd.api.types.is_numeric_dtype(series):
-            stripped = series.astype(str).str.strip()
-            blank_like = stripped.isin(("", "nan", "None", "NaN", "<NA>"))
-            if blank_like.all():
-                continue
-        keep_cols.append(c)
-    if len(keep_cols) == len(df.columns):
-        return df
-    return df.loc[:, keep_cols].copy()
+    from export_row_identity import drop_dead_columns as _drop_dead_columns_impl  # noqa: PLC0415
+
+    return _drop_dead_columns_impl(df, protected=_DEAD_COLUMN_PROTECTED_NAMES)
 
 
 def _slice_compiled_df_by_status(base_df: pd.DataFrame, status: str) -> pd.DataFrame:
@@ -6865,6 +6866,7 @@ def _write_compiled_excel(
         except Exception as _ge:
             logger.warning("Compile_Guide sheet skipped: %s", _ge)
             meta_flat["compile_guide_export_status"] = f"skipped: {_ge}"
+        density_df = _drop_dead_columns(density_df)
         density_df.to_excel(writer, sheet_name="Density_Metrics", index=False)
         if legacy_aliases_df is not None and not legacy_aliases_df.empty:
             legacy_aliases_df.to_excel(writer, sheet_name="Legacy_Aliases", index=False)
@@ -6977,6 +6979,8 @@ def _write_compiled_excel(
                         "nominal_fallback_used_not_acoustically_verified"
                     )
                     _canon.loc[_need_af0, "acoustic_f0_status"] = _derived.loc[_need_af0]
+            _canon = _attach_sample_id_from_density(_canon, density_df)
+            _canon = _drop_dead_columns(_canon)
             _canon.to_excel(writer, sheet_name="Canonical_Metrics", index=False)
             meta_flat["canonical_metrics_export_status"] = "exported"
             # Canonical primary subset for inferential/descriptive stats.
@@ -7044,6 +7048,7 @@ def _write_compiled_excel(
             # what's actually populated for this run. Sheet presence and
             # column SET (for live columns) are preserved.
             if not _diag.empty:
+                _diag = _attach_sample_id_from_density(_diag, density_df)
                 _diag = _drop_dead_columns(_diag)
                 # Scientific hygiene: avoid reusing canonical Density_Metrics names
                 # for diagnostic-scale variants on a different sheet.
@@ -7095,6 +7100,8 @@ def _write_compiled_excel(
 
         meta_flat.setdefault("robust_salient_inharmonic_peak_picking_enabled", False)
         if _dbg is not None and not _dbg.empty:
+            _dbg = _attach_sample_id_from_density(_dbg, density_df)
+            _dbg = _drop_dead_columns(_dbg)
             _dbg.to_excel(writer, sheet_name="Debug_Counts", index=False)
             meta_flat["debug_counts_export_status"] = "exported"
         else:
@@ -7114,6 +7121,8 @@ def _write_compiled_excel(
         _phase7_summary.to_excel(writer, sheet_name="Validation_Summary", index=False)
         meta_flat["validation_summary_export_status"] = "exported"
         if _pn is not None and not _pn.empty:
+            _pn = _attach_sample_id_from_density(_pn, density_df)
+            _pn = _drop_dead_columns(_pn)
             _pn.to_excel(writer, sheet_name="Per_Note_Processing_Metadata", index=False)
             meta_flat["per_note_metadata_export_status"] = "exported"
         else:

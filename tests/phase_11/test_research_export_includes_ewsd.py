@@ -162,6 +162,5 @@ def test_research_export_ewsd_skipped_without_per_note_workbooks(tmp_path: Path)
         include_ewsd=True,
     )
     sdm = pd.read_excel(output, sheet_name="Spectral_Density_Metrics")
-    assert "EWSD_score_total" in sdm.columns
-    assert pd.isna(sdm.iloc[0]["EWSD_score_total"])
+    assert "EWSD_score_total" not in sdm.columns
     assert str(sdm.iloc[0]["ewsd_merge_status"]).strip() == "no_per_note_workbooks_found"
