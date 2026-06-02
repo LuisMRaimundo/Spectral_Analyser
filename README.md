@@ -102,6 +102,21 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 
 Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
 
+## Documentation map (v4.0.3)
+
+| Document | Role |
+|----------|------|
+| [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md) | Full implementation manual; **§14.3** export schema and join keys |
+| [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md) | Normative export schema; **§R.6–R.8** hygiene and column traps |
+| [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) | Audit repairs v4.0.0–v4.0.3; re-export table |
+| [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md) | Sheet/column inventory + traps table |
+| [`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`](docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) | Pipeline + **§11** export version map |
+| [`docs/GUI_OPTION_REFERENCE.md`](docs/GUI_OPTION_REFERENCE.md) | GUI controls; **§A5** export weight naming |
+| [`CHANGES.md`](CHANGES.md) | Versioned change log |
+
+**Re-export:** workbooks on disk keep old export semantics until recompiled with **v4.0.3+**
+(Stage 2 + Stage 3 for full refresh).
+
 ## Metric hierarchy (acoustic — do not interchange)
 
 | Musical question | Primary column | Stage |

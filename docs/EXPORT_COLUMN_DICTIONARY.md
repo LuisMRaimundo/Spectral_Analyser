@@ -1,5 +1,8 @@
 # Export Column Dictionary
 
+**Package version:** 4.0.3. Export schema repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
+Normative export rules: `docs/DENSITY_EXPORT_SCHEMA.md` §R.6–R.8. Implementation manual: `docs/TECHNICAL_MANUAL_COMPLETE.md` §14.3.
+
 This dictionary covers exported workbook sheets for:
 
 - `compiled_density_metrics.xlsx` (Stage 2 compile),

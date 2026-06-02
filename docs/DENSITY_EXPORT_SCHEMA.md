@@ -1,8 +1,9 @@
 # DENSITY_EXPORT_SCHEMA — Authoritative export schema
 
-> **Status:** scaffolded skeleton. Normative content is to be authored by the project author.
-> This file is the authoritative reference for the schema of `compiled_density_metrics.xlsx`
-> and of the research workbook produced by `tools/export_research_density_workbook.py`.
+> **Status:** normative for export-column semantics (package **v4.0.3**). Skeleton sections
+> marked `TODO(author)` remain for full column inventories; §R.6–R.8 and §2.1–2.3 are
+> maintained for current export behaviour. Where this file conflicts with older docs under
+> `docs/`, this file prevails for export semantics.
 
 ## 1. Scope and authority
 

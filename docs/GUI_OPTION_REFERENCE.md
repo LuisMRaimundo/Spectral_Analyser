@@ -70,6 +70,23 @@ Notes:
 - EWSD requires per-note workbooks with `Harmonic Spectrum` and `Inharmonic Spectrum` sheets under the analysis folder.
 - Prefer `EWSD_score_acoustic_balanced` for cross-instrument bibliographic comparisons; keep `EWSD_score_total` as strict EWSD.
 
+## A5. Export weight naming (GUI vs Phase-2 vs per-note)
+
+The GUI parameters in §A1 (`harmonic_density_weight`, etc.) are **base multipliers** applied
+during Stage 1 weighted summaries. They are **not** the corpus adaptive Phase-2 profile.
+
+| Export location | Column | Meaning |
+|-----------------|--------|---------|
+| compiled `Density_Metrics` | `phase2_*_application_weight` | Corpus adaptive profile applied to `density_metric_raw` |
+| compiled `Density_Metrics` | `component_*_energy_ratio` | Per-note observed energy fractions |
+| research `Metadata` | `harmonic_density_weight` (+ I/S) | Phase-2 corpus weights (distinct H/I/S since v4.0.3) |
+| research `Analysis_Settings_By_Note` | `harmonic_density_weight` (+ I/S) | GUI base multipliers (typically 1 / 0.5 / 0.25) |
+| research `Spectral_Density_Metrics` | `harmonic_density_weight` (+ I/S) | Per-note ratio-derived columns — not Phase-2 |
+
+For thesis statistics use `phase2_*_application_weight` or research `Metadata` (v4.0.3+),
+not `Analysis_Settings_By_Note` weight columns. Full table:
+`docs/DENSITY_EXPORT_SCHEMA.md` §R.8.
+
 ---
 
 ## B. PyQt GUI (`interface.py`) — reference/legacy surface (ARCHIVED)

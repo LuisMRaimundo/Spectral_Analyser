@@ -17,7 +17,7 @@ This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orche
 | P6 Provenance + consolidation | Constants provenance registry, alias consolidation, curated exports | `constants.py`, `docs/CONSTANTS_PROVENANCE.md`, `compile_metrics.py`, `post_compile_research_export.py` |
 | P7 Register-invariant strength | Occupancy-normalized H/I/S strength to remove register drift | `acoustic_density_core.py`, `constants.py`, `compile_metrics.py` |
 | P8 Stage 3 EWSD v18.1 | Recompute EWSD-R v18.1 from per-note spectra; bootstrap UQ; fail-closed contract; merge into research export | `tools/ewsd_core.py`, `tools/ewsd_pure.py`, `tools/ewsd_uncertainty.py`, `tools/ewsd_stage3_contract.py`, `tools/ewsd_research_integration.py`, `tools/export_research_density_workbook.py` |
-| Final compile/export | Build compiled workbook and side sheets; publication/research variants | `compile_metrics.py`, `publication_metric_columns.py`, `publication_chart_policy.py`, `post_compile_research_export.py` |
+| Final compile/export | Build compiled workbook and side sheets; publication/research variants; export row identity (v4.0.3) | `compile_metrics.py`, `export_row_identity.py`, `publication_metric_columns.py`, `publication_chart_policy.py`, `post_compile_research_export.py`, `tools/export_research_density_workbook.py` |
 
 ## Core computational scripts (functions, summaries, formulas)
 
@@ -49,6 +49,7 @@ This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orche
 | `data_integrity.py` | normalization/validation helpers | Metric coercion, outlier detection, robust scaling | IQR/outlier and robust normalization |
 | `debug_counts.py` | `validate_debug_count_invariants` | Debug count consistency checks | Invariant checks |
 | `dissonance_export.py` | canonical dissonance frame builders | Export harmonized dissonance comparison sheets | Correlation/reshape ops |
+| `export_row_identity.py` | `assign_sample_ids`, `attach_sample_id_from_density`, `merge_keys_for_frames`, `drop_dead_columns`, `dedupe_identical_columns` | Export row PK, satellite ID propagation, merge-key selection, dead-column pruning, identical `_2` dedupe (v4.0.2–v4.0.3) | `sample_id = slug(note|file|row)` |
 | `dissonance_models.py` | `SetharesDissonance`, `HutchinsonKnopoffDissonance`, `VassilakisDissonance` | Pairwise sensory dissonance models | Model-specific pairwise kernels |
 | `energy_accounting.py` | `describe_component_energy_balance` | Summarizes component energy balance | Ratio/accounting |
 | `density_uncertainty.py` | `bootstrap_note_density_final`, `bootstrap_density_ci`, `nfft_sensitivity` | Uncertainty quantification for `note_density_final` (transform-aware bootstrap CI; partials + ratios propagated jointly) | Non-parametric bootstrap; dispersion summaries |

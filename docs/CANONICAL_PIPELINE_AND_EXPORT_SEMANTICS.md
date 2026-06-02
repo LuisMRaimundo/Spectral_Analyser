@@ -1,8 +1,8 @@
 # CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS — Normative pipeline reference
 
-> **Status:** scaffolded skeleton. Normative content is to be authored by the project author.
-> This document is the single source of truth for the canonical Stage-1 / Stage-2 pipeline
-> and for export semantics that follow from it.
+> **Status:** normative for pipeline and export semantics (package **v4.0.3**). Skeleton
+> sections marked `TODO(author)` remain for full Stage-1/2 inventories; §9, §A, and §11 are
+> maintained for current behaviour.
 
 ## 1. Scope and authority
 
@@ -72,6 +72,32 @@ bibliographic distance. See `docs/DENSITY_EXPORT_SCHEMA.md` §R.4 and
 `docs/TECHNICAL_MANUAL_COMPLETE.md` §7.8.
 
 For the full schema of the research workbook see `docs/DENSITY_EXPORT_SCHEMA.md` §R.
+
+**Export row identity (v4.0.2–v4.0.3).** Stage 2 and Stage 3 delegate join and hygiene
+helpers to `export_row_identity.py`:
+
+- `assign_sample_ids` / `compute_sample_id` — authoritative per-row primary key on
+  `Density_Metrics`.
+- `attach_sample_id_from_density` — copies `sample_id` onto satellite compiled sheets
+  (v4.0.3: NaN placeholder columns treated as unpopulated).
+- `merge_keys_for_frames` — research merge prefers `sample_id` when IDs align, else `Note`.
+- `drop_dead_columns` — omits never-populated columns at Excel write.
+- `dedupe_identical_columns` — drops byte-identical `*_2` suffix columns (v4.0.3: also
+  after header uniquification in research export).
+
+## 11. Export schema version map (v4.0.0–v4.0.3)
+
+| Version | Scope | Key behaviour |
+|---------|-------|----------------|
+| v4.0.0 | Schema repair | `sample_id` PK; diagnostic column prefixes; three-density naming; `Primary_Statistics_Eligible`; `Stage3_Summary` |
+| v4.0.1 | Research formatting | Red data bars on `EWSD_score_acoustic_balanced` |
+| v4.0.2 | Export hygiene | `merge_keys_for_frames`; dead-column pruning; satellite `sample_id` propagation |
+| v4.0.3 | Metadata + dedupe | Distinct Phase-2 H/I/S in research `Metadata`; `Diagnostic_Metrics.sample_id` fill; post-uniquify dedupe; numeric `zero_padding` per note |
+
+**Re-export:** full refresh after v4.0.3 requires Stage 2 + Stage 3. See
+`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export required.
+
+**Column traps:** same header, different meaning — `docs/DENSITY_EXPORT_SCHEMA.md` §R.8.
 
 ## 10. Audit CLI
 

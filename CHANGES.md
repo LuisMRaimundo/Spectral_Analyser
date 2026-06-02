@@ -15,6 +15,20 @@ Fixes remaining export/schema bugs identified in the architecture audit after v4
 - **Docs:** `DENSITY_EXPORT_SCHEMA` §R.7–R.8, `EXPORT_SCHEMA_AUDIT_REPAIR` re-export table,
   `EXPORT_COLUMN_DICTIONARY` column traps, README outputs table.
 
+# Documentation alignment — full v4.0.3 sweep
+
+Synchronized all user-facing documentation to package **v4.0.3**:
+
+- **`TECHNICAL_MANUAL_COMPLETE.md`:** version header; new **§14.3** export schema/join keys; GUI
+  weight vs Phase-2 distinction in §15; §19A items 7–8 (open column renames, redaction); §21 cross-links.
+- **`CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`:** **§11** export version map; `export_row_identity` in §9.
+- **`MANUAL_COVERAGE_REPORT.md`:** v4.0.3 scope, keyword sweep, status table rows.
+- **`GUI_OPTION_REFERENCE.md`:** **§A5** export weight naming table.
+- **`NOTE_FATNESS_AND_DENSITY_GUIDE.md`:** `sample_id` join note; export doc links.
+- **`pipeline.md` / `pipeline_runtime.md`:** `export_row_identity.py` on compile/export path.
+- **`metrics_dictionary.json`:** `registry_version` 4.0.3; `export_schema_versions` block.
+- **`README.md`:** documentation map + re-export note.
+
 # Export hygiene — research merge fix + dead-column pruning (v4.0.2)
 
 Fixes blank columns in research exports when satellite compiled sheets lacked matching

@@ -1,5 +1,10 @@
 # SoundSpectrAnalyse — Complete Technical Manual
 
+**Package version:** 4.0.3 (`pyproject.toml`).  
+**Export schema:** v4.0.0–v4.0.3 — normative detail in
+[`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) and
+[`docs/DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.8.
+
 ## 0. Scope and epistemic status
 
 This manual documents the current implementation in `SoundSpectrAnalyse` as code exists today.
@@ -848,6 +853,64 @@ Export family includes segmented descriptor suffixes:
 - `Metadata`
 - `Dashboard`, `README`.
 
+### 14.3 Export schema, join keys, and column semantics (v4.0.3)
+
+Export behaviour is implemented in `export_row_identity.py`, `compile_metrics.py` (Stage 2
+write path), and `tools/export_research_density_workbook.py` (Stage 3). Normative tables:
+[`EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md),
+[`DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.8,
+[`EXPORT_COLUMN_DICTIONARY.md`](EXPORT_COLUMN_DICTIONARY.md) (column traps).
+
+**Primary join key:** `sample_id` — stable per compiled/research row; survives duplicate
+`Note` labels (e.g. two G#4 samples). `Note` is a display/pitch label only; do not use it
+as the sole join key when duplicates may exist.
+
+**Stage 2 (v4.0.2+):**
+
+- `drop_dead_columns` removes all-NaN / all-blank text columns at write time (never drops
+  all-zero numerics; never drops `Note` or `sample_id`).
+- `attach_sample_id_from_density` copies authoritative `sample_id` from `Density_Metrics`
+  onto `Canonical_Metrics`, `Diagnostic_Metrics`, `Debug_Counts`, and
+  `Per_Note_Processing_Metadata`.
+- `Diagnostic_Metrics` renames collision-prone columns to `diagnostic_*` / `per_note_*_diagnostic`
+  prefixes where implemented.
+
+**Stage 3 research merge (v4.0.2+):** `merge_keys_for_frames` merges satellite compiled
+sheets on `sample_id` when anchor and satellite IDs overlap; otherwise on `Note`. Satellite
+sheets must not receive synthetic mismatched `sample_id` values before merge.
+
+**Stage 3 export hygiene (v4.0.3):**
+
+- Research `Metadata` sheet: `harmonic_density_weight`, `inharmonic_density_weight`, and
+  `subbass_density_weight` are **distinct** Phase-2 corpus application weights (each key
+  resolves through its own fallback chain).
+- Identical merge suffix columns (`*_2`) are dropped after header uniquification
+  (`dedupe_identical_columns`).
+- `Analysis_Settings_By_Note.zero_padding` prefers per-note numeric values (including
+  `n_fft_effective / n_fft` when present) before a tier-dependent label string.
+
+**Three density quantities (do not interchange under one name):**
+
+| Canonical meaning | Typical column | Workbook |
+|-------------------|----------------|----------|
+| Phase-2 corpus-profile weighted density | `density_metric_raw` | compiled |
+| Per-note energy-ratio weighted density | `density_metric_raw_per_note_balance`, compiled `density_weighted_sum` | compiled |
+| Body-ceiling richness sum | `richness_weighted_body_density_*`, research `density_weighted_sum` | research |
+
+**Weight columns (same header, different meaning):**
+
+| Column name | Where | Meaning |
+|-------------|-------|---------|
+| `phase2_*_application_weight` | compiled `Density_Metrics`, `Analysis_Metadata` | Corpus adaptive profile applied to `density_metric_raw` |
+| `component_*_energy_ratio` | compiled / research | Per-note **observed** energy fractions |
+| `harmonic_density_weight` | research `Metadata` | Phase-2 corpus weight (v4.0.3+) |
+| `harmonic_density_weight` | `Analysis_Settings_By_Note` | GUI **base** multiplier (typically 1 / 0.5 / 0.25), not Phase-2 |
+| `harmonic_density_weight` | research `Spectral_Density_Metrics` | Per-note ratio-derived column, not Phase-2 |
+
+**Re-export:** existing workbooks on disk retain old semantics until recompiled. Full v4.0.3
+refresh requires **Stage 2 + Stage 3**. See re-export table in
+`EXPORT_SCHEMA_AUDIT_REPAIR.md`.
+
 ### Per-note workbook (`spectral_analysis.xlsx`)
 
 Beyond the spectral sheets (`Harmonic Spectrum`, `Strict_Harmonic_Peaks`,
@@ -872,7 +935,7 @@ Legacy/reference GUI: `interface.py` (PyQt) — archived to `Backup/root_modules
 Core controls (Tk):
 
 - Density mode (`density_summation_mode`): adaptive/harmonic-only/inharmonic-only/subbass-only/HIS weighted modes.
-- Component weights (`harmonic_density_weight`, `inharmonic_density_weight`, `subbass_density_weight`).
+- Component weights (`harmonic_density_weight`, `inharmonic_density_weight`, `subbass_density_weight`) — **GUI base multipliers for Stage 1 weighted summaries** (defaults 1.0 / 0.5 / 0.25). These are **not** the Phase-2 corpus adaptive profile. At compile time the adaptive engine produces `phase2_*_application_weight` on `Density_Metrics` and in research `Metadata` (v4.0.3+). Do not read GUI base weights from `Analysis_Settings_By_Note` as Phase-2 values — see §14.3.
 - Salience threshold (`density_salience_threshold_db`).
 - Density ceiling (`density_frequency_ceiling_hz`).
 - Frequency range (`freq_min`, `freq_max`).
@@ -989,6 +1052,16 @@ Numeric constants are now explicitly classified as `primary_source`, `derived`, 
 6. **Formula-validation scope is intentionally proportionate.**  
    `tests/formula_validation/` and `docs/validation/FORMULA_VALIDATION_STATUS.md` currently canonicalise six high-impact formula families (F1–F6). Internal helper expressions are still primarily governed by numerical regression under `tests/phase_*`.
 
+7. **Export column names still overload legacy headers.**  
+   v4.0.3 fixes Metadata weight **values** and join hygiene but does not yet rename every
+   ambiguous public column (e.g. compiled vs research `density_weighted_sum`). Use §14.3,
+   `DENSITY_EXPORT_SCHEMA.md` §R.8, and `EXPORT_COLUMN_DICTIONARY.md` column traps before
+   cross-workbook joins.
+
+8. **Publication redaction is not uniform across all sheets.**  
+   `metadata_sanitizer` may redact paths on `Density_Metrics` while other sheets still
+   expose filenames; treat path columns as sensitive until a unified redaction pass ships.
+
 ---
 
 ## 20. Complete formula index
@@ -999,7 +1072,9 @@ See `docs/METRIC_FORMULA_INDEX.md` for indexed formulas (`F-001` onward), mapped
 
 ## 21. Complete export column dictionary
 
-See `docs/EXPORT_COLUMN_DICTIONARY.md` for exhaustive sheet-by-sheet exported column coverage for compiled and research workbooks.
+See `docs/EXPORT_COLUMN_DICTIONARY.md` for exhaustive sheet-by-sheet exported column coverage
+for compiled and research workbooks, including the **column-name traps** table (v4.0.3) and
+the compiled/research crosswalk. Export schema repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
 
 ---
 

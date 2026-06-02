@@ -17,8 +17,8 @@ This is the filtered version containing only scripts used in the default runtime
 | Stage 1B Per-note analysis | `proc_audio.AudioProcessor` + core acoustic/density modules | per-note `spectral_analysis.xlsx` |
 | Stage 1C Adaptive update | `adaptive_density_engine.AdaptiveDensityEngine.update` fed by pure observation | `adaptive_density_engine_state.json`, phase profile CSV/JSON |
 | Stage 2 Compilation | `compile_metrics.compile_density_metrics_with_pca` and `_write_compiled_excel` | `compiled_density_metrics.xlsx` |
-| Stage 2B Publication/research curation | metadata/column policies applied in compile/export helpers | curated sheets (`Density_Metrics`, `Canonical_Metrics`, etc.) |
-| Stage 3 EWSD v18.1 + research export | `post_compile_research_export` → `export_research_workbook` + `ewsd_research_integration` | `compiled_density_metrics_research.xlsx` with fatness, density, EWSD + CI + `Stage3_Diagnostics` |
+| Stage 2B Publication/research curation | metadata/column policies + `export_row_identity` helpers in compile write path | curated sheets with `sample_id`, dead-column pruning (v4.0.2–v4.0.3) |
+| Stage 3 EWSD v18.1 + research export | `post_compile_research_export` → `export_research_workbook` + `ewsd_research_integration` + `export_row_identity.merge_keys_for_frames` | `compiled_density_metrics_research.xlsx` with fatness, density, EWSD + CI + `Stage3_Diagnostics`; Metadata H/I/S fix (v4.0.3) |
 
 ## Scripts actually traversed
 
@@ -38,9 +38,10 @@ This is the filtered version containing only scripts used in the default runtime
 | `mir_descriptors.py` | `compute_mir_descriptors_from_spectrum` | Whole-note MIR descriptors | `centroid = sum(f*p)` | \(\mu_f=\sum_i f_i p_i\) |
 | `temporal_segmentation.py` | `segment_attack_sustain_release` | Envelope segmentation and log attack time | `log_attack_time_s = log10(max(t_attack,eps))` | \(LAT=\log_{10}(t_{attack})\) |
 | `spectral_normalization.py` | `n_fft_normalization_factor` | Tier normalization factors used in compile output (`quantity_kind` contract) | `peak_amplitude_sum: N_ref/N; peak_power_sum: (N_ref/N)^2` | \(k_{peak\_amp}=N_{ref}/N,\;k_{peak\_pow}=(N_{ref}/N)^2\) |
-| `compile_metrics.py` | `compile_density_metrics_with_pca`, `_compile_density_metrics_impl`, `_write_compiled_excel`, `_build_density_metrics_main_sheet`, `_build_density_metrics_sheet_from_per_note_files` | Stage-2 aggregation, direct per-note extraction, canonical + legacy sheet writing | `raw_per_note = D_H*wH_per + D_I*wI_per + D_S*wS_per` | \(D_{per}=D_Hw_H^{(n)}+D_Iw_I^{(n)}+D_Sw_S^{(n)}\) |
+| `compile_metrics.py` | `compile_density_metrics_with_pca`, `_compile_density_metrics_impl`, `_write_compiled_excel`, `_build_density_metrics_main_sheet`, `_build_density_metrics_sheet_from_per_note_files` | Stage-2 aggregation, direct per-note extraction, canonical + legacy sheet writing; delegates dead-column pruning and `sample_id` attach to `export_row_identity` | `raw_per_note = D_H*wH_per + D_I*wI_per + D_S*wS_per` | \(D_{per}=D_Hw_H^{(n)}+D_Iw_I^{(n)}+D_Sw_S^{(n)}\) |
+| `export_row_identity.py` | `assign_sample_ids`, `attach_sample_id_from_density`, `merge_keys_for_frames`, `drop_dead_columns`, `dedupe_identical_columns` | Primary join key and export hygiene shared by Stage 2 and Stage 3 | `sample_id` slug from note + file + row | N/A (identity policy) |
 | `post_compile_research_export.py` | `run_research_workbook_export` | Stage 3 hook after compile; triggers research workbook + EWSD merge | delegates to `export_research_workbook` | N/A (control flow) |
-| `tools/export_research_density_workbook.py` | `export_research_workbook`, `build_workbook`, `merge_ewsd_into_spectral_density_metrics` (via integration) | Research workbook assembly and EWSD left-join | EWSD: \(\sum_k r_k D_k (N_{eff,k}/N_k)\) | `note_effective_component_density`, `note_density_final`, `EWSD_score_*`, CI columns |
+| `tools/export_research_density_workbook.py` | `export_research_workbook`, `build_workbook` | Research workbook assembly, Metadata Phase-2 weights (v4.0.3), post-uniquify dedupe | EWSD merge via integration | `note_effective_component_density`, `note_density_final`, `EWSD_score_*`, CI columns |
 | `tools/ewsd_core.py` | `compute_ewsd`, `add_acoustic_alignment_columns`, `add_quality_columns` | EWSD-R v18.1 core from per-note component spectra | participation-ratio penalty per H/I/S compartment | Stage 3 research columns |
 | `tools/ewsd_pure.py` | pure F-048/F-049/F-050 reference | Golden/corpus validation reference | numpy-only |
 | `tools/ewsd_uncertainty.py` | bootstrap EWSD CI | Resampled UQ on balanced score | bootstrap bands |

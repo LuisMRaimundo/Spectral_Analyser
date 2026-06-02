@@ -47,6 +47,7 @@ See `docs/validation/EWSD_THEORY.md` for the full metric hierarchy.
 
 ## Filters for thesis statistics
 
+- **`sample_id`** — primary join key when duplicate `Note` labels exist (v4.0.0+); prefer over `Note` alone for merges.
 - **`valid_for_primary_statistics == True`** — gate compiled/research rows used in primary analysis.
 - **`ewsd_primary_analysis_eligible == True`** — gate EWSD columns only (Stage 3).
 - Match **`Register`**, **`Dynamic`**, and **`analysis_parameter_profile_id`** when comparing notes or instruments.
@@ -55,6 +56,8 @@ Bootstrap CI columns exist for **`note_density_final`** and **`EWSD_score_acoust
 
 ## Related documentation
 
-- `docs/EXPORT_COLUMN_DICTIONARY.md` — column semantics
+- `docs/EXPORT_COLUMN_DICTIONARY.md` — column semantics and traps (v4.0.3)
+- `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` — export schema repairs and re-export table
+- `docs/DENSITY_EXPORT_SCHEMA.md` §R.8 — ambiguous column names
 - `docs/METRIC_FORMULA_INDEX.md` — F-045 (harmonic fatness), F-047 (unified fatness), F-048–F-050 (EWSD)
 - `docs/validation/EWSD_CONSTRUCT_VALIDITY.md` — acoustic construct checks

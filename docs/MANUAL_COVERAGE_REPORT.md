@@ -2,15 +2,19 @@
 
 ## Scope
 
-Documentation-only pass synchronized to the current repository state after Phase 8, constants-provenance registry completion, and formula-validation suite introduction.
+Documentation pass synchronized to package **v4.0.3** (export schema hygiene, EWSD Stage 3,
+constants-provenance registry, formula-validation suite).
 
-Generated deliverables:
+Generated / maintained deliverables:
 
-1. `docs/TECHNICAL_MANUAL_COMPLETE.md`
+1. `docs/TECHNICAL_MANUAL_COMPLETE.md` (includes §14.3 export schema v4.0.3)
 2. `docs/METRIC_FORMULA_INDEX.md`
-3. `docs/GUI_OPTION_REFERENCE.md`
-4. `docs/EXPORT_COLUMN_DICTIONARY.md`
-5. `docs/MANUAL_COVERAGE_REPORT.md`
+3. `docs/GUI_OPTION_REFERENCE.md` (includes export weight naming §A5)
+4. `docs/EXPORT_COLUMN_DICTIONARY.md` (column traps + crosswalk)
+5. `docs/DENSITY_EXPORT_SCHEMA.md` (§R.6–R.8)
+6. `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`
+7. `docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md` (§9, §11)
+8. `docs/MANUAL_COVERAGE_REPORT.md`
 
 ---
 
@@ -31,6 +35,7 @@ Generated deliverables:
 - `note_parser.py`
 - `constants.py`
 - `tools/export_research_density_workbook.py`
+- `export_row_identity.py`
 - `metrics_dictionary.json`
 - `docs/CONSTANTS_PROVENANCE.md`
 - `docs/validation/FORMULA_VALIDATION_STATUS.md`
@@ -44,6 +49,7 @@ Keyword sweep executed for:
 - `spectral_`, `tristimulus`, `centroid`, `flatness`, `rolloff`, `skewness`, `kurtosis`, `irregularity`, `ERB`, `Bark`
 - `f0`, `inharmonicity`, `tier_normalized`, `Validation_Summary`, `obs_w`, `pure_observation`, `phase2`
 - `PCA`, `UMAP`, `t-SNE`, `anomaly`, `LogAttackTime`, `attack`, `sustain`, `release`
+- `sample_id`, `merge_keys`, `drop_dead_columns`, `dedupe_identical_columns`, `EXPORT_SCHEMA`
 
 ---
 
@@ -64,6 +70,8 @@ Documented metric families include:
 - MIR descriptors (centroid, spread, skewness, kurtosis, irregularity, tristimulus, flatness, rolloff, roughness proxy, ERB density).
 - Temporal segmentation (attack/sustain/release and log attack time).
 - Validation/warning and legacy-alias semantics.
+- Export row identity (`sample_id`), merge keys, dead-column pruning, identical-column dedupe (v4.0.2–v4.0.3).
+- Phase-2 vs GUI-base vs per-note weight column semantics in exports (v4.0.3 documentation).
 
 ---
 
@@ -168,5 +176,8 @@ Included where project-level transformation/wrapping is present.
 | Keep dynamic-sheet caveat explicit | intentionally unresolved | full column enumeration is intentionally not stable due to runtime-conditional generation |
 | Stage 3 EWSD-R v18 in research export | resolved | `tools/ewsd_core.py`, `tools/ewsd_research_integration.py`, `tests/phase_11/`, manual §7.8, schema §R.4 |
 | Full inharmonicity family in research workbook | requires code/export change | export mapping in `tools/export_research_density_workbook.py` still omits `inharmonicity_*` set |
+| Export schema v4.0.3 (Metadata weights, sample_id, dedupe, zero_padding) | resolved | `export_row_identity.py`, `tests/phase_11/test_export_schema_v403.py`, manual §14.3, schema §R.7–R.8 |
+| Rename overloaded export headers (`density_weighted_sum`, settings weights) | requires code change | documented as open in §R.8 / manual §19A item 7 |
+| Uniform publication redaction across all sheets | requires code change | documented in manual §19A item 8 |
 | Constants provenance registry completion | resolved | `docs/CONSTANTS_PROVENANCE.md` now classifies constants as `primary_source` / `derived` / `convention` / `internal_default` |
 | Formula-validation baseline (F1–F6) | resolved | `tests/formula_validation/` and `docs/validation/FORMULA_VALIDATION_STATUS.md` added |

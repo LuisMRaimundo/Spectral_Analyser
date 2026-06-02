@@ -1,5 +1,12 @@
 {
-  "registry_version": "phase_8_docs_sync_v1",
+  "registry_version": "4.0.3_export_schema_sync",
+  "package_version": "4.0.3",
+  "export_schema_versions": {
+    "v4.0.0": "sample_id PK, diagnostic renames, three-density semantics",
+    "v4.0.1": "EWSD red data bars on research Spectral_Density_Metrics",
+    "v4.0.2": "merge_keys_for_frames, drop_dead_columns, satellite sample_id propagation",
+    "v4.0.3": "Metadata Phase-2 H/I/S weights, Diagnostic sample_id fill, post-uniquify dedupe, zero_padding per note"
+  },
   "registry_semantics": {
     "status_values": {
       "canonical": "Primary public metric for current research workflow.",
@@ -7,7 +14,23 @@
       "validation": "Quality-control or warning/status field.",
       "legacy": "Backward compatibility field; not recommended as new primary endpoint."
     },
-    "notes": "This registry documents project-defined metric families and export semantics. Direct external-package primitive calls are not listed unless wrapped in project logic."
+    "notes": "This registry documents project-defined metric families and export semantics. Direct external-package primitive calls are not listed unless wrapped in project logic. Export hygiene helpers live in export_row_identity.py (v4.0.2–v4.0.3)."
+  },
+  "export_row_identity": {
+    "sample_id": {
+      "status": "validation",
+      "phase": "export_v4",
+      "description": "Primary join key for compiled and research rows; stable slug from Note + source file + row index. Propagated to satellite compiled sheets via attach_sample_id_from_density.",
+      "sheet_or_export": "Density_Metrics and satellite compiled sheets / research Spectral_Density_Metrics",
+      "citation": "docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md"
+    },
+    "phase2_harmonic_application_weight": {
+      "status": "canonical",
+      "phase": "phase_2",
+      "description": "Corpus-level harmonic weight applied to density_metric_raw at compile. Distinct from GUI harmonic_density_weight and from per-note component_harmonic_energy_ratio.",
+      "sheet_or_export": "compiled Density_Metrics / research Metadata (v4.0.3+)",
+      "citation": "docs/DENSITY_EXPORT_SCHEMA.md section R.8"
+    }
   },
   "phase_1_2_adaptive": {
     "pure_observation_w_h": {
