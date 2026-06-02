@@ -18,7 +18,7 @@ This is the filtered version containing only scripts used in the default runtime
 | Stage 1C Adaptive update | `adaptive_density_engine.AdaptiveDensityEngine.update` fed by pure observation | `adaptive_density_engine_state.json`, phase profile CSV/JSON |
 | Stage 2 Compilation | `compile_metrics.compile_density_metrics_with_pca` and `_write_compiled_excel` | `compiled_density_metrics.xlsx` |
 | Stage 2B Publication/research curation | metadata/column policies applied in compile/export helpers | curated sheets (`Density_Metrics`, `Canonical_Metrics`, etc.) |
-| Stage 3 EWSD + research export | `post_compile_research_export` → `export_research_workbook` + `ewsd_research_integration` | `compiled_density_metrics_research.xlsx` with EWSD columns |
+| Stage 3 EWSD v18.1 + research export | `post_compile_research_export` → `export_research_workbook` + `ewsd_research_integration` | `compiled_density_metrics_research.xlsx` with fatness, density, EWSD + CI + `Stage3_Diagnostics` |
 
 ## Scripts actually traversed
 
@@ -40,8 +40,11 @@ This is the filtered version containing only scripts used in the default runtime
 | `spectral_normalization.py` | `n_fft_normalization_factor` | Tier normalization factors used in compile output (`quantity_kind` contract) | `peak_amplitude_sum: N_ref/N; peak_power_sum: (N_ref/N)^2` | \(k_{peak\_amp}=N_{ref}/N,\;k_{peak\_pow}=(N_{ref}/N)^2\) |
 | `compile_metrics.py` | `compile_density_metrics_with_pca`, `_compile_density_metrics_impl`, `_write_compiled_excel`, `_build_density_metrics_main_sheet`, `_build_density_metrics_sheet_from_per_note_files` | Stage-2 aggregation, direct per-note extraction, canonical + legacy sheet writing | `raw_per_note = D_H*wH_per + D_I*wI_per + D_S*wS_per` | \(D_{per}=D_Hw_H^{(n)}+D_Iw_I^{(n)}+D_Sw_S^{(n)}\) |
 | `post_compile_research_export.py` | `run_research_workbook_export` | Stage 3 hook after compile; triggers research workbook + EWSD merge | delegates to `export_research_workbook` | N/A (control flow) |
-| `tools/export_research_density_workbook.py` | `export_research_workbook`, `build_workbook`, `merge_ewsd_into_spectral_density_metrics` (via integration) | Research workbook assembly and EWSD left-join | EWSD: \(\sum_k r_k D_k (N_{eff,k}/N_k)\) | `EWSD_score_total`, `EWSD_score_acoustic_balanced` |
-| `tools/ewsd_core.py` | `compute_ewsd`, `add_acoustic_alignment_columns`, `add_quality_columns` | EWSD-R v18 core from per-note component spectra | participation-ratio penalty per H/I/S compartment | Stage 3 research columns |
+| `tools/export_research_density_workbook.py` | `export_research_workbook`, `build_workbook`, `merge_ewsd_into_spectral_density_metrics` (via integration) | Research workbook assembly and EWSD left-join | EWSD: \(\sum_k r_k D_k (N_{eff,k}/N_k)\) | `note_effective_component_density`, `note_density_final`, `EWSD_score_*`, CI columns |
+| `tools/ewsd_core.py` | `compute_ewsd`, `add_acoustic_alignment_columns`, `add_quality_columns` | EWSD-R v18.1 core from per-note component spectra | participation-ratio penalty per H/I/S compartment | Stage 3 research columns |
+| `tools/ewsd_pure.py` | pure F-048/F-049/F-050 reference | Golden/corpus validation reference | numpy-only |
+| `tools/ewsd_uncertainty.py` | bootstrap EWSD CI | Resampled UQ on balanced score | bootstrap bands |
+| `tools/ewsd_stage3_contract.py` | Stage 3 merge contract | ok/degraded/failed + diagnostics | fail-closed optional gate |
 | `tools/ewsd_research_integration.py` | `discover_individual_exact_workbooks`, `merge_ewsd_into_spectral_density_metrics` | Discover workbooks, compute EWSD, merge on Note | left join + `ewsd_primary_analysis_eligible` gate | provenance columns |
 | `metadata_sanitizer.py` | publication redaction/clean functions used during write | Removes private paths/noise from published exports | `sanitize_dataframe_for_publication(df)` | N/A (policy transform) |
 | `publication_metric_columns.py` | `filter_dataframe_for_publication_metrics_sheet` | Final column filtering for publication sheet | allow-list filter | N/A (deterministic set projection) |

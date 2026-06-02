@@ -485,6 +485,32 @@ re-analysis at multiple resolutions multiplies per-note runtime.
 
 Export: `note_density_final` (+ the four uncertainty columns above).
 
+### 7.7.1 Acoustic fatness — effective component count (`note_effective_component_density`)
+
+$$
+N_{\mathrm{eff}}^{\mathrm{HIS}} = \frac{\left(\sum_i A_i^2\right)^2}{\sum_i A_i^4}
+$$
+
+where the sum runs over all harmonic, inharmonic, and sub-bass **components** pooled
+into a single amplitude vector (F-047). This is the participation ratio on squared
+amplitudes — an effective number of energy-bearing partials, **not** loudness.
+
+**Code location.** `compile_metrics._energy_distribution_density` →
+`note_effective_component_density` on `Density_Metrics`; mirrored in research
+`Spectral_Density_Metrics`.
+
+**Interpretation.** Higher values indicate energy spread across more partials
+(acoustic “fatness”); lower values indicate concentration in fewer partials. Distinct
+from `note_density_final` (weighted density sum, §7.7) and from EWSD (§7.8), which
+applies compartment-wise anti-concentration penalties to weighted density.
+
+**Harmonic-only variant.** `harmonic_effective_partial_count` (F-045) restricts the
+same formula to harmonic peaks only.
+
+**Practical guide.** `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
+
+Export: `note_effective_component_density`, `harmonic_effective_partial_count`.
+
 ### 7.8 Effective Weighted Spectral Density — EWSD-R v18 (Stage 3)
 
 Stage 3 recomputes EWSD from per-note component spectra (`Harmonic Spectrum`,
@@ -794,7 +820,7 @@ Export family includes segmented descriptor suffixes:
 
 `compiled_density_metrics.xlsx` major sheets:
 
-- `Density_Metrics` (includes `density_metric_raw`, `density_metric_normalized`, `density_metric_raw_per_note_balance`, and `note_density_final` — see §7.7)
+- `Density_Metrics` (includes `density_metric_raw`, `density_metric_normalized`, `density_metric_raw_per_note_balance`, `note_density_final` — see §7.7, and `note_effective_component_density` — see §7.7.1)
 - `Canonical_Metrics`
 - `Canonical_Primary_Filtered`
 - `Diagnostic_Metrics`
@@ -811,7 +837,7 @@ Export family includes segmented descriptor suffixes:
 
 `compiled_density_metrics_research.xlsx` major sheets:
 
-- `Spectral_Density_Metrics` (includes `note_density_final` — see §7.7; EWSD scores — see §7.8)
+- `Spectral_Density_Metrics` (includes `note_density_final` — see §7.7; `note_effective_component_density` — see §7.7.1; EWSD scores — see §7.8)
 - `Primary_Statistics_Filtered`
 - `Component_Balance`
 - `Validation_Summary`

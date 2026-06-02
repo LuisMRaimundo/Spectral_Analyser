@@ -56,7 +56,7 @@ chmod +x installers/linux/install-and-run.sh installers/linux/setup-runtime.sh
 | `installers/runtime/` | Private Python + pip packages |
 | Runtime session | SoundSpectrAnalyse Tk GUI (`pipeline_orchestrator_gui.py`) |
 
-Each completed analysis folder also produces `compiled_density_metrics.xlsx` and, when Stage 2 auto-compile is enabled, `compiled_density_metrics_research.xlsx` with EWSD-R v18 scores in `Spectral_Density_Metrics` (Stage 3).
+Each completed analysis folder also produces `compiled_density_metrics.xlsx` and, when Stage 2 auto-compile is enabled, `compiled_density_metrics_research.xlsx` with **`note_effective_component_density`** (acoustic fatness), **`note_density_final`**, and EWSD-R v18.1 scores with bootstrap CI in `Spectral_Density_Metrics` (Stage 3). See `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
 
 To reinstall: delete `installers/runtime/` and run the launcher again.
 

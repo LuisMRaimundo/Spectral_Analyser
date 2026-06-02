@@ -11,6 +11,9 @@ For compactness and auditability:
 2. key interpretation rows are provided in table format;
 3. legacy/debug-only fields are explicitly tagged.
 
+**Per-note fatness lookup:** read `note_effective_component_density` on `Density_Metrics` — see
+`docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
+
 ---
 
 ## 1) Compiled workbook (`compiled_density_metrics.xlsx`)
@@ -31,7 +34,7 @@ Key interpretation rows:
 | `note_density_final_ci_low` / `note_density_final_ci_high` | `Density_Metrics` (+ research) | Bootstrap CI bounds for `note_density_final` | percentiles of transform-aware bootstrap | model units | per-note uncertainty band | NaN if per-note workbook unreadable |
 | `note_density_final_rel_uncertainty` | `Density_Metrics` (+ research) | Relative uncertainty of `note_density_final` | $\sigma_{boot}/|point|$ | ratio | per-note UQ magnitude | NaN if point≈0 or workbook unreadable |
 | `note_density_final_uncertainty_sources` | `Density_Metrics` (+ research) | Which uncertainty sources were propagated | bootstrap config | category | `partials+ratios` (full UQ), `partials`, or `unavailable` | not a numeric metric |
-| `note_effective_component_density` | `Density_Metrics` | **Unified single-scalar note density** across harmonic + inharmonic + sub-bass: effective number of energy-bearing spectral components (pooled participation ratio) | $(\sum_i A_i^2)^2 / \sum_i A_i^4$ over all H+I+S components | count (≥1) | **primary per-note density**; instrument-discriminating; basis for chord/aggregate density (aggregates over pooled partials) | not loudness; level-normalized input |
+| `note_effective_component_density` | `Density_Metrics` | **Acoustic fatness (F-047):** effective number of energy-bearing spectral components pooled over harmonic + inharmonic + sub-bass | $(\sum_i A_i^2)^2 / \sum_i A_i^4$ over all H+I+S components | count (≥1) | **primary fatness scalar**; instrument-discriminating; basis for chord/aggregate density | not loudness; not interchangeable with `note_density_final` or EWSD |
 | `harmonic_effective_partial_count` | `Density_Metrics` | Energy-distribution density ("fatness"): effective number of harmonic partials carrying energy | $(\sum_n A_n^2)^2 / \sum_n A_n^4$ over harmonic peaks | count (≥1) | timbre/richness ranking; **register-robust** instrument comparison | not a loudness measure |
 | `harmonic_energy_above_fundamental_ratio` | `Density_Metrics` | Fraction of harmonic energy not in the fundamental | $1-A_1^2/\sum_n A_n^2$ | ratio [0,1] | spectral spread / brightness; separates timbres at matched pitch | 0 ⇒ energy concentrated at f0 |
 | `harmonic_energy_centroid_order` | `Density_Metrics` | Energy-weighted mean harmonic order (brightness) | $\sum_n n A_n^2 / \sum_n A_n^2$ | harmonic order | brightness in order units | depends on f0 accuracy |

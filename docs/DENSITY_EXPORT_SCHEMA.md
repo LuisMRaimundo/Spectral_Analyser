@@ -74,6 +74,22 @@ hard-restricted to one analysis profile (the dominant one when several
 primary-comparable profiles are present), so primary statistics are never
 aggregated across profiles.
 
+### 2.3 `note_effective_component_density` (acoustic fatness — F-047)
+
+Emitted on `Density_Metrics` and research `Spectral_Density_Metrics`.
+
+- **Definition:** pooled participation ratio
+  \(N_{\mathrm{eff}}^{\mathrm{HIS}} = (\sum_i A_i^2)^2 / \sum_i A_i^4\) over all
+  harmonic, inharmonic, and sub-bass components identified for the note.
+- **Source:** `compile_metrics._energy_distribution_density`; research mirror in
+  `tools/export_research_density_workbook.build_spectral_density_metrics`.
+- **Units / scale:** effective partial count (≥ 1). Level-normalized input; **not**
+  loudness.
+- **Non-interchangeability:** distinct from `note_density_final` (§2.1, weighted
+  density) and from EWSD scores (§R.4, anti-concentration weighted density).
+- **Harmonic-only variant:** `harmonic_effective_partial_count` (F-045).
+- **Practical guide:** `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
+
 ## 2b. Per-note `Harmonic_Inclusion_Audit` sheet (in each `spectral_analysis.xlsx`)
 
 Read-only diagnostic sheet written per note by

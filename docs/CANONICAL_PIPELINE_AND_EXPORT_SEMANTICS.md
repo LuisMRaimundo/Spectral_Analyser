@@ -78,20 +78,30 @@ For the full schema of the research workbook see `docs/DENSITY_EXPORT_SCHEMA.md`
 <!-- TODO(author): document `tools/audit_compiled_workbook.py` — invocation, exit codes,
      and the checks it performs. -->
 
-## A. Naming caveat: `effective_partial_density` vs. classical density
+## A. Naming caveat: spectral fatness vs. classical density
 
-This section is referenced from `density.py`.
+This section is referenced from `density.py` and `compile_metrics.py`.
 
-`effective_partial_density` is the primary public spectral-fatness scalar emitted on the
-`Density_Metrics` sheet of `compiled_density_metrics.xlsx`. The name `effective_partial`
-is retained for historical-continuity reasons. The metric **diverges conceptually** from
+**Primary fatness scalar (F-047):** `note_effective_component_density` on `Density_Metrics`
+and research `Spectral_Density_Metrics` — pooled participation ratio over harmonic +
+inharmonic + sub-bass components. Use this column when the research question is “how many
+effective partials carry energy on this note?”
+
+**Harmonic-only fatness (F-045):** `harmonic_effective_partial_count`.
+
+**Legacy name:** `effective_partial_density` is retained for historical continuity on
+`Density_Metrics`. The name `effective_partial` **diverges conceptually** from
 "classical" spectral-density framings associated with Krimphoff et al. (1994) and
-Peeters et al. (2011): it operates on identified partials (harmonic plus nonharmonic
-peaks above the noise floor), weighted by the project's amplitude/energy policy, rather
-than on a continuous power spectrum.
+Peeters et al. (2011): these metrics operate on identified partials (harmonic plus
+nonharmonic peaks above the noise floor), weighted by the project's amplitude/energy
+policy, rather than on a continuous power spectrum.
 
-Authors citing this codebase should not equate `effective_partial_density` with
-Krimphoff-Peeters spectral density without explicit qualification.
+Authors citing this codebase should not equate `effective_partial_density` or
+`note_effective_component_density` with Krimphoff-Peeters spectral density without
+explicit qualification. For weighted H/I/S content use `note_density_final` (§2.1);
+for cross-instrument comparative density use `EWSD_score_acoustic_balanced` (§R.4).
+
+Practical lookup: `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
 
 <!-- TODO(author): add bibliographic anchors (APA-7) and confirm the section-letter
      designator A (or renumber to a §11 form if preferred for sequential citation). -->

@@ -16,7 +16,7 @@ This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orche
 | P5 MIR + temporal | MPEG-7-like descriptors and attack/sustain/release segmentation | `mir_descriptors.py`, `temporal_segmentation.py`, `proc_audio.py`, `compile_metrics.py` |
 | P6 Provenance + consolidation | Constants provenance registry, alias consolidation, curated exports | `constants.py`, `docs/CONSTANTS_PROVENANCE.md`, `compile_metrics.py`, `post_compile_research_export.py` |
 | P7 Register-invariant strength | Occupancy-normalized H/I/S strength to remove register drift | `acoustic_density_core.py`, `constants.py`, `compile_metrics.py` |
-| P8 Stage 3 EWSD | Recompute EWSD-R v18 from per-note spectra; merge into research export | `tools/ewsd_core.py`, `tools/ewsd_research_integration.py`, `tools/export_research_density_workbook.py` |
+| P8 Stage 3 EWSD v18.1 | Recompute EWSD-R v18.1 from per-note spectra; bootstrap UQ; fail-closed contract; merge into research export | `tools/ewsd_core.py`, `tools/ewsd_pure.py`, `tools/ewsd_uncertainty.py`, `tools/ewsd_stage3_contract.py`, `tools/ewsd_research_integration.py`, `tools/export_research_density_workbook.py` |
 | Final compile/export | Build compiled workbook and side sheets; publication/research variants | `compile_metrics.py`, `publication_metric_columns.py`, `publication_chart_policy.py`, `post_compile_research_export.py` |
 
 ## Core computational scripts (functions, summaries, formulas)
@@ -66,7 +66,10 @@ This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orche
 | `pipeline_orchestrator_gui.py` | `RobustOrchestratorApp` + helpers | Full GUI orchestration over Phase 1/2/compile/export | Stage orchestration and adaptive handoff |
 | `pipeline_orchestrator_integrated.py` | `RobustOrchestrator`, `main` | Integrated orchestrator runner | CLI orchestration |
 | `post_compile_research_export.py` | `run_research_workbook_export` | Stage 3 hook: research workbook + EWSD merge after compile | delegates to `export_research_workbook` |
-| `tools/ewsd_core.py` | `compute_ewsd`, `add_acoustic_alignment_columns` | EWSD-R v18 core from per-note component spectra | $\sum_k r_k D_k (N_{eff,k}/N_k)$ |
+| `tools/ewsd_core.py` | `compute_ewsd`, `add_acoustic_alignment_columns` | EWSD-R v18.1 core from per-note component spectra | $\sum_k r_k D_k (N_{eff,k}/N_k)$ |
+| `tools/ewsd_pure.py` | pure reference F-048/F-049/F-050 | Numpy-only golden/corpus reference | same algebra as core |
+| `tools/ewsd_uncertainty.py` | bootstrap EWSD CI | Resampled partial/ratio UQ | bootstrap bands on F-049 |
+| `tools/ewsd_stage3_contract.py` | fail-closed Stage 3 merge | Typed ok/degraded/failed contract | gates export + diagnostics sheet |
 | `tools/ewsd_research_integration.py` | `merge_ewsd_into_spectral_density_metrics` | Discover workbooks, compute EWSD, left-join on Note | merge + `ewsd_primary_analysis_eligible` |
 | `publication_chart_policy.py` | chart metric policies | Publication-safe metric selection and warnings | Policy rules |
 | `publication_metric_columns.py` | metrics-sheet filters | Column allow-listing for publication sheets | Deterministic filtering |

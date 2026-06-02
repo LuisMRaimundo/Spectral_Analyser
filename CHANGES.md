@@ -1,3 +1,14 @@
+# Documentation sweep — v3.9.0 metric hierarchy and fatness guide (2026-06-02)
+
+Aligns user-facing docs with EWSD v18.1 Tier A–C and the acoustic fatness scalar:
+
+- **README:** version 3.9.0; metric hierarchy table; Stage 3 diagnostics + bootstrap CI; link to fatness guide.
+- **New:** `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md` — practical steps to read `note_effective_component_density`.
+- **CANONICAL_PIPELINE §A:** primary fatness scalar is `note_effective_component_density` (F-047); `effective_partial_density` retained for legacy continuity.
+- **TECHNICAL_MANUAL §7.7.1:** documents F-047 pooled participation ratio.
+- **DENSITY_EXPORT_SCHEMA §2.3:** `note_effective_component_density` normative entry.
+- **pipeline.md / pipeline_runtime.md:** Stage 3 module inventory (pure math, UQ, contract).
+
 # Stage 3 EWSD-R v18.1 — Tier C (fail-closed contract + diagnostics sheet)
 
 - **Contract module:** `tools/ewsd_stage3_contract.py` — typed failures, `Stage3MergeResult`, status ok/degraded/failed.

@@ -36,4 +36,5 @@ only** — no perceptual claims.
 | B | Bootstrap UQ, `tools/ewsd_sensitivity_report.py`, construct doc |
 | C | `tools/ewsd_stage3_contract.py`, `Stage3_Diagnostics` sheet, CI gate |
 
-See also: `docs/validation/EWSD_CONSTRUCT_VALIDITY.md`, `docs/validation/FORMULA_VALIDATION_STATUS.md`.
+See also: `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md` (how to read per-note fatness),
+`docs/validation/EWSD_CONSTRUCT_VALIDITY.md`, `docs/validation/FORMULA_VALIDATION_STATUS.md`.

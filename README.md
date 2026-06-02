@@ -9,7 +9,7 @@ SoundSpectrAnalyse is a spectral-analysis pipeline developed in support of docto
 
 ## Status
 
-- **Version**: 3.8.0.
+- **Version**: 3.9.0.
 - **Python**: >=3.10,<3.12.
 - **Development status**: Beta.
 - **License**: Proprietary — see `LICENSE` at the repository root.
@@ -20,7 +20,7 @@ SoundSpectrAnalyse analyses individual note recordings and produces a multi-shee
 
 1. **Stage 1 — per-note analysis** (`proc_audio.AudioProcessor`): STFT, peak picking, F0 estimation, harmonic / inharmonic / sub-bass (H/I/S) partitioning, stiff-string inharmonicity fit, sub-bass policy, MIR descriptors (spectral moments, tristimulus, Aures roughness, ERB-weighted density), and optional temporal segmentation. Output: one `spectral_analysis.xlsx` per note.
 2. **Stage 2 — compilation** (`compile_metrics.compile_density_metrics_with_pca`): per-note rows aggregated into `compiled_density_metrics.xlsx` with tier-normalized columns, dissonance metrics, PCA scores, and validation summary.
-3. **Stage 3 — research export + EWSD** (`post_compile_research_export` → `tools/export_research_density_workbook`): builds `compiled_density_metrics_research.xlsx` and recomputes **EWSD-R v18** from per-note component spectra. Merges `EWSD_score_total`, `EWSD_score_acoustic_balanced`, provenance columns, and `ewsd_primary_analysis_eligible` into `Spectral_Density_Metrics`.
+3. **Stage 3 — research export + EWSD** (`post_compile_research_export` → `tools/export_research_density_workbook`): builds `compiled_density_metrics_research.xlsx` and recomputes **EWSD-R v18.1** from per-note component spectra. Merges `EWSD_score_total`, `EWSD_score_acoustic_balanced`, bootstrap CI columns, provenance fields, `ewsd_primary_analysis_eligible`, and a **`Stage3_Diagnostics`** sheet (fail-closed contract via `tools/ewsd_stage3_contract.py`).
 
 An online adaptive engine (`adaptive_density_engine.AdaptiveDensityEngine`) learns a corpus-level (H, I, S) density profile across notes, using pure observations decoupled from the prior (Phase 1) and a Jensen-Shannon divergence reliability gate (Phase 7). The engine state is exported to `adaptive_density_engine_state.json` for reproducibility.
 
@@ -95,12 +95,24 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 |---|---|
 | `<note_name>/spectral_analysis.xlsx` | Per-note multi-sheet workbook (spectrum, peaks, partitioning, descriptors). |
 | `compiled_density_metrics.xlsx` | Corpus-level compiled workbook (16 sheets including `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Validation_Metrics`, `PCA_*`, `Dissonance_Metrics`, `Analysis_Metadata`). |
-| `compiled_density_metrics_research.xlsx` | Reduced research workbook for publication-oriented analysis. Includes EWSD-R v18 scores (`EWSD_score_total`, `EWSD_score_acoustic_balanced`) merged into `Spectral_Density_Metrics` when per-note workbooks are present. Filter thesis rows with `ewsd_primary_analysis_eligible == True`. |
+| `compiled_density_metrics_research.xlsx` | Reduced research workbook for publication-oriented analysis. Includes per-note **`note_effective_component_density`** (acoustic fatness), **`note_density_final`** (weighted density), EWSD-R v18.1 scores with bootstrap CI, and **`Stage3_Diagnostics`**. Filter thesis rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
 | `phase1_discovered_density_profiles.csv` | Full adaptive trajectory per note (observation triplets, JS divergence, reliability, confidence). |
 | `adaptive_density_engine_state.json` | Final engine state (posterior profile, concentration, confidence). |
 | `phase2_application_profile.json` | The profile applied during Stage 2 compilation. |
 
 Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
+
+## Metric hierarchy (acoustic — do not interchange)
+
+| Musical question | Primary column | Stage |
+|------------------|----------------|-------|
+| How many effective partials carry energy (“fatness”)? | **`note_effective_component_density`** | 2 / research |
+| How much GUI-weighted H/I/S content? | **`note_density_final`** | 2 / research |
+| Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI | 3 (research) |
+
+Practical lookup steps: [`docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`](docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md). Theory memo: [`docs/validation/EWSD_THEORY.md`](docs/validation/EWSD_THEORY.md).
+
+Stage 3 validation evidence (v18.1): pure reference math (`tools/ewsd_pure.py`), golden vectors, 49-note corpus regression, bootstrap UQ (`tools/ewsd_uncertainty.py`), sensitivity report (`tools/ewsd_sensitivity_report.py`), construct validity doc, CI gate in `.github/workflows/ci.yml`.
 
 ## Scientific governance
 
