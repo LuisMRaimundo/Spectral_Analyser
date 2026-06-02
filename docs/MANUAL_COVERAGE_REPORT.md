@@ -106,7 +106,7 @@ Compiled workbook sheets documented:
 Research workbook sheets documented:
 
 - `Spectral_Density_Metrics`
-- `Primary_Statistics_Filtered`
+- `Primary_Statistics_Eligible`
 - `Component_Balance`
 - `Validation_Summary`
 - `Charts_Data`

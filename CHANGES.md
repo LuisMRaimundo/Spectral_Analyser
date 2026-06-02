@@ -1,3 +1,10 @@
+# Research export — EWSD data-bar formatting + documentation (v4.0.1)
+
+- **`EWSD_score_acoustic_balanced`:** red Excel **data bars** on research `Spectral_Density_Metrics` (conditional formatting, min–max scale, `#C00000`).
+- **Research export script:** `tools/export_research_density_workbook.py` v1.1.3.
+- **Tests:** `tests/phase_11/test_research_export_includes_ewsd.py` asserts data-bar rule on export.
+- **Docs:** README, CHANGES, `DENSITY_EXPORT_SCHEMA` §R.5, TECHNICAL_MANUAL research sheets, `EXPORT_COLUMN_DICTIONARY`, `MANUAL_COVERAGE_REPORT`, `metrics_dictionary.json`.
+
 # Export schema audit repair (v4.0.0)
 
 Fixes architecture-level workbook incongruences (audit 2026-06):

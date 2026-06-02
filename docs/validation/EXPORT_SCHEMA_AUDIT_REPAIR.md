@@ -1,4 +1,4 @@
-# Export schema audit repair (v4.0.0)
+# Export schema audit repair (v4.0.0+) + research formatting (v4.0.1)
 
 Addresses the architecture-level incongruences identified in the compiled/research
 workbook audit (duplicate Note keys, `density_weighted_sum` semantic overload, phase-2
@@ -47,9 +47,10 @@ On `Diagnostic_Metrics`, raw-power / wide-frame variants are prefixed, e.g.
 - **`Stage3_Summary`** holds the former `__STAGE3_SUMMARY__` row; `Stage3_Diagnostics` is note-level only.
 - **`sample_row_count`**, **`unique_midi_count`**, **`notes_count_semantics`** clarify row vs pitch counts.
 - Identical merge duplicate columns (`*_2`) are dropped before Excel export when values match.
+- **`EWSD_score_acoustic_balanced`:** red Excel **data bars** on `Spectral_Density_Metrics` (v4.0.1).
 
 ## Re-export required
 
-Existing workbooks on disk retain old semantics until recompiled with v4.0.0+.
+Existing workbooks on disk retain old semantics until recompiled with **v4.0.0+** (schema) and re-exported for **v4.0.1** formatting (EWSD data bars).
 
 See also: `docs/DENSITY_EXPORT_SCHEMA.md`, `docs/EXPORT_COLUMN_DICTIONARY.md`, `CHANGES.md`.

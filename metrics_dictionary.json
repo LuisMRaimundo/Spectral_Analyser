@@ -598,7 +598,7 @@
       "status": "validation",
       "phase": "phase_6",
       "description": "Boolean gate for inclusion in primary statistics subset.",
-      "sheet_or_export": "compiled Canonical_Primary_Filtered / research Primary_Statistics_Filtered",
+      "sheet_or_export": "compiled Canonical_Primary_Filtered / research Primary_Statistics_Eligible",
       "citation": "implementation-defined; requires sensitivity analysis or bibliographic justification"
     },
     "is_primary_comparable_profile": {

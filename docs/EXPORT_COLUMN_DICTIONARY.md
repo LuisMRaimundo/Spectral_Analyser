@@ -73,7 +73,7 @@ Key interpretation rows (EWSD — Stage 3):
 | Column | Sheet | Meaning | Formula/source | Unit | Recommended use | Caution |
 |---|---|---|---|---|---|---|
 | `EWSD_score_total` | `Spectral_Density_Metrics` | Strict EWSD with full anti-concentration penalty $(N_{\mathrm{eff}}/N)^1$ per H/I/S compartment | `tools/ewsd_core.compute_ewsd` + left-join | model units | strict companion anti-concentration index | requires per-note component spectra; NaN if workbooks missing |
-| `EWSD_score_acoustic_balanced` | `Spectral_Density_Metrics` | EWSD companion with moderated penalty $(N_{\mathrm{eff}}/N)^{0.5}$ | `add_acoustic_alignment_columns` | model units | **primary cross-instrument bibliographic distance metric** | same inputs as strict EWSD; filter with `ewsd_primary_analysis_eligible` |
+| `EWSD_score_acoustic_balanced` | `Spectral_Density_Metrics` | EWSD companion with moderated penalty $(N_{\mathrm{eff}}/N)^{0.5}$ | `add_acoustic_alignment_columns` | model units | **primary cross-instrument bibliographic distance metric** | same inputs as strict EWSD; filter with `ewsd_primary_analysis_eligible`; research export adds red **data bars** (conditional formatting) |
 | `ewsd_primary_analysis_eligible` | `Spectral_Density_Metrics` | Thesis safety gate | row-quality rule in `add_quality_columns` | bool | filter final publication statistics | `False` rows remain exported for audit |
 | `ewsd_merge_status` | `Spectral_Density_Metrics` | Stage 3 merge provenance | integration layer | category | diagnose missing EWSD (`no_per_note_workbooks_found`, etc.) | not a timbre metric |
 

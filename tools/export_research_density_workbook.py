@@ -44,7 +44,7 @@ import numpy as np
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, LineChart, Reference
-from openpyxl.formatting.rule import CellIsRule, ColorScaleRule
+from openpyxl.formatting.rule import CellIsRule, ColorScaleRule, DataBarRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -61,7 +61,7 @@ from constants import BODY_DENSITY_MAX_HZ, FULL_SPECTRUM_MAX_HZ
 from export_row_identity import assign_sample_ids, dedupe_identical_columns, primary_merge_keys
 
 SCRIPT_NAME = "export_research_density_workbook.py"
-SCRIPT_VERSION = "1.1.2"
+SCRIPT_VERSION = "1.1.3"
 TIER_STRATEGY_LABEL = "90_tier_granular"
 TIER_DEPENDENT_LABEL = "tier_dependent_see_Analysis_Settings_By_Note"
 UNKNOWN_NOT_PARSEABLE = "unknown_not_parseable"
@@ -159,6 +159,8 @@ RESEARCH_FILL_DWS_CDM_MEAN = PatternFill("solid", fgColor="E8D5F2")
 RESEARCH_FILL_NOTE_DENSITY_FINAL = PatternFill("solid", fgColor="ADD8E6")
 # Pale orange highlight for Stage 3 strict EWSD (EWSD-R v18).
 RESEARCH_FILL_EWSD_SCORE_TOTAL = PatternFill("solid", fgColor="FFE5CC")
+# Red gradient data bar on EWSD_score_acoustic_balanced (Excel data-bar fill).
+EWSD_ACOUSTIC_BALANCED_DATA_BAR_COLOR = "FFC00000"
 RESEARCH_HIGHLIGHT_HEADER_FONT = Font(bold=True, color="1F4E79", size=11)
 
 
@@ -2987,6 +2989,18 @@ def _apply_sdm_conditional(ws, headers: List[str | None]) -> None:
         ws.conditional_formatting.add(
             f"{letter}2:{letter}{last}", CellIsRule(operator="equal", formula=["FALSE"], fill=F0_FALSE_FILL)
         )
+
+    add_rule(
+        "EWSD_score_acoustic_balanced",
+        DataBarRule(
+            start_type="min",
+            end_type="max",
+            color=EWSD_ACOUSTIC_BALANCED_DATA_BAR_COLOR,
+            showValue=True,
+            minLength=0,
+            maxLength=100,
+        ),
+    )
 
 
 def _write_dashboard_layout(

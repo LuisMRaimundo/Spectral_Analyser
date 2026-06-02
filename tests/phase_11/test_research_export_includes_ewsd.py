@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from openpyxl import load_workbook
 
 from tools import export_research_density_workbook as research_export
 
@@ -117,6 +118,35 @@ def test_research_export_includes_ewsd_stage3_columns(tmp_path: Path) -> None:
     assert float(row["EWSD_score_acoustic_balanced_ci_low"]) <= float(row["EWSD_score_acoustic_balanced"])
     assert float(row["EWSD_score_acoustic_balanced"]) <= float(row["EWSD_score_acoustic_balanced_ci_high"])
     assert str(row.get("ewsd_uncertainty_sources", "")).strip() in {"partials+ratios", "partials"}
+
+
+def test_research_export_ewsd_acoustic_balanced_has_red_data_bar(tmp_path: Path) -> None:
+    _write_per_note_workbook(tmp_path / "D3" / "spectral_analysis.xlsx", note="D3")
+    compiled = tmp_path / "compiled_density_metrics.xlsx"
+    _write_compiled_workbook(compiled, note="D3")
+    output = tmp_path / "compiled_density_metrics_research.xlsx"
+
+    research_export.export_research_workbook(
+        input_path=compiled,
+        output_path=output,
+        overwrite=True,
+        no_charts=True,
+        include_ewsd=True,
+    )
+
+    wb = load_workbook(output)
+    ws = wb["Spectral_Density_Metrics"]
+    assert "EWSD_score_acoustic_balanced" in {
+        ws.cell(1, c).value for c in range(1, ws.max_column + 1)
+    }
+    data_bar_rules = [
+        rule
+        for cf in ws.conditional_formatting
+        for rule in ws.conditional_formatting._cf_rules[cf]
+        if getattr(rule, "type", None) == "dataBar" and rule.dataBar is not None
+    ]
+    assert data_bar_rules, "expected red data bar on EWSD_score_acoustic_balanced"
+    assert str(data_bar_rules[0].dataBar.color.rgb).upper().endswith("C00000")
 
 
 def test_research_export_ewsd_skipped_without_per_note_workbooks(tmp_path: Path) -> None:
