@@ -97,10 +97,23 @@ On `Diagnostic_Metrics`, raw-power / wide-frame variants are prefixed, e.g.
 
 ## Re-export required
 
-Existing workbooks on disk retain old semantics until recompiled with **v4.0.0+** (schema)
-and re-exported for **v4.0.1** formatting (EWSD data bars). Workbooks with blank research
-columns caused by the pre-v4.0.2 merge bug can be fixed by **re-running Stage 3 only**
-from an existing `compiled_density_metrics.xlsx` using **v4.0.2+** code; recompile Stage 2
-to prune dead columns on compiled sheets and propagate `sample_id`.
+| Target fix | Minimum re-run |
+|------------|----------------|
+| Schema aliases, diagnostic renames, `sample_id` PK | Stage 2 + 3 with **v4.0.0+** |
+| EWSD red data bars | Stage 3 with **v4.0.1+** |
+| Blank research columns (bad merge) | Stage 3 with **v4.0.2+** (or Stage 2+3 for compiled `sample_id`) |
+| Metadata H/I/S weights, `_2` dedupe, research `zero_padding` | Stage 3 with **v4.0.3+** |
+| `Diagnostic_Metrics.sample_id` on **compiled** workbook | Stage 2 with **v4.0.3+** |
+
+Existing workbooks on disk retain old semantics until recompiled. For a full refresh after
+v4.0.3, re-run **Stage 2 and Stage 3** on the corpus.
+
+## Known ambiguous columns (still exported under legacy names)
+
+v4.0.3 fixes Metadata weight **values** but does not yet rename all overloaded headers.
+See **§R.8** in `docs/DENSITY_EXPORT_SCHEMA.md` and the three-density table above.
+Prefer explicit columns: `density_metric_raw`, `density_metric_raw_per_note_balance`,
+`richness_weighted_body_density_body_ceiling`, `phase2_*_application_weight`,
+`component_*_energy_ratio`.
 
 See also: `docs/DENSITY_EXPORT_SCHEMA.md`, `docs/EXPORT_COLUMN_DICTIONARY.md`, `CHANGES.md`.

@@ -95,7 +95,7 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 |---|---|
 | `<note_name>/spectral_analysis.xlsx` | Per-note multi-sheet workbook (spectrum, peaks, partitioning, descriptors). |
 | `compiled_density_metrics.xlsx` | Corpus-level compiled workbook (16 sheets including `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Validation_Metrics`, `PCA_*`, `Dissonance_Metrics`, `Analysis_Metadata`). |
-| `compiled_density_metrics_research.xlsx` | Reduced research workbook. Includes **`note_effective_component_density`** (fatness), **`note_density_final`**, EWSD-R v18.1 with bootstrap CI, **`Primary_Statistics_Eligible`**, **`Stage3_Diagnostics`**, **`Stage3_Summary`**. Red **data bars** on **`EWSD_score_acoustic_balanced`**. All-blank columns are pruned at export (v4.0.2). Gate rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
+| `compiled_density_metrics_research.xlsx` | Reduced research workbook. Includes **`note_effective_component_density`** (fatness), **`note_density_final`**, EWSD-R v18.1 with bootstrap CI, **`Primary_Statistics_Eligible`**, **`Stage3_Diagnostics`**, **`Stage3_Summary`**. Red **data bars** on **`EWSD_score_acoustic_balanced`**. Export hygiene: dead columns pruned (v4.0.2); Metadata Phase-2 H/I/S weights, `Diagnostic_Metrics.sample_id`, identical `_2` column dedupe, numeric `zero_padding` per note (v4.0.3). Gate rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
 | `phase1_discovered_density_profiles.csv` | Full adaptive trajectory per note (observation triplets, JS divergence, reliability, confidence). |
 | `adaptive_density_engine_state.json` | Final engine state (posterior profile, concentration, confidence). |
 | `phase2_application_profile.json` | The profile applied during Stage 2 compilation. |
@@ -110,7 +110,7 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | How much GUI-weighted H/I/S content? | **`note_density_final`** | 2 / research |
 | Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI | 3 (research) |
 
-Practical lookup steps: [`docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`](docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md). Schema audit repairs (v4.0): [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md). Theory memo: [`docs/validation/EWSD_THEORY.md`](docs/validation/EWSD_THEORY.md).
+Practical lookup steps: [`docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`](docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md). Schema audit repairs (v4.0): [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md). **Known ambiguous column names** (same header, different meaning): see §R.8 in [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md). Theory memo: [`docs/validation/EWSD_THEORY.md`](docs/validation/EWSD_THEORY.md).
 
 Stage 3 validation evidence (v18.1): pure reference math (`tools/ewsd_pure.py`), golden vectors, 49-note corpus regression, bootstrap UQ (`tools/ewsd_uncertainty.py`), sensitivity report (`tools/ewsd_sensitivity_report.py`), construct validity doc, CI gate in `.github/workflows/ci.yml`.
 

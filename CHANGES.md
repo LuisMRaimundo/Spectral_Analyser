@@ -12,6 +12,8 @@ Fixes remaining export/schema bugs identified in the architecture audit after v4
 - **`Analysis_Settings_By_Note.zero_padding`:** per-note numeric values are preferred
   (including `n_fft_effective / n_fft` derivation) before falling back to the tier label.
 - **Tests:** `tests/phase_11/test_export_schema_v403.py`.
+- **Docs:** `DENSITY_EXPORT_SCHEMA` §R.7–R.8, `EXPORT_SCHEMA_AUDIT_REPAIR` re-export table,
+  `EXPORT_COLUMN_DICTIONARY` column traps, README outputs table.
 
 # Export hygiene — research merge fix + dead-column pruning (v4.0.2)
 

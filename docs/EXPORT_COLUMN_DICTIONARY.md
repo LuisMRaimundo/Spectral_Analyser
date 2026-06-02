@@ -14,6 +14,18 @@ For compactness and auditability:
 **Per-note fatness lookup:** read `note_effective_component_density` on `Density_Metrics` — see
 `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
 
+### Column-name traps (v4.0.3 — same header, different meaning)
+
+| Column | Where | Meaning |
+|--------|-------|---------|
+| `density_weighted_sum` | compiled | Alias of per-note balance density (`density_metric_raw_per_note_balance`) |
+| `density_weighted_sum` | research `Spectral_Density_Metrics` | Body-ceiling richness (`richness_weighted_body_density_*`) |
+| `harmonic_density_weight` | research `Metadata` | Phase-2 corpus weight (H/I/S distinct since v4.0.3) |
+| `harmonic_density_weight` | `Analysis_Settings_By_Note` | GUI base multiplier (1 / 0.5 / 0.25), **not** Phase-2 |
+| `harmonic_density_weight` | research main sheet | Per-note ratio-derived column, **not** Phase-2 |
+
+Full table: `docs/DENSITY_EXPORT_SCHEMA.md` §R.8. Re-export guidance: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export required.
+
 ---
 
 ## 1) Compiled workbook (`compiled_density_metrics.xlsx`)

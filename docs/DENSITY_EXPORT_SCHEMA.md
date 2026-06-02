@@ -256,3 +256,45 @@ otherwise merge on `Note`.
 compiled workbook already contains the data on `Diagnostic_Metrics` /
 `Per_Note_Processing_Metadata`. Stage 2 recompile is required to prune compiled-sheet dead
 columns and attach `sample_id` on satellite sheets.
+
+### R.7 Metadata weights, sample_id, dedupe, zero_padding (v4.0.3)
+
+**Research `Metadata` sheet:** `harmonic_density_weight`, `inharmonic_density_weight`, and
+`subbass_density_weight` are corpus-level **Phase-2 application weights**. Each key resolves
+through its own fallback chain (`phase2_harmonic_application_weight`, etc.) — not a shared
+lookup that returns the harmonic weight for all three.
+
+**Compiled `Diagnostic_Metrics.sample_id`:** empty or all-NaN placeholder columns are treated
+as unpopulated; authoritative IDs are copied from `Density_Metrics` via
+`export_row_identity.attach_sample_id_from_density` before Excel write.
+
+**Research duplicate headers:** after merge uniquification adds `_2` suffixes,
+`dedupe_identical_columns` runs again in `_sanitize_dataframe_columns` so byte-identical
+suffix columns are dropped.
+
+**`Analysis_Settings_By_Note.zero_padding`:** per-note numeric values are preferred
+(including derivation from `n_fft_effective / n_fft` when present) before falling back to
+the tier-dependent label string.
+
+**Re-export (v4.0.3):** re-run **Stage 2 + Stage 3** on existing audio to refresh compiled
+and research workbooks. Stage 3 alone updates research `Metadata` weights and research-sheet
+dedupe; Stage 2 is required for `Diagnostic_Metrics.sample_id` on compiled output.
+
+### R.8 Known ambiguous column names (documented, not yet renamed in export)
+
+These headers still appear in current exports. **Do not join or compare across workbooks on
+name alone** — read the sheet and the canonical name in
+[`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md).
+
+| Column name | Workbook / sheet | Actual meaning |
+|-------------|------------------|----------------|
+| `density_weighted_sum` | compiled `Density_Metrics` / `Legacy_Aliases` | Per-note energy-ratio sum (`density_metric_raw_per_note_balance`) |
+| `density_weighted_sum` | research `Spectral_Density_Metrics` | Body-ceiling richness sum (`richness_weighted_body_density_*`) |
+| `density_metric_raw` | compiled | Phase-2 corpus-profile weighted density |
+| `harmonic_density_weight` | research `Metadata` | Phase-2 corpus application weight (v4.0.3+) |
+| `harmonic_density_weight` | `Analysis_Settings_By_Note` | GUI **base** multiplier (typically 1 / 0.5 / 0.25), not Phase-2 |
+| `harmonic_density_weight` | research `Spectral_Density_Metrics` | Per-note energy-ratio–derived weight column, not Phase-2 |
+| Same names as `Density_Metrics` | `Diagnostic_Metrics` (subset) | Often log/diagnostic scale — prefixed columns (`diagnostic_*`) where renamed; others may still collide |
+
+Planned follow-up (not in v4.0.3): rename ambiguous public columns to explicit canonical
+names only; unify publication redaction across all sheets.
