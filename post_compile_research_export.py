@@ -2,6 +2,11 @@
 """
 Post–Stage-2 hook: build ``compiled_density_metrics_research.xlsx`` beside the compiled workbook.
 
+Stage 3 (EWSD-R v18) runs inside the research export: per-note ``spectral_analysis.xlsx``
+workbooks under the analysis folder are recomputed and merged into
+``Spectral_Density_Metrics`` (``EWSD_score_total``, ``EWSD_score_acoustic_balanced``,
+provenance columns, ``ewsd_primary_analysis_eligible`` gating).
+
 Safe to call after a successful compile; failures are logged and do not affect analysis status.
 The research workbook is written without formal Excel **Table** parts (worksheet AutoFilter
 only on data sheets); see ``docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`` §9.

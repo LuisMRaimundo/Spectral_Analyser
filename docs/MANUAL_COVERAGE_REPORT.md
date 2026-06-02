@@ -166,6 +166,7 @@ Included where project-level transformation/wrapping is present.
 | Explicitly document research workbook inharmonicity family gap | resolved | documented in `EXPORT_COLUMN_DICTIONARY.md` and manual limitations section |
 | Add manual section: known documentation and provenance limitations | resolved | added `19A. Known documentation and provenance limitations` in manual |
 | Keep dynamic-sheet caveat explicit | intentionally unresolved | full column enumeration is intentionally not stable due to runtime-conditional generation |
+| Stage 3 EWSD-R v18 in research export | resolved | `tools/ewsd_core.py`, `tools/ewsd_research_integration.py`, `tests/phase_11/`, manual §7.8, schema §R.4 |
 | Full inharmonicity family in research workbook | requires code/export change | export mapping in `tools/export_research_density_workbook.py` still omits `inharmonicity_*` set |
 | Constants provenance registry completion | resolved | `docs/CONSTANTS_PROVENANCE.md` now classifies constants as `primary_source` / `derived` / `convention` / `internal_default` |
 | Formula-validation baseline (F1–F6) | resolved | `tests/formula_validation/` and `docs/validation/FORMULA_VALIDATION_STATUS.md` added |

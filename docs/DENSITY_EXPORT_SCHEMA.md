@@ -180,5 +180,25 @@ and Dashboard sheets are not auto-filtered.
 Exported column headers are sanitised: blank names are forbidden; duplicate names are
 suffixed `_2`, `_3`, … in document order.
 
+### R.4 Stage 3 EWSD-R v18 columns (`Spectral_Density_Metrics`)
+
+Stage 3 runs automatically during research export (default `include_ewsd=True`).
+
+| Column | Role |
+|---|---|
+| `EWSD_score_total` | Strict EWSD: $\sum_k r_k D_k (N_{\mathrm{eff},k}/N_k)$ |
+| `EWSD_score_acoustic_balanced` | Companion: same with penalty exponent $\alpha=0.5$ |
+| `ewsd_primary_analysis_eligible` | Thesis gate — filter to `True` for final statistics |
+| `ewsd_mode` | Must be `individual_exact` for primary use |
+| `ewsd_H_ratio`, `ewsd_I_ratio`, `ewsd_S_noise_ratio` | Per-note H/I/S ratios used |
+| `ewsd_his_ratio_source` | Which Excel ratio column set was selected |
+| `ewsd_weight_function_canonical` | Weight function applied to component sums |
+| `ewsd_acoustic_balance_alpha` | Penalty exponent (default 0.5) |
+| `ewsd_stage3_version` | Embedded EWSD core version tag (`EWSD-R v18`) |
+| `ewsd_merge_status` | `merged_individual_exact`, `no_per_note_workbooks_found`, etc. |
+
+Implementation: `tools/ewsd_core.py`, `tools/ewsd_research_integration.py`.
+Highlight: `EWSD_score_total` uses pale orange fill (research workbook only).
+
 <!-- TODO(author): expand R.1–R.3 with any further constraints required by the
-     publication workflow; add R.4 ff. as needed. -->
+     publication workflow; add R.5 ff. as needed. -->

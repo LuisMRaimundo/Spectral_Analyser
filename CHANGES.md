@@ -1,3 +1,30 @@
+# Stage 3 EWSD-R v18 integration in research export (2026-06-02)
+
+Integrates Effective Weighted Spectral Density (EWSD-R v18) into the canonical
+research workbook export so bibliography-facing density comparisons no longer
+require a separate post-processing GUI step.
+
+- **New modules:** `tools/ewsd_core.py` (EWSD-R v18 computation core),
+  `tools/ewsd_research_integration.py` (Stage 3 discovery, compute, left-join).
+- **Pipeline hook:** `post_compile_research_export.run_research_workbook_export`
+  now triggers EWSD inside `tools/export_research_density_workbook.build_workbook`.
+  Per-note `spectral_analysis.xlsx` workbooks under the analysis folder are
+  recomputed with `individual_exact` mode; H/I/S ratios are read from each
+  note's Metrics sheet (`auto_excel_required`) — no silent H=I=S=1 defaults.
+- **Research columns added to `Spectral_Density_Metrics`:**
+  `EWSD_score_total`, `EWSD_score_acoustic_balanced`, `ewsd_mode`,
+  `ewsd_primary_analysis_eligible`, `ewsd_his_ratio_source`, `ewsd_H_ratio`,
+  `ewsd_I_ratio`, `ewsd_S_noise_ratio`, `ewsd_weight_function_canonical`,
+  `ewsd_acoustic_balance_alpha`, `ewsd_stage3_version`, `ewsd_merge_status`.
+- **Publication gate:** use only rows with `ewsd_primary_analysis_eligible == True`
+  for final thesis statistics. For cross-instrument bibliographic distance,
+  prefer `EWSD_score_acoustic_balanced`; keep `EWSD_score_total` as strict EWSD.
+- **Tests:** `tests/phase_11/test_research_export_includes_ewsd.py`.
+- **Docs:** README, `CHANGES.md`, `TECHNICAL_MANUAL_COMPLETE.md`,
+  `EXPORT_COLUMN_DICTIONARY.md`, `DENSITY_EXPORT_SCHEMA.md` §R,
+  `CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md` §9, `METRIC_FORMULA_INDEX.md`,
+  `pipeline.md`, `pipeline_runtime.md`.
+
 # Density energy gate: full-spectrum region basis + non-harmonic terminology (2026-05-29)
 
 Resolves the "band-vs-peak" inconsistency between the inharmonic density weight

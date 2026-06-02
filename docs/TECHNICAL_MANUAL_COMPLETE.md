@@ -51,7 +51,8 @@ Primary runtime path:
 14. Optional temporal segmentation descriptors (attack/sustain/release).
 15. Stage 2 compile/export to `compiled_density_metrics.xlsx`.
 16. Research workbook post-export to `compiled_density_metrics_research.xlsx`.
-17. Validation sheets, diagnostic flags, and metadata summaries.
+17. Stage 3 EWSD-R v18 merge into research `Spectral_Density_Metrics` (from per-note component spectra).
+18. Validation sheets, diagnostic flags, and metadata summaries.
 
 Flow diagram:
 
@@ -65,8 +66,10 @@ Audio file
       -> direct per-note extraction
       -> density_metric_raw + profile application + tier normalization
       -> compiled_density_metrics.xlsx (multi-sheet)
-  -> Post-process research export (tools/export_research_density_workbook.py)
+  -> Stage 3 research export (tools/export_research_density_workbook.py)
       -> compiled_density_metrics_research.xlsx
+      -> EWSD-R v18 recomputed from per-note spectral_analysis.xlsx
+      -> EWSD_score_total + EWSD_score_acoustic_balanced merged on Note
 ```
 
 ---
@@ -482,6 +485,60 @@ re-analysis at multiple resolutions multiplies per-note runtime.
 
 Export: `note_density_final` (+ the four uncertainty columns above).
 
+### 7.8 Effective Weighted Spectral Density — EWSD-R v18 (Stage 3)
+
+Stage 3 recomputes EWSD from per-note component spectra (`Harmonic Spectrum`,
+`Inharmonic Spectrum`, `Sub-bass band`) and merges the result into research
+`Spectral_Density_Metrics`. It does **not** replace `note_density_final` or
+`density_metric_raw`; it adds an anti-concentration-aware companion index.
+
+For each H/I/S compartment $k \in \{H,I,S\}$:
+
+$$
+\text{score}_k = r_k \cdot D_k^{\text{sum}} \cdot \left(\frac{N_{\mathrm{eff},k}}{N_k}\right)
+$$
+
+where $r_k$ is the per-note analysis ratio read from Excel (never defaulted to
+$1/3$), $D_k^{\text{sum}}$ is the GUI weight-function sum over salient
+components in that compartment, $N_k$ is the component count, and
+$N_{\mathrm{eff},k}=1/\sum_i p_i^2$ with $p_i$ the normalised weighted
+strengths inside the compartment only.
+
+Strict total:
+
+$$
+\text{EWSD\_score\_total} = \text{score}_H + \text{score}_I + \text{score}_S
+$$
+
+Acoustic-balanced companion (default $\alpha=0.5$):
+
+$$
+\text{EWSD\_score\_acoustic\_balanced} = \sum_k r_k D_k^{\text{sum}}
+\left(\frac{N_{\mathrm{eff},k}}{N_k}\right)^{\alpha}
+$$
+
+**Code location.**
+- Core: `tools/ewsd_core.py` (`compute_ewsd`, `add_acoustic_alignment_columns`,
+  `add_quality_columns`)
+- Integration: `tools/ewsd_research_integration.py`
+  (`merge_ewsd_into_spectral_density_metrics`)
+- Hook: `tools/export_research_density_workbook.build_workbook` (after
+  `apply_per_note_chart_paths`)
+
+**Publication gate.** `ewsd_primary_analysis_eligible == True` requires
+`individual_exact` mode, H/I/S ratios summing to $\approx 1$, finite strict
+EWSD, positive component count, no row warning, parsed note, and a thesis-safe
+weight function (`log`, `sqrt`, `d3`, … — not `exponential` / `cubic`).
+
+**Recommended use.**
+- Cross-instrument bibliographic distance: `EWSD_score_acoustic_balanced`
+- Strict anti-concentration index: `EWSD_score_total`
+- Filter final statistics: `ewsd_primary_analysis_eligible == True`
+
+Export (research `Spectral_Density_Metrics` only): `EWSD_score_total`,
+`EWSD_score_acoustic_balanced`, plus provenance columns listed in
+`docs/EXPORT_COLUMN_DICTIONARY.md` §2.1.
+
 ---
 
 ## 8. Adaptive Phase 1 and Phase 2
@@ -754,7 +811,7 @@ Export family includes segmented descriptor suffixes:
 
 `compiled_density_metrics_research.xlsx` major sheets:
 
-- `Spectral_Density_Metrics` (includes `note_density_final` — see §7.7)
+- `Spectral_Density_Metrics` (includes `note_density_final` — see §7.7; EWSD scores — see §7.8)
 - `Primary_Statistics_Filtered`
 - `Component_Balance`
 - `Validation_Summary`

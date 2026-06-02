@@ -9,17 +9,18 @@ SoundSpectrAnalyse is a spectral-analysis pipeline developed in support of docto
 
 ## Status
 
-- **Version**: 3.7.0.
+- **Version**: 3.8.0.
 - **Python**: >=3.10,<3.12.
 - **Development status**: Beta.
 - **License**: Proprietary — see `LICENSE` at the repository root.
 
 ## What this software does
 
-SoundSpectrAnalyse analyses individual note recordings and produces a multi-sheet workbook of spectral, harmonic, inharmonic, sub-bass, and MIR descriptors per note, together with a corpus-level adaptive density profile. The pipeline runs in two stages:
+SoundSpectrAnalyse analyses individual note recordings and produces a multi-sheet workbook of spectral, harmonic, inharmonic, sub-bass, and MIR descriptors per note, together with a corpus-level adaptive density profile. The pipeline runs in three stages:
 
 1. **Stage 1 — per-note analysis** (`proc_audio.AudioProcessor`): STFT, peak picking, F0 estimation, harmonic / inharmonic / sub-bass (H/I/S) partitioning, stiff-string inharmonicity fit, sub-bass policy, MIR descriptors (spectral moments, tristimulus, Aures roughness, ERB-weighted density), and optional temporal segmentation. Output: one `spectral_analysis.xlsx` per note.
-2. **Stage 2 — compilation** (`compile_metrics.compile_density_metrics_with_pca`): per-note rows aggregated into `compiled_density_metrics.xlsx` with tier-normalized columns, dissonance metrics, PCA scores, and validation summary. A reduced research workbook (`compiled_density_metrics_research.xlsx`) is then produced for publication-oriented analysis.
+2. **Stage 2 — compilation** (`compile_metrics.compile_density_metrics_with_pca`): per-note rows aggregated into `compiled_density_metrics.xlsx` with tier-normalized columns, dissonance metrics, PCA scores, and validation summary.
+3. **Stage 3 — research export + EWSD** (`post_compile_research_export` → `tools/export_research_density_workbook`): builds `compiled_density_metrics_research.xlsx` and recomputes **EWSD-R v18** from per-note component spectra. Merges `EWSD_score_total`, `EWSD_score_acoustic_balanced`, provenance columns, and `ewsd_primary_analysis_eligible` into `Spectral_Density_Metrics`.
 
 An online adaptive engine (`adaptive_density_engine.AdaptiveDensityEngine`) learns a corpus-level (H, I, S) density profile across notes, using pure observations decoupled from the prior (Phase 1) and a Jensen-Shannon divergence reliability gate (Phase 7). The engine state is exported to `adaptive_density_engine_state.json` for reproducibility.
 
@@ -70,7 +71,7 @@ The full module manifest (48 top-level modules) is declared under `[tool.setupto
 
 ### Cross-platform CLI
 
-The canonical entry point is `run_orchestrator.py`, which runs the full Stage 1 + Stage 2 pipeline on a folder of audio files:
+The canonical entry point is `run_orchestrator.py`, which runs the full Stage 1 + Stage 2 + Stage 3 pipeline on a folder of audio files:
 
 ```bash
 python run_orchestrator.py
@@ -94,7 +95,7 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 |---|---|
 | `<note_name>/spectral_analysis.xlsx` | Per-note multi-sheet workbook (spectrum, peaks, partitioning, descriptors). |
 | `compiled_density_metrics.xlsx` | Corpus-level compiled workbook (16 sheets including `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Validation_Metrics`, `PCA_*`, `Dissonance_Metrics`, `Analysis_Metadata`). |
-| `compiled_density_metrics_research.xlsx` | Reduced research workbook for publication-oriented analysis. |
+| `compiled_density_metrics_research.xlsx` | Reduced research workbook for publication-oriented analysis. Includes EWSD-R v18 scores (`EWSD_score_total`, `EWSD_score_acoustic_balanced`) merged into `Spectral_Density_Metrics` when per-note workbooks are present. Filter thesis rows with `ewsd_primary_analysis_eligible == True`. |
 | `phase1_discovered_density_profiles.csv` | Full adaptive trajectory per note (observation triplets, JS divergence, reliability, confidence). |
 | `adaptive_density_engine_state.json` | Final engine state (posterior profile, concentration, confidence). |
 | `phase2_application_profile.json` | The profile applied during Stage 2 compilation. |
@@ -103,7 +104,7 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 
 ## Scientific governance
 
-Methodological changes to the pipeline are tracked in [`CHANGES.md`](CHANGES.md) with explicit phase markers (phases 1, 7, 7.1, 8 at time of writing). Each phase change is accompanied by phase-organised regression tests under `tests/phase_<n>/`. Symbolic-structure tests for the canonical formulae are under [`tests/formula_validation/`](tests/formula_validation/) and documented in [`docs/validation/FORMULA_VALIDATION_STATUS.md`](docs/validation/FORMULA_VALIDATION_STATUS.md).
+Methodological changes to the pipeline are tracked in [`CHANGES.md`](CHANGES.md) with explicit phase markers (phases 1, 7, 7.1, 8, 11 at time of writing). Each phase change is accompanied by phase-organised regression tests under `tests/phase_<n>/`. Symbolic-structure tests for the canonical formulae are under [`tests/formula_validation/`](tests/formula_validation/) and documented in [`docs/validation/FORMULA_VALIDATION_STATUS.md`](docs/validation/FORMULA_VALIDATION_STATUS.md).
 
 Principal methodological commitments:
 

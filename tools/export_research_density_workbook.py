@@ -156,6 +156,8 @@ RESEARCH_FILL_COMBINED_DENSITY_METRIC = PatternFill("solid", fgColor="FFF2CC")
 RESEARCH_FILL_DWS_CDM_MEAN = PatternFill("solid", fgColor="E8D5F2")
 # Light blue highlight for the principled per-note scalar note_density_final.
 RESEARCH_FILL_NOTE_DENSITY_FINAL = PatternFill("solid", fgColor="ADD8E6")
+# Pale orange highlight for Stage 3 strict EWSD (EWSD-R v18).
+RESEARCH_FILL_EWSD_SCORE_TOTAL = PatternFill("solid", fgColor="FFE5CC")
 RESEARCH_HIGHLIGHT_HEADER_FONT = Font(bold=True, color="1F4E79", size=11)
 
 
@@ -2613,6 +2615,23 @@ def readme_lines(
             "    Recommended note-thickness index combining body-weighted effective density, low-mid ratio,",
             "    harmonic body density, and capped residual body contribution (corpus-relative z-score blend).",
             "",
+            "note_density_final:",
+            "    Per-note principled scalar: component_*_energy_ratio × *_density_sum (GUI weight inside sums).",
+            "    Highlighted (light blue) on Spectral_Density_Metrics.",
+            "",
+            "EWSD_score_total (Stage 3):",
+            "    Strict Effective Weighted Spectral Density (EWSD-R v18): anti-concentration penalty (N_eff/N)^1",
+            "    applied separately in each H/I/S compartment using per-note ratios from Metrics.",
+            "    Highlighted (pale orange). Requires per-note spectral_analysis.xlsx under the analysis folder.",
+            "",
+            "EWSD_score_acoustic_balanced (Stage 3):",
+            "    Companion EWSD with moderated penalty (N_eff/N)^0.5. Preferred for cross-instrument",
+            "    bibliographic distance. Filter thesis rows with ewsd_primary_analysis_eligible == True.",
+            "",
+            "ewsd_primary_analysis_eligible:",
+            "    Thesis gate: True only for individual_exact rows with valid H/I/S ratios, finite EWSD,",
+            "    no warnings, parsed note, and a thesis-safe weight function.",
+            "",
             "spectral_entropy:",
             "    Distributional spread of spectral power.",
             "",
@@ -2701,6 +2720,23 @@ def readme_lines(
             "spectral_body_thickness_index:",
             "    Recommended note-thickness index combining body-weighted effective density, low-mid ratio,",
             "    harmonic body density, and capped residual body contribution (corpus-relative z-score blend).",
+            "",
+            "note_density_final:",
+            "    Per-note principled scalar: component_*_energy_ratio × *_density_sum (GUI weight inside sums).",
+            "    Highlighted (light blue) on Spectral_Density_Metrics.",
+            "",
+            "EWSD_score_total (Stage 3):",
+            "    Strict Effective Weighted Spectral Density (EWSD-R v18): anti-concentration penalty (N_eff/N)^1",
+            "    applied separately in each H/I/S compartment using per-note ratios from Metrics.",
+            "    Highlighted (pale orange). Requires per-note spectral_analysis.xlsx under the analysis folder.",
+            "",
+            "EWSD_score_acoustic_balanced (Stage 3):",
+            "    Companion EWSD with moderated penalty (N_eff/N)^0.5. Preferred for cross-instrument",
+            "    bibliographic distance. Filter thesis rows with ewsd_primary_analysis_eligible == True.",
+            "",
+            "ewsd_primary_analysis_eligible:",
+            "    Thesis gate: True only for individual_exact rows with valid H/I/S ratios, finite EWSD,",
+            "    no warnings, parsed note, and a thesis-safe weight function.",
             "",
             "spectral_entropy:",
             "    Distributional spread of spectral power.",
@@ -3260,6 +3296,7 @@ def build_workbook(
     overwrite: bool,
     research_metadata: Optional[ResearchExportMetadata] = None,
     include_legacy_cdm_mean: bool = False,
+    include_ewsd: bool = True,
 ) -> List[str]:
     warnings: List[str] = []
     if not source.is_file():
@@ -3325,6 +3362,16 @@ def build_workbook(
         errors="ignore",
     )
     apply_per_note_chart_paths(sd, source, merged, warnings)
+    if include_ewsd:
+        from tools.ewsd_research_integration import merge_ewsd_into_spectral_density_metrics
+
+        sd = merge_ewsd_into_spectral_density_metrics(
+            sd,
+            merged,
+            source,
+            warnings,
+            include_ewsd=True,
+        )
     required_front_cols = [
         "Technique",
         "metadata_inference_status",
@@ -3376,6 +3423,10 @@ def build_workbook(
         "final_note_density_count_based",
         "final_note_density_salience_weighted",
         "final_note_density_salience_weighted_norm_for_chart",
+        "note_density_final",
+        "EWSD_score_total",
+        "EWSD_score_acoustic_balanced",
+        "ewsd_primary_analysis_eligible",
         "harmonic_density_component",
         "inharmonic_density_component",
         "subbass_density_component",
@@ -3601,6 +3652,18 @@ def build_workbook(
         "note_density_final_ci_high",
         "note_density_final_rel_uncertainty",
         "note_density_final_uncertainty_sources",
+        "EWSD_score_total",
+        "EWSD_score_acoustic_balanced",
+        "ewsd_mode",
+        "ewsd_primary_analysis_eligible",
+        "ewsd_his_ratio_source",
+        "ewsd_H_ratio",
+        "ewsd_I_ratio",
+        "ewsd_S_noise_ratio",
+        "ewsd_weight_function_canonical",
+        "ewsd_acoustic_balance_alpha",
+        "ewsd_stage3_version",
+        "ewsd_merge_status",
         "final_note_density_salience_weighted_norm_for_chart",
         "harmonic_density_component",
         "inharmonic_density_component",
@@ -3685,6 +3748,7 @@ def build_workbook(
     _hl = [
         ("density_weighted_sum", RESEARCH_FILL_DENSITY_WEIGHTED_SUM),
         ("note_density_final", RESEARCH_FILL_NOTE_DENSITY_FINAL),
+        ("EWSD_score_total", RESEARCH_FILL_EWSD_SCORE_TOTAL),
     ]
     if include_legacy_cdm_mean:
         _hl.append(("density_weighted_sum_cdm_mean", RESEARCH_FILL_DWS_CDM_MEAN))
@@ -3908,6 +3972,7 @@ def export_research_workbook(
     force_metadata: bool = False,
     research_metadata: Optional[ResearchExportMetadata] = None,
     include_legacy_cdm_mean: bool = False,
+    include_ewsd: bool = True,
 ) -> Path:
     """
     Build ``compiled_density_metrics_research.xlsx`` from a compiled workbook.
@@ -3961,6 +4026,7 @@ def export_research_workbook(
         overwrite=overwrite,
         research_metadata=meta,
         include_legacy_cdm_mean=include_legacy_cdm_mean,
+        include_ewsd=include_ewsd,
     )
     for w in warns:
         print(f"WARNING: {w}", file=sys.stderr)

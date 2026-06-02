@@ -59,8 +59,19 @@ This section is referenced from `post_compile_research_export.py`. The research 
 is built as a read-only post-process beside the compiled workbook. The hook is safe to
 call after a successful Stage-2 compile; failures inside the hook are logged and do not
 affect analysis status. The research workbook is written without formal Excel `Table`
-parts; worksheet-level AutoFilter is used on data sheets. For the full schema of that
-workbook see `docs/DENSITY_EXPORT_SCHEMA.md` §R.
+parts; worksheet-level AutoFilter is used on data sheets.
+
+**Stage 3 (EWSD-R v18).** Inside `tools/export_research_density_workbook.build_workbook`,
+after the research frame is assembled, `tools/ewsd_research_integration` discovers
+per-note `spectral_analysis.xlsx` files under the analysis folder, recomputes EWSD with
+`individual_exact` mode, and left-joins scores on `Note` into `Spectral_Density_Metrics`.
+H/I/S ratios are read from each note's Metrics sheet (`auto_excel_required`); rows without
+valid ratios are not silently filled with H=I=S=1. Use `ewsd_primary_analysis_eligible`
+for thesis-facing statistics; prefer `EWSD_score_acoustic_balanced` for cross-instrument
+bibliographic distance. See `docs/DENSITY_EXPORT_SCHEMA.md` §R.4 and
+`docs/TECHNICAL_MANUAL_COMPLETE.md` §7.8.
+
+For the full schema of the research workbook see `docs/DENSITY_EXPORT_SCHEMA.md` §R.
 
 ## 10. Audit CLI
 
