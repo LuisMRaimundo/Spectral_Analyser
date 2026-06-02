@@ -1,3 +1,18 @@
+# Export schema hygiene — metadata weights, sample_id, dedupe (v4.0.3)
+
+Fixes remaining export/schema bugs identified in the architecture audit after v4.0.2:
+
+- **Metadata H/I/S weights:** research `Metadata` sheet now maps each weight key to its
+  own Phase-2 fallback (`phase2_inharmonic_application_weight`, etc.) instead of always
+  returning the harmonic weight for all three keys.
+- **`Diagnostic_Metrics.sample_id`:** NaN placeholder columns are treated as unpopulated;
+  authoritative IDs are copied from `Density_Metrics` via shared `attach_sample_id_from_density`.
+- **Research `_2` columns:** `_sanitize_dataframe_columns` runs `dedupe_identical_columns`
+  after uniquifying headers so identical merge suffix columns are dropped.
+- **`Analysis_Settings_By_Note.zero_padding`:** per-note numeric values are preferred
+  (including `n_fft_effective / n_fft` derivation) before falling back to the tier label.
+- **Tests:** `tests/phase_11/test_export_schema_v403.py`.
+
 # Export hygiene — research merge fix + dead-column pruning (v4.0.2)
 
 Fixes blank columns in research exports when satellite compiled sheets lacked matching

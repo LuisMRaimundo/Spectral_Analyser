@@ -1,4 +1,4 @@
-# Export schema audit repair (v4.0.0+) + research formatting (v4.0.1) + export hygiene (v4.0.2)
+# Export schema audit repair (v4.0.0+) + research formatting (v4.0.1) + export hygiene (v4.0.2) + metadata/sample_id (v4.0.3)
 
 Addresses the architecture-level incongruences identified in the compiled/research
 workbook audit (duplicate Note keys, `density_weighted_sum` semantic overload, phase-2
@@ -40,6 +40,24 @@ are not retained as schema placeholders.
 Protected columns (never dropped): `Note`, `sample_id`. All-zero numeric columns are kept.
 
 Implementation: `export_row_identity.drop_dead_columns`.
+
+## Metadata weight propagation (v4.0.3)
+
+Research `Metadata` exports `harmonic_density_weight`, `inharmonic_density_weight`, and
+`subbass_density_weight` as **corpus-level Phase-2 application weights**. Each key resolves
+through its own fallback chain (`phase2_harmonic_application_weight`, etc.) — not through a
+shared loop that always returned the harmonic value.
+
+## Diagnostic `sample_id` (v4.0.3)
+
+Satellite compiled sheets may carry an empty `sample_id` column (all NaN). These are now
+treated as unpopulated; `attach_sample_id_from_density` in `export_row_identity.py` copies
+authoritative IDs from `Density_Metrics` before Excel write.
+
+## Research duplicate columns (v4.0.3)
+
+After merge uniquification adds `_2` suffixes, `dedupe_identical_columns` runs again so
+byte-identical suffix columns are removed before Excel write.
 
 ## Three density quantities (do not interchange)
 

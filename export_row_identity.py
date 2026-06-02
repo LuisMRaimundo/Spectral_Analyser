@@ -14,10 +14,12 @@ DEAD_COLUMN_PROTECTED_NAMES: frozenset[str] = frozenset({"Note", "sample_id"})
 __all__ = [
     "compute_sample_id",
     "assign_sample_ids",
+    "attach_sample_id_from_density",
     "dedupe_identical_columns",
     "drop_dead_columns",
     "merge_keys_for_frames",
     "primary_merge_keys",
+    "sample_id_fully_populated",
     "DEAD_COLUMN_PROTECTED_NAMES",
 ]
 
@@ -60,6 +62,51 @@ def assign_sample_ids(df: pd.DataFrame) -> pd.DataFrame:
         src = str(row[src_col]).strip() if src_col and pd.notna(row.get(src_col)) else ""
         ids.append(compute_sample_id(note=note, source_file_name=src, row_index=int(i)))
     out["sample_id"] = ids
+    return out
+
+
+def sample_id_fully_populated(df: pd.DataFrame) -> bool:
+    """True when every row has a non-blank ``sample_id`` (NaN / ``nan`` text counts as missing)."""
+    if df is None or df.empty or "sample_id" not in df.columns:
+        return False
+    for v in df["sample_id"]:
+        if pd.isna(v):
+            return False
+        s = str(v).strip().lower()
+        if s in ("", "nan", "none", "<na>"):
+            return False
+    return True
+
+
+def attach_sample_id_from_density(
+    df: pd.DataFrame,
+    density_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Copy authoritative ``sample_id`` from ``Density_Metrics`` onto satellite sheets."""
+    if df is None or df.empty or density_df is None or density_df.empty:
+        return df
+    if sample_id_fully_populated(df):
+        return df
+    if "sample_id" not in density_df.columns or "Note" not in df.columns or "Note" not in density_df.columns:
+        return df
+    sid_map = density_df[["Note", "sample_id"]].drop_duplicates(subset=["Note"], keep="last")
+    out = df.merge(sid_map, on="Note", how="left", suffixes=("", "__sid"))
+    if "sample_id__sid" not in out.columns:
+        return out
+    if "sample_id" not in out.columns:
+        out["sample_id"] = out["sample_id__sid"]
+    else:
+        need = out["sample_id"].isna() | out["sample_id"].astype(str).str.strip().str.lower().isin(
+            ("", "nan", "none", "<na>")
+        )
+        out.loc[need, "sample_id"] = out.loc[need, "sample_id__sid"]
+    out = out.drop(columns=["sample_id__sid"], errors="ignore")
+    if "Note" in out.columns and "sample_id" in out.columns:
+        cols = list(out.columns)
+        cols.remove("sample_id")
+        note_idx = cols.index("Note")
+        cols.insert(note_idx + 1, "sample_id")
+        out = out.loc[:, cols]
     return out
 
 

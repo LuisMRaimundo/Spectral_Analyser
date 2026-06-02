@@ -6281,29 +6281,9 @@ def _attach_sample_id_from_density(
     density_df: pd.DataFrame,
 ) -> pd.DataFrame:
     """Copy authoritative ``sample_id`` from Density_Metrics onto satellite sheets."""
-    if df is None or df.empty or density_df is None or density_df.empty:
-        return df
-    if "sample_id" in df.columns and df["sample_id"].astype(str).str.strip().ne("").all():
-        return df
-    if "sample_id" not in density_df.columns or "Note" not in df.columns or "Note" not in density_df.columns:
-        return df
-    sid_map = density_df[["Note", "sample_id"]].drop_duplicates(subset=["Note"], keep="last")
-    out = df.merge(sid_map, on="Note", how="left", suffixes=("", "__sid"))
-    if "sample_id__sid" not in out.columns:
-        return out
-    if "sample_id" not in out.columns:
-        out["sample_id"] = out["sample_id__sid"]
-    else:
-        need = out["sample_id"].isna() | out["sample_id"].astype(str).str.strip().eq("")
-        out.loc[need, "sample_id"] = out.loc[need, "sample_id__sid"]
-    out = out.drop(columns=["sample_id__sid"], errors="ignore")
-    if "Note" in out.columns and "sample_id" in out.columns:
-        cols = list(out.columns)
-        cols.remove("sample_id")
-        note_idx = cols.index("Note")
-        cols.insert(note_idx + 1, "sample_id")
-        out = out.loc[:, cols]
-    return out
+    from export_row_identity import attach_sample_id_from_density
+
+    return attach_sample_id_from_density(df, density_df)
 
 
 def _corpus_comparability_audit(df: pd.DataFrame) -> Dict[str, Any]:

@@ -658,7 +658,20 @@ def build_analysis_settings_by_note(
 
     out["n_fft"] = _per_note_value("n_fft", TIER_DEPENDENT_LABEL if tier_mode else UNKNOWN_NOT_PARSEABLE)
     out["hop_length"] = _per_note_value("hop_length", TIER_DEPENDENT_LABEL if tier_mode else UNKNOWN_NOT_PARSEABLE)
-    out["zero_padding"] = _per_note_value("zero_padding", TIER_DEPENDENT_LABEL if tier_mode else _derive_zero_padding_from_fft(merged))
+    zp = _per_note_value("zero_padding", np.nan)
+    zp_num = pd.to_numeric(zp, errors="coerce")
+    if "n_fft_effective" in lookup.columns and "n_fft" in lookup.columns:
+        n_eff = pd.to_numeric(out["Note"].map(lookup["n_fft_effective"].to_dict()), errors="coerce")
+        n_fft = pd.to_numeric(out["Note"].map(lookup["n_fft"].to_dict()), errors="coerce")
+        derived = (n_eff / n_fft).where(n_fft > 0).round()
+        zp_num = zp_num.fillna(derived)
+    still_missing = zp_num.isna()
+    if still_missing.any():
+        fallback = TIER_DEPENDENT_LABEL if tier_mode else _derive_zero_padding_from_fft(merged)
+        out["zero_padding"] = zp_num
+        out.loc[still_missing, "zero_padding"] = fallback
+    else:
+        out["zero_padding"] = zp_num.round().astype(int)
     out["window_type"] = _per_note_value("window_type", _first_non_blank(lookup["window"]) if "window" in lookup.columns else UNKNOWN_NOT_PARSEABLE)
     out["harmonic_tolerance_hz"] = _per_note_value(
         "harmonic_tolerance",
@@ -2285,22 +2298,28 @@ def build_metadata_rows(
         meta_missing.add(key)
         return np.nan
 
-    def mget_required(*keys: str) -> Any:
-        weight_keys = {
+    _weight_key_fallbacks: dict[str, tuple[str, ...]] = {
+        "harmonic_density_weight": (
+            "phase2_harmonic_application_weight",
+            "harmonic_weight",
             "harmonic_density_weight",
+        ),
+        "inharmonic_density_weight": (
+            "phase2_inharmonic_application_weight",
+            "inharmonic_weight",
             "inharmonic_density_weight",
+        ),
+        "subbass_density_weight": (
+            "phase2_subbass_application_weight",
+            "subbass_weight",
             "subbass_density_weight",
-        }
+        ),
+    }
+
+    def mget_required(*keys: str) -> Any:
         for k in keys:
-            if k in weight_keys:
-                for phase2_key in (
-                    "phase2_harmonic_application_weight",
-                    "phase2_inharmonic_application_weight",
-                    "phase2_subbass_application_weight",
-                    "harmonic_weight",
-                    "inharmonic_weight",
-                    "subbass_weight",
-                ):
+            if k in _weight_key_fallbacks:
+                for phase2_key in _weight_key_fallbacks[k]:
                     v = mget(phase2_key)
                     if isinstance(v, str):
                         vv = v.strip()
@@ -2872,7 +2891,7 @@ def _sanitize_dataframe_columns(df: pd.DataFrame) -> pd.DataFrame:
         else:
             new_names.append(f"{base}_{n + 1}")
     out.columns = new_names
-    return out
+    return dedupe_identical_columns(out)
 
 
 def apply_simple_autofilter(ws) -> None:
