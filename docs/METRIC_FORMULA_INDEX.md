@@ -50,3 +50,4 @@
 | F-047 | $N_{eff}^{HIS}=(\sum_i A_i^2)^2/\sum_i A_i^4$ over harmonic ∪ inharmonic ∪ sub-bass components | Unified single-scalar note density across all three bands; per-note basis for chord/aggregate density (pooled participation ratio) | `compile_metrics._energy_distribution_density` | `note_effective_component_density` |
 | F-048 | $\text{EWSD}_k=r_k D_k(N_{\mathrm{eff},k}/N_k)$; $\text{EWSD}=\sum_k \text{EWSD}_k$ | Strict EWSD (Stage 3 anti-concentration density) | `tools/ewsd_core.compute_ewsd` | `EWSD_score_total` |
 | F-049 | $\text{EWSD}^{bal}_k=r_k D_k(N_{\mathrm{eff},k}/N_k)^{\alpha}$, $\alpha=0.5$ | Acoustic-balanced EWSD companion | `tools/ewsd_core.add_acoustic_alignment_columns` | `EWSD_score_acoustic_balanced` |
+| F-050 | Bootstrap CI on resampled H/I/S partials | EWSD uncertainty bands | `tools.ewsd_uncertainty.bootstrap_ewsd_from_compartments` | `EWSD_score_*_ci_*`, `ewsd_uncertainty_sources` |

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Final
 
 PIPELINE_CONTRACT_VERSION: Final[str] = (
-    "SSA_CANONICAL_PIPELINE_2026_06_STAGE1_PROC_AUDIO_STAGE2_COMPILE_STAGE3_EWSD"
+    "SSA_CANONICAL_PIPELINE_2026_06_STAGE1_STAGE2_STAGE3_EWSD_v18_1_UQ"
 )
 
 CANONICAL_STAGE1_MODULE: Final[str] = "proc_audio"
@@ -21,6 +21,9 @@ CANONICAL_STAGE2_MODULE: Final[str] = "compile_metrics"
 CANONICAL_STAGE2_FUNCTION: Final[str] = "compile_density_metrics_with_pca"
 CANONICAL_STAGE3_MODULE: Final[str] = "post_compile_research_export"
 CANONICAL_STAGE3_FUNCTION: Final[str] = "run_research_workbook_export"
+CANONICAL_STAGE3_EWSD_PURE: Final[str] = "tools.ewsd_pure"
+CANONICAL_STAGE3_EWSD_UNCERTAINTY: Final[str] = "tools.ewsd_uncertainty"
+CANONICAL_STAGE3_EWSD_CONTRACT: Final[str] = "tools.ewsd_stage3_contract"
 CANONICAL_STAGE3_EWSD_CORE: Final[str] = "tools.ewsd_core"
 CANONICAL_STAGE3_EWSD_INTEGRATION: Final[str] = "tools.ewsd_research_integration"
 
@@ -38,6 +41,9 @@ class PipelineContract:
     stage2_function: str = CANONICAL_STAGE2_FUNCTION
     stage3_module: str = CANONICAL_STAGE3_MODULE
     stage3_function: str = CANONICAL_STAGE3_FUNCTION
+    stage3_ewsd_pure: str = CANONICAL_STAGE3_EWSD_PURE
+    stage3_ewsd_uncertainty: str = CANONICAL_STAGE3_EWSD_UNCERTAINTY
+    stage3_ewsd_contract: str = CANONICAL_STAGE3_EWSD_CONTRACT
     stage3_ewsd_core: str = CANONICAL_STAGE3_EWSD_CORE
     stage3_ewsd_integration: str = CANONICAL_STAGE3_EWSD_INTEGRATION
     per_note_workbook: str = CANONICAL_PER_NOTE_WORKBOOK

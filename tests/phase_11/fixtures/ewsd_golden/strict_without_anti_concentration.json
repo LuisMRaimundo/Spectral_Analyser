@@ -1,0 +1,46 @@
+{
+  "id": "strict_without_anti_concentration",
+  "description": "Anti-concentration disabled",
+  "acoustic_balance_alpha": 0.5,
+  "compartments": [
+    {
+      "values": [
+        1.0,
+        0.2,
+        0.05
+      ],
+      "analysis_ratio": 0.7,
+      "weight_function": "log",
+      "apply_anti_concentration": false
+    },
+    {
+      "values": [
+        0.1,
+        0.05
+      ],
+      "analysis_ratio": 0.3,
+      "weight_function": "log",
+      "apply_anti_concentration": false
+    }
+  ],
+  "expected": {
+    "ewsd_score_total": 0.6902113342584594,
+    "ewsd_score_acoustic_balanced": 0.5217224898838015,
+    "compartments": [
+      {
+        "count": 3,
+        "original_sum_metric": 0.924258901523332,
+        "ratio_weighted_metric": 0.6469812310663323,
+        "concentration_penalty": 0.5517641855336007,
+        "ewsd_score": 0.6469812310663323
+      },
+      {
+        "count": 2,
+        "original_sum_metric": 0.14410034397375687,
+        "ratio_weighted_metric": 0.04323010319212706,
+        "concentration_penalty": 0.9056169098627959,
+        "ewsd_score": 0.04323010319212706
+      }
+    ]
+  }
+}

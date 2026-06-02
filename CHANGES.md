@@ -1,3 +1,29 @@
+# Stage 3 EWSD-R v18.1 — Tier C (fail-closed contract + diagnostics sheet)
+
+- **Contract module:** `tools/ewsd_stage3_contract.py` — typed failures, `Stage3MergeResult`, status ok/degraded/failed.
+- **Research export:** `Stage3_Diagnostics` sheet; optional `ewsd_fail_closed=True` blocks export on hard Stage 3 failure.
+- **Pipeline contract:** version `SSA_CANONICAL_PIPELINE_2026_06_STAGE1_STAGE2_STAGE3_EWSD_v18_1_UQ`.
+- **CI:** explicit EWSD validation gate in `.github/workflows/ci.yml`.
+- **Theory memo:** `docs/validation/EWSD_THEORY.md`.
+- **Version:** 3.9.0.
+
+# Stage 3 EWSD-R v18.1 — Tier B (bootstrap UQ + sensitivity + construct validity)
+
+- **Bootstrap UQ:** `tools/ewsd_uncertainty.py` propagates partial + ratio uncertainty into
+  `EWSD_score_*_ci_low/high`, `*_rel_uncertainty`, `ewsd_uncertainty_sources` (research export).
+- **Sensitivity CLI:** `tools/ewsd_sensitivity_report.py` — alpha rank stability and acoustic construct checks.
+- **Construct validity doc:** `docs/validation/EWSD_CONSTRUCT_VALIDITY.md`.
+- **Tests:** `tests/phase_11/test_ewsd_uncertainty.py`, extended export CI assertions.
+
+# Stage 3 EWSD-R v18.1 — Tier A validation (pure math + golden + corpus)
+
+- **New module:** `tools/ewsd_pure.py` — numpy-only reference implementation (F-048/F-049).
+- **Refactor:** `tools/ewsd_core.py` delegates compartment math to `ewsd_pure`; version tag `EWSD-R v18.1`.
+- **Golden vectors:** `tests/phase_11/fixtures/ewsd_golden/` (8 cases) + independent reference cross-check.
+- **Corpus regression:** committed `tests/phase_11/fixtures/ewsd_corpus_reference.json` (49 violin notes);
+  live recompute test when `EWSD_CORPUS_ROOT` or default analysis folder is present (`frequency_ceiling_hz=20000`).
+- **Validation status:** F-048/F-049 marked **validated** in `docs/validation/FORMULA_VALIDATION_STATUS.md`.
+
 # Stage 3 EWSD-R v18 integration in research export (2026-06-02)
 
 Integrates Effective Weighted Spectral Density (EWSD-R v18) into the canonical
@@ -20,6 +46,11 @@ require a separate post-processing GUI step.
   for final thesis statistics. For cross-instrument bibliographic distance,
   prefer `EWSD_score_acoustic_balanced`; keep `EWSD_score_total` as strict EWSD.
 - **Tests:** `tests/phase_11/test_research_export_includes_ewsd.py`.
+- **Tier A validation (v18.1):** `tools/ewsd_pure.py`, golden vectors in
+  `tests/phase_11/fixtures/ewsd_golden/`, committed 49-note corpus reference in
+  `tests/phase_11/fixtures/ewsd_corpus_reference.json`, tests
+  `test_ewsd_golden_vectors.py`, `test_ewsd_pure_matches_core.py`,
+  `test_ewsd_corpus_regression.py`.
 - **Docs:** README, `CHANGES.md`, `TECHNICAL_MANUAL_COMPLETE.md`,
   `EXPORT_COLUMN_DICTIONARY.md`, `DENSITY_EXPORT_SCHEMA.md` §R,
   `CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md` §9, `METRIC_FORMULA_INDEX.md`,

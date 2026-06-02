@@ -41,6 +41,9 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
+      - name: EWSD validation gate (Stage 3)
+        run: pytest tests/phase_11/test_ewsd_golden_vectors.py tests/phase_11/test_ewsd_pure_matches_core.py tests/phase_11/test_ewsd_corpus_regression.py tests/phase_11/test_ewsd_uncertainty.py tests/phase_11/test_ewsd_stage3_contract.py tests/phase_11/test_research_export_includes_ewsd.py -q
+
       - name: Run test suite
         # testpaths/markers are configured in pyproject.toml
         # ([tool.pytest.ini_options]); the slow end-to-end tests are skipped

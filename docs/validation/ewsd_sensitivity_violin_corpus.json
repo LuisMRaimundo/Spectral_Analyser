@@ -1,0 +1,49 @@
+{
+  "source": "C:\\Users\\lmr20\\Desktop\\ORC_Vlc_arco_mf\\_Sustains\\ewsd_ratio_respecting_results.xlsx",
+  "construct_checks": {
+    "n_rows": 49,
+    "n_finite_scores": 49,
+    "spearman_strict_vs_balanced": 0.9917346938775509,
+    "strict_balanced_not_identical": true,
+    "spearman_register_vs_balanced": -0.9156122448979591,
+    "spearman_mean_penalty_vs_strict": 0.603673469387755
+  },
+  "alpha_rank_stability": [
+    {
+      "alpha_a": 0.25,
+      "alpha_b": 0.5,
+      "spearman_rho": 0.9953061224489794,
+      "n_notes": 49
+    },
+    {
+      "alpha_a": 0.25,
+      "alpha_b": 0.75,
+      "spearman_rho": 0.9868367346938774,
+      "n_notes": 49
+    },
+    {
+      "alpha_a": 0.25,
+      "alpha_b": 1.0,
+      "spearman_rho": 0.9801020408163263,
+      "n_notes": 49
+    },
+    {
+      "alpha_a": 0.5,
+      "alpha_b": 0.75,
+      "spearman_rho": 0.9962244897959182,
+      "n_notes": 49
+    },
+    {
+      "alpha_a": 0.5,
+      "alpha_b": 1.0,
+      "spearman_rho": 0.9917346938775509,
+      "n_notes": 49
+    },
+    {
+      "alpha_a": 0.75,
+      "alpha_b": 1.0,
+      "spearman_rho": 0.9980612244897958,
+      "n_notes": 49
+    }
+  ]
+}

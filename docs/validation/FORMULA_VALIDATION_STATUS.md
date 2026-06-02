@@ -112,21 +112,28 @@ The status of each formula is one of:
   dense spectra do not inflate the local floor. Default `Pfa = 1e-2`, calibrated
   to preserve the validated acoustic chain.
 
-## F7 — Strict EWSD (Stage 3, EWSD-R v18)
+## F-048 — Strict EWSD (Stage 3, EWSD-R v18.1)
 
 - **Canonical form**: `EWSD_score_total = sum_k r_k D_k (N_eff,k / N_k)` over H/I/S compartments.
-- **Module**: `tools/ewsd_core.py` (`compute_ewsd`); integration in `tools/ewsd_research_integration.py`.
+- **Module**: `tools/ewsd_pure.py` (reference math), `tools/ewsd_core.py` (Excel adapter), integration in `tools/ewsd_research_integration.py`.
 - **Reference**: participation-ratio anti-concentration; see `docs/TECHNICAL_MANUAL_COMPLETE.md` §7.8 and `docs/METRIC_FORMULA_INDEX.md` F-048.
-- **Test**: `tests/phase_11/test_research_export_includes_ewsd.py`.
-- **Status**: canonicalised_only (numerical regression; no symbolic AST test yet).
+- **Test**: `tests/phase_11/test_ewsd_golden_vectors.py`, `tests/phase_11/test_ewsd_pure_matches_core.py`, `tests/phase_11/test_ewsd_corpus_regression.py`.
+- **Status**: validated (golden vectors + 49-note corpus regression at `frequency_ceiling_hz=20000`).
 
-## F8 — Acoustic-balanced EWSD companion (Stage 3)
+## F-049 — Acoustic-balanced EWSD companion (Stage 3, EWSD-R v18.1)
 
 - **Canonical form**: `EWSD_score_acoustic_balanced = sum_k r_k D_k (N_eff,k / N_k)^alpha`, default `alpha = 0.5`.
-- **Module**: `tools/ewsd_core.py` (`add_acoustic_alignment_columns`).
+- **Module**: `tools/ewsd_pure.py` (`compute_acoustic_balanced_score`), `tools/ewsd_core.py` (`add_acoustic_alignment_columns`).
 - **Reference**: see `docs/METRIC_FORMULA_INDEX.md` F-049.
-- **Test**: `tests/phase_11/test_research_export_includes_ewsd.py`.
-- **Status**: canonicalised_only.
+- **Test**: same suite as F7.
+- **Status**: validated (golden vectors + corpus compartment reconstruction).
+
+## F-050 — EWSD bootstrap uncertainty (Stage 3, Tier B)
+
+- **Canonical form**: non-parametric bootstrap CI on F-048/F-049 from resampled H/I/S partials; ratios optionally recomputed per draw.
+- **Module**: `tools/ewsd_uncertainty.bootstrap_ewsd_from_compartments`.
+- **Test**: `tests/phase_11/test_ewsd_uncertainty.py`.
+- **Status**: validated (CI brackets point estimate; ratio propagation widens uncertainty).
 
 ## Coverage notes
 

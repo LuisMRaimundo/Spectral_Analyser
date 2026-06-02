@@ -110,6 +110,13 @@ def test_research_export_includes_ewsd_stage3_columns(tmp_path: Path) -> None:
     assert bool(row["ewsd_primary_analysis_eligible"]) is True
     assert str(row["ewsd_merge_status"]).strip() == "merged_individual_exact"
     assert str(row["ewsd_stage3_version"]).strip().startswith("EWSD-R v18")
+    assert "EWSD_score_acoustic_balanced_ci_low" in sdm.columns
+    assert "EWSD_score_acoustic_balanced_ci_high" in sdm.columns
+    assert pd.notna(row["EWSD_score_acoustic_balanced_ci_low"])
+    assert pd.notna(row["EWSD_score_acoustic_balanced_ci_high"])
+    assert float(row["EWSD_score_acoustic_balanced_ci_low"]) <= float(row["EWSD_score_acoustic_balanced"])
+    assert float(row["EWSD_score_acoustic_balanced"]) <= float(row["EWSD_score_acoustic_balanced_ci_high"])
+    assert str(row.get("ewsd_uncertainty_sources", "")).strip() in {"partials+ratios", "partials"}
 
 
 def test_research_export_ewsd_skipped_without_per_note_workbooks(tmp_path: Path) -> None:

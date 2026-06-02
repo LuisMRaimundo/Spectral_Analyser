@@ -1,0 +1,1525 @@
+{
+  "source": "C:\\Users\\lmr20\\Desktop\\ORC_Vlc_arco_mf\\_Sustains\\ewsd_ratio_respecting_results.xlsx",
+  "frequency_ceiling_hz": 20000.0,
+  "notes": [
+    {
+      "Note": "C2",
+      "EWSD_score_total": 65.23933599492234,
+      "EWSD_score_acoustic_balanced": 84.91354941047,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 98.08597785525482,
+          "concentration_penalty": 0.523622843735383,
+          "ewsd_score": 51.36005865513434,
+          "ewsd_balanced": 70.97676786028013
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 13.99451552731969,
+          "concentration_penalty": 0.9917648688542241,
+          "ewsd_score": 13.87926885663062,
+          "ewsd_balanced": 13.93677306703248
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 8.483157384162538e-06,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 8.483157384162538e-06,
+          "ewsd_balanced": 8.483157384162538e-06
+        }
+      ],
+      "reconstructed_strict": 65.23933599492234,
+      "reconstructed_balanced": 84.91354941047
+    },
+    {
+      "Note": "C#2",
+      "EWSD_score_total": 42.05469429976147,
+      "EWSD_score_acoustic_balanced": 47.50623925267146,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 27.69886338474535,
+          "concentration_penalty": 0.5464409741453552,
+          "ewsd_score": 15.13579389067936,
+          "ewsd_balanced": 20.47545572624919
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 27.14313012976164,
+          "concentration_penalty": 0.9917389315890969,
+          "ewsd_score": 26.91889887487363,
+          "ewsd_balanced": 27.03078199221379
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 1.534208483390148e-06,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 1.534208483390148e-06,
+          "ewsd_balanced": 1.534208483390148e-06
+        }
+      ],
+      "reconstructed_strict": 42.05469429976147,
+      "reconstructed_balanced": 47.50623925267147
+    },
+    {
+      "Note": "D2",
+      "EWSD_score_total": 68.97335506983606,
+      "EWSD_score_acoustic_balanced": 78.4718671416736,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 61.05320800229437,
+          "concentration_penalty": 0.6598947760642769,
+          "ewsd_score": 40.28869302267977,
+          "ewsd_balanced": 49.59590663809114
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 29.06852383733388,
+          "concentration_penalty": 0.9867942146680646,
+          "ewsd_score": 28.6846511516218,
+          "ewsd_balanced": 28.87594960804796
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 1.089553448754447e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 1.089553448754447e-05,
+          "ewsd_balanced": 1.089553448754447e-05
+        }
+      ],
+      "reconstructed_strict": 68.97335506983606,
+      "reconstructed_balanced": 78.4718671416736
+    },
+    {
+      "Note": "D#2",
+      "EWSD_score_total": 50.84739423266254,
+      "EWSD_score_acoustic_balanced": 56.51826586734131,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 29.25456010725525,
+          "concentration_penalty": 0.5720685493951033,
+          "ewsd_score": 16.73561376374937,
+          "ewsd_balanced": 22.1267489429291
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 34.67353477012829,
+          "concentration_penalty": 0.983798395019904,
+          "ewsd_score": 34.11176785651905,
+          "ewsd_balanced": 34.39150431201808
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 1.261239412346185e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 1.261239412346185e-05,
+          "ewsd_balanced": 1.261239412346185e-05
+        }
+      ],
+      "reconstructed_strict": 50.847394232662545,
+      "reconstructed_balanced": 56.518265867341306
+    },
+    {
+      "Note": "E2",
+      "EWSD_score_total": 53.60283873037164,
+      "EWSD_score_acoustic_balanced": 61.3256273416881,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 37.27307796479669,
+          "concentration_penalty": 0.5418931773503568,
+          "ewsd_score": 20.19802664797125,
+          "ewsd_balanced": 27.43797773132841
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 34.37742860464324,
+          "concentration_penalty": 0.9717066080828664,
+          "ewsd_score": 33.40477454402879,
+          "ewsd_balanced": 33.8876120719881
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 3.753837160004685e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 3.753837160004685e-05,
+          "ewsd_balanced": 3.753837160004685e-05
+        }
+      ],
+      "reconstructed_strict": 53.602838730371644,
+      "reconstructed_balanced": 61.325627341688104
+    },
+    {
+      "Note": "F2",
+      "EWSD_score_total": 43.45200138589196,
+      "EWSD_score_acoustic_balanced": 47.76484345309488,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 19.99193505289838,
+          "concentration_penalty": 0.5541485498918888,
+          "ewsd_score": 11.07850181909646,
+          "ewsd_balanced": 14.88222728125038
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 33.39972937933268,
+          "concentration_penalty": 0.9692740099523295,
+          "ewsd_score": 32.37348962682842,
+          "ewsd_balanced": 32.88260623187741
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 9.93996708902506e-06,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 9.93996708902506e-06,
+          "ewsd_balanced": 9.93996708902506e-06
+        }
+      ],
+      "reconstructed_strict": 43.45200138589197,
+      "reconstructed_balanced": 47.76484345309487
+    },
+    {
+      "Note": "F#2",
+      "EWSD_score_total": 39.38008887359982,
+      "EWSD_score_acoustic_balanced": 41.65556768850803,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 10.59190026916194,
+          "concentration_penalty": 0.5566488372316493,
+          "ewsd_score": 5.895968968902586,
+          "ewsd_balanced": 7.902500573153395
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 34.02417250639683,
+          "concentration_penalty": 0.9841273251390567,
+          "ewsd_score": 33.48411787879014,
+          "ewsd_balanced": 33.75306508944754
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 2.02590709201175e-06,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 2.02590709201175e-06,
+          "ewsd_balanced": 2.02590709201175e-06
+        }
+      ],
+      "reconstructed_strict": 39.38008887359982,
+      "reconstructed_balanced": 41.65556768850803
+    },
+    {
+      "Note": "G2",
+      "EWSD_score_total": 24.2974444066586,
+      "EWSD_score_acoustic_balanced": 32.00611440515197,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 33.46728620329812,
+          "concentration_penalty": 0.4106713623565641,
+          "ewsd_score": 13.74405601948548,
+          "ewsd_balanced": 21.44705705681511
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 10.56465908227891,
+          "concentration_penalty": 0.9989265183614572,
+          "ewsd_score": 10.55331811473662,
+          "ewsd_balanced": 10.55898707590035
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 7.027243650649892e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 7.027243650649892e-05,
+          "ewsd_balanced": 7.027243650649892e-05
+        }
+      ],
+      "reconstructed_strict": 24.297444406658606,
+      "reconstructed_balanced": 32.006114405151976
+    },
+    {
+      "Note": "G#2",
+      "EWSD_score_total": 41.52903604525596,
+      "EWSD_score_acoustic_balanced": 47.26090112285176,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 29.22494284302964,
+          "concentration_penalty": 0.5419212338710057,
+          "ewsd_score": 15.83761708530424,
+          "ewsd_balanced": 21.51402923879686
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 25.80243490704129,
+          "concentration_penalty": 0.9956970906248633,
+          "ewsd_score": 25.69140936797843,
+          "ewsd_balanced": 25.74686229208161
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 9.591973295642263e-06,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 9.591973295642263e-06,
+          "ewsd_balanced": 9.591973295642263e-06
+        }
+      ],
+      "reconstructed_strict": 41.529036045255964,
+      "reconstructed_balanced": 47.26090112285176
+    },
+    {
+      "Note": "A2",
+      "EWSD_score_total": 35.81129690820978,
+      "EWSD_score_acoustic_balanced": 38.2536720026286,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 16.38622821908082,
+          "concentration_penalty": 0.6703058217610153,
+          "ewsd_score": 10.98378417195451,
+          "ewsd_balanced": 13.41576662553334
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 24.84822636876035,
+          "concentration_penalty": 0.9991633353753733,
+          "ewsd_score": 24.8274367367729,
+          "ewsd_balanced": 24.83782937761289
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 7.599948237412384e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 7.599948237412384e-05,
+          "ewsd_balanced": 7.599948237412384e-05
+        }
+      ],
+      "reconstructed_strict": 35.81129690820978,
+      "reconstructed_balanced": 38.253672002628605
+    },
+    {
+      "Note": "A#2",
+      "EWSD_score_total": 33.78652534198001,
+      "EWSD_score_acoustic_balanced": 39.2810559112736,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 33.30272925102074,
+          "concentration_penalty": 0.6268353027559864,
+          "ewsd_score": 20.87532637266423,
+          "ewsd_balanced": 26.36674690240587
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 12.91740089004088,
+          "concentration_penalty": 0.9995184148652002,
+          "ewsd_score": 12.91118006179199,
+          "ewsd_balanced": 12.91429010134393
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 1.890752379546082e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 1.890752379546082e-05,
+          "ewsd_balanced": 1.890752379546082e-05
+        }
+      ],
+      "reconstructed_strict": 33.78652534198002,
+      "reconstructed_balanced": 39.281055911273604
+    },
+    {
+      "Note": "B2",
+      "EWSD_score_total": 57.60289170207569,
+      "EWSD_score_acoustic_balanced": 63.48298177300126,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 37.30249063881924,
+          "concentration_penalty": 0.6513015960462737,
+          "ewsd_score": 24.29517168956415,
+          "ewsd_balanced": 30.10432551176779
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 33.44966958475597,
+          "concentration_penalty": 0.995754111350881,
+          "ewsd_score": 33.30764601234927,
+          "ewsd_balanced": 33.37858226107121
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 7.400016226560171e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 7.400016226560171e-05,
+          "ewsd_balanced": 7.400016226560171e-05
+        }
+      ],
+      "reconstructed_strict": 57.60289170207568,
+      "reconstructed_balanced": 63.48298177300128
+    },
+    {
+      "Note": "C3",
+      "EWSD_score_total": 45.2356257195914,
+      "EWSD_score_acoustic_balanced": 50.99921405577705,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 43.95131952732334,
+          "concentration_penalty": 0.7138792305581355,
+          "ewsd_score": 31.37593416618034,
+          "ewsd_balanced": 37.13507382524038
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 13.86841961098749,
+          "concentration_penalty": 0.9993583420135347,
+          "ewsd_score": 13.85952082878445,
+          "ewsd_balanced": 13.86396950591005
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.00017072462660671,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.00017072462660671,
+          "ewsd_balanced": 0.00017072462660671
+        }
+      ],
+      "reconstructed_strict": 45.2356257195914,
+      "reconstructed_balanced": 50.99921405577705
+    },
+    {
+      "Note": "C#3",
+      "EWSD_score_total": 35.3935460118711,
+      "EWSD_score_acoustic_balanced": 37.12905794474187,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 15.05574081043036,
+          "concentration_penalty": 0.7529347795216276,
+          "ewsd_score": 11.33599088763616,
+          "ewsd_balanced": 13.06413949074528
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 24.07221236807584,
+          "concentration_penalty": 0.9993881362872059,
+          "ewsd_score": 24.05748345484114,
+          "ewsd_balanced": 24.06484678460278
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 7.166939380222779e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 7.166939380222779e-05,
+          "ewsd_balanced": 7.166939380222779e-05
+        }
+      ],
+      "reconstructed_strict": 35.39354601187111,
+      "reconstructed_balanced": 37.12905794474186
+    },
+    {
+      "Note": "D3",
+      "EWSD_score_total": 55.02814516951958,
+      "EWSD_score_acoustic_balanced": 63.97763323087703,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 40.6696882760367,
+          "concentration_penalty": 0.4649960659260544,
+          "ewsd_score": 18.91124505079604,
+          "ewsd_balanced": 27.73291259726639
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 36.37295913901219,
+          "concentration_penalty": 0.9929592366692895,
+          "ewsd_score": 36.1168657420768,
+          "ewsd_balanced": 36.24468625696391
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 3.437664672643191e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 3.437664672643191e-05,
+          "ewsd_balanced": 3.437664672643191e-05
+        }
+      ],
+      "reconstructed_strict": 55.02814516951956,
+      "reconstructed_balanced": 63.977633230877025
+    },
+    {
+      "Note": "D#3",
+      "EWSD_score_total": 42.37573703310114,
+      "EWSD_score_acoustic_balanced": 49.03202786551176,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 43.15811166075832,
+          "concentration_penalty": 0.6560858513428605,
+          "ewsd_score": 28.31542643129885,
+          "ewsd_balanced": 34.9576935115002
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 14.08834060412344,
+          "concentration_penalty": 0.9980081762269053,
+          "ewsd_score": 14.06027911238469,
+          "ewsd_balanced": 14.07430286459396
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 3.14894176002751e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 3.14894176002751e-05,
+          "ewsd_balanced": 3.14894176002751e-05
+        }
+      ],
+      "reconstructed_strict": 42.37573703310114,
+      "reconstructed_balanced": 49.03202786551177
+    },
+    {
+      "Note": "E3",
+      "EWSD_score_total": 40.46454725520415,
+      "EWSD_score_acoustic_balanced": 45.33765943407816,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 42.2911231883283,
+          "concentration_penalty": 0.7519517126103085,
+          "ewsd_score": 31.800882509677,
+          "ewsd_balanced": 36.67281063286948
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 8.665948549828832,
+          "concentration_penalty": 0.9997267150647278,
+          "ewsd_score": 8.66358027664032,
+          "ewsd_balanced": 8.664764332321846
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 8.44688868410259e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 8.44688868410259e-05,
+          "ewsd_balanced": 8.44688868410259e-05
+        }
+      ],
+      "reconstructed_strict": 40.46454725520416,
+      "reconstructed_balanced": 45.33765943407816
+    },
+    {
+      "Note": "F3",
+      "EWSD_score_total": 30.57139756056315,
+      "EWSD_score_acoustic_balanced": 37.11424089698403,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 41.5991692189308,
+          "concentration_penalty": 0.6472233815181054,
+          "ewsd_score": 26.92395497022028,
+          "ewsd_balanced": 33.46661259896296
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 3.647778108545388,
+          "concentration_penalty": 0.9998981777946299,
+          "ewsd_score": 3.647406683733675,
+          "ewsd_balanced": 3.647592391411879
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 3.590660919328573e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 3.590660919328573e-05,
+          "ewsd_balanced": 3.590660919328573e-05
+        }
+      ],
+      "reconstructed_strict": 30.571397560563145,
+      "reconstructed_balanced": 37.11424089698403
+    },
+    {
+      "Note": "F#3",
+      "EWSD_score_total": 27.57283283219746,
+      "EWSD_score_acoustic_balanced": 31.11626329067887,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 23.19271880637448,
+          "concentration_penalty": 0.6594923267942415,
+          "ewsd_score": 15.29542009030047,
+          "ewsd_balanced": 18.83460584083749
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 12.28589023393126,
+          "concentration_penalty": 0.9993088914791902,
+          "ewsd_score": 12.27739935050485,
+          "ewsd_balanced": 12.28164405844924
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 1.339139213139103e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 1.339139213139103e-05,
+          "ewsd_balanced": 1.339139213139103e-05
+        }
+      ],
+      "reconstructed_strict": 27.57283283219745,
+      "reconstructed_balanced": 31.116263290678866
+    },
+    {
+      "Note": "G3",
+      "EWSD_score_total": 18.83327639890318,
+      "EWSD_score_acoustic_balanced": 21.47155041952016,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 15.93554884644634,
+          "concentration_penalty": 0.6250782132708493,
+          "ewsd_score": 9.96096440042702,
+          "ewsd_balanced": 12.59894577973561
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 8.872836909081547,
+          "concentration_penalty": 0.9999340354978666,
+          "ewsd_score": 8.87225161681233,
+          "ewsd_balanced": 8.872544258120715
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 6.038166382802485e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 6.038166382802485e-05,
+          "ewsd_balanced": 6.038166382802485e-05
+        }
+      ],
+      "reconstructed_strict": 18.83327639890318,
+      "reconstructed_balanced": 21.47155041952016
+    },
+    {
+      "Note": "G#3",
+      "EWSD_score_total": 21.14408836603312,
+      "EWSD_score_acoustic_balanced": 22.92958125666873,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 10.01515151409708,
+          "concentration_penalty": 0.5991405245395197,
+          "ewsd_score": 6.000483131498891,
+          "ewsd_balanced": 7.752144717414989
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 15.21131474856805,
+          "concentration_penalty": 0.995546855026497,
+          "ewsd_score": 15.14357655875509,
+          "ewsd_balanced": 15.1774078634746
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 2.86757791395e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 2.86757791395e-05,
+          "ewsd_balanced": 2.86757791395e-05
+        }
+      ],
+      "reconstructed_strict": 21.14408836603312,
+      "reconstructed_balanced": 22.92958125666873
+    },
+    {
+      "Note": "A3",
+      "EWSD_score_total": 20.76797803413959,
+      "EWSD_score_acoustic_balanced": 30.09062334535204,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 38.21730063419329,
+          "concentration_penalty": 0.335443214111511,
+          "ewsd_score": 12.81973415939968,
+          "ewsd_balanced": 22.13448970318076
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 7.963971761082535,
+          "concentration_penalty": 0.9980176516044793,
+          "ewsd_score": 7.948184394439981,
+          "ewsd_balanced": 7.956074161871349
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 5.948029992863449e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 5.948029992863449e-05,
+          "ewsd_balanced": 5.948029992863449e-05
+        }
+      ],
+      "reconstructed_strict": 20.76797803413959,
+      "reconstructed_balanced": 30.09062334535204
+    },
+    {
+      "Note": "A#3",
+      "EWSD_score_total": 31.36549604875417,
+      "EWSD_score_acoustic_balanced": 38.76361116813941,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 35.27175608122899,
+          "concentration_penalty": 0.5034387726409308,
+          "ewsd_score": 17.75716959042421,
+          "ewsd_balanced": 25.02651702667512
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 13.86695568355866,
+          "concentration_penalty": 0.9813402568619403,
+          "ewsd_score": 13.6082018523966,
+          "ewsd_balanced": 13.73696953553091
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0001246059333655453,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0001246059333655453,
+          "ewsd_balanced": 0.0001246059333655453
+        }
+      ],
+      "reconstructed_strict": 31.365496048754174,
+      "reconstructed_balanced": 38.763611168139406
+    },
+    {
+      "Note": "B3",
+      "EWSD_score_total": 29.95557092731683,
+      "EWSD_score_acoustic_balanced": 36.91507644851363,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 37.31332260429264,
+          "concentration_penalty": 0.5671891195285322,
+          "ewsd_score": 21.16371059461282,
+          "ewsd_balanced": 28.10139428784049
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 8.835396016852048,
+          "concentration_penalty": 0.9950542318986457,
+          "ewsd_score": 8.791698197069069,
+          "ewsd_balanced": 8.813520025038201
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.000162135634936515,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.000162135634936515,
+          "ewsd_balanced": 0.000162135634936515
+        }
+      ],
+      "reconstructed_strict": 29.955570927316828,
+      "reconstructed_balanced": 36.91507644851363
+    },
+    {
+      "Note": "C4",
+      "EWSD_score_total": 18.99103754858969,
+      "EWSD_score_acoustic_balanced": 22.62109506912553,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 21.39215639563774,
+          "concentration_penalty": 0.6138027490955835,
+          "ewsd_score": 13.13056440472511,
+          "ewsd_balanced": 16.7598057061791
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 5.862067745551002,
+          "concentration_penalty": 0.9997215058040193,
+          "ewsd_score": 5.860435193707421,
+          "ewsd_balanced": 5.86125141278927
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 3.795015715597577e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 3.795015715597577e-05,
+          "ewsd_balanced": 3.795015715597577e-05
+        }
+      ],
+      "reconstructed_strict": 18.991037548589688,
+      "reconstructed_balanced": 22.621095069125527
+    },
+    {
+      "Note": "C#4",
+      "EWSD_score_total": 25.37435972533843,
+      "EWSD_score_acoustic_balanced": 33.78291335979486,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 40.37720421096359,
+          "concentration_penalty": 0.4966229566726412,
+          "ewsd_score": 20.05224653742376,
+          "ewsd_balanced": 28.45441360018067
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 5.334833278716435,
+          "concentration_penalty": 0.9976042723834402,
+          "ewsd_score": 5.322052471300871,
+          "ewsd_balanced": 5.328439043000391
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 6.071661380046213e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 6.071661380046213e-05,
+          "ewsd_balanced": 6.071661380046213e-05
+        }
+      ],
+      "reconstructed_strict": 25.37435972533843,
+      "reconstructed_balanced": 33.78291335979486
+    },
+    {
+      "Note": "D4",
+      "EWSD_score_total": 35.2547618707305,
+      "EWSD_score_acoustic_balanced": 40.04586060422329,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 43.92340947677906,
+          "concentration_penalty": 0.7663485150260744,
+          "ewsd_score": 33.66063962741184,
+          "ewsd_balanced": 38.45113857358591
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 1.595150973326459,
+          "concentration_penalty": 0.9992478452815683,
+          "ewsd_score": 1.593951172995261,
+          "ewsd_balanced": 1.594550960313982
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0001710703234025357,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0001710703234025357,
+          "ewsd_balanced": 0.0001710703234025357
+        }
+      ],
+      "reconstructed_strict": 35.254761870730505,
+      "reconstructed_balanced": 40.045860604223286
+    },
+    {
+      "Note": "D#4",
+      "EWSD_score_total": 15.63429877752865,
+      "EWSD_score_acoustic_balanced": 17.41405575568847,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 8.99100175158151,
+          "concentration_penalty": 0.5346567179010208,
+          "ewsd_score": 4.807099487142899,
+          "ewsd_balanced": 6.574240633634305
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 10.85241830919842,
+          "concentration_penalty": 0.9976736647448232,
+          "ewsd_score": 10.82717194588181,
+          "ewsd_balanced": 10.83978777755023
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 2.734450394079162e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 2.734450394079162e-05,
+          "ewsd_balanced": 2.734450394079162e-05
+        }
+      ],
+      "reconstructed_strict": 15.63429877752865,
+      "reconstructed_balanced": 17.41405575568847
+    },
+    {
+      "Note": "E4",
+      "EWSD_score_total": 22.28920530656544,
+      "EWSD_score_acoustic_balanced": 26.32227192962544,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 21.62823736135062,
+          "concentration_penalty": 0.5677088080477639,
+          "ewsd_score": 12.27854085258648,
+          "ewsd_balanced": 16.29610984286682
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 10.04162787052413,
+          "concentration_penalty": 0.9969109333497457,
+          "ewsd_score": 10.01060861275503,
+          "ewsd_balanced": 10.0261062455347
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 5.584122392481109e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 5.584122392481109e-05,
+          "ewsd_balanced": 5.584122392481109e-05
+        }
+      ],
+      "reconstructed_strict": 22.289205306565435,
+      "reconstructed_balanced": 26.322271929625437
+    },
+    {
+      "Note": "F4",
+      "EWSD_score_total": 19.89873479997864,
+      "EWSD_score_acoustic_balanced": 24.11722437215097,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 22.0542852593818,
+          "concentration_penalty": 0.5530381534797619,
+          "ewsd_score": 12.19686119616444,
+          "ewsd_balanced": 16.40100777663664
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 7.730477132078646,
+          "concentration_penalty": 0.9962857797966023,
+          "ewsd_score": 7.701764437732775,
+          "ewsd_balanced": 7.716107429432912
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0001091660814194283,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0001091660814194283,
+          "ewsd_balanced": 0.0001091660814194283
+        }
+      ],
+      "reconstructed_strict": 19.898734799978634,
+      "reconstructed_balanced": 24.11722437215096
+    },
+    {
+      "Note": "F#4",
+      "EWSD_score_total": 18.95763937539411,
+      "EWSD_score_acoustic_balanced": 24.58682939208084,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 24.87788472666042,
+          "concentration_penalty": 0.4320096794519241,
+          "ewsd_score": 10.74748700620649,
+          "ewsd_balanced": 16.35159756236942
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 8.260356440511874,
+          "concentration_penalty": 0.9939184789845068,
+          "ewsd_score": 8.210120909223436,
+          "ewsd_balanced": 8.235200369747236
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 3.145996418469272e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 3.145996418469272e-05,
+          "ewsd_balanced": 3.145996418469272e-05
+        }
+      ],
+      "reconstructed_strict": 18.95763937539411,
+      "reconstructed_balanced": 24.58682939208084
+    },
+    {
+      "Note": "G4",
+      "EWSD_score_total": 17.33052576041874,
+      "EWSD_score_acoustic_balanced": 24.05442836803848,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 30.40946705719747,
+          "concentration_penalty": 0.4490499769348701,
+          "ewsd_score": 13.65537048063622,
+          "ewsd_balanced": 20.37774616547997
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 3.678181272691913,
+          "concentration_penalty": 0.9991695678588031,
+          "ewsd_score": 3.675126792741922,
+          "ewsd_balanced": 3.676653715517907
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 2.84870406004922e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 2.84870406004922e-05,
+          "ewsd_balanced": 2.84870406004922e-05
+        }
+      ],
+      "reconstructed_strict": 17.330525760418745,
+      "reconstructed_balanced": 24.054428368038483
+    },
+    {
+      "Note": "G#4",
+      "EWSD_score_total": 17.96722490243366,
+      "EWSD_score_acoustic_balanced": 23.64948280442408,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 24.63223698077435,
+          "concentration_penalty": 0.4136195076200181,
+          "ewsd_score": 10.18837373156749,
+          "ewsd_balanced": 15.84179397052829
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 7.836597855229049,
+          "concentration_penalty": 0.9926266175385006,
+          "ewsd_score": 7.778815622045479,
+          "ewsd_balanced": 7.807653285075088
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 3.554882069895862e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 3.554882069895862e-05,
+          "ewsd_balanced": 3.554882069895862e-05
+        }
+      ],
+      "reconstructed_strict": 17.967224902433667,
+      "reconstructed_balanced": 23.649482804424082
+    },
+    {
+      "Note": "A4",
+      "EWSD_score_total": 21.63867617878298,
+      "EWSD_score_acoustic_balanced": 27.21634300083858,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 28.25377602958802,
+          "concentration_penalty": 0.5319387439699232,
+          "ewsd_score": 15.02927813358657,
+          "ewsd_balanced": 20.60664597339266
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 6.609805375161897,
+          "concentration_penalty": 0.9999095316745021,
+          "ewsd_score": 6.609207397137739,
+          "ewsd_balanced": 6.609506379387253
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0001906480586702205,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0001906480586702205,
+          "ewsd_balanced": 0.0001906480586702205
+        }
+      ],
+      "reconstructed_strict": 21.63867617878298,
+      "reconstructed_balanced": 27.21634300083858
+    },
+    {
+      "Note": "A#4",
+      "EWSD_score_total": 15.98004960337112,
+      "EWSD_score_acoustic_balanced": 21.55288477660403,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 26.73805810390069,
+          "concentration_penalty": 0.4955010837674846,
+          "ewsd_score": 13.24873676832077,
+          "ewsd_balanced": 18.82141050810609
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 2.731575402343522,
+          "concentration_penalty": 0.9998817984535223,
+          "ewsd_score": 2.731252525906644,
+          "ewsd_balanced": 2.731413959354239
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 6.030914370743448e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 6.030914370743448e-05,
+          "ewsd_balanced": 6.030914370743448e-05
+        }
+      ],
+      "reconstructed_strict": 15.980049603371121,
+      "reconstructed_balanced": 21.552884776604028
+    },
+    {
+      "Note": "B4",
+      "EWSD_score_total": 15.21976383775765,
+      "EWSD_score_acoustic_balanced": 21.5727203167593,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 27.94168904608767,
+          "concentration_penalty": 0.4232599464357337,
+          "ewsd_score": 11.82659780897099,
+          "ewsd_balanced": 18.17842453160915
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 3.395395459765086,
+          "concentration_penalty": 0.9993344254269908,
+          "ewsd_score": 3.393135570881755,
+          "ewsd_balanced": 3.394265327245253
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 3.045790489986436e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 3.045790489986436e-05,
+          "ewsd_balanced": 3.045790489986436e-05
+        }
+      ],
+      "reconstructed_strict": 15.219763837757645,
+      "reconstructed_balanced": 21.572720316759302
+    },
+    {
+      "Note": "C5",
+      "EWSD_score_total": 12.32364066721582,
+      "EWSD_score_acoustic_balanced": 16.24724256470007,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 18.36466608575173,
+          "concentration_penalty": 0.4884668659246455,
+          "ewsd_score": 8.970530886659773,
+          "ewsd_balanced": 12.83513943615063
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 3.472013015112326,
+          "concentration_penalty": 0.9657188381064286,
+          "ewsd_score": 3.352988374844673,
+          "ewsd_balanced": 3.411981722838068
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0001214057113765919,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0001214057113765919,
+          "ewsd_balanced": 0.0001214057113765919
+        }
+      ],
+      "reconstructed_strict": 12.323640667215823,
+      "reconstructed_balanced": 16.247242564700073
+    },
+    {
+      "Note": "C#5",
+      "EWSD_score_total": 14.34881101040386,
+      "EWSD_score_acoustic_balanced": 17.5694012934231,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 14.72929351134779,
+          "concentration_penalty": 0.4640910130515126,
+          "ewsd_score": 6.835732747214467,
+          "ewsd_balanced": 10.03421715924335
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 7.55725979808178,
+          "concentration_penalty": 0.9941411587656268,
+          "ewsd_score": 7.512983012757907,
+          "ewsd_balanced": 7.535088883748264
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 9.525043148397135e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 9.525043148397135e-05,
+          "ewsd_balanced": 9.525043148397135e-05
+        }
+      ],
+      "reconstructed_strict": 14.348811010403859,
+      "reconstructed_balanced": 17.5694012934231
+    },
+    {
+      "Note": "D5",
+      "EWSD_score_total": 16.49927741014644,
+      "EWSD_score_acoustic_balanced": 21.42789082200834,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 23.74488761075073,
+          "concentration_penalty": 0.5002637127588747,
+          "ewsd_score": 11.87870563519637,
+          "ewsd_balanced": 16.79459824672591
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 4.645434581945404,
+          "concentration_penalty": 0.9945157710780489,
+          "ewsd_score": 4.619957955256067,
+          "ewsd_balanced": 4.632678755588424
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0006138196940028848,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0006138196940028848,
+          "ewsd_balanced": 0.0006138196940028848
+        }
+      ],
+      "reconstructed_strict": 16.49927741014644,
+      "reconstructed_balanced": 21.427890822008337
+    },
+    {
+      "Note": "D#5",
+      "EWSD_score_total": 11.940610840378,
+      "EWSD_score_acoustic_balanced": 15.19144355285662,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 17.63260334708864,
+          "concentration_penalty": 0.5720304852992567,
+          "ewsd_score": 10.08638664972441,
+          "ewsd_balanced": 13.33601345979977
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 1.85642287133793,
+          "concentration_penalty": 0.9987004096976608,
+          "ewsd_score": 1.854010282177299,
+          "ewsd_balanced": 1.855216184580554
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0002139084762870102,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0002139084762870102,
+          "ewsd_balanced": 0.0002139084762870102
+        }
+      ],
+      "reconstructed_strict": 11.940610840377996,
+      "reconstructed_balanced": 15.191443552856619
+    },
+    {
+      "Note": "E5",
+      "EWSD_score_total": 12.27916893005572,
+      "EWSD_score_acoustic_balanced": 16.07775068145713,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 19.21777072151869,
+          "concentration_penalty": 0.5311809672906923,
+          "ewsd_score": 10.20811404102704,
+          "ewsd_balanced": 14.00632696818025
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 2.07149823312325,
+          "concentration_penalty": 0.9996438740926299,
+          "ewsd_score": 2.070760518935364,
+          "ewsd_balanced": 2.071129343183566
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0002943700933130392,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0002943700933130392,
+          "ewsd_balanced": 0.0002943700933130392
+        }
+      ],
+      "reconstructed_strict": 12.279168930055716,
+      "reconstructed_balanced": 16.077750681457132
+    },
+    {
+      "Note": "F5",
+      "EWSD_score_total": 8.273130907966998,
+      "EWSD_score_acoustic_balanced": 12.29524446508724,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 17.16327858745458,
+          "concentration_penalty": 0.3921491188163992,
+          "ewsd_score": 6.730564574070688,
+          "ewsd_balanced": 10.74795584451424
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 1.55188992472467,
+          "concentration_penalty": 0.9939048312028428,
+          "ewsd_score": 1.542430893678865,
+          "ewsd_balanced": 1.547153180355552
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0001354402174457274,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0001354402174457274,
+          "ewsd_balanced": 0.0001354402174457274
+        }
+      ],
+      "reconstructed_strict": 8.273130907966998,
+      "reconstructed_balanced": 12.295244465087237
+    },
+    {
+      "Note": "F#5",
+      "EWSD_score_total": 9.688387155858761,
+      "EWSD_score_acoustic_balanced": 13.22250086537756,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 16.26536230473207,
+          "concentration_penalty": 0.4638717090492835,
+          "ewsd_score": 7.54504141060186,
+          "ewsd_balanced": 11.07803376721907
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 2.145496562729494,
+          "concentration_penalty": 0.9989544180422195,
+          "ewsd_score": 2.143253270233024,
+          "ewsd_balanced": 2.14437462313461
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 9.247502387821037e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 9.247502387821037e-05,
+          "ewsd_balanced": 9.247502387821037e-05
+        }
+      ],
+      "reconstructed_strict": 9.688387155858763,
+      "reconstructed_balanced": 13.222500865377558
+    },
+    {
+      "Note": "G5",
+      "EWSD_score_total": 12.05051862174943,
+      "EWSD_score_acoustic_balanced": 15.5757283394623,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 16.77919193233529,
+          "concentration_penalty": 0.4915432823020896,
+          "ewsd_score": 8.247699076796831,
+          "ewsd_balanced": 11.76391626159072
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 3.818953687816914,
+          "concentration_penalty": 0.9952850067218048,
+          "ewsd_score": 3.800947346849118,
+          "ewsd_balanced": 3.809939879768098
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.001872198103485132,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.001872198103485132,
+          "ewsd_balanced": 0.001872198103485132
+        }
+      ],
+      "reconstructed_strict": 12.050518621749433,
+      "reconstructed_balanced": 15.575728339462303
+    },
+    {
+      "Note": "G#5",
+      "EWSD_score_total": 7.64849809388337,
+      "EWSD_score_acoustic_balanced": 11.1165482523303,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 14.40285669003583,
+          "concentration_penalty": 0.355666799458296,
+          "ewsd_score": 5.122617942001553,
+          "ewsd_balanced": 8.589547840046919
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 2.528031265816553,
+          "concentration_penalty": 0.9991135324546624,
+          "ewsd_score": 2.525790248145808,
+          "ewsd_balanced": 2.526910508547375
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 8.990373600909981e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 8.990373600909981e-05,
+          "ewsd_balanced": 8.990373600909981e-05
+        }
+      ],
+      "reconstructed_strict": 7.6484980938833695,
+      "reconstructed_balanced": 11.116548252330299
+    },
+    {
+      "Note": "A5",
+      "EWSD_score_total": 8.729521572627872,
+      "EWSD_score_acoustic_balanced": 11.74428200356127,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 14.11187798861372,
+          "concentration_penalty": 0.477702093629421,
+          "ewsd_score": 6.741273660203716,
+          "ewsd_balanced": 9.753565060051134
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 1.992888488893287,
+          "concentration_penalty": 0.9975206195747083,
+          "ewsd_score": 1.987947360184136,
+          "ewsd_balanced": 1.990416391270118
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0003005522400204361,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0003005522400204361,
+          "ewsd_balanced": 0.0003005522400204361
+        }
+      ],
+      "reconstructed_strict": 8.729521572627872,
+      "reconstructed_balanced": 11.744282003561272
+    },
+    {
+      "Note": "A#5",
+      "EWSD_score_total": 7.006496770165205,
+      "EWSD_score_acoustic_balanced": 11.00898334218999,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 16.76157791473707,
+          "concentration_penalty": 0.3752883667976494,
+          "ewsd_score": 6.290425200573227,
+          "ewsd_balanced": 10.26827405732014
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 0.7661460822257724,
+          "concentration_penalty": 0.9345774993274545,
+          "ewsd_score": 0.7160228896460887,
+          "ewsd_balanced": 0.7406606049239608
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 4.867994588890498e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 4.867994588890498e-05,
+          "ewsd_balanced": 4.867994588890498e-05
+        }
+      ],
+      "reconstructed_strict": 7.006496770165205,
+      "reconstructed_balanced": 11.008983342189984
+    },
+    {
+      "Note": "B5",
+      "EWSD_score_total": 6.169649637332521,
+      "EWSD_score_acoustic_balanced": 9.084636231801547,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 12.56723799486741,
+          "concentration_penalty": 0.4026572456396483,
+          "ewsd_score": 5.060289436311248,
+          "ewsd_balanced": 7.974575955437186
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 1.110634687270959,
+          "concentration_penalty": 0.9987389260000863,
+          "ewsd_score": 1.109234094743439,
+          "ewsd_balanced": 1.109934170086526
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 0.0001261062778345017,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 0.0001261062778345017,
+          "ewsd_balanced": 0.0001261062778345017
+        }
+      ],
+      "reconstructed_strict": 6.169649637332521,
+      "reconstructed_balanced": 9.084636231801545
+    },
+    {
+      "Note": "C6",
+      "EWSD_score_total": 4.07804314618219,
+      "EWSD_score_acoustic_balanced": 6.497368165868665,
+      "primary_analysis_eligible": true,
+      "compartments": [
+        {
+          "family": "H",
+          "ratio_weighted_metric": 9.647509636847127,
+          "concentration_penalty": 0.2907564747392091,
+          "ewsd_score": 2.805075892022218,
+          "ewsd_balanced": 5.202114637373142
+        },
+        {
+          "family": "I",
+          "ratio_weighted_metric": 1.317871643043325,
+          "concentration_penalty": 0.9658823070948556,
+          "ewsd_score": 1.272908903037575,
+          "ewsd_balanced": 1.295195177373127
+        },
+        {
+          "family": "S_noise",
+          "ratio_weighted_metric": 5.835112239691527e-05,
+          "concentration_penalty": 1.0,
+          "ewsd_score": 5.835112239691527e-05,
+          "ewsd_balanced": 5.835112239691527e-05
+        }
+      ],
+      "reconstructed_strict": 4.07804314618219,
+      "reconstructed_balanced": 6.497368165868667
+    }
+  ]
+}

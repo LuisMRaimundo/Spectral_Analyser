@@ -1,0 +1,56 @@
+{
+  "id": "invalid_zero_ratio",
+  "description": "Zero analysis ratio on S compartment within valid H/I/S sum",
+  "acoustic_balance_alpha": 0.5,
+  "compartments": [
+    {
+      "values": [
+        1.0,
+        0.5
+      ],
+      "analysis_ratio": 0.9,
+      "weight_function": "log"
+    },
+    {
+      "values": [
+        0.2
+      ],
+      "analysis_ratio": 0.1,
+      "weight_function": "log"
+    },
+    {
+      "values": [
+        0.1
+      ],
+      "analysis_ratio": 0.0,
+      "weight_function": "log"
+    }
+  ],
+  "expected": {
+    "ewsd_score_total": 0.9435348389942289,
+    "ewsd_score_acoustic_balanced": 0.9747330750540331,
+    "compartments": [
+      {
+        "count": 2,
+        "original_sum_metric": 1.0986122886681096,
+        "ratio_weighted_metric": 0.9887510598012986,
+        "concentration_penalty": 0.9358297765069238,
+        "ewsd_score": 0.9253026833148333
+      },
+      {
+        "count": 1,
+        "original_sum_metric": 0.18232155679395465,
+        "ratio_weighted_metric": 0.018232155679395467,
+        "concentration_penalty": 1.0,
+        "ewsd_score": 0.018232155679395467
+      },
+      {
+        "count": 0,
+        "original_sum_metric": 0.0,
+        "ratio_weighted_metric": 0.0,
+        "concentration_penalty": 0.0,
+        "ewsd_score": 0.0
+      }
+    ]
+  }
+}

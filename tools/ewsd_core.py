@@ -26,6 +26,18 @@ from typing import Any, Iterable, Optional, Sequence, Union
 import numpy as np
 import pandas as pd
 
+from tools.ewsd_pure import (
+    ACOUSTIC_BALANCE_ALPHA_DEFAULT as _PURE_ACOUSTIC_BALANCE_ALPHA_DEFAULT,
+    CompartmentInputs,
+    EWSD_PURE_REVISION,
+    canonical_weight_key,
+    compute_compartment_metrics,
+    d24_strength_mask,
+    original_elementwise_weight,
+    original_sum_metric,
+    spectral_neff_from_linear_amplitudes,
+)
+
 
 INDIVIDUAL_SHEETS = {"Harmonic Spectrum", "Inharmonic Spectrum"}
 COMPILED_SHEETS = {
@@ -113,8 +125,8 @@ AUTO_RATIO_PRIORITY = [
     "energy_ratio",
 ]
 
-SCRIPT_VERSION = "EWSD-R v18"
-ACOUSTIC_BALANCE_ALPHA_DEFAULT = 0.50
+SCRIPT_VERSION = "EWSD-R v18.1"
+ACOUSTIC_BALANCE_ALPHA_DEFAULT = _PURE_ACOUSTIC_BALANCE_ALPHA_DEFAULT
 BIBLIOGRAPHIC_ALIGNMENT_FILL_EXPONENT_DEFAULT = 1.0
 PRIMARY_OUTPUT_FILENAME = "ewsd_ratio_respecting_results.xlsx"
 THESIS_SAFE_WEIGHT_FUNCTIONS = {"log", "d3", "d10", "d17", "d24", "sqrt", "cbrt", "linear"}
@@ -153,19 +165,6 @@ class ComponentSet:
     n_components_raw_nonharmonic_residual: int = 0
     n_components_raw_noise_subbass: int = 0
 
-
-def canonical_weight_key(name: str) -> str:
-    key = (name or "linear").strip().lower()
-    aliases = {
-        "auto_from_excel": "auto_from_excel",
-        "sum": "linear",
-        "d2": "linear",
-        "d8": "d17",
-        "logarithmic": "log",
-        "exp": "exponential",
-        "square": "squared",
-    }
-    return aliases.get(key, key)
 
 
 def safe_numeric_scalar(value: Any) -> float:
@@ -449,141 +448,12 @@ def extract_his_weights(
 
 
 # -----------------------------------------------------------------------------
-# Original SoundSpectrAnalyse weighting/sum family
+# Original SoundSpectrAnalyse weighting/sum family (delegates to ewsd_pure)
 # -----------------------------------------------------------------------------
 
-
-def _finite_nonnegative_vector(values: Union[np.ndarray, list[float], pd.Series]) -> np.ndarray:
-    v = np.asarray(values, dtype=float).reshape(-1)
-    v = v[np.isfinite(v) & (v >= 0.0)]
-    return v.astype(float, copy=False)
+_spectral_neff_from_linear_amplitudes = spectral_neff_from_linear_amplitudes
 
 
-def _spectral_neff_from_linear_amplitudes(values: Union[np.ndarray, list[float], pd.Series]) -> float:
-    """N_eff = 1 / sum(p_i^2), p_i = A_i^2 / sum(A_j^2)."""
-    v = _finite_nonnegative_vector(values)
-    if v.size == 0:
-        return 0.0
-    pwr = np.square(v)
-    total = float(np.sum(pwr))
-    if total <= 1e-30:
-        return 0.0
-    p = pwr / total
-    den = float(np.sum(np.square(p)))
-    if den <= 1e-30:
-        return 0.0
-    return float(1.0 / den)
-
-
-def original_elementwise_weight(values: Union[np.ndarray, list[float], pd.Series], key: str) -> np.ndarray:
-    """Per-component non-negative weights for participation/concentration diagnostics."""
-    k = canonical_weight_key(key)
-    v = _finite_nonnegative_vector(values)
-    if v.size == 0:
-        return np.zeros(0, dtype=float)
-
-    if k == "linear":
-        out = v
-    elif k == "sqrt":
-        out = np.sqrt(v)
-    elif k == "squared":
-        out = np.square(v)
-    elif k == "cbrt":
-        out = np.cbrt(v)
-    elif k == "cubic":
-        out = np.power(v, 3)
-    elif k in {"log", "d3", "d10"}:
-        out = np.log1p(v)
-    elif k == "exponential":
-        out = np.expm1(np.clip(v, 0.0, 50.0))
-    elif k == "inverse log":
-        out = 1.0 / (np.log1p(v) + 1e-10)
-    elif k == "d17":
-        # D17 scalar is based on sum(A^2) and N_eff; A^2 is the matching mass vector.
-        out = np.square(v)
-    elif k == "d24":
-        out = np.log1p(v)
-    else:
-        raise ValueError(f"Unknown weight function: {key}")
-
-    return np.where(np.isfinite(out) & (out > 0.0), out, 0.0).astype(float)
-
-
-def original_sum_metric(
-    values: Union[np.ndarray, list[float], pd.Series],
-    key: str,
-    frequencies_hz: Optional[Union[np.ndarray, list[float], pd.Series]] = None,
-    d24_global_amplitude_max: Optional[float] = None,
-) -> float:
-    """
-    Scalar sum/metric family matching the SoundSpectrAnalyse density.py logic.
-
-    linear/sum/D2: sum(A_i)
-    sqrt:          sum(sqrt(A_i))
-    squared:       sum(A_i^2)
-    cbrt:          sum(cuberoot(A_i))
-    cubic:         sum(A_i^3)
-    log/D3:        sum(ln(1 + A_i))
-    exponential:   sum(expm1(A_i))
-    inverse log:   sum(1 / (ln(1 + A_i) + eps))
-    D10:           sum(ln(1 + A_i)) * (N_eff / N)
-    D17:           ln(1 + sum(A_i^2)) * ln(1 + N_eff)
-    D24:           sum(ln(1 + A_i)) with A_i >= 1% max(A) and f_i <= 12000 Hz
-    """
-    k = canonical_weight_key(key)
-    v_all = np.asarray(values, dtype=float).reshape(-1)
-    f_all: Optional[np.ndarray] = None
-    if frequencies_hz is not None:
-        f_tmp = np.asarray(frequencies_hz, dtype=float).reshape(-1)
-        if f_tmp.size == v_all.size:
-            f_all = f_tmp
-
-    mask = np.isfinite(v_all) & (v_all >= 0.0)
-    if f_all is not None:
-        mask &= np.isfinite(f_all)
-    v = v_all[mask]
-    f = f_all[mask] if f_all is not None else None
-
-    if v.size == 0:
-        return 0.0
-
-    if k == "linear":
-        return float(np.sum(v))
-    if k == "sqrt":
-        return float(np.sum(np.sqrt(v)))
-    if k == "squared":
-        return float(np.sum(np.square(v)))
-    if k == "cbrt":
-        return float(np.sum(np.cbrt(v)))
-    if k == "cubic":
-        return float(np.sum(np.power(v, 3)))
-    if k in {"log", "d3"}:
-        return float(np.sum(np.log1p(v)))
-    if k == "exponential":
-        return float(np.sum(np.expm1(np.clip(v, 0.0, 50.0))))
-    if k == "inverse log":
-        return float(np.sum(1.0 / (np.log1p(v) + 1e-10)))
-    if k == "d10":
-        n_eff = float(_spectral_neff_from_linear_amplitudes(v))
-        n = float(v.size)
-        return float(np.sum(np.log1p(v)) * (n_eff / n)) if n > 0 else 0.0
-    if k == "d17":
-        n_eff = float(_spectral_neff_from_linear_amplitudes(v))
-        return float(np.log1p(float(np.sum(np.square(v)))) * np.log1p(n_eff))
-    if k == "d24":
-        m = np.ones(v.shape[0], dtype=bool)
-        if f is not None:
-            m &= f <= 12000.0
-        if d24_global_amplitude_max is not None and np.isfinite(float(d24_global_amplitude_max)):
-            a_max = float(d24_global_amplitude_max)
-        else:
-            a_max = float(np.max(v)) if v.size else 0.0
-        if a_max <= 0.0:
-            return 0.0
-        m &= v >= (0.01 * a_max)
-        return float(np.sum(np.log1p(v[m]))) if np.any(m) else 0.0
-
-    raise ValueError(f"Unknown weight function: {key}")
 # -----------------------------------------------------------------------------
 # Reading component distributions
 # -----------------------------------------------------------------------------
@@ -742,15 +612,7 @@ def _component_family_mask(component_types: pd.Series, family: str) -> pd.Series
 
 
 def _d24_strength_mask(values: np.ndarray, freqs: Optional[np.ndarray]) -> np.ndarray:
-    if values.size == 0:
-        return np.zeros(0, dtype=bool)
-    a_max = float(np.nanmax(values)) if np.isfinite(values).any() else 0.0
-    if a_max <= 0.0:
-        return np.zeros(values.shape[0], dtype=bool)
-    m = values >= (0.01 * a_max)
-    if freqs is not None and len(freqs) == len(m):
-        m &= np.asarray(freqs, dtype=float) <= 12000.0
-    return m
+    return d24_strength_mask(values, freqs)
 
 
 def _compute_family_metrics(
@@ -760,76 +622,53 @@ def _compute_family_metrics(
     analysis_ratio_weight: float,
     apply_anti_concentration: bool,
 ) -> dict[str, Any]:
-    out: dict[str, Any] = {
-        f"count_{family_name}": 0,
-        f"original_sum_metric_{family_name}": 0.0,
-        f"analysis_ratio_weight_{family_name}": float(analysis_ratio_weight) if np.isfinite(analysis_ratio_weight) else math.nan,
-        f"ratio_weighted_metric_{family_name}": 0.0,
-        f"weighted_mass_{family_name}": 0.0,
-        f"effective_component_count_{family_name}": 0.0,
-        f"concentration_penalty_{family_name}": 0.0,
-        f"entropy_normalized_{family_name}": 0.0,
-        f"ewsd_score_{family_name}": 0.0,
+    values = (
+        family_df["basis_value"].to_numpy(dtype=float)
+        if not family_df.empty and "basis_value" in family_df.columns
+        else np.array([], dtype=float)
+    )
+    freqs = (
+        family_df["frequency_hz"].to_numpy(dtype=float)
+        if not family_df.empty and "frequency_hz" in family_df.columns
+        else None
+    )
+    try:
+        metrics = compute_compartment_metrics(
+            CompartmentInputs(
+                values=values,
+                analysis_ratio=float(analysis_ratio_weight),
+                frequencies_hz=freqs,
+                weight_function=cset.weight_function,
+                apply_anti_concentration=apply_anti_concentration,
+            )
+        )
+    except Exception as exc:
+        return {
+            f"count_{family_name}": 0,
+            f"original_sum_metric_{family_name}": 0.0,
+            f"analysis_ratio_weight_{family_name}": float(analysis_ratio_weight)
+            if np.isfinite(float(analysis_ratio_weight))
+            else math.nan,
+            f"ratio_weighted_metric_{family_name}": 0.0,
+            f"weighted_mass_{family_name}": 0.0,
+            f"effective_component_count_{family_name}": 0.0,
+            f"concentration_penalty_{family_name}": 0.0,
+            f"entropy_normalized_{family_name}": 0.0,
+            f"ewsd_score_{family_name}": 0.0,
+            f"warning_{family_name}": f"compartment_error:{exc}",
+        }
+
+    return {
+        f"count_{family_name}": metrics.count,
+        f"original_sum_metric_{family_name}": metrics.original_sum_metric,
+        f"analysis_ratio_weight_{family_name}": metrics.analysis_ratio_weight,
+        f"ratio_weighted_metric_{family_name}": metrics.ratio_weighted_metric,
+        f"weighted_mass_{family_name}": metrics.weighted_mass,
+        f"effective_component_count_{family_name}": metrics.effective_component_count,
+        f"concentration_penalty_{family_name}": metrics.concentration_penalty,
+        f"entropy_normalized_{family_name}": metrics.entropy_normalized,
+        f"ewsd_score_{family_name}": metrics.ewsd_score,
     }
-    if family_df.empty or not np.isfinite(float(analysis_ratio_weight)) or float(analysis_ratio_weight) <= 0.0:
-        return out
-
-    values = family_df["basis_value"].to_numpy(dtype=float)
-    freqs = family_df["frequency_hz"].to_numpy(dtype=float) if "frequency_hz" in family_df.columns else None
-
-    try:
-        original_metric = float(original_sum_metric(values, cset.weight_function, freqs))
-    except Exception as exc:
-        out[f"warning_{family_name}"] = f"original_metric_error:{exc}"
-        return out
-
-    try:
-        strengths = original_elementwise_weight(values, cset.weight_function)
-    except Exception as exc:
-        out[f"warning_{family_name}"] = f"weight_function_error:{exc}"
-        return out
-
-    if strengths.size != family_df.shape[0]:
-        min_n = min(strengths.size, family_df.shape[0])
-        strengths = strengths[:min_n]
-        values = values[:min_n]
-        freqs = freqs[:min_n] if freqs is not None else None
-
-    if canonical_weight_key(cset.weight_function) == "d24":
-        strengths = np.where(_d24_strength_mask(values, freqs), strengths, 0.0)
-
-    # H/I/noise ratios are per-note analysis-derived ratios; they are applied
-    # separately to each compartment, not collapsed into a single mixed p_i distribution.
-    strengths = strengths * float(analysis_ratio_weight)
-    mask = np.isfinite(strengths) & (strengths > 0.0)
-    strengths = strengths[mask]
-
-    n = int(strengths.size)
-    total = float(np.sum(strengths)) if n else 0.0
-    if n and total > 0.0:
-        p = strengths / total
-        neff = float(1.0 / np.sum(p ** 2)) if np.sum(p ** 2) > 0 else 0.0
-        penalty = float(neff / n) if n > 0 else 0.0
-        entropy_norm = float(-np.sum(p * np.log(p + 1e-300)) / np.log(n)) if n > 1 else 0.0
-    else:
-        neff = 0.0
-        penalty = 0.0
-        entropy_norm = 0.0
-
-    ratio_weighted_metric = float(original_metric * float(analysis_ratio_weight))
-    score = float(ratio_weighted_metric * penalty) if apply_anti_concentration else float(ratio_weighted_metric)
-
-    out.update({
-        f"count_{family_name}": n,
-        f"original_sum_metric_{family_name}": float(original_metric),
-        f"ratio_weighted_metric_{family_name}": ratio_weighted_metric,
-        f"weighted_mass_{family_name}": total,
-        f"effective_component_count_{family_name}": neff,
-        f"concentration_penalty_{family_name}": penalty,
-        f"entropy_normalized_{family_name}": entropy_norm,
-        f"ewsd_score_{family_name}": score,
-    })
-    return out
 
 
 def _empty_row(cset: ComponentSet, reason: str, apply_anti_concentration: bool) -> dict[str, Any]:

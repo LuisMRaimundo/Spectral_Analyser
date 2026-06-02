@@ -1,0 +1,58 @@
+{
+  "id": "his_three_compartment_log",
+  "description": "Standard H/I/S split summing to 1",
+  "acoustic_balance_alpha": 0.5,
+  "compartments": [
+    {
+      "values": [
+        1.0,
+        0.8,
+        0.6
+      ],
+      "analysis_ratio": 0.8,
+      "weight_function": "log"
+    },
+    {
+      "values": [
+        0.2,
+        0.15
+      ],
+      "analysis_ratio": 0.15,
+      "weight_function": "log"
+    },
+    {
+      "values": [
+        0.05
+      ],
+      "analysis_ratio": 0.05,
+      "weight_function": "log"
+    }
+  ],
+  "expected": {
+    "ewsd_score_total": 1.4173254121488132,
+    "ewsd_score_acoustic_balanced": 1.4343114818317166,
+    "compartments": [
+      {
+        "count": 3,
+        "original_sum_metric": 1.7509374747078001,
+        "ratio_weighted_metric": 1.4007499797662402,
+        "concentration_penalty": 0.9761931013340971,
+        "ewsd_score": 1.3674024669416798
+      },
+      {
+        "count": 2,
+        "original_sum_metric": 0.3220834991691134,
+        "ratio_weighted_metric": 0.048312524875367004,
+        "concentration_penalty": 0.9828390696026741,
+        "ewsd_score": 0.047483436998661754
+      },
+      {
+        "count": 1,
+        "original_sum_metric": 0.048790164169432,
+        "ratio_weighted_metric": 0.0024395082084716,
+        "concentration_penalty": 1.0,
+        "ewsd_score": 0.0024395082084716
+      }
+    ]
+  }
+}

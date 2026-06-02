@@ -138,6 +138,34 @@
       "sheet_or_export": "research Spectral_Density_Metrics only",
       "citation": "implementation-defined"
     },
+    "EWSD_score_acoustic_balanced_ci_low": {
+      "status": "validation",
+      "phase": "phase_11",
+      "description": "Bootstrap 95% lower bound for EWSD_score_acoustic_balanced (partials + H/I/S ratios resampled).",
+      "sheet_or_export": "research Spectral_Density_Metrics only",
+      "citation": "tools/ewsd_uncertainty.bootstrap_ewsd_from_compartments"
+    },
+    "EWSD_score_acoustic_balanced_ci_high": {
+      "status": "validation",
+      "phase": "phase_11",
+      "description": "Bootstrap 95% upper bound for EWSD_score_acoustic_balanced.",
+      "sheet_or_export": "research Spectral_Density_Metrics only",
+      "citation": "tools/ewsd_uncertainty.bootstrap_ewsd_from_compartments"
+    },
+    "EWSD_score_acoustic_balanced_rel_uncertainty": {
+      "status": "validation",
+      "phase": "phase_11",
+      "description": "Relative bootstrap uncertainty (std/|point|) for EWSD_score_acoustic_balanced.",
+      "sheet_or_export": "research Spectral_Density_Metrics only",
+      "citation": "tools/ewsd_uncertainty.bootstrap_ewsd_from_compartments"
+    },
+    "ewsd_uncertainty_sources": {
+      "status": "validation",
+      "phase": "phase_11",
+      "description": "EWSD bootstrap provenance: partials+ratios, partials, or unavailable.",
+      "sheet_or_export": "research Spectral_Density_Metrics only",
+      "citation": "implementation-defined"
+    },
     "ewsd_stage3_version": {
       "status": "validation",
       "phase": "phase_11",

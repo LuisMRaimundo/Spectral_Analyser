@@ -1,0 +1,28 @@
+{
+  "id": "sqrt_weight_two_partial",
+  "description": "sqrt weight function",
+  "acoustic_balance_alpha": 0.5,
+  "compartments": [
+    {
+      "values": [
+        0.25,
+        1.0
+      ],
+      "analysis_ratio": 1.0,
+      "weight_function": "sqrt"
+    }
+  ],
+  "expected": {
+    "ewsd_score_total": 1.3499999999999999,
+    "ewsd_score_acoustic_balanced": 1.4230249470757705,
+    "compartments": [
+      {
+        "count": 2,
+        "original_sum_metric": 1.5,
+        "ratio_weighted_metric": 1.5,
+        "concentration_penalty": 0.8999999999999999,
+        "ewsd_score": 1.3499999999999999
+      }
+    ]
+  }
+}

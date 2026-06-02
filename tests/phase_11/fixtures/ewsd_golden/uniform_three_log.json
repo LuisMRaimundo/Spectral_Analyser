@@ -1,0 +1,29 @@
+{
+  "id": "uniform_three_log",
+  "description": "Three equal partials, full H ratio, log weight; penalty=1",
+  "acoustic_balance_alpha": 0.5,
+  "compartments": [
+    {
+      "values": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "analysis_ratio": 1.0,
+      "weight_function": "log"
+    }
+  ],
+  "expected": {
+    "ewsd_score_total": 2.0794415416798353,
+    "ewsd_score_acoustic_balanced": 2.0794415416798357,
+    "compartments": [
+      {
+        "count": 3,
+        "original_sum_metric": 2.0794415416798357,
+        "ratio_weighted_metric": 2.0794415416798357,
+        "concentration_penalty": 0.9999999999999999,
+        "ewsd_score": 2.0794415416798353
+      }
+    ]
+  }
+}

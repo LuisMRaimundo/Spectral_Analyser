@@ -2628,6 +2628,12 @@ def readme_lines(
             "    Companion EWSD with moderated penalty (N_eff/N)^0.5. Preferred for cross-instrument",
             "    bibliographic distance. Filter thesis rows with ewsd_primary_analysis_eligible == True.",
             "",
+            "EWSD_score_acoustic_balanced_ci_low / _ci_high / _rel_uncertainty:",
+            "    Bootstrap 95% uncertainty band for the balanced EWSD (partials + H/I/S ratios resampled).",
+            "",
+            "ewsd_uncertainty_sources:",
+            "    UQ provenance: partials+ratios, partials, or unavailable.",
+            "",
             "ewsd_primary_analysis_eligible:",
             "    Thesis gate: True only for individual_exact rows with valid H/I/S ratios, finite EWSD,",
             "    no warnings, parsed note, and a thesis-safe weight function.",
@@ -2733,6 +2739,12 @@ def readme_lines(
             "EWSD_score_acoustic_balanced (Stage 3):",
             "    Companion EWSD with moderated penalty (N_eff/N)^0.5. Preferred for cross-instrument",
             "    bibliographic distance. Filter thesis rows with ewsd_primary_analysis_eligible == True.",
+            "",
+            "EWSD_score_acoustic_balanced_ci_low / _ci_high / _rel_uncertainty:",
+            "    Bootstrap 95% uncertainty band for the balanced EWSD (partials + H/I/S ratios resampled).",
+            "",
+            "ewsd_uncertainty_sources:",
+            "    UQ provenance: partials+ratios, partials, or unavailable.",
             "",
             "ewsd_primary_analysis_eligible:",
             "    Thesis gate: True only for individual_exact rows with valid H/I/S ratios, finite EWSD,",
@@ -3297,6 +3309,7 @@ def build_workbook(
     research_metadata: Optional[ResearchExportMetadata] = None,
     include_legacy_cdm_mean: bool = False,
     include_ewsd: bool = True,
+    ewsd_fail_closed: bool = False,
 ) -> List[str]:
     warnings: List[str] = []
     if not source.is_file():
@@ -3362,16 +3375,24 @@ def build_workbook(
         errors="ignore",
     )
     apply_per_note_chart_paths(sd, source, merged, warnings)
+    stage3_diagnostics = pd.DataFrame()
+    stage3_status = "ok"
     if include_ewsd:
-        from tools.ewsd_research_integration import merge_ewsd_into_spectral_density_metrics
+        from tools.ewsd_research_integration import merge_ewsd_stage3
 
-        sd = merge_ewsd_into_spectral_density_metrics(
+        stage3_result = merge_ewsd_stage3(
             sd,
             merged,
             source,
             warnings,
             include_ewsd=True,
+            fail_closed=ewsd_fail_closed,
         )
+        sd = stage3_result.spectral_density_metrics
+        stage3_diagnostics = stage3_result.diagnostics
+        stage3_status = stage3_result.status
+        if stage3_status != "ok":
+            warnings.append(f"Stage 3 status: {stage3_status}")
     required_front_cols = [
         "Technique",
         "metadata_inference_status",
@@ -3654,6 +3675,13 @@ def build_workbook(
         "note_density_final_uncertainty_sources",
         "EWSD_score_total",
         "EWSD_score_acoustic_balanced",
+        "EWSD_score_total_ci_low",
+        "EWSD_score_total_ci_high",
+        "EWSD_score_total_rel_uncertainty",
+        "EWSD_score_acoustic_balanced_ci_low",
+        "EWSD_score_acoustic_balanced_ci_high",
+        "EWSD_score_acoustic_balanced_rel_uncertainty",
+        "ewsd_uncertainty_sources",
         "ewsd_mode",
         "ewsd_primary_analysis_eligible",
         "ewsd_his_ratio_source",
@@ -3743,6 +3771,14 @@ def build_workbook(
         metric_cols.insert(4, "density_weighted_sum_cdm_mean")
 
     _write_data_sheet(wb, "Spectral_Density_Metrics", sd, ratio_cols, tuple(metric_cols))
+    if include_ewsd and not stage3_diagnostics.empty:
+        _write_data_sheet(
+            wb,
+            "Stage3_Diagnostics",
+            stage3_diagnostics,
+            tuple(),
+            tuple(stage3_diagnostics.columns),
+        )
     sdm_ws = wb["Spectral_Density_Metrics"]
     hdrs = [sdm_ws.cell(1, c).value for c in range(1, sdm_ws.max_column + 1)]
     _hl = [
@@ -3973,6 +4009,7 @@ def export_research_workbook(
     research_metadata: Optional[ResearchExportMetadata] = None,
     include_legacy_cdm_mean: bool = False,
     include_ewsd: bool = True,
+    ewsd_fail_closed: bool = False,
 ) -> Path:
     """
     Build ``compiled_density_metrics_research.xlsx`` from a compiled workbook.
@@ -4027,6 +4064,7 @@ def export_research_workbook(
         research_metadata=meta,
         include_legacy_cdm_mean=include_legacy_cdm_mean,
         include_ewsd=include_ewsd,
+        ewsd_fail_closed=ewsd_fail_closed,
     )
     for w in warns:
         print(f"WARNING: {w}", file=sys.stderr)

@@ -188,6 +188,9 @@ Stage 3 runs automatically during research export (default `include_ewsd=True`).
 |---|---|
 | `EWSD_score_total` | Strict EWSD: $\sum_k r_k D_k (N_{\mathrm{eff},k}/N_k)$ |
 | `EWSD_score_acoustic_balanced` | Companion: same with penalty exponent $\alpha=0.5$ |
+| `EWSD_score_total_ci_low` / `_ci_high` / `_rel_uncertainty` | Bootstrap 95% CI for strict EWSD |
+| `EWSD_score_acoustic_balanced_ci_low` / `_ci_high` / `_rel_uncertainty` | Bootstrap 95% CI for balanced EWSD |
+| `ewsd_uncertainty_sources` | `partials+ratios`, `partials`, or `unavailable` |
 | `ewsd_primary_analysis_eligible` | Thesis gate — filter to `True` for final statistics |
 | `ewsd_mode` | Must be `individual_exact` for primary use |
 | `ewsd_H_ratio`, `ewsd_I_ratio`, `ewsd_S_noise_ratio` | Per-note H/I/S ratios used |
@@ -197,8 +200,10 @@ Stage 3 runs automatically during research export (default `include_ewsd=True`).
 | `ewsd_stage3_version` | Embedded EWSD core version tag (`EWSD-R v18`) |
 | `ewsd_merge_status` | `merged_individual_exact`, `no_per_note_workbooks_found`, etc. |
 
-Implementation: `tools/ewsd_core.py`, `tools/ewsd_research_integration.py`.
+Implementation: `tools/ewsd_pure.py`, `tools/ewsd_core.py`, `tools/ewsd_uncertainty.py`, `tools/ewsd_research_integration.py`.
 Highlight: `EWSD_score_total` uses pale orange fill (research workbook only).
+Construct validity: `docs/validation/EWSD_CONSTRUCT_VALIDITY.md`; sensitivity CLI: `tools/ewsd_sensitivity_report.py`.
+Stage 3 diagnostics sheet: `Stage3_Diagnostics` (per-note merge audit + summary row).
 
 <!-- TODO(author): expand R.1–R.3 with any further constraints required by the
      publication workflow; add R.5 ff. as needed. -->

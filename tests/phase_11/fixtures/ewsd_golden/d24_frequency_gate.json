@@ -1,0 +1,34 @@
+{
+  "id": "d24_frequency_gate",
+  "description": "D24 excludes partials above 12 kHz",
+  "acoustic_balance_alpha": 0.5,
+  "compartments": [
+    {
+      "values": [
+        1.0,
+        0.5,
+        0.2
+      ],
+      "analysis_ratio": 1.0,
+      "weight_function": "d24",
+      "frequencies_hz": [
+        5000.0,
+        15000.0,
+        8000.0
+      ]
+    }
+  ],
+  "expected": {
+    "ewsd_score_total": 0.6531114523007616,
+    "ewsd_score_acoustic_balanced": 0.7561604713928913,
+    "compartments": [
+      {
+        "count": 2,
+        "original_sum_metric": 0.8754687373539,
+        "ratio_weighted_metric": 0.8754687373539,
+        "concentration_penalty": 0.7460134490636271,
+        "ewsd_score": 0.6531114523007616
+      }
+    ]
+  }
+}
