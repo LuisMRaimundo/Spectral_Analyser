@@ -62,7 +62,7 @@ jobs:
           command: |
             mkdir -p test-results
             if [ "<< parameters.run-coverage >>" = "true" ]; then
-              python -m pytest tests -q --cov=. --cov-report=term-missing --junitxml=test-results/junit.xml
+              python -m pytest tests -q --cov --cov-report=term-missing --junitxml=test-results/junit.xml
             else
               python -m pytest tests -q --junitxml=test-results/junit.xml
             fi

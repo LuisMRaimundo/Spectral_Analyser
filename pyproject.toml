@@ -124,6 +124,66 @@ markers = [
     "slow: tests that are computationally expensive or unsuitable for the default fast suite",
 ]
 
+# Coverage scope: production analytical modules only (not tests, GUI, orchestrators,
+# one-off validation scripts, or generated artifacts). Use:
+#   python -m pytest tests -q --cov --cov-report=term-missing
+# Do not pass --cov=. on the CLI; that overrides this source list.
+[tool.coverage.run]
+source = [
+    "acoustic_density_core",
+    "analysis_policy",
+    "compile_metrics",
+    "data_integrity",
+    "density",
+    "density_uncertainty",
+    "energy_accounting",
+    "export_row_identity",
+    "harmonic_alignment",
+    "harmonic_peak_validation",
+    "harmonic_validation",
+    "inharmonicity_model",
+    "low_frequency_policy",
+    "metadata_sanitizer",
+    "metric_contract",
+    "mir_descriptors",
+    "note_parser",
+    "peak_component_counts",
+    "pipeline_contract",
+    "proc_audio",
+    "spectral_normalization",
+    "subbass_policy",
+    "temporal_segmentation",
+]
+omit = [
+    "tests/*",
+    ".circleci/*",
+    "main.py",
+    "run_*.py",
+    "gui_*.py",
+    "pipeline_orchestrator_gui.py",
+    "pipeline_orchestrator_integrated.py",
+    "acoustic_data_analysis_suite.py",
+    "run_real_corpus_validation.py",
+    "validate_canonical_metrics.py",
+    "verify_runtime_schema.py",
+    "tools/*",
+    "build/*",
+    "dist/*",
+    "*.egg-info/*",
+    "**/site-packages/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+precision = 1
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+]
+
 [tool.black]
 line-length = 100
 target-version = ['py310', 'py311']
