@@ -198,9 +198,19 @@ def dedupe_identical_columns(df: pd.DataFrame) -> pd.DataFrame:
             continue
         left = pd.to_numeric(out[base], errors="coerce")
         right = pd.to_numeric(out[col], errors="coerce")
-        if left.equals(right) or (
-            left.fillna(-999999.0).equals(right.fillna(-999999.0))
-            and left.isna().equals(right.isna())
+        # Pure-string pairs coerce to all-NaN on BOTH sides; aligned NaNs
+        # compare equal under Series.equals, which would wrongly drop a
+        # suffixed text column whose content differs from the base. The
+        # numeric-equivalence branch therefore only applies when the
+        # coercion retains numeric information on at least one side;
+        # otherwise the exact string comparison below decides.
+        has_numeric_info = bool(left.notna().any() or right.notna().any())
+        if has_numeric_info and (
+            left.equals(right)
+            or (
+                left.fillna(-999999.0).equals(right.fillna(-999999.0))
+                and left.isna().equals(right.isna())
+            )
         ):
             drop.append(col)
             continue
