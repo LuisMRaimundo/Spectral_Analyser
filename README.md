@@ -129,9 +129,23 @@ Practical lookup steps: [`docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`](do
 
 Stage 3 validation evidence (v18.1): pure reference math (`tools/ewsd_pure.py`), golden vectors, 49-note corpus regression, bootstrap UQ (`tools/ewsd_uncertainty.py`), sensitivity report (`tools/ewsd_sensitivity_report.py`), construct validity doc, CI gate in `.github/workflows/ci.yml`.
 
+## Development / tests
+
+**CI:** GitHub Actions (`.github/workflows/ci.yml`) on Python 3.10 and 3.11.
+
+```bash
+pip install -e ".[dev]"
+python -m pytest tests -q
+python -m pytest tests -q --cov --cov-report=term-missing   # scoped production modules; see pyproject.toml [tool.coverage.run]
+```
+
+Typical full suite: **1264 passed**, 3 skipped, 3 xfailed (2026-06-10). Do **not** pass `--cov=.` on the CLI — that overrides the scoped `source` list in `pyproject.toml`.
+
+**Scope boundary:** this repository analyses **audio recordings** (FFT/STFT, H/I/S, EWSD). It does **not** compute symbolic score homogeneity metrics such as **H_TI** / **H_TI_core** (see [Orchomogeneity_Analyser](https://github.com/LuisMRaimundo/Orchomogeneity_Analyser)).
+
 ## Scientific governance
 
-Methodological changes to the pipeline are tracked in [`CHANGES.md`](CHANGES.md) with explicit phase markers (phases 1, 7, 7.1, 8, 11 at time of writing). Each phase change is accompanied by phase-organised regression tests under `tests/phase_<n>/`. Symbolic-structure tests for the canonical formulae are under [`tests/formula_validation/`](tests/formula_validation/) and documented in [`docs/validation/FORMULA_VALIDATION_STATUS.md`](docs/validation/FORMULA_VALIDATION_STATUS.md).
+Methodological changes to the pipeline are tracked in [`CHANGES.md`](CHANGES.md) with explicit phase markers (phases 1–12 and substeps such as 7.1 / 7.1b at time of writing). Each phase change is accompanied by phase-organised regression tests under `tests/phase_<n>/` (including **`tests/phase_12/`** contract layers). Symbolic-structure tests for the canonical formulae are under [`tests/formula_validation/`](tests/formula_validation/) and documented in [`docs/validation/FORMULA_VALIDATION_STATUS.md`](docs/validation/FORMULA_VALIDATION_STATUS.md).
 
 Principal methodological commitments:
 
