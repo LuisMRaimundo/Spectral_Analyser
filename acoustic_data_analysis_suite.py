@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Acoustic Data Analysis Suite - Production-Grade Statistical Analysis Tool
+Spectral_Analyser — compiled-metrics statistical analysis tool
 ================================================================================
-Senior Data Engineer & Computational Musicologist Level Analysis
 
-This script performs comprehensive statistical analysis of spectral density
-metrics from acoustic analysis outputs. Designed for CERN-level scientific rigor.
+Part of Spectral_Analyser. Performs comprehensive statistical analysis of spectral
+density metrics from acoustic analysis outputs.
 
 Features:
 - Comprehensive descriptive statistics
@@ -20,9 +19,9 @@ Features:
 - Automated report generation
 - High-quality visualizations
 
-Author: AI Assistant (Senior Data Engineer & Computational Musicologist)
+Author: Luís Raimundo
 Version: 1.0.0
-License: Scientific Research Use
+License: Proprietary — see LICENSE at repository root
 """
 
 import pandas as pd
@@ -1043,7 +1042,7 @@ class AcousticDataAnalyzer:
         """Generate a comprehensive Markdown report."""
         lines = []
         
-        lines.append("# Acoustic Data Analysis Report\n")
+        lines.append("# Spectral_Analyser — Data Analysis Report\n")
         lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         lines.append(f"**Input File:** {self.excel_path.name}\n")
         lines.append(f"**Samples:** {len(self.df)}\n\n")
@@ -1763,7 +1762,7 @@ def run_gui():
     class AnalysisGUI:
         def __init__(self, root):
             self.root = root
-            self.root.title("Acoustic Data Analysis Suite - Multi-File Comparison")
+            self.root.title("Spectral_Analyser — Multi-File Comparison")
             self.root.geometry("900x700")
             self.root.resizable(True, True)
             
@@ -1788,7 +1787,7 @@ def run_gui():
             # Title
             title_label = ttk.Label(
                 main_frame, 
-                text="Acoustic Data Analysis Suite",
+                text="Spectral_Analyser",
                 font=("Arial", 16, "bold")
             )
             title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
@@ -2155,7 +2154,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description='Acoustic Data Analysis Suite - Production-Grade Statistical Analysis',
+        description='Spectral_Analyser — compiled-metrics statistical analysis',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

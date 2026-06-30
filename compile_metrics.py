@@ -10396,7 +10396,7 @@ def compile_density_metrics_with_pca(
         except Exception as e:
             logger.error("Error saving Excel workbook (PCA) to '%s': %s", outp, e, exc_info=True)
 
-    # Resumo compatível com Spectral_Analyser-main_7 (proc_audio lê _last_dr_audit)
+    # Resumo para proc_audio (_last_dr_audit)
     pca_exported = bool(meta_out.get("pca_export_status") == "exported")
     compile_density_metrics_with_pca._last_dr_audit = {  # type: ignore[attr-defined]
         "PCA_applied": pca_exported,

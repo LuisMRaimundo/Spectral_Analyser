@@ -3681,7 +3681,7 @@ class SuperAudioAnalyzer:
             )
             ax8.grid(True, alpha=0.3, axis='y')
         
-        plt.suptitle(f'Super Audio Analysis: {self.audio_path.name}', fontsize=16, fontweight='bold', y=0.995)
+        plt.suptitle(f'Spectral_Analyser: {self.audio_path.name}', fontsize=16, fontweight='bold', y=0.995)
         plt.savefig(self.output_dir / "super_comprehensive_analysis.png", dpi=300, bbox_inches='tight')
         plt.close()
         
@@ -3903,7 +3903,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description='Super Audio Analyzer - State-of-the-Art Edition',
+        description='Spectral_Analyser — super-analysis module',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

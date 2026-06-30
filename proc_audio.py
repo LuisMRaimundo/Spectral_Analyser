@@ -1863,7 +1863,7 @@ class AudioProcessor:
 
         # Outros
         self.results_directory: Path = Path("./results")
-        # Preenchido em _compile_metrics (alinhado com Spectral_Analyser-main_7 / compile_metrics DR audit)
+        # Preenchido em _compile_metrics (alinhado com compile_metrics DR audit)
         self.last_density_dr_audit: Dict[str, Any] = {}
         self.freq_min = 20.0
         self.freq_max = 20000.0
@@ -8079,7 +8079,7 @@ class AudioProcessor:
 
     def _find_compiled_metrics_excel(self, results_directory: Path) -> Optional[Path]:
         """
-        Localiza o Excel compilado (main_7 grava em compile_root; pode haver sufixo de dinâmica).
+        Localiza o Excel compilado (grava em compile_root; pode haver sufixo de dinâmica).
         """
         compile_root = self._resolve_compile_metrics_root(Path(results_directory))
         for fn in ("compiled_density_metrics.xlsx", "compiled_metrics.xlsx"):
@@ -12117,7 +12117,7 @@ def _process_file_worker_parallel(
     task: Tuple[Tuple[np.ndarray, int, str, str], Dict[str, Any]],
 ) -> Dict[str, Any]:
     """
-    Ponto de entrada picklável para ``multiprocessing.Pool`` (restaurado a partir de main_7).
+    Ponto de entrada picklável para ``multiprocessing.Pool``.
     Espera ``((y, sr, note, file_path), worker_params)``.
     """
     file_tuple, params = task
