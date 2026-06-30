@@ -2,7 +2,7 @@
 """
 ewsd_core.py — Effective Weighted Spectral Density (EWSD-R v18 core).
 
-Embedded computation module for SoundSpectrAnalyse Stage 3 research export.
+Embedded computation module for Spectral_Analyser Stage 3 research export.
 Source logic: apply_effective_weighted_spectral_density_gui_v18.py (EWSD-R v18).
 """
 
@@ -448,7 +448,7 @@ def extract_his_weights(
 
 
 # -----------------------------------------------------------------------------
-# Original SoundSpectrAnalyse weighting/sum family (delegates to ewsd_pure)
+# Original Spectral_Analyser weighting/sum family (delegates to ewsd_pure)
 # -----------------------------------------------------------------------------
 
 _spectral_neff_from_linear_amplitudes = spectral_neff_from_linear_amplitudes

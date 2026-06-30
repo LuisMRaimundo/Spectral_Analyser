@@ -1,6 +1,6 @@
-# SoundSpectrAnalyse
+# Spectral_Analyser
 
-SoundSpectrAnalyse is a spectral-analysis pipeline developed in support of doctoral research in musicology at NOVA University of Lisbon, with a focus on musical texture in twentieth-century repertoire. The instrument analyses individual note recordings and produces an auditable per-note and corpus-level decomposition of spectral content into harmonic, inharmonic, and sub-bass components (H/I/S), supplemented by a battery of psychoacoustic and MIR descriptors. The H/I/S model is treated throughout as an operational measurement framework - anchored in primary sources in acoustics and psychoacoustics - rather than as a universal ontology of musical sound. The pipeline is designed for traceable, reproducible analysis at doctoral standard: every exported metric is accompanied by an epistemic contract, every numeric constant by a provenance class, and every methodological change by a versioned and tested phase entry in CHANGES.md.
+Spectral_Analyser is a spectral-analysis pipeline developed in support of doctoral research in musicology at NOVA University of Lisbon, with a focus on musical texture in twentieth-century repertoire. The instrument analyses individual note recordings and produces an auditable per-note and corpus-level decomposition of spectral content into harmonic, inharmonic, and sub-bass components (H/I/S), supplemented by a battery of psychoacoustic and MIR descriptors. The H/I/S model is treated throughout as an operational measurement framework - anchored in primary sources in acoustics and psychoacoustics - rather than as a universal ontology of musical sound. The pipeline is designed for traceable, reproducible analysis at doctoral standard: every exported metric is accompanied by an epistemic contract, every numeric constant by a provenance class, and every methodological change by a versioned and tested phase entry in CHANGES.md.
 
 > **Documentation status (work in progress).** Several documents referenced below
 > are part of an ongoing documentation programme and are not yet present in this
@@ -16,7 +16,7 @@ SoundSpectrAnalyse is a spectral-analysis pipeline developed in support of docto
 
 ## What this software does
 
-SoundSpectrAnalyse analyses individual note recordings and produces a multi-sheet workbook of spectral, harmonic, inharmonic, sub-bass, and MIR descriptors per note, together with a corpus-level adaptive density profile. The pipeline runs in three stages:
+Spectral_Analyser analyses individual note recordings and produces a multi-sheet workbook of spectral, harmonic, inharmonic, sub-bass, and MIR descriptors per note, together with a corpus-level adaptive density profile. The pipeline runs in three stages:
 
 1. **Stage 1 — per-note analysis** (`proc_audio.AudioProcessor`): STFT, peak picking, F0 estimation, harmonic / inharmonic / sub-bass (H/I/S) partitioning, stiff-string inharmonicity fit, sub-bass policy, MIR descriptors (spectral moments, tristimulus, Aures roughness, ERB-weighted density), and optional temporal segmentation. Output: one `spectral_analysis.xlsx` per note.
 2. **Stage 2 — compilation** (`compile_metrics.compile_density_metrics_with_pca`): per-note rows aggregated into `compiled_density_metrics.xlsx` with tier-normalized columns, dissonance metrics, PCA scores, and validation summary.
@@ -36,7 +36,7 @@ The software is developed and tested on Python >=3.10,<3.12. Installation from a
 
 ```bash
 git clone <repository-url>
-cd "SoundSpectrAnalyse"
+cd "Spectral_Analyser"
 pip install -r requirements.txt
 ```
 
@@ -80,7 +80,7 @@ python run_orchestrator.py
 Equivalently, after installation:
 
 ```bash
-soundspectranalyse
+spectral-analyser
 ```
 
 ### Windows GUI

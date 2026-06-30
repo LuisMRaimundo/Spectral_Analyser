@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "soundspectranalyse"
+name = "spectral-analyser"
 version = "4.0.3"
-description = "Advanced spectral analysis tool for acoustic research with harmonic-order-aware spectral processing"
+description = "Spectral_Analyser — advanced spectral analysis for acoustic research with harmonic-order-aware processing"
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
 license = {text = "Proprietary - All Rights Reserved"}
@@ -55,9 +55,9 @@ dev = [
 
 [project.scripts]
 # Canonical CLI: full batch → empirical H–I–S → per-note → compiled pipeline (same as python run_orchestrator.py). Windows run.bat is separate: pipeline_orchestrator_gui.py (Tk).
-soundspectranalyse = "run_orchestrator:main"
+spectral-analyser = "run_orchestrator:main"
 # Former PyQt entry; main.py now forwards to pipeline_orchestrator_integrated.py --gui (Tk).
-soundspectranalyse-legacy-gui = "main:main"
+spectral-analyser-legacy-gui = "main:main"
 
 [tool.setuptools]
 # Flat layout: top-level modules (no src/ package); avoids invalid `packages = ["."]`

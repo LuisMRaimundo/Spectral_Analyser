@@ -83,7 +83,7 @@ def test_tilde_home_prefix_is_detected_as_local() -> None:
 @pytest.mark.parametrize(
     "url",
     [
-        "https://github.com/org/SoundSpectrAnalyse",
+        "https://github.com/org/Spectral_Analyser",
         "http://example.com/audio.wav",
         "https://doi.org/10.1234/abc.def",
     ],

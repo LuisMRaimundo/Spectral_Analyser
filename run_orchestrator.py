@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-SoundSpectrAnalyse - Pipeline Entry Point
+Spectral_Analyser - Pipeline Entry Point
 =========================================
 
 Pipeline:
@@ -64,7 +64,7 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(
         description=(
-            "SoundSpectrAnalyse pipeline - Stage 1 (per-note spectral "
+            "Spectral_Analyser pipeline - Stage 1 (per-note spectral "
             "analysis), Stage 2 (compilation), Stage 3 (research export + EWSD)."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,

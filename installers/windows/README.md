@@ -1,6 +1,6 @@
-# SoundSpectrAnalyse - Windows installer
+# Spectral_Analyser - Windows installer
 
-**Repository:** https://github.com/LuisMRaimundo/SoundSpectrAnalyse
+**Repository:** https://github.com/LuisMRaimundo/Spectral_Analyser
 
 ## Standard installation (no Python required)
 
@@ -8,7 +8,7 @@
 2. Open `installers\windows`.
 3. Double-click `INSTALL.bat` or `START-HERE.bat` (same as `Install and Run.bat`).
 4. Wait for first-time setup (**10-25 minutes** can be normal on slower networks).
-5. The SoundSpectrAnalyse GUI opens when setup finishes.
+5. The Spectral_Analyser GUI opens when setup finishes.
 
 After analysis with auto-compile enabled, each folder also contains `compiled_density_metrics.xlsx` and `compiled_density_metrics_research.xlsx` (Stage 3 EWSD scores in `Spectral_Density_Metrics`).
 

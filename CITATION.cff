@@ -1,10 +1,10 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata from this file."
-title: "SoundSpectrAnalyse"
+title: "Spectral_Analyser"
 version: "3.7.0"
 date-released: "2026-05-27"
 license: "LicenseRef-Proprietary"
-repository-code: "https://github.com/LuisMRaimundo/SoundSpectrAnalyse"
+repository-code: "https://github.com/LuisMRaimundo/Spectral_Analyser"
 authors:
   - family-names: "Raimundo"
     given-names: "Luís"
@@ -18,7 +18,7 @@ references:
     notes: "Funded the doctoral research that produced this software."
 preferred-citation:
   type: software
-  title: "SoundSpectrAnalyse"
+  title: "Spectral_Analyser"
   version: "3.7.0"
   authors:
     - family-names: "Raimundo"

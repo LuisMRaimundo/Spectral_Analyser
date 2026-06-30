@@ -414,18 +414,18 @@ def test_redact_public_path_leakage_and_detect_private_fragment() -> None:
 
 
 def test_get_metadata_privacy_mode_and_export_profile(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("SOUNDSPECTRAN_EXPORT_PROFILE", raising=False)
-    monkeypatch.delenv("SOUNDSPECTRANALYSE_EXPORT_PROFILE", raising=False)
-    monkeypatch.delenv("SOUNDSPECTRAN_METADATA_PRIVACY_MODE", raising=False)
-    monkeypatch.delenv("SOUNDSPECTRANALYSE_EXPORT_ABSOLUTE_PATHS", raising=False)
+    monkeypatch.delenv("SPECTRAL_ANALYSER_EXPORT_PROFILE", raising=False)
+    monkeypatch.delenv("SPECTRAL_ANALYSER_EXPORT_PROFILE", raising=False)
+    monkeypatch.delenv("SPECTRAL_ANALYSER_METADATA_PRIVACY_MODE", raising=False)
+    monkeypatch.delenv("SPECTRAL_ANALYSER_EXPORT_ABSOLUTE_PATHS", raising=False)
     assert ms.get_export_profile() == ""
     assert ms.get_metadata_privacy_mode() == "public"
 
-    monkeypatch.setenv("SOUNDSPECTRAN_EXPORT_PROFILE", "public_repository")
+    monkeypatch.setenv("SPECTRAL_ANALYSER_EXPORT_PROFILE", "public_repository")
     assert ms.get_metadata_privacy_mode() == "public"
 
-    monkeypatch.delenv("SOUNDSPECTRAN_EXPORT_PROFILE", raising=False)
-    monkeypatch.setenv("SOUNDSPECTRANALYSE_EXPORT_ABSOLUTE_PATHS", "true")
+    monkeypatch.delenv("SPECTRAL_ANALYSER_EXPORT_PROFILE", raising=False)
+    monkeypatch.setenv("SPECTRAL_ANALYSER_EXPORT_ABSOLUTE_PATHS", "true")
     assert ms.get_metadata_privacy_mode() == "internal_debug"
 
 
@@ -513,8 +513,8 @@ def test_redact_path_and_dataframe_passthrough_when_redaction_disabled(
 
 
 def test_get_metadata_privacy_mode_internal_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("SOUNDSPECTRANALYSE_EXPORT_ABSOLUTE_PATHS", raising=False)
-    monkeypatch.setenv("SOUNDSPECTRAN_METADATA_PRIVACY_MODE", "internal_debug")
+    monkeypatch.delenv("SPECTRAL_ANALYSER_EXPORT_ABSOLUTE_PATHS", raising=False)
+    monkeypatch.setenv("SPECTRAL_ANALYSER_METADATA_PRIVACY_MODE", "internal_debug")
     assert ms.get_metadata_privacy_mode() == "internal_debug"
 
 
@@ -543,7 +543,7 @@ def test_publication_path_fields_honour_dataset_root(tmp_path: Path) -> None:
 def test_redact_public_path_leakage_passthrough_in_internal_debug(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("SOUNDSPECTRAN_METADATA_PRIVACY_MODE", "internal_debug")
+    monkeypatch.setenv("SPECTRAL_ANALYSER_METADATA_PRIVACY_MODE", "internal_debug")
     text = f"notes stored at {_WIN_SAMPLE}"
     assert ms.redact_public_path_leakage(text) == text
 

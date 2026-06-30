@@ -1863,7 +1863,7 @@ class AudioProcessor:
 
         # Outros
         self.results_directory: Path = Path("./results")
-        # Preenchido em _compile_metrics (alinhado com SoundSpectrAnalyse-main_7 / compile_metrics DR audit)
+        # Preenchido em _compile_metrics (alinhado com Spectral_Analyser-main_7 / compile_metrics DR audit)
         self.last_density_dr_audit: Dict[str, Any] = {}
         self.freq_min = 20.0
         self.freq_max = 20000.0

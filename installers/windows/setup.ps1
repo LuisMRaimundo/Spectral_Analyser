@@ -1,4 +1,4 @@
-# First-time portable Python setup for SoundSpectrAnalyse (Windows).
+# First-time portable Python setup for Spectral_Analyser (Windows).
 #Requires -Version 5.1
 $ErrorActionPreference = 'Stop'
 
@@ -31,7 +31,7 @@ try {
 $Version = '3.11.9'
 $ZipUrl = "https://www.python.org/ftp/python/$Version/python-$Version-embed-amd64.zip"
 $GetPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
-$Temp = Join-Path $env:TEMP 'soundspectranalyse-python-setup'
+$Temp = Join-Path $env:TEMP 'spectral-analyser-python-setup'
 New-Item -ItemType Directory -Force -Path $Temp | Out-Null
 $ZipPath = Join-Path $Temp 'python-embed.zip'
 

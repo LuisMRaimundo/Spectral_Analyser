@@ -1,4 +1,4 @@
-# SoundSpectrAnalyse - Development / test dependencies
+# Spectral_Analyser - Development / test dependencies
 # Mirrors the [project.optional-dependencies] dev extra in pyproject.toml.
 # Install runtime deps first:  pip install -r requirements.txt
 # Then dev deps:               pip install -r requirements-dev.txt

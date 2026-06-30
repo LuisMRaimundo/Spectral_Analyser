@@ -1,6 +1,6 @@
 # Autonomous installers (no Python required)
 
-These launchers install a **private copy** of Python and all SoundSpectrAnalyse libraries on
+These launchers install a **private copy** of Python and all Spectral_Analyser libraries on
 **first run**, then open the desktop GUI. Users do **not** need to install Python, pip, or conda.
 
 **Requirements:** Internet on first run (~250-600 MB download depending on platform and wheel cache),
@@ -20,7 +20,7 @@ disk space ~1-2 GB after install, and one of:
    **`installers\windows\Install and Run.bat`**
 
 3. Wait for first-time setup.
-4. The SoundSpectrAnalyse GUI opens. Keep the console window open while you use the app.
+4. The Spectral_Analyser GUI opens. Keep the console window open while you use the app.
 
 To stop: close the GUI window, then close the console or press **Ctrl+C**.
 
@@ -54,7 +54,7 @@ chmod +x installers/linux/install-and-run.sh installers/linux/setup-runtime.sh
 | Location | Contents |
 |----------|----------|
 | `installers/runtime/` | Private Python + pip packages |
-| Runtime session | SoundSpectrAnalyse Tk GUI (`pipeline_orchestrator_gui.py`) |
+| Runtime session | Spectral_Analyser Tk GUI (`pipeline_orchestrator_gui.py`) |
 
 Each completed analysis folder also produces `compiled_density_metrics.xlsx` and, when Stage 2 auto-compile is enabled, `compiled_density_metrics_research.xlsx` with **`note_effective_component_density`** (acoustic fatness), **`note_density_final`**, and EWSD-R v18.1 scores with bootstrap CI in `Spectral_Density_Metrics` (Stage 3). See `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
 

@@ -130,7 +130,7 @@ def original_sum_metric(
     frequencies_hz: Optional[ArrayLike] = None,
     d24_global_amplitude_max: Optional[float] = None,
 ) -> float:
-    """Scalar sum/metric family matching SoundSpectrAnalyse density weighting."""
+    """Scalar sum/metric family matching Spectral_Analyser density weighting."""
     k = canonical_weight_key(key)
     v_all = np.asarray(values, dtype=float).reshape(-1)
     f_all: Optional[np.ndarray] = None

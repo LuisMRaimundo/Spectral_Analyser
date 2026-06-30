@@ -2,7 +2,7 @@
 Legacy / standalone Spectrum Analyzer GUI (PyQt).
 
 The canonical full-workflow entry point is ``python run_orchestrator.py`` (or
-the ``soundspectranalyse`` console script): batch analysis, empirical H-I-S
+the ``spectral-analyser`` console script): batch analysis, empirical H-I-S
 handoff, per-note spectral analysis, and compiled export.
 
 ``main.py`` no longer launches this window: it forwards to

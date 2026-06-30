@@ -29,19 +29,19 @@ __all__ = [
 
 
 def default_dataset_root_from_env() -> Optional[Path]:
-    v = os.environ.get("SOUNDSPECTRAN_DATASET_ROOT", "").strip()
+    v = os.environ.get("SPECTRAL_ANALYSER_DATASET_ROOT", "").strip()
     if not v:
         return None
     return Path(v)
 
 
 def default_dataset_name_from_env() -> Optional[str]:
-    v = os.environ.get("SOUNDSPECTRAN_DATASET_NAME", "").strip()
+    v = os.environ.get("SPECTRAL_ANALYSER_DATASET_NAME", "").strip()
     return v or None
 
 
 def default_dataset_version_from_env() -> Optional[str]:
-    v = os.environ.get("SOUNDSPECTRAN_DATASET_VERSION", "").strip()
+    v = os.environ.get("SPECTRAL_ANALYSER_DATASET_VERSION", "").strip()
     return v or None
 
 

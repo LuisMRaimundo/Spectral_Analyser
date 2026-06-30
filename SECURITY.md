@@ -1,6 +1,6 @@
 # Security and provenance notes
 
-This document describes the trust model of the `SoundSpectrAnalyse` installer
+This document describes the trust model of the `Spectral_Analyser` installer
 subsystem and the cryptographic verification performed on downloaded artefacts.
 It is intended for users who will cite analyses produced by this tool in
 published research, for thesis examiners, and for future maintainers.
@@ -63,7 +63,7 @@ additional measures should be performed in a separate task:
 ## 5. Reporting a security concern
 
 Please report security concerns through a private channel (a GitHub Security
-Advisory on `LuisMRaimundo/SoundSpectrAnalyse`, or direct email to the
+Advisory on `LuisMRaimundo/Spectral_Analyser`, or direct email to the
 maintainer). Do not open a public issue for unpatched vulnerabilities.
 
 ## 6. Versions pinned at the time of writing

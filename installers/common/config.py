@@ -1,4 +1,4 @@
-"""Paths and download URLs for SoundSpectrAnalyse autonomous installers."""
+"""Paths and download URLs for Spectral_Analyser autonomous installers."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import platform
 import sys
 from pathlib import Path
 
-APP_NAME = "SoundSpectrAnalyse"
+APP_NAME = "Spectral_Analyser"
 PYTHON_VERSION = "3.11.9"
 PBS_TAG = "20240415"
 
@@ -26,7 +26,7 @@ STAMP_FILE = RUNTIME_DIR / ".install_ok"
 REQUIREMENTS = PROJECT_ROOT / "requirements.txt"
 GUI_ENTRY = PROJECT_ROOT / "pipeline_orchestrator_gui.py"
 CLI_ENTRY = PROJECT_ROOT / "run_orchestrator.py"
-REPO_URL = "https://github.com/LuisMRaimundo/SoundSpectrAnalyse"
+REPO_URL = "https://github.com/LuisMRaimundo/Spectral_Analyser"
 
 
 def platform_key() -> str:

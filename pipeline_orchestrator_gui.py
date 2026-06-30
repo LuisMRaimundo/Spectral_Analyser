@@ -1,5 +1,5 @@
-﻿"""
-SoundSpectrAnalyse - standalone Tk file-picker GUI.
+"""
+Spectral_Analyser - standalone Tk file-picker GUI.
 
 This GUI exposes the canonical three-stage pipeline:
 
@@ -600,7 +600,7 @@ class QueueLogHandler(logging.Handler):
 class RobustOrchestratorApp:
     def __init__(self, master: tk.Tk):
         self.master = master
-        master.title("SoundSpectrAnalyse \u2014 Per-note Spectral Analysis")
+        master.title("Spectral_Analyser \u2014 Per-note Spectral Analysis")
         master.geometry("1200x850")
 
         self.processing_queue: List[Path] = []

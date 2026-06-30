@@ -458,8 +458,8 @@ class SuperAudioAnalyzer:
         """
         try:
             from importlib import metadata as importlib_metadata
-            version = importlib_metadata.version("soundspectranalyse")
-            return version, "importlib.metadata:soundspectranalyse"
+            version = importlib_metadata.version("spectral-analyser")
+            return version, "importlib.metadata:spectral-analyser"
         except Exception:
             pass
 

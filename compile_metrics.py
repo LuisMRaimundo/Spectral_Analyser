@@ -5725,8 +5725,8 @@ def _get_project_version_info() -> tuple[str, str]:
     """
     try:
         from importlib import metadata as importlib_metadata
-        version = importlib_metadata.version("soundspectranalyse")
-        return version, "importlib.metadata:soundspectranalyse"
+        version = importlib_metadata.version("spectral-analyser")
+        return version, "importlib.metadata:spectral-analyser"
     except Exception:
         pass
 
@@ -10396,7 +10396,7 @@ def compile_density_metrics_with_pca(
         except Exception as e:
             logger.error("Error saving Excel workbook (PCA) to '%s': %s", outp, e, exc_info=True)
 
-    # Resumo compatível com SoundSpectrAnalyse-main_7 (proc_audio lê _last_dr_audit)
+    # Resumo compatível com Spectral_Analyser-main_7 (proc_audio lê _last_dr_audit)
     pca_exported = bool(meta_out.get("pca_export_status") == "exported")
     compile_density_metrics_with_pca._last_dr_audit = {  # type: ignore[attr-defined]
         "PCA_applied": pca_exported,

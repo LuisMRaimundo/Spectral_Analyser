@@ -1,4 +1,4 @@
-# SoundSpectrAnalys v51 Release Notes
+# Spectral_Analyser v51 Release Notes
 
 ## Scientific consolidation scope
 

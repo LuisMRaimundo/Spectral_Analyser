@@ -1,4 +1,4 @@
-# SoundSpectrAnalyse — Complete Technical Manual
+# Spectral_Analyser — Complete Technical Manual
 
 **Package version:** 4.0.3 (`pyproject.toml`).  
 **Export schema:** v4.0.0–v4.0.3 — normative detail in
@@ -7,7 +7,7 @@
 
 ## 0. Scope and epistemic status
 
-This manual documents the current implementation in `SoundSpectrAnalyse` as code exists today.
+This manual documents the current implementation in `Spectral_Analyser` as code exists today.
 
 - The software analyses individual note recordings.
 - It is not restricted to clarinet.

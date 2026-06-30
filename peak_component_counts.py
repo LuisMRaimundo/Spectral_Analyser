@@ -2,7 +2,7 @@
 """
 Peak-based harmonic / inharmonic / subbass classification for detected spectral rows.
 
-Adapted from SoundSpectrAnalyse-main_7 ``audio_analysis/super_audio_analyzer`` (one
+Adapted from Spectral_Analyser-main_7 ``audio_analysis/super_audio_analyzer`` (one
 strongest local assignment per harmonic order, cents tolerance). Intended for
 **peak lists** (e.g. ``filtered_list_df``), not raw FFT bin grids.
 """

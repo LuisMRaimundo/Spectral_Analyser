@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions
-title SoundSpectrAnalyse
+title Spectral_Analyser
 
 cd /d "%~dp0..\.." || (
   echo ERROR: Cannot find project root.
@@ -16,10 +16,10 @@ set "LOG=%ROOT%\installers\runtime\windows\install.log"
 echo.
 echo  *** USE THIS FILE FOR NORMAL INSTALL ***
 echo.
-echo  SoundSpectrAnalyse
+echo  Spectral_Analyser
 echo  ==================
 echo.
-echo  Repository: https://github.com/LuisMRaimundo/SoundSpectrAnalyse
+echo  Repository: https://github.com/LuisMRaimundo/Spectral_Analyser
 echo.
 
 if not exist "%BOOT%" (

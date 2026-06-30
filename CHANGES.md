@@ -558,7 +558,7 @@ Full suite: 102 passed, 2 skipped.
 
 - No existing test modified.
 - No `.py` module under the implementation tree modified.
-- The suite is deliberately proportionate (six formulae), not a full mirror of `SoundSpectrAnalyse-main/tests/formula_validation/`, because v55 has scientific modules (`adaptive_density_engine.py`, `inharmonicity_model.py`, `subbass_policy.py`, `spectral_normalization.py`, etc.) that have no counterpart in `main`. A direct mirror would be incoherent.
+- The suite is deliberately proportionate (six formulae), not a full mirror of `Spectral_Analyser-main/tests/formula_validation/`, because v55 has scientific modules (`adaptive_density_engine.py`, `inharmonicity_model.py`, `subbass_policy.py`, `spectral_normalization.py`, etc.) that have no counterpart in `main`. A direct mirror would be incoherent.
 - Tests are conservative: they assert structural invariants (presence of `sqrt`, polynomial degree, additive structure) rather than exact AST identity, to avoid firing on legitimate refactoring.
 
 # Authorial completion of README.md and CITATION.cff; LICENSE file and pyproject.toml license synchronisation (2026-05-27)

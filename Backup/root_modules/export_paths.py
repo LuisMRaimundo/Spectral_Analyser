@@ -3,7 +3,7 @@ Publication-safe path handling for JSON/Excel/metadata exports.
 
 Delegates to :mod:`metadata_sanitizer` export helpers (v7-compatible).
 
-Legacy: set ``SOUNDSPECTRANALYSE_EXPORT_ABSOLUTE_PATHS=1`` to skip structured
+Legacy: set ``SPECTRAL_ANALYSER_EXPORT_ABSOLUTE_PATHS=1`` to skip structured
 sanitization (maps to ``metadata_privacy_mode=internal_debug``).
 """
 
@@ -42,7 +42,7 @@ def export_absolute_paths() -> bool:
     try:
         return get_metadata_privacy_mode() == "internal_debug"
     except Exception:
-        v = os.environ.get("SOUNDSPECTRANALYSE_EXPORT_ABSOLUTE_PATHS", "").strip().lower()
+        v = os.environ.get("SPECTRAL_ANALYSER_EXPORT_ABSOLUTE_PATHS", "").strip().lower()
         return v in ("1", "true", "yes", "debug")
 
 

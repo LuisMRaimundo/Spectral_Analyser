@@ -4,7 +4,7 @@ setlocal
 
 cd /d "%~dp0"
 
-echo Starting SoundSpectrAnalyse pipeline orchestrator (Tk / tier GUI)...
+echo Starting Spectral_Analyser pipeline orchestrator (Tk / tier GUI)...
 
 echo   Target: pipeline_orchestrator_gui.py
 

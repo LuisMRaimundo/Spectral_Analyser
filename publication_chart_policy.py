@@ -2,7 +2,7 @@
 ============================
 
 Central policy module for user-facing plots, charts, and default metric
-selectors generated from compiled SoundSpectrAnalyse workbooks.
+selectors generated from compiled Spectral_Analyser workbooks.
 
 Why this module exists
 ----------------------

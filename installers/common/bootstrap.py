@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bootstrap portable Python + dependencies, then launch SoundSpectrAnalyse."""
+"""Bootstrap portable Python + dependencies, then launch Spectral_Analyser."""
 
 from __future__ import annotations
 

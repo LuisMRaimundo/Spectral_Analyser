@@ -5,7 +5,7 @@ cd "$(dirname "$0")/../.."
 ROOT="$(pwd)"
 
 echo ""
-echo "  SoundSpectrAnalyse"
+echo "  Spectral_Analyser"
 echo "  =================="
 echo ""
 

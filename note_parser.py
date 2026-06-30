@@ -1,4 +1,4 @@
-"""Canonical note-token parser for SoundSpectrAnalyse.
+"""Canonical note-token parser for Spectral_Analyser.
 
 This module is the single source of truth for note-token extraction from
 audio filenames and result folders. It enforces the following audit

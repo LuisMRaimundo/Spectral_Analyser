@@ -1,7 +1,7 @@
 """validate_canonical_metrics.py
 =================================
 
-Scientific validation script for SoundSpectrAnalyse canonical metrics.
+Scientific validation script for Spectral_Analyser canonical metrics.
 
 Purpose
 -------
@@ -988,7 +988,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="validate_canonical_metrics",
         description=(
-            "Scientific validation of the SoundSpectrAnalyse canonical "
+            "Scientific validation of the Spectral_Analyser canonical "
             "metrics. Reads a compiled workbook plus metrics_dictionary.json "
             "and emits a validation report (xlsx and/or md). Performs no "
             "musicological inference."

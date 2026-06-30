@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document covers operational scripts in `SoundSpectrAnalyse` (runtime, orchestration, validation, export, GUI worker, and support modules), excluding test files.
+This document covers operational scripts in `Spectral_Analyser` (runtime, orchestration, validation, export, GUI worker, and support modules), excluding test files.
 
 ## Phase map (end-to-end runtime)
 

@@ -555,9 +555,19 @@ def list_publication_path_violations_in_excel(path: Union[str, Path]) -> List[st
 # :func:`sanitize_metadata_dict` which follows REDACT_TOKEN rules for Excel/CSV.
 # ---------------------------------------------------------------------------
 
-_ENV_PROFILE_EXPORT = ("SOUNDSPECTRAN_EXPORT_PROFILE", "SOUNDSPECTRANALYSE_EXPORT_PROFILE")
-_ENV_PRIVACY_EXPORT = "SOUNDSPECTRAN_METADATA_PRIVACY_MODE"
-_ENV_LEGACY_ABS_EXPORT = "SOUNDSPECTRANALYSE_EXPORT_ABSOLUTE_PATHS"
+_ENV_PROFILE_EXPORT = (
+    "SPECTRAL_ANALYSER_EXPORT_PROFILE",
+    "SOUNDSPECTRAN_EXPORT_PROFILE",
+    "SOUNDSPECTRANALYSE_EXPORT_PROFILE",
+)
+_ENV_PRIVACY_EXPORT_KEYS = (
+    "SPECTRAL_ANALYSER_METADATA_PRIVACY_MODE",
+    "SOUNDSPECTRAN_METADATA_PRIVACY_MODE",
+)
+_ENV_LEGACY_ABS_EXPORT_KEYS = (
+    "SPECTRAL_ANALYSER_EXPORT_ABSOLUTE_PATHS",
+    "SOUNDSPECTRANALYSE_EXPORT_ABSOLUTE_PATHS",
+)
 
 _WIN_ABS_START_EXPORT = re.compile(r"^[A-Za-z]:[/\\]")
 _UNC_EXPORT = re.compile(r"^\\\\(\?|\.)\\")
@@ -613,11 +623,15 @@ def get_metadata_privacy_mode() -> str:
     """``public`` (default) or ``internal_debug`` for structured JSON-style exports."""
     if get_export_profile() == "public_repository":
         return "public"
-    if os.environ.get(_ENV_LEGACY_ABS_EXPORT, "").strip().lower() in ("1", "true", "yes", "debug"):
-        return "internal_debug"
-    v = os.environ.get(_ENV_PRIVACY_EXPORT, "public").strip().lower()
-    if v in ("internal", "internal_debug", "debug"):
-        return "internal_debug"
+    for key in _ENV_LEGACY_ABS_EXPORT_KEYS:
+        if os.environ.get(key, "").strip().lower() in ("1", "true", "yes", "debug"):
+            return "internal_debug"
+    for key in _ENV_PRIVACY_EXPORT_KEYS:
+        v = os.environ.get(key, "").strip().lower()
+        if v:
+            if v in ("internal", "internal_debug", "debug"):
+                return "internal_debug"
+            break
     return "public"
 
 

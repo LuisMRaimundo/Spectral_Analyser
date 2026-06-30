@@ -34,7 +34,7 @@ proc_audio analysis. If a per-note workbook lacks the canonical
 ``component_*`` ratios, Stage 2 surfaces ``error/missing_component_weights``
 rather than falling back to legacy aliases.
 
-Author: SoundSpectrAnalyse maintainers
+Author: Spectral_Analyser maintainers
 """
 
 from __future__ import annotations

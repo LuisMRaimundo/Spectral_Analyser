@@ -1,4 +1,4 @@
-# SoundSpectrAnalyse - Production Dependencies
+# Spectral_Analyser - Production Dependencies
 # Pinned versions for reproducibility
 
 # Core scientific computing
