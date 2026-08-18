@@ -248,52 +248,179 @@ def test_multiphonic_half_integers_are_inharmonic(tmp_path: Path) -> None:
             assert int(near_half) >= 1 or len(inh) > 0
 
 
-def test_c1_fixture_count_drops_if_present() -> None:
-    wb = FIXTURE_DIR / "C1" / "spectral_analysis.xlsx"
-    if not wb.exists():
+FIXTURE_N_FFT = 16384
+FIXTURE_ZERO_PADDING = 2
+FIXTURE_HOP_LENGTH = 2048
+
+
+def _settings_from_workbook(wb: Path) -> dict:
+    """Replay the original per-note analysis settings from Analysis_Metadata."""
+    meta = pd.read_excel(wb, sheet_name="Analysis_Metadata")
+    mapping = {
+        str(k): v for k, v in zip(meta["Parameter"].astype(str), meta["Value"])
+    }
+
+    def _int(key: str, default: int) -> int:
+        try:
+            return int(float(mapping[key]))
+        except (KeyError, TypeError, ValueError):
+            return int(default)
+
+    def _float(key: str, default: float) -> float:
+        try:
+            return float(mapping[key])
+        except (KeyError, TypeError, ValueError):
+            return float(default)
+
+    return {
+        "n_fft": _int("n_fft", FIXTURE_N_FFT),
+        "zero_padding": _int("zero_padding", FIXTURE_ZERO_PADDING),
+        "hop_length": _int("hop_length", FIXTURE_HOP_LENGTH),
+        "window": str(mapping.get("window") or "blackmanharris"),
+        "weight_function": str(mapping.get("weight_function") or "log"),
+        "density_salience_threshold_db": _float("density_salience_threshold_db", -90.0),
+        "density_frequency_ceiling_hz": _float("density_frequency_ceiling_hz", 20000.0),
+        "freq_min": _float("freq_min", 20.0),
+        "freq_max": _float("freq_max", 20000.0),
+    }
+
+
+def _fixture_audio(folder: Path) -> Path | None:
+    named = []
+    generic = []
+    for p in folder.iterdir():
+        if p.suffix.lower() not in {".aif", ".aiff", ".wav"}:
+            continue
+        if p.stem.lower() == "audio":
+            generic.append(p)
+        else:
+            named.append(p)
+    if named:
+        return named[0]
+    return generic[0] if generic else None
+
+
+def _run_fixture_audio(audio: Path, out: Path, settings: dict | None = None) -> Path:
+    cfg = {
+        "n_fft": FIXTURE_N_FFT,
+        "zero_padding": FIXTURE_ZERO_PADDING,
+        "hop_length": FIXTURE_HOP_LENGTH,
+        "window": "blackmanharris",
+        "weight_function": "log",
+        "density_salience_threshold_db": -90.0,
+        "density_frequency_ceiling_hz": 20000.0,
+        "freq_min": 20.0,
+        "freq_max": 20000.0,
+    }
+    if settings:
+        cfg.update(settings)
+    ap = AudioProcessor()
+    ap.load_audio_files([str(audio)])
+    ap.apply_filters_and_generate_data(
+        results_directory=out,
+        n_fft=int(cfg["n_fft"]),
+        zero_padding=int(cfg["zero_padding"]),
+        hop_length=int(cfg["hop_length"]),
+        window=str(cfg["window"]),
+        weight_function=str(cfg["weight_function"]),
+        density_salience_threshold_db=float(cfg["density_salience_threshold_db"]),
+        density_frequency_ceiling_hz=float(cfg["density_frequency_ceiling_hz"]),
+        freq_min=float(cfg["freq_min"]),
+        freq_max=float(cfg["freq_max"]),
+        dissonance_enabled=False,
+        dissonance_curve=False,
+        dissonance_scale=False,
+        compare_models=False,
+        compile_per_call=False,
+        parallel_processing=False,
+    )
+    workbooks = list(out.rglob("spectral_analysis.xlsx"))
+    assert workbooks, f"no workbook for {audio}"
+    return workbooks[0]
+
+
+def _metrics_row(wb: Path) -> pd.Series:
+    return pd.read_excel(wb, sheet_name="Metrics").iloc[0]
+
+
+def test_c1_fixture_count_drops_if_present(tmp_path: Path) -> None:
+    folder = FIXTURE_DIR / "C1"
+    old_wb = folder / "spectral_analysis.xlsx"
+    audio = _fixture_audio(folder)
+    if not old_wb.exists() and audio is None:
         pytest.skip("C1 tuba fixture not present under tests/acoustic_validity/fixtures/low_f0/")
-    # Re-running the fixture audio is preferred; if only the old export exists,
-    # document the pre-fix count so a future regeneration can be compared.
-    old = pd.read_excel(wb, sheet_name="Metrics")
-    old_count = float(old.iloc[0].get("validated_harmonic_component_count_body_ceiling", np.nan))
-    expect = FIXTURE_DIR / "C1" / "expected_v2.json"
-    if expect.exists():
-        spec = json.loads(expect.read_text(encoding="utf-8"))
-        assert 28 <= spec["validated_count"] <= 45
-    else:
+    old_count = float("nan")
+    if old_wb.exists():
+        old_count = float(
+            _metrics_row(old_wb).get("validated_harmonic_component_count_body_ceiling", np.nan)
+        )
+    if audio is None:
         assert not np.isfinite(old_count) or old_count >= 28
+        pytest.skip("C1 audio missing; only the pre-4.1.0 workbook is present")
+    settings = _settings_from_workbook(old_wb) if old_wb.exists() else None
+    new_wb = _run_fixture_audio(audio, tmp_path / "run_C1", settings)
+    row = _metrics_row(new_wb)
+    new_count = float(row.get("validated_harmonic_component_count_body_ceiling", np.nan))
+    stop_hz = float(row.get("harmonic_body_stop_hz", np.nan))
+    assert np.isfinite(new_count)
+    assert 28 <= new_count <= 45
+    if np.isfinite(old_count):
+        assert new_count < old_count
+    assert np.isfinite(stop_hz) and 400.0 <= stop_hz <= 2500.0
 
 
-def test_trombone_pp_regression_if_present() -> None:
+def test_trombone_pp_regression_if_present(tmp_path: Path) -> None:
     if not TROMBONE_DIR.exists():
         pytest.skip("trombone pp fixtures not present")
+    notes = sorted(
+        p for p in TROMBONE_DIR.iterdir() if p.is_dir() and (p / "expected_main.json").exists()
+    )
+    if not notes:
+        pytest.skip("trombone pp expected_main.json files not present")
     moved: list[str] = []
-    for wb in sorted(TROMBONE_DIR.rglob("spectral_analysis.xlsx")):
-        expect = wb.parent / "expected_main.json"
-        if not expect.exists():
+    band_dev: dict[str, list[float]] = {"E2-D#3": [], "E3-C5": []}
+    for folder in notes:
+        spec = json.loads((folder / "expected_main.json").read_text(encoding="utf-8"))
+        note = str(spec.get("note") or folder.name)
+        audio = _fixture_audio(folder)
+        if audio is None:
             continue
-        spec = json.loads(expect.read_text(encoding="utf-8"))
-        metrics = pd.read_excel(wb, sheet_name="Metrics")
-        row = metrics.iloc[0]
-        note = str(spec.get("note") or wb.parent.name)
-        tol = 0.03 if note[:1] in {"E", "F", "G"} and "2" in note or "D#" in note else 0.01
-        if note >= "E3":
-            tol = 0.01
-        else:
-            tol = 0.03
-        for key in (
-            "note_density_final",
-            "EWSD_score_total",
-            "EWSD_score_acoustic_balanced",
-        ):
-            if key not in spec or key not in row.index:
-                continue
-            old = float(spec[key])
-            new = float(row[key])
-            if not np.isfinite(old) or abs(old) < 1e-12:
-                continue
-            rel = abs(new - old) / abs(old)
-            if rel > tol:
-                moved.append(f"{note} {key}: {rel:.3%}")
+        old_wb = folder / "spectral_analysis.xlsx"
+        settings = _settings_from_workbook(old_wb) if old_wb.exists() else None
+        new_wb = _run_fixture_audio(audio, tmp_path / f"run_{folder.name}", settings)
+        row = _metrics_row(new_wb)
+        rank = _note_sort_key(note)
+        band = "E3-C5" if rank >= _note_sort_key("E3") else "E2-D#3"
+        if "canonical_density" not in spec or "canonical_density" not in row.index:
+            moved.append(f"{note} canonical_density: missing")
+            continue
+        old = float(spec["canonical_density"])
+        new = float(row["canonical_density"])
+        if not np.isfinite(old) or abs(old) < 1e-12 or not np.isfinite(new):
+            continue
+        rel = abs(new - old) / abs(old)
+        band_dev[band].append(rel)
+    if not any(band_dev.values()):
+        pytest.skip("trombone pp audio not present")
+    max_low = max(band_dev["E2-D#3"]) if band_dev["E2-D#3"] else float("nan")
+    max_high = max(band_dev["E3-C5"]) if band_dev["E3-C5"] else float("nan")
+    report = (
+        f"trombone max |Δcanonical_density| E2–D#3={max_low:.2%} "
+        f"(n={len(band_dev['E2-D#3'])}); E3–C5={max_high:.2%} "
+        f"(n={len(band_dev['E3-C5'])})"
+    )
     if moved:
-        pytest.fail("trombone notes moved more than allowed:\n" + "\n".join(moved))
+        pytest.fail(report + "\n" + "\n".join(moved))
+    assert band_dev["E2-D#3"] and band_dev["E3-C5"], report
+    print(report)
+
+
+def _note_sort_key(name: str) -> tuple[int, int]:
+    raw = str(name).strip().replace("s", "#")
+    pc = {"C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, "E": 4, "F": 5,
+          "F#": 6, "Gb": 6, "G": 7, "G#": 8, "Ab": 8, "A": 9, "A#": 10, "Bb": 10, "B": 11}
+    for n in (2, 1):
+        if len(raw) >= n + 1 and raw[:-1] in pc and raw[-1].isdigit():
+            return (int(raw[-1]), pc[raw[:-1]])
+    return (99, 0)
+

@@ -1,13 +1,19 @@
 # Low-f₀ fixtures
 
-Copy the three IOWA tuba *pp* stable exports (C1, D#1, C2 `spectral_analysis.xlsx`
-and, if available, the source audio) into:
+IOWA tuba *pp* `_Sustains_Stable` exports and audio:
 
-- `C1/`
-- `Ds1/` (D#1)
+- `C1/` — `spectral_analysis.xlsx` (main / pre-4.1.0), `audio.aif`
+- `Ds1/` — D#1
 - `C2/`
 
-Copy the trombone *pp* E2–C5 batch (or a subset) into `trombone_pp/<Note>/`.
-For regression test 5, add `expected_main.json` next to each trombone workbook
-with `note_density_final`, `EWSD_score_total`, and `EWSD_score_acoustic_balanced`
-from `main` (`4711f86`).
+Trombone *pp* E2–C5 `_Sustains_Stable` batch:
+
+- `trombone_pp/<Note>/spectral_analysis.xlsx` (main)
+- `trombone_pp/<Note>/expected_main.json` (`canonical_density`, compiled
+  `note_density_final`, research EWSD)
+- `trombone_pp/<Note>/C5.aiff` (C5) or `<Note>.aif`
+- `trombone_pp/acceptance_v2.json` — measured max `|Δcanonical_density|`
+
+Fixture tests re-analyse the audio using settings replayed from each
+main workbook (`window`, `weight_function`, `n_fft`, `zero_padding`,
+`hop_length`, salience).
