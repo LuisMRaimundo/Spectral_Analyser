@@ -30,14 +30,30 @@ it.
 
 from __future__ import annotations
 
-from typing import Dict, Mapping, Sequence, Tuple
+from typing import Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
+
+from constants import (
+    DENSITY_CI_DEFAULT_ON,
+    DENSITY_CI_N_BOOT,
+    DENSITY_CI_SEED,
+    DENSITY_FRAGILE_CI_PCT,
+    DENSITY_FRAGILE_PERTURBATION_PCT,
+    DENSITY_WINDOW_PERTURBATION_MS,
+)
 
 __all__ = [
     "bootstrap_density_ci",
     "bootstrap_note_density_final",
+    "ci_relative_width_pct",
+    "evaluate_density_fragility",
     "nfft_sensitivity",
+    "window_perturbation_spread_pct",
+    "DENSITY_CI_DEFAULT_ON",
+    "DENSITY_CI_N_BOOT",
+    "DENSITY_CI_SEED",
+    "DENSITY_WINDOW_PERTURBATION_MS",
 ]
 
 
@@ -231,6 +247,72 @@ def bootstrap_density_ci(
         "relative_uncertainty": rel,
         "n_boot": int(n_boot),
         "ci_mass": float(ci),
+    }
+
+
+def ci_relative_width_pct(
+    point_estimate: float,
+    ci_low: float,
+    ci_high: float,
+) -> float:
+    """Two-sided CI width as a percentage of ``|point_estimate|``."""
+    try:
+        point = float(point_estimate)
+        lo = float(ci_low)
+        hi = float(ci_high)
+    except (TypeError, ValueError):
+        return float("nan")
+    if not (np.isfinite(point) and np.isfinite(lo) and np.isfinite(hi)):
+        return float("nan")
+    if abs(point) <= 1e-30:
+        return float("nan")
+    return float(100.0 * abs(hi - lo) / abs(point))
+
+
+def window_perturbation_spread_pct(
+    values: Sequence[float],
+    *,
+    center: Optional[float] = None,
+) -> float:
+    """``100 * (max - min) / |center|`` over a set of window-perturbed densities."""
+    arr = _as_1d_float(values)
+    if arr.size == 0:
+        return float("nan")
+    if center is None:
+        mid = float(arr[0]) if arr.size == 1 else float(np.median(arr))
+    else:
+        try:
+            mid = float(center)
+        except (TypeError, ValueError):
+            mid = float("nan")
+    if not np.isfinite(mid) or abs(mid) <= 1e-30:
+        return float("nan")
+    return float(100.0 * (float(np.max(arr)) - float(np.min(arr))) / abs(mid))
+
+
+def evaluate_density_fragility(
+    *,
+    point_estimate: float = float("nan"),
+    ci_low: float = float("nan"),
+    ci_high: float = float("nan"),
+    perturbation_spread_pct: float = float("nan"),
+    fragile_ci_pct: float = DENSITY_FRAGILE_CI_PCT,
+    fragile_perturbation_pct: float = DENSITY_FRAGILE_PERTURBATION_PCT,
+) -> Dict[str, float]:
+    """Flag a density scalar as fragile when CI width or window spread exceeds 10 %."""
+    ci_width = ci_relative_width_pct(point_estimate, ci_low, ci_high)
+    try:
+        spread = float(perturbation_spread_pct)
+    except (TypeError, ValueError):
+        spread = float("nan")
+    fragile_ci = bool(np.isfinite(ci_width) and ci_width > float(fragile_ci_pct))
+    fragile_pert = bool(np.isfinite(spread) and spread > float(fragile_perturbation_pct))
+    return {
+        "density_ci_relative_width_pct": float(ci_width),
+        "density_perturbation_spread_pct": float(spread),
+        "density_fragile": bool(fragile_ci or fragile_pert),
+        "density_fragile_from_ci": bool(fragile_ci),
+        "density_fragile_from_perturbation": bool(fragile_pert),
     }
 
 

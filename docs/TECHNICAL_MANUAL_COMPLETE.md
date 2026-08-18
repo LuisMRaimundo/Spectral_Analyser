@@ -1,7 +1,7 @@
 # Spectral_Analyser — Complete Technical Manual
 
-**Package version:** 4.0.3 (`pyproject.toml`).  
-**Export schema:** v4.0.0–v4.0.3 — normative detail in
+**Package version:** 4.1.0 (`pyproject.toml`).  
+**Export schema:** v4.0.0–v4.1.0 — normative detail in
 [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) and
 [`docs/DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.8.
 
@@ -262,6 +262,63 @@ $$
 \tau_n = \max\left(\tau_{\mathrm{cents}}, 1200 \cdot \frac{\Delta f_{\mathrm{bin}}}{n f_0}\right)
 $$
 
+### 5.2.1 Low-f₀ harmonic validation (policy version 2)
+
+A cents-only window is physically unbounded at high harmonic order. Converted
+to hertz, its half-width grows as \(n f_0 \tau_{\mathrm{cents}} / 1200\) while
+the inter-harmonic spacing stays \(f_0\). The crossover
+
+$$
+n \approx 1200 / \tau_{\mathrm{cents}}
+$$
+
+is about H20–H35 for the current default (35 cents). Beyond that order every
+noise-floor ripple that clears the SNR/prominence gates lands inside some
+\(n f_0\) window. On a 33 Hz tuba that crossover is a few hundred hertz; on a
+523 Hz note it sits near 11 kHz, where the partials are already gone — hence
+the register dependence of the false-validation problem.
+
+**Spacing cap.** Policy v2 keeps the cents formula and applies
+
+$$
+\mathrm{tol}_{hz}(n) = \max\bigl(\Delta f_{\mathrm{bin}},\;
+\min(n f_0 \tau_n / 1200,\; \beta f_0)\bigr)
+$$
+
+with \(\beta =\) `HARMONIC_TOLERANCE_SPACING_CAP_FRACTION` \(= 0.30\). The
+half-width is applied around the Inharmonicity_Fit prediction
+\(n f_0 \sqrt{1 + B n^2}\) when stretch is enabled, not around the ideal
+comb \(n f_0\). The active limb is exported as `tolerance_limb`
+\(\in \{\mathrm{cents}, \mathrm{spacing\_cap}, \mathrm{bin\_floor}\}\).
+`HARMONIC_TOLERANCE_POLICY_VERSION = "2"`.
+
+**Harmonic-body noise-floor stop.** After candidate matching, the smoothed
+harmonic envelope (median of the last five validated magnitudes) is compared
+to the existing percentile/multiplier noise-floor estimate. When the envelope
+has been within `HARMONIC_BODY_STOP_MARGIN_DB` (6 dB) of that floor for
+`HARMONIC_BODY_STOP_CONSECUTIVE` (5) orders, `harmonic_body_stop_hz` is set at
+the last accepted order. Orders above the stop are excluded from the
+strict/validated set and from every density integration, but remain on
+`Harmonic_Inclusion_Audit` with reason `above_harmonic_body_stop`. Notes whose
+body never approaches the floor before 20 kHz are unaffected.
+
+**Global comparability is preserved.** `density_frequency_ceiling_hz` stays at
+20 kHz. The per-note effective ceiling
+`density_effective_ceiling_hz = min(density_frequency_ceiling_hz,
+harmonic_body_stop_hz)` is reported so every table cell can name the policy
+that produced it.
+
+**Fragility flag.** `bootstrap_density_ci` runs by default
+(`DENSITY_CI_DEFAULT_ON`). An optional ±10 ms window perturbation reports
+`density_perturbation_spread_pct`. `density_fragile` is true when the CI
+relative width exceeds `DENSITY_FRAGILE_CI_PCT` (10 %) or the perturbation
+spread exceeds 10 %. The flag is carried through Stage 3
+(`Stage3_Diagnostics`, `Spectral_Density_Metrics`) and the research export.
+
+**Low-f₀ resolution guard.** If `bin_spacing_hz > f0/8`, the pipeline
+escalates `n_fft` when the sustain allows; otherwise it exports
+`low_f0_resolution_warning = True` and `bin_to_f0_ratio`.
+
 ### 5.3 Inharmonic/residual classification
 
 Residual assignment occurs after harmonic matching and candidate filters; counts and occupancy diagnostics are exported.
@@ -273,8 +330,9 @@ Residual assignment occurs after harmonic matching and candidate filters; counts
 `_saddle_prominence_db`, `_prominence_saddle_window_bins`), re-exported by
 `proc_audio` and driven from `proc_audio._generate_harmonic_list`.
 
-For each expected order, the candidate nearest to `n·f0` (within the tolerance
-window) is refined to the local spectral peak and classified. A candidate is
+For each expected order, the candidate nearest to the (possibly stretched)
+expected frequency (within the tolerance window) is refined to the local
+spectral peak and classified. A candidate is
 promoted to `strict_validated` (and only then `include_for_density = True`)
 when it is **CFAR-detected AND clears the saddle-prominence criterion**. The
 noise-significance gate is a cell-averaging **CFAR** (constant false-alarm-rate)

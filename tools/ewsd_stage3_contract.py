@@ -67,6 +67,8 @@ def build_stage3_diagnostics(
             "ewsd_primary_analysis_eligible",
             "EWSD_score_acoustic_balanced",
             "ewsd_uncertainty_sources",
+            "density_fragile",
+            "density_effective_ceiling_hz",
             "stage3_issue",
         ]
     )
@@ -93,6 +95,8 @@ def build_stage3_diagnostics(
                 "ewsd_primary_analysis_eligible": bool(row.get("ewsd_primary_analysis_eligible", False)),
                 "EWSD_score_acoustic_balanced": row.get("EWSD_score_acoustic_balanced"),
                 "ewsd_uncertainty_sources": row.get("ewsd_uncertainty_sources"),
+                "density_fragile": row.get("density_fragile"),
+                "density_effective_ceiling_hz": row.get("density_effective_ceiling_hz"),
                 "stage3_issue": issue,
             }
         )

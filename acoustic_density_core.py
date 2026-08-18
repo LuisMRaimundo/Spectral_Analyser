@@ -71,6 +71,7 @@ from constants import (
     ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC,
     BODY_DENSITY_MAX_HZ,
     FULL_SPECTRUM_MAX_HZ,
+    HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
     INHARMONICITY_B_ENABLE_THRESHOLD,
     INHARMONICITY_FIT_CENTS_WINDOW,
     INHARMONICITY_FIT_ORDER_CAP,
@@ -593,6 +594,25 @@ def compute_acoustic_density_descriptors(
     )
     fit_B = float(fit_result.get("inharmonicity_coefficient_B", 0.0) or 0.0)
     fit_status = str(fit_result.get("fit_status", "insufficient_partials") or "insufficient_partials")
+    # Strong stretch (e.g. B = 5e-4 to H40) wraps high peaks onto neighbouring
+    # n·f0 slots during the B=0 first match and zeros B. Retry on low orders.
+    if fit_status == "ok" and fit_B <= float(INHARMONICITY_B_ENABLE_THRESHOLD) and inharm_freqs.size >= 3:
+        _fit_cap = 16
+        _low = inharm_freqs[inharm_freqs <= (float(_fit_cap) * float(f0_hz) * 1.25)]
+        if _low.size >= 3:
+            _retry = fit_inharmonicity_coefficient(
+                candidate_freqs_hz=_low,
+                f0_hz=float(f0_hz),
+                order_cap=int(_fit_cap),
+                cents_window=float(INHARMONICITY_FIT_CENTS_WINDOW),
+            )
+            _retry_B = float(_retry.get("inharmonicity_coefficient_B", 0.0) or 0.0)
+            if str(_retry.get("fit_status", "") or "") == "ok" and _retry_B > float(
+                INHARMONICITY_B_ENABLE_THRESHOLD
+            ):
+                fit_result = _retry
+                fit_B = _retry_B
+                fit_status = "ok"
     out["inharmonicity_coefficient_B"] = fit_B
     out["inharmonicity_fit_residual_std_cents"] = float(
         fit_result.get("fit_residual_std_cents", float("nan"))
@@ -611,17 +631,39 @@ def compute_acoustic_density_descriptors(
     out["bin_spacing_hz_estimate"] = float(bin_spacing_hz)
 
     # Classify each significant peak by nearest harmonic order in cents.
-    nearest_order = np.rint(freq_sig / float(f0_hz)).astype(int)
-    valid_order = nearest_order >= 1
-    predicted = nearest_order.astype(float) * float(f0_hz)
+    # When stretch is enabled, assign to the Inharmonicity_Fit prediction
+    # (not rint(f / f0)) so a 0.30·f0 cap around n·f0 cannot reject real
+    # high partials on piano / harp / other stretched sources.
+    n_grid_max = max(int(expected_count), int(INHARMONICITY_FIT_ORDER_CAP), 1)
     if fit_status == "ok" and fit_B > float(INHARMONICITY_B_ENABLE_THRESHOLD):
-        n_float = np.maximum(nearest_order.astype(float), 1.0)
-        predicted = n_float * float(f0_hz) * np.sqrt(1.0 + fit_B * (n_float**2))
+        n_grid = np.arange(1, n_grid_max + 1, dtype=float)
+        pred_grid = n_grid * float(f0_hz) * np.sqrt(1.0 + fit_B * (n_grid**2))
+        assign_idx = np.argmin(
+            np.abs(freq_sig[:, None] - pred_grid[None, :]),
+            axis=1,
+        )
+        nearest_order = n_grid[assign_idx].astype(int)
+        predicted = pred_grid[assign_idx]
         out["inharmonicity_stretch_applied"] = True
+    else:
+        nearest_order = np.rint(freq_sig / float(f0_hz)).astype(int)
+        predicted = nearest_order.astype(float) * float(f0_hz)
+    valid_order = nearest_order >= 1
     cents_error = 1200.0 * np.log2(np.maximum(freq_sig, EPS) / np.maximum(predicted, EPS))
     n_safe = np.maximum(nearest_order.astype(float), 1.0)
-    tol_floor_cents = 1200.0 * float(bin_spacing_hz) / np.maximum(n_safe * float(f0_hz), EPS)
+    expected_hz = np.maximum(predicted, EPS)
+    tol_floor_cents = 1200.0 * float(bin_spacing_hz) / expected_hz
     tol_per_partial = np.maximum(float(harmonic_tolerance_cents), tol_floor_cents)
+    # Spacing cap (policy v2): convert the cents window to Hz about the
+    # (possibly stretched) expected frequency, cap at β·f0, floor at one
+    # FFT bin, then convert back with the same linear map so the uncapped
+    # limb is bit-identical to the pre-v2 cents gate when B = 0.
+    cents_hz = expected_hz * tol_per_partial / 1200.0
+    cap_hz = float(HARMONIC_TOLERANCE_SPACING_CAP_FRACTION) * float(f0_hz)
+    tol_hz = np.minimum(cents_hz, cap_hz)
+    if np.isfinite(float(bin_spacing_hz)) and float(bin_spacing_hz) > 0.0:
+        tol_hz = np.maximum(tol_hz, float(bin_spacing_hz))
+    tol_per_partial = 1200.0 * tol_hz / expected_hz
     harmonic_peak_mask = valid_order & (np.abs(cents_error) <= tol_per_partial)
 
     try:
