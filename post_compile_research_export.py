@@ -25,6 +25,8 @@ def run_research_workbook_export(
     compiled_workbook_path: Path | str,
     *,
     log: Optional[logging.Logger] = None,
+    no_charts: bool = False,
+    analysis_root: Optional[Path] = None,
 ) -> Optional[Path]:
     """
     If ``compiled_workbook_path`` exists, run the research export (overwrite=True).
@@ -47,7 +49,13 @@ def run_research_workbook_export(
     try:
         from tools.export_research_density_workbook import export_research_workbook
 
-        out = export_research_workbook(compiled, output_path=None, overwrite=True)
+        out = export_research_workbook(
+            compiled,
+            output_path=None,
+            overwrite=True,
+            no_charts=no_charts,
+            analysis_root=analysis_root,
+        )
     except Exception as exc:  # noqa: BLE001
         _log.error(
             "Research workbook export failed for %s: %s",

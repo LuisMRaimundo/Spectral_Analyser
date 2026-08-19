@@ -251,6 +251,8 @@ EXPORT_COMPLETE_SPECTRUM_PITCH_NAMES: Final[bool] = False
 LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ: Final[float] = 200.0
 # Phase G: documented default φ for D_k / EWSD (log-amplitude loudness proxy).
 DENSITY_WEIGHT_FUNCTION_DEFAULT: Final[str] = "log"
+# Phase H: flag a Stage 3 note when |Δ| / |baseline| exceeds this percent.
+REEXPORT_REL_DELTA_FLAG_PCT: Final[float] = 4.0
 DENSITY_WINDOW_PERTURBATION_MS: Final[float] = 10.0
 DENSITY_FRAGILE_CI_PCT: Final[float] = 10.0
 DENSITY_FRAGILE_PERTURBATION_PCT: Final[float] = 10.0
@@ -529,6 +531,7 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "DENSITY_CI_DEFAULT_ON",
         "DENSITY_CI_N_BOOT",
         "DENSITY_CI_SEED",
+        "REEXPORT_REL_DELTA_FLAG_PCT",
         "UNCERTAINTY_REL_FLAG_PCT",
         "DENSITY_FRAGILE_CI_PCT",
         "DENSITY_FRAGILE_PERTURBATION_PCT",

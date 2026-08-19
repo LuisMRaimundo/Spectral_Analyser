@@ -3440,6 +3440,7 @@ def build_workbook(
     include_legacy_cdm_mean: bool = False,
     include_ewsd: bool = True,
     ewsd_fail_closed: bool = False,
+    analysis_root: Optional[Path] = None,
 ) -> List[str]:
     warnings: List[str] = []
     if not source.is_file():
@@ -3523,6 +3524,7 @@ def build_workbook(
             warnings,
             include_ewsd=True,
             fail_closed=ewsd_fail_closed,
+            analysis_root=analysis_root,
         )
         sd = stage3_result.spectral_density_metrics
         stage3_diagnostics = stage3_result.diagnostics
@@ -4211,6 +4213,7 @@ def export_research_workbook(
     include_legacy_cdm_mean: bool = False,
     include_ewsd: bool = True,
     ewsd_fail_closed: bool = False,
+    analysis_root: Optional[Path] = None,
 ) -> Path:
     """
     Build ``compiled_density_metrics_research.xlsx`` from a compiled workbook.
@@ -4266,6 +4269,7 @@ def export_research_workbook(
         include_legacy_cdm_mean=include_legacy_cdm_mean,
         include_ewsd=include_ewsd,
         ewsd_fail_closed=ewsd_fail_closed,
+        analysis_root=analysis_root,
     )
     for w in warns:
         print(f"WARNING: {w}", file=sys.stderr)

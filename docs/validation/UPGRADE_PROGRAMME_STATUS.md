@@ -12,8 +12,8 @@ bump is recorded.
 | D | Uncertainty by default | `tests/phase_17/test_uncertainty_defaults.py` | CI bands on Stage 3 EWSD; A2 EPD CI reported; < 10 independent frames flagged. | **done (PR #69)** |
 | E | Provenance | `tests/phase_18/test_provenance_and_verify_export.py` | Fresh export stamps commit + version. `verify_export.py` on run-2 → not comparable. | **done (PR #70)** |
 | F | Schema / count hygiene | `tests/phase_19/test_schema_and_count_hygiene.py` | One meaning per header; F-020 rows contribute 0 to S sums. | **done (PR #71)** |
-| G | Weight function φ | `tests/phase_20/test_weight_function_phi.py` | Sensitivity report on tuba corpus; README records ρ. | **in this PR** |
-| H | Reproducibility command | `tests/phase_21/` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | pending |
+| G | Weight function φ | `tests/phase_20/test_weight_function_phi.py` | Sensitivity report on tuba corpus; README records ρ. | **done (PR #72)** |
+| H | Reproducibility command | `tests/phase_21/test_reproducibility_command.py` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | **in this PR** |
 | I | Construct validation | `tests/validation/synthetic_corpus/` | Recover N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at SNR 10–40 dB. Perceptual scaffold only (no data collection). | pending |
 
 ## Phase A notes
@@ -83,3 +83,19 @@ first-order loudness proxy for φ. `tools/ewsd_sensitivity_report.py --phi`
 recomputes EWSD-R acoustic-balanced ranks under all amplitude-family φ
 and writes `docs/validation/EWSD_SENSITIVITY_PHI.md`. The README metric
 hierarchy records the measured minimum Spearman ρ.
+
+## Phase H notes
+
+`run_orchestrator.py --corpus <path> --out <dir> --stages 1,2,3 --figures`
+writes `run_manifest.json`. `tools/reexport_corpus.py` diffs Stage 3
+against the 19 Aug Análise 3 series
+(`docs/validation/ANALISE_3_TUBA_PP_EWSD_2026_08_19.json`). Notes whose
+relative change exceeds 4 % are listed; when the Stage 1 tree has
+`rejected_floor` rows, each flagged note reports the minimum CFAR margin.
+
+Live tuba *pp* Stage 2+3 re-export from `analysis_results_3` (Análise 3
+Stage 1 tree) into `analysis_results_phase21`: 37 / 37 notes compared,
+maximum |rel Δ| = 0.042 %, **0 notes exceed 4 %**. No `rejected_floor`
+rows in that Stage 1 tree (pre-Phase A). `verify_export.py` on Análise 3
+A2 reports `not comparable (pre-exclusive-assignment)`. Full table:
+`docs/validation/TUBA_PP_REEXPORT_DIFF.md`.

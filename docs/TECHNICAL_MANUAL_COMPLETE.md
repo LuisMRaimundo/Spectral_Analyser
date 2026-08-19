@@ -952,6 +952,15 @@ Export family includes segmented descriptor suffixes:
 
 ## 14. Compilation and Excel exports
 
+A corpus run is one command:
+
+`python run_orchestrator.py --corpus <path> --out <dir> --stages 1,2,3 --figures`
+
+It writes `run_manifest.json` (commit, versions, constants hash, parameter
+profile id, input SHA-256 hashes, wall time). After a code change,
+`python -m tools.reexport_corpus` re-runs Stage 2/3 from an existing Stage 1
+tree and diffs `EWSD_score_acoustic_balanced` against a previous series.
+
 ### Primary compiled workbook
 
 `compiled_density_metrics.xlsx` major sheets:

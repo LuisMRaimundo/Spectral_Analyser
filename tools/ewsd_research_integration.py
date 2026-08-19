@@ -380,6 +380,7 @@ def merge_ewsd_stage3(
     include_uncertainty: bool = True,
     bootstrap_n: int = 800,
     fail_closed: bool = False,
+    analysis_root: Optional[Path] = None,
 ) -> Stage3MergeResult:
     """Left-join EWSD into ``Spectral_Density_Metrics`` with diagnostics."""
     if not include_ewsd or sd is None or sd.empty or "Note" not in sd.columns:
@@ -389,7 +390,10 @@ def merge_ewsd_stage3(
         )
         return Stage3MergeResult(empty, diag, diag_summary, STAGE3_STATUS_OK, tuple(warnings))
 
-    analysis_root = Path(compiled_workbook).expanduser().resolve().parent
+    if analysis_root is not None:
+        analysis_root = Path(analysis_root).expanduser().resolve()
+    else:
+        analysis_root = Path(compiled_workbook).expanduser().resolve().parent
     freq_ceiling = _first_finite_from_frame(
         sd if "density_frequency_ceiling_hz" in sd.columns else merged,
         ("density_frequency_ceiling_hz",),

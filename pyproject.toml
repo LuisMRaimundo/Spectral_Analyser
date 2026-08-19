@@ -99,6 +99,7 @@ py-modules = [
     "publication_chart_policy",
     "publication_metric_columns",
     "result_cache",
+    "run_manifest",
     "run_orchestrator",
     "run_real_corpus_validation",
     "spectral_leakage_guards",

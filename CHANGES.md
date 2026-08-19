@@ -1,3 +1,17 @@
+# Phase 21 / Phase H — Reproducibility as one command
+
+One command regenerates a corpus run and writes an audit manifest.
+
+- `python run_orchestrator.py --corpus <path> --out <dir> --stages 1,2,3 --figures`
+  writes `run_manifest.json` (commit, versions, constants hash, parameter
+  profile id, input SHA-256 hashes, wall time).
+- `python -m tools.reexport_corpus` re-runs Stage 2/3 from existing Stage 1
+  workbooks and diffs `EWSD_score_acoustic_balanced` against a previous
+  series (default: 19 Aug Análise 3). Notes above
+  `REEXPORT_REL_DELTA_FLAG_PCT` (4 %) are listed with `rejected_floor`
+  CFAR margins when those rows are in the Stage 1 workbooks.
+- **Tests:** `tests/phase_21/test_reproducibility_command.py`
+
 # Phase 20 / Phase G — Weight function φ provenance
 
 φ is a documented convention, not a free GUI-only choice.
