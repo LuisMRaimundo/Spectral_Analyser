@@ -2,10 +2,9 @@
 
 Spectral_Analyser is a spectral-analysis pipeline developed in support of doctoral research in musicology at NOVA University of Lisbon, with a focus on musical texture in twentieth-century repertoire. The instrument analyses individual note recordings and produces an auditable per-note and corpus-level decomposition of spectral content into harmonic, inharmonic, and sub-bass components (H/I/S), supplemented by a battery of psychoacoustic and MIR descriptors. The H/I/S model is treated throughout as an operational measurement framework - anchored in primary sources in acoustics and psychoacoustics - rather than as a universal ontology of musical sound. The pipeline is designed for traceable, reproducible analysis at doctoral standard: every exported metric is accompanied by an epistemic contract, every numeric constant by a provenance class, and every methodological change by a versioned and tested phase entry in CHANGES.md.
 
-> **Documentation status (work in progress).** Several documents referenced below
-> are part of an ongoing documentation programme and are not yet present in this
-> repository. Links to such documents may not resolve until the corresponding
-> files are committed.
+> **Documentation status.** The implementation / mathematical manual, formula
+> index, export schema, and pipeline semantics documents listed in the map below
+> are present in this repository and stamped to package **v4.1.0**.
 
 ## Status
 
@@ -95,27 +94,27 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 |---|---|
 | `<note_name>/spectral_analysis.xlsx` | Per-note multi-sheet workbook (spectrum, peaks, partitioning, descriptors). |
 | `compiled_density_metrics.xlsx` | Corpus-level compiled workbook (16 sheets including `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Validation_Metrics`, `PCA_*`, `Dissonance_Metrics`, `Analysis_Metadata`). |
-| `compiled_density_metrics_research.xlsx` | Reduced research workbook. Includes **`note_effective_component_density`** (fatness), **`note_density_final`**, EWSD-R v18.1 with bootstrap CI, **`Primary_Statistics_Eligible`**, **`Stage3_Diagnostics`**, **`Stage3_Summary`**. Red **data bars** on **`EWSD_score_acoustic_balanced`**. Export hygiene: dead columns pruned (v4.0.2); Metadata Phase-2 H/I/S weights, `Diagnostic_Metrics.sample_id`, identical `_2` column dedupe, numeric `zero_padding` per note (v4.0.3). Gate rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
+| `compiled_density_metrics_research.xlsx` | Reduced research workbook. Includes **`note_effective_component_density`** (fatness), **`note_density_final`**, EWSD-R v18.1 with bootstrap CI, **`Primary_Statistics_Eligible`**, **`Stage3_Diagnostics`**, **`Stage3_Summary`**. Red **data bars** on **`EWSD_score_acoustic_balanced`**. Export hygiene: dead columns pruned (v4.0.2); Metadata Phase-2 H/I/S weights, `Diagnostic_Metrics.sample_id`, identical `_2` column dedupe, numeric `zero_padding` per note (v4.0.3). Stage 1 (v4.1.0): spacing-capped harmonic match, f0 refit, body-stop count cut, noise-gated mass, `density_fragile`. Gate rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
 | `phase1_discovered_density_profiles.csv` | Full adaptive trajectory per note (observation triplets, JS divergence, reliability, confidence). |
 | `adaptive_density_engine_state.json` | Final engine state (posterior profile, concentration, confidence). |
 | `phase2_application_profile.json` | The profile applied during Stage 2 compilation. |
 
 Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
 
-## Documentation map (v4.0.3)
+## Documentation map (v4.1.0)
 
 | Document | Role |
 |----------|------|
-| [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md) | Full implementation manual; **§14.3** export schema and join keys |
-| [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md) | Normative export schema; **§R.6–R.8** hygiene and column traps |
-| [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) | Audit repairs v4.0.0–v4.0.3; re-export table |
+| [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md) | Full implementation / mathematical manual; **§5.2.1** low-f₀ policy; **§14.3** export schema; **§14.4** Stage 1 audit columns |
+| [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md) | Indexed formulae F-001–F-055 |
+| [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md) | Normative export schema; **§R.6–R.9** |
+| [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) | Audit repairs v4.0.0–v4.1.0; re-export table |
 | [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md) | Sheet/column inventory + traps table |
-| [`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`](docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) | Pipeline + **§11** export version map |
-| [`docs/GUI_OPTION_REFERENCE.md`](docs/GUI_OPTION_REFERENCE.md) | GUI controls; **§A5** export weight naming |
+| [`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`](docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) | Pipeline + **§3–4** f0/harmonics + **§11** version map |
+| [`docs/GUI_OPTION_REFERENCE.md`](docs/GUI_OPTION_REFERENCE.md) | GUI controls; **§A1** β / body-stop / CI; **§A5** export weight naming |
 | [`CHANGES.md`](CHANGES.md) | Versioned change log |
 
-**Re-export:** workbooks on disk keep old export semantics until recompiled with **v4.0.3+**
-(Stage 2 + Stage 3 for full refresh).
+**Re-export:** workbooks on disk keep old Stage 1 harmonic identity until **re-analysed with v4.1.0** (Stage 1 + 2 + 3). Export-schema-only refresh from v4.0.3 still needs Stage 2 + 3.
 
 ## Metric hierarchy (acoustic — do not interchange)
 
@@ -152,6 +151,7 @@ Principal methodological commitments:
 - **FFT-length-aware normalization** (Phase 8). Peak-bin sums are normalized using `peak_amplitude_sum` (`N_ref/N`) or `peak_power_sum` (`(N_ref/N)²`) factors rather than broadband-L2 factors, eliminating the cross-tier discontinuity introduced by FFT-length tier switching. The empirical step discontinuity on a 1 kHz synthetic benchmark is reduced from approximately 29.9 % to approximately 0.87 %. See `CHANGES.md`, Phase 8 entry.
 - **Prior / observation decoupling** (Phase 1). The triplet `pure_observation_w_{h,i,s}` carries the unmixed observation; the prior-smoothed values are retained as `smoothed_w_{h,i,s}_legacy` for backward compatibility only. This is a precondition for any defensible Bayesian update of the corpus-level profile.
 - **Formula versioning** (Phase 7.1). `obs_w_formula_version = "v58_full_spectrum_region_energy_gate"` and `density_formula_version = "v5_apply_density_metric_adapted_v6_1"` are exported on every row, permitting cross-version comparability of compiled workbooks. The density energy gate uses the full-spectrum, total-power-normalised region triple (harmonic-peak / non-harmonic-residual / sub-bass); partial inharmonicity (coefficient B, inharmonic-peak energy) is reported separately and is not part of the density gate.
+- **Low-f₀ harmonic identity** (v4.1.0, policy v2). Spacing-capped tolerance (`β = 0.30`) around the Inharmonicity_Fit centre; H1–H8 f0/B refit when the joint fit drifts more than 15 cents; harmonic-body stop as a **validation/count** cut; noise-gated mass on core integrals; `density_frequency_ceiling_hz` stays 20 kHz. See TECHNICAL_MANUAL §5.2.1.
 - **Per-metric epistemic contract** (`metric_contract.py`). Every exported density metric carries an explicit record of its formula, input domain, unit/scale, amplitude basis, power basis, normalization scope, physical interpretation, validity boundary, and ontological family.
 - **Per-constant provenance registry** ([`docs/CONSTANTS_PROVENANCE.md`](docs/CONSTANTS_PROVENANCE.md)). Every numeric constant exported by `constants.py` is classified as `primary_source`, `derived`, `convention`, or `internal_default`. Internal defaults are tunable engineering choices documented for auditability rather than concealed.
 

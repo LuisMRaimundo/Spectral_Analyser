@@ -1,7 +1,7 @@
 # DENSITY_EXPORT_SCHEMA — Authoritative export schema
 
-> **Status:** normative for export-column semantics (package **v4.0.3**). Skeleton sections
-> marked `TODO(author)` remain for full column inventories; §R.6–R.8 and §2.1–2.3 are
+> **Status:** normative for export-column semantics (package **v4.1.0**). Skeleton sections
+> marked `TODO(author)` remain for full column inventories; §R.6–R.9 and §2.1–2.3 are
 > maintained for current export behaviour. Where this file conflicts with older docs under
 > `docs/`, this file prevails for export semantics.
 
@@ -297,5 +297,22 @@ name alone** — read the sheet and the canonical name in
 | `harmonic_density_weight` | research `Spectral_Density_Metrics` | Per-note energy-ratio–derived weight column, not Phase-2 |
 | Same names as `Density_Metrics` | `Diagnostic_Metrics` (subset) | Often log/diagnostic scale — prefixed columns (`diagnostic_*`) where renamed; others may still collide |
 
-Planned follow-up (not in v4.0.3): rename ambiguous public columns to explicit canonical
+Planned follow-up (not in v4.1.0): rename ambiguous public columns to explicit canonical
 names only; unify publication redaction across all sheets.
+
+### R.9 Low-f₀ harmonic identity (v4.1.0)
+
+Stage 1 exports (per-note `Metrics` / `Analysis_Metadata`; carried where compiled):
+
+| Column | Meaning |
+|--------|---------|
+| `tolerance_limb` | Active half-width limb: `cents`, `spacing_cap`, or `bin_floor` |
+| `f0_fit_discrepancy_cents` | `1200 log2(f0_refit / f0_joint)` |
+| `f0_refit_applied` / `f0_refit_hz` | Low-order refit used as the match centre |
+| `harmonic_body_stop_hz` | Validation/count cut (not the density ceiling) |
+| `density_effective_ceiling_hz` | Global ceiling (20 kHz), not `min(ceiling, stop)` |
+| `density_noise_gate_enabled` / `density_noise_gate_policy` | `subtract_floor_clip_0` |
+| `density_fragile` | CI width or ±10 ms perturbation spread > 10 % |
+
+**Re-export (v4.1.0):** re-run **Stage 1 + 2 + 3**. Old per-note workbooks keep the
+uncapped / un-refit harmonic list until Stage 1 is repeated.

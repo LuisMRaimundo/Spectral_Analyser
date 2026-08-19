@@ -77,7 +77,7 @@ Provenance classes:
 - `F0_REFIT_SNR_MIN_DB` (`20.0`) - `internal_default` - Minimum SNR to keep a first-pass peak.
 - `F0_REFIT_PROMINENCE_MIN_DB` (`12.0`) - `internal_default` - Minimum prominence to keep a first-pass peak.
 - `F0_REFIT_DISCREPANCY_CENTS` (`15.0`) - `internal_default` - Apply the refit when |refit − joint| exceeds this.
-- `DENSITY_NOISE_GATE_ENABLED` (`True`) - `internal_default` - Density integrals count only mass above the floor.
+- `DENSITY_NOISE_GATE_ENABLED` (`True`) - `internal_default` - Core peak-power integrals subtract the floor; `canonical_density` still follows the stop-trimmed harmonic list.
 - `DENSITY_NOISE_GATE_POLICY` (`subtract_floor_clip_0`) - `internal_default` - Subtract the smoothed floor and clip at 0.
 - `DENSITY_CI_DEFAULT_ON` (`True`) - `internal_default` - Per-note bootstrap CI is exported by default.
 - `DENSITY_CI_N_BOOT` (`1200`) - `internal_default` - Bootstrap resample count.

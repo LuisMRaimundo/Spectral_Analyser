@@ -1,11 +1,12 @@
 {
-  "registry_version": "4.0.3_export_schema_sync",
-  "package_version": "4.0.3",
+  "registry_version": "4.1.0_low_f0_harmonic_identity",
+  "package_version": "4.1.0",
   "export_schema_versions": {
     "v4.0.0": "sample_id PK, diagnostic renames, three-density semantics",
     "v4.0.1": "EWSD red data bars on research Spectral_Density_Metrics",
     "v4.0.2": "merge_keys_for_frames, drop_dead_columns, satellite sample_id propagation",
-    "v4.0.3": "Metadata Phase-2 H/I/S weights, Diagnostic sample_id fill, post-uniquify dedupe, zero_padding per note"
+    "v4.0.3": "Metadata Phase-2 H/I/S weights, Diagnostic sample_id fill, post-uniquify dedupe, zero_padding per note",
+    "v4.1.0": "spacing-capped harmonic match, f0/B refit, body-stop count cut, noise-gated mass, density_fragile"
   },
   "registry_semantics": {
     "status_values": {

@@ -1,4 +1,4 @@
-# Export schema audit repair (v4.0.0+) + research formatting (v4.0.1) + export hygiene (v4.0.2) + metadata/sample_id (v4.0.3)
+# Export schema audit repair (v4.0.0+) + research formatting (v4.0.1) + export hygiene (v4.0.2) + metadata/sample_id (v4.0.3) + low-f₀ identity (v4.1.0)
 
 Addresses the architecture-level incongruences identified in the compiled/research
 workbook audit (duplicate Note keys, `density_weighted_sum` semantic overload, phase-2
@@ -104,9 +104,11 @@ On `Diagnostic_Metrics`, raw-power / wide-frame variants are prefixed, e.g.
 | Blank research columns (bad merge) | Stage 3 with **v4.0.2+** (or Stage 2+3 for compiled `sample_id`) |
 | Metadata H/I/S weights, `_2` dedupe, research `zero_padding` | Stage 3 with **v4.0.3+** |
 | `Diagnostic_Metrics.sample_id` on **compiled** workbook | Stage 2 with **v4.0.3+** |
+| Spacing cap, f0 refit, body stop, noise gate, fragility | **Stage 1 + 2 + 3** with **v4.1.0** |
 
 Existing workbooks on disk retain old semantics until recompiled. For a full refresh after
-v4.0.3, re-run **Stage 2 and Stage 3** on the corpus.
+v4.0.3, re-run **Stage 2 and Stage 3** on the corpus. For v4.1.0 harmonic identity,
+re-run **Stage 1 + 2 + 3**.
 
 ## Known ambiguous columns (still exported under legacy names)
 

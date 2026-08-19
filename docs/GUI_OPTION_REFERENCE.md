@@ -20,7 +20,7 @@ This document covers visible options in:
 | Salience threshold (dB) | `density_salience_threshold_db` | `runtime-configured` | float | salient-count and salience-weighted metrics | gates salient partial/bin population | Stage 1, comparability |
 | Density ceiling (Hz) | `density_frequency_ceiling_hz` | `runtime-configured` | float > 0 | salient metrics | upper bound for density salience families | Stage 1, comparability |
 | Spacing-cap β (fraction of f0) | `harmonic_tolerance_spacing_cap_fraction` | `0.30` | float > 0 | harmonic validation | caps per-order tolerance at β·f0 | Stage 1 |
-| Harmonic-body noise-floor stop | `harmonic_body_stop_enabled` | `True` | bool | harmonic validation | adaptive effective ceiling once the envelope meets the floor | Stage 1 |
+| Harmonic-body noise-floor stop | `harmonic_body_stop_enabled` | `True` | bool | harmonic validation | validation/count cut once the envelope meets a floor plateau; density ceiling stays 20 kHz | Stage 1 |
 | Body-stop margin (dB) | `harmonic_body_stop_margin_db` | `3.0` | float ≥ 0 | harmonic validation | envelope-to-floor margin (plateau, not decaying tail) | Stage 1 |
 | Density CI / fragility | `density_ci_enabled` | `True` | bool | uncertainty | default-on bootstrap CI and `density_fragile` | Stage 1, Stage 3 |
 
@@ -89,7 +89,7 @@ during Stage 1 weighted summaries. They are **not** the corpus adaptive Phase-2 
 
 For thesis statistics use `phase2_*_application_weight` or research `Metadata` (v4.0.3+),
 not `Analysis_Settings_By_Note` weight columns. Full table:
-`docs/DENSITY_EXPORT_SCHEMA.md` §R.8.
+`docs/DENSITY_EXPORT_SCHEMA.md` §R.8. Stage 1 identity columns: §R.9.
 
 ---
 

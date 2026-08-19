@@ -1,3 +1,18 @@
+# Documentation alignment — full v4.1.0 sweep
+
+Synchronized user-facing documentation and citation metadata with package **v4.1.0**
+(low-f₀ harmonic identity). Core peak-power integrals are noise-gated over 0–20 kHz;
+`canonical_density` still follows the validated / stop-trimmed harmonic list.
+
+- **`TECHNICAL_MANUAL_COMPLETE.md`:** §5.2.1 honesty on gated vs stop-trimmed integrals; new **§14.4** Stage 1 audit columns; re-export requires Stage 1 + 2 + 3.
+- **`METRIC_FORMULA_INDEX.md`:** F-051–F-055 (spacing cap, comb centre, f0 refit, body stop, noise gate).
+- **`CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`:** §3 f0, §4 harmonics, §11 version map v4.1.0.
+- **`DENSITY_EXPORT_SCHEMA.md` / `EXPORT_COLUMN_DICTIONARY.md`:** §R.9 identity columns.
+- **`GUI_OPTION_REFERENCE.md`:** body stop is a validation/count cut; density ceiling stays 20 kHz.
+- **`MANUAL_COVERAGE_REPORT.md` / `NOTE_FATNESS_AND_DENSITY_GUIDE.md`:** v4.1.0 scope and F-051+ links.
+- **`pipeline.md` / `pipeline_runtime.md`:** Stage 1 policy v2 / f0 refit / stop-as-count.
+- **`metrics_dictionary.json` / `CITATION.cff` / `README.md`:** package 4.1.0; documentation map.
+
 # Low-f₀ harmonic validation — f0 refit and noise-gated density (v4.1.0)
 
 Policy v1 integrated noise-floor mass at *pp*. Policy v2 (spacing cap) plus

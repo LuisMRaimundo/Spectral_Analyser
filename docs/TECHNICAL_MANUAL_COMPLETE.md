@@ -315,12 +315,14 @@ strict/validated set and remain on `Harmonic_Inclusion_Audit` with reason
 
 **Noise-gated density mass.** Policy v1 integrated noise-floor mass at *pp*
 (tuba C1 harvested ~190 floor ripples into `canonical_density`). Policy v2
-plus the noise gate correct that. Every density integral (harmonic,
-inharmonic, residual/sub-bass; `canonical_density`, `note_density_final`,
-EWSD inputs) counts only mass above the smoothed noise floor: subtract the
-local percentile/multiplier floor and clip at 0
+plus the noise gate correct that. Core peak-power integrals (harmonic,
+inharmonic, residual/sub-bass; inputs to `note_density_final` and EWSD)
+subtract the local percentile/multiplier floor and clip at 0
 (`DENSITY_NOISE_GATE_POLICY = subtract_floor_clip_0`,
 `DENSITY_NOISE_GATE_ENABLED = True`) over the full 0–20 kHz domain.
+`canonical_density` (`apply_density_metric` on the harmonic list) still
+follows the validated / stop-trimmed body: putting above-stop harvest back
+into that metric re-imports the C1 floor (measured 1376 on that path).
 `density_effective_ceiling_hz` is the global ceiling, not
 `min(ceiling, harmonic_body_stop_hz)`.
 
@@ -935,7 +937,7 @@ Export family includes segmented descriptor suffixes:
 Export behaviour is implemented in `export_row_identity.py`, `compile_metrics.py` (Stage 2
 write path), and `tools/export_research_density_workbook.py` (Stage 3). Normative tables:
 [`EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md),
-[`DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.8,
+[`DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.9,
 [`EXPORT_COLUMN_DICTIONARY.md`](EXPORT_COLUMN_DICTIONARY.md) (column traps).
 
 **Primary join key:** `sample_id` — stable per compiled/research row; survives duplicate
@@ -984,9 +986,30 @@ sheets must not receive synthetic mismatched `sample_id` values before merge.
 | `harmonic_density_weight` | `Analysis_Settings_By_Note` | GUI **base** multiplier (typically 1 / 0.5 / 0.25), not Phase-2 |
 | `harmonic_density_weight` | research `Spectral_Density_Metrics` | Per-note ratio-derived column, not Phase-2 |
 
-**Re-export:** existing workbooks on disk retain old semantics until recompiled. Full v4.0.3
-refresh requires **Stage 2 + Stage 3**. See re-export table in
-`EXPORT_SCHEMA_AUDIT_REPAIR.md`.
+**Re-export:** existing workbooks on disk retain old semantics until recompiled.
+v4.0.3 export-schema refresh requires **Stage 2 + Stage 3**. v4.1.0 harmonic
+identity (spacing cap, f0 refit, body stop, noise gate) requires **Stage 1 +
+2 + 3**. See re-export table in `EXPORT_SCHEMA_AUDIT_REPAIR.md`.
+
+### 14.4 Stage 1 low-f₀ identity columns (v4.1.0)
+
+Per-note `Metrics` / `Analysis_Metadata` (and `Harmonic Spectrum` for the limb)
+export the policy-v2 audit fields. These are not Stage 2/3 schema repairs;
+they change only after Stage 1 is re-run.
+
+| Column | Meaning |
+|--------|---------|
+| `tolerance_limb` | Active half-width: `cents`, `spacing_cap`, or `bin_floor` |
+| `f0_fit_discrepancy_cents` | \(1200\log_2(f_{0,\mathrm{refit}}/f_{0,\mathrm{joint}})\) |
+| `f0_refit_applied`, `f0_refit_hz` | Low-order H1–H8 refit used as the match centre |
+| `harmonic_body_stop_hz` | Validation/count cut (clears `include_for_density`) |
+| `density_effective_ceiling_hz` | Global 20 kHz ceiling, not \(\min(\mathrm{ceiling}, \mathrm{stop})\) |
+| `density_noise_gate_enabled` / `density_noise_gate_policy` | `subtract_floor_clip_0` on core peak-power integrals |
+| `density_fragile` | CI width or ±10 ms perturbation spread > 10 % |
+
+`canonical_density` still follows the validated / stop-trimmed harmonic list.
+Core peak-power integrals that feed `note_density_final` and EWSD are gated
+over 0–20 kHz. See §5.2.1 and F-051–F-055.
 
 ### Per-note workbook (`spectral_analysis.xlsx`)
 
@@ -1143,15 +1166,16 @@ Numeric constants are now explicitly classified as `primary_source`, `derived`, 
 
 ## 20. Complete formula index
 
-See `docs/METRIC_FORMULA_INDEX.md` for indexed formulas (`F-001` onward), mapped to functions and exported columns, and `docs/validation/FORMULA_VALIDATION_STATUS.md` for the AST-based canonical validation status of F1–F6.
+See `docs/METRIC_FORMULA_INDEX.md` for indexed formulas (`F-001`–`F-055`), mapped to functions and exported columns, and `docs/validation/FORMULA_VALIDATION_STATUS.md` for the AST-based canonical validation status of F1–F6. Low-f₀ identity formulae F-051–F-055 are documented in the index and tested numerically under `tests/phase_12/` and `tests/acoustic_validity/`.
 
 ---
 
 ## 21. Complete export column dictionary
 
 See `docs/EXPORT_COLUMN_DICTIONARY.md` for exhaustive sheet-by-sheet exported column coverage
-for compiled and research workbooks, including the **column-name traps** table (v4.0.3) and
-the compiled/research crosswalk. Export schema repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
+for compiled and research workbooks, including the **column-name traps** table (v4.0.3),
+the v4.1.0 Stage 1 identity columns, and the compiled/research crosswalk. Export schema
+repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
 
 ---
 

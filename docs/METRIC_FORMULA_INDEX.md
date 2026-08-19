@@ -10,7 +10,12 @@
 | F-006 | $f_n=nf_0$ | Ideal harmonic prediction | harmonic matching logic | harmonic candidate/order columns |
 | F-007 | $f_n=nf_0\sqrt{1+Bn^2}$ | Stiff-string prediction | `inharmonicity_model.fit_inharmonicity_coefficient` | inharmonicity diagnostics |
 | F-008 | $y_n=(f_n/(nf_0))^2-1\approx Bn^2$ | Linearized B fit relation | `inharmonicity_model.fit_inharmonicity_coefficient` | `inharmonicity_coefficient_B` |
-| F-009 | $\tau_n=\max(\tau_{\text{cents}},1200\Delta f_{\text{bin}}/(nf_0))$ | Adaptive harmonic tolerance | policy in `constants.py` + usage path | harmonic alignment and matching diagnostics |
+| F-009 | $\tau_n=\max(\tau_{\text{cents}},1200\Delta f_{\text{bin}}/(nf_0))$ | Adaptive harmonic tolerance (cents limb) | policy in `constants.py` + usage path | harmonic alignment and matching diagnostics |
+| F-051 | $\mathrm{tol}_{hz}(n)=\max(\Delta f_{\mathrm{bin}},\min(n f_0\tau_n/1200,\beta f_0))$, $\beta=0.30$ | Spacing-capped tolerance (policy v2) | `proc_audio._spacing_capped_tol_hz` | `tolerance_limb` $\in$ `{cents, spacing_cap, bin_floor}` |
+| F-052 | $f_n=n f_0\sqrt{1+B n^2}$ when $B$ on; else $n f_0$ | Comb centre for the capped match | `proc_audio._comb_expected_freqs` | `expected_frequency_hz` |
+| F-053 | $f_{0,\mathrm{refit}}=\sum w n f/\sum w n^2$; joint $(f/n)^2=f_0^2+f_0^2 B n^2$; apply iff $|1200\log_2(f_{0,\mathrm{refit}}/f_{0,\mathrm{joint}})|>15$ | Low-order f0 (and B) refit on H1–H8 | `harmonic_peak_validation.refine_f0_from_low_order_peaks` | `f0_fit_discrepancy_cents`, `f0_refit_applied`, `f0_refit_hz` |
+| F-054 | Envelope $\le$ floor $+3$ dB for 5 orders and $|$slope$|\le 1$ dB/order | Harmonic-body stop (validation/count cut) | `harmonic_peak_validation.apply_harmonic_body_stop` | `harmonic_body_stop_hz`, `include_for_density` |
+| F-055 | $A_{\mathrm{gated}}=\max(0,A-A_{\mathrm{floor}})$; $P_{\mathrm{gated}}=\max(0,P-P_{\mathrm{floor}})$ | Noise-gated density mass (`subtract_floor_clip_0`) | `noise_gated_linear_mass`, `noise_gated_power` | `density_noise_gate_enabled`, `density_fragile` |
 | F-010 | $H=-\sum_i p_i\log_2 p_i$ | Shannon entropy | `_normalized_entropy` | intermediate entropy |
 | F-011 | $H_{norm}=H/\log_2 K$ | Normalized entropy | `_normalized_entropy` | `spectral_entropy` |
 | F-012 | $D_{eff}=(\sum_i P_i)^2/\sum_i P_i^2$ | Effective component count/density | `_effective_count`, density helpers | `effective_partial_density`, related fields |

@@ -1,7 +1,7 @@
 # Export Column Dictionary
 
-**Package version:** 4.0.3. Export schema repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
-Normative export rules: `docs/DENSITY_EXPORT_SCHEMA.md` §R.6–R.8. Implementation manual: `docs/TECHNICAL_MANUAL_COMPLETE.md` §14.3.
+**Package version:** 4.1.0. Export schema repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
+Normative export rules: `docs/DENSITY_EXPORT_SCHEMA.md` §R.6–R.9. Implementation manual: `docs/TECHNICAL_MANUAL_COMPLETE.md` §5.2.1 and §14.3.
 
 This dictionary covers exported workbook sheets for:
 
@@ -27,7 +27,19 @@ For compactness and auditability:
 | `harmonic_density_weight` | `Analysis_Settings_By_Note` | GUI base multiplier (1 / 0.5 / 0.25), **not** Phase-2 |
 | `harmonic_density_weight` | research main sheet | Per-note ratio-derived column, **not** Phase-2 |
 
-Full table: `docs/DENSITY_EXPORT_SCHEMA.md` §R.8. Re-export guidance: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export required.
+Full table: `docs/DENSITY_EXPORT_SCHEMA.md` §R.8. Low-f₀ Stage 1 columns: §R.9.
+Re-export guidance: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export required.
+
+### Per-note v4.1.0 identity columns (`spectral_analysis.xlsx` Metrics / Analysis_Metadata)
+
+| Column | Meaning |
+|--------|---------|
+| `f0_fit_discrepancy_cents` | `1200 log2(f0_refit / f0_joint)` |
+| `f0_refit_applied`, `f0_refit_hz` | Low-order H1–H8 refit used as match centre |
+| `harmonic_body_stop_hz` | Validation/count cut |
+| `density_effective_ceiling_hz` | Global 20 kHz ceiling |
+| `density_fragile` | CI or ±10 ms perturbation > 10 % |
+| `tolerance_limb` | `cents` / `spacing_cap` / `bin_floor` (Harmonic Spectrum) |
 
 ---
 

@@ -2,18 +2,20 @@
 
 ## Scope
 
-Documentation pass synchronized to package **v4.0.3** (export schema hygiene, EWSD Stage 3,
-constants-provenance registry, formula-validation suite).
+Documentation pass synchronized to package **v4.1.0** (low-f₀ harmonic identity,
+spacing-capped match, f0/B refit, body-stop count cut, noise-gated mass; plus
+export schema hygiene, EWSD Stage 3, constants-provenance registry,
+formula-validation suite).
 
 Generated / maintained deliverables:
 
-1. `docs/TECHNICAL_MANUAL_COMPLETE.md` (includes §14.3 export schema v4.0.3)
-2. `docs/METRIC_FORMULA_INDEX.md`
-3. `docs/GUI_OPTION_REFERENCE.md` (includes export weight naming §A5)
-4. `docs/EXPORT_COLUMN_DICTIONARY.md` (column traps + crosswalk)
-5. `docs/DENSITY_EXPORT_SCHEMA.md` (§R.6–R.8)
+1. `docs/TECHNICAL_MANUAL_COMPLETE.md` (includes §5.2.1 low-f₀ policy, §14.3 export schema, §14.4 Stage 1 audit columns)
+2. `docs/METRIC_FORMULA_INDEX.md` (F-001–F-055)
+3. `docs/GUI_OPTION_REFERENCE.md` (includes §A1 β / body-stop / CI; export weight naming §A5)
+4. `docs/EXPORT_COLUMN_DICTIONARY.md` (column traps + v4.1.0 identity columns + crosswalk)
+5. `docs/DENSITY_EXPORT_SCHEMA.md` (§R.6–R.9)
 6. `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`
-7. `docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md` (§9, §11)
+7. `docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md` (§3–4, §9, §11)
 8. `docs/MANUAL_COVERAGE_REPORT.md`
 
 ---
@@ -50,6 +52,7 @@ Keyword sweep executed for:
 - `f0`, `inharmonicity`, `tier_normalized`, `Validation_Summary`, `obs_w`, `pure_observation`, `phase2`
 - `PCA`, `UMAP`, `t-SNE`, `anomaly`, `LogAttackTime`, `attack`, `sustain`, `release`
 - `sample_id`, `merge_keys`, `drop_dead_columns`, `dedupe_identical_columns`, `EXPORT_SCHEMA`
+- `spacing_cap`, `f0_refit`, `harmonic_body_stop`, `noise_gated`, `density_fragile`, `tolerance_limb`
 
 ---
 
@@ -72,6 +75,7 @@ Documented metric families include:
 - Validation/warning and legacy-alias semantics.
 - Export row identity (`sample_id`), merge keys, dead-column pruning, identical-column dedupe (v4.0.2–v4.0.3).
 - Phase-2 vs GUI-base vs per-note weight column semantics in exports (v4.0.3 documentation).
+- Low-f₀ harmonic identity (v4.1.0): spacing-capped `tol_hz(n)`, H1–H8 f0/B refit, body-stop validation cut, noise-gated core integrals, `density_fragile`.
 
 ---
 
@@ -177,6 +181,7 @@ Included where project-level transformation/wrapping is present.
 | Stage 3 EWSD-R v18 in research export | resolved | `tools/ewsd_core.py`, `tools/ewsd_research_integration.py`, `tests/phase_11/`, manual §7.8, schema §R.4 |
 | Full inharmonicity family in research workbook | requires code/export change | export mapping in `tools/export_research_density_workbook.py` still omits `inharmonicity_*` set |
 | Export schema v4.0.3 (Metadata weights, sample_id, dedupe, zero_padding) | resolved | `export_row_identity.py`, `tests/phase_11/test_export_schema_v403.py`, manual §14.3, schema §R.7–R.8 |
+| Low-f₀ harmonic identity v4.1.0 (spacing cap, f0 refit, body stop, noise gate) | resolved | `proc_audio.py`, `harmonic_peak_validation.py`, `acoustic_density_core.py`, tests under `tests/phase_12/` and `tests/acoustic_validity/`, manual §5.2.1 / §14.4, F-051–F-055, schema §R.9 |
 | Rename overloaded export headers (`density_weighted_sum`, settings weights) | requires code change | documented as open in §R.8 / manual §19A item 7 |
 | Uniform publication redaction across all sheets | requires code change | documented in manual §19A item 8 |
 | Constants provenance registry completion | resolved | `docs/CONSTANTS_PROVENANCE.md` now classifies constants as `primary_source` / `derived` / `convention` / `internal_default` |
