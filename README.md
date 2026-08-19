@@ -135,6 +135,8 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | [`docs/GUI_OPTION_REFERENCE.md`](docs/GUI_OPTION_REFERENCE.md) | GUI controls; **§A1** β / body-stop / CI; **§A5** export weight naming |
 | [`CHANGES.md`](CHANGES.md) | Versioned change log |
 | [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md) | Post-`70525e3` upgrade programme (Phases A–I) |
+| [`docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`](docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md) | Planted N / B / EPD / confirmed-I recovery (Phase I) |
+| [`docs/validation/PERCEPTUAL_PROTOCOL.md`](docs/validation/PERCEPTUAL_PROTOCOL.md) | Listener-study scaffold (no data collection) |
 
 **Re-export:** workbooks on disk keep old Stage 1 harmonic identity until **re-analysed with v4.1.0** (Stage 1 + 2 + 3), including exclusive peak-to-slot assignment and validated-partial gating (`spectral_analysis_schema_2026_08`). Export-schema-only refresh from v4.0.3 still needs Stage 2 + 3.
 
@@ -147,6 +149,8 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI | 3 (research) |
 
 Default φ is `log`. On the IOWA tuba *pp* SustainStable corpus (37 notes, `analysis_results_4`), EWSD ordering is **not** φ-invariant across all amplitude-family φ (minimum pairwise Spearman ρ = 0.075). Among compressive φ (`linear`, `log`, `sqrt`, `cbrt`) ρ ≥ 0.948. Full table: [`docs/validation/EWSD_SENSITIVITY_PHI.md`](docs/validation/EWSD_SENSITIVITY_PHI.md).
+
+**EWSD is acoustic until a listener study is run.** Pairwise templates and agreement scoring are scaffold only (`tools/perceptual_pairs.py`, `tools/perceptual_agreement.py`); protocol: [`docs/validation/PERCEPTUAL_PROTOCOL.md`](docs/validation/PERCEPTUAL_PROTOCOL.md). Synthetic recovery of N, B, EPD, and confirmed-I: [`docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`](docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md).
 
 Practical lookup steps: [`docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`](docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md). Schema audit repairs (v4.0): [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md). **Known ambiguous column names** (same header, different meaning): see §R.8 in [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md). Theory memo: [`docs/validation/EWSD_THEORY.md`](docs/validation/EWSD_THEORY.md).
 

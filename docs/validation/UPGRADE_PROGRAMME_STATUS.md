@@ -13,8 +13,8 @@ bump is recorded.
 | E | Provenance | `tests/phase_18/test_provenance_and_verify_export.py` | Fresh export stamps commit + version. `verify_export.py` on run-2 → not comparable. | **done (PR #70)** |
 | F | Schema / count hygiene | `tests/phase_19/test_schema_and_count_hygiene.py` | One meaning per header; F-020 rows contribute 0 to S sums. | **done (PR #71)** |
 | G | Weight function φ | `tests/phase_20/test_weight_function_phi.py` | Sensitivity report on tuba corpus; README records ρ. | **done (PR #72)** |
-| H | Reproducibility command | `tests/phase_21/test_reproducibility_command.py` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | **in this PR** |
-| I | Construct validation | `tests/validation/synthetic_corpus/` | Recover N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at SNR 10–40 dB. Perceptual scaffold only (no data collection). | pending |
+| H | Reproducibility command | `tests/phase_21/test_reproducibility_command.py` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | **done (PR #73)** |
+| I | Construct validation | `tests/validation/synthetic_corpus/` | Recover N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at SNR 10–40 dB. Perceptual scaffold only (no data collection). | **done (PR #74)** |
 
 ## Phase A notes
 
@@ -99,3 +99,15 @@ maximum |rel Δ| = 0.042 %, **0 notes exceed 4 %**. No `rejected_floor`
 rows in that Stage 1 tree (pre-Phase A). `verify_export.py` on Análise 3
 A2 reports `not comparable (pre-exclusive-assignment)`. Full table:
 `docs/validation/TUBA_PP_REEXPORT_DIFF.md`.
+
+## Phase I notes
+
+`tests/validation/synthetic_corpus/` plants harmonic (N=8), stiff-string
+(N=12, B=2e-4), and bell (3 H + 10 I) constructs at SNR 10/20/30/40 dB.
+Recovery uses peak pick → F-007 → B fit → confirmed-I → EPD. All 12
+conditions meet N ±1, B ±10 %, EPD ±10 %, confirmed-I exact. Table:
+`docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`. Listener study is
+scaffold only (`tools/perceptual_pairs.py`,
+`tools/perceptual_agreement.py`,
+`docs/validation/PERCEPTUAL_PROTOCOL.md`). EWSD is acoustic until that
+study is run.
