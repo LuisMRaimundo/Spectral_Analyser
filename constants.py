@@ -249,6 +249,8 @@ INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE: Final[bool] = False
 EXPORT_COMPLETE_SPECTRUM_PITCH_NAMES: Final[bool] = False
 # Phase F: export ceiling for LF diagnostic rows above F-020 (Hz).
 LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ: Final[float] = 200.0
+# Phase G: documented default φ for D_k / EWSD (log-amplitude loudness proxy).
+DENSITY_WEIGHT_FUNCTION_DEFAULT: Final[str] = "log"
 DENSITY_WINDOW_PERTURBATION_MS: Final[float] = 10.0
 DENSITY_FRAGILE_CI_PCT: Final[float] = 10.0
 DENSITY_FRAGILE_PERTURBATION_PCT: Final[float] = 10.0

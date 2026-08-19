@@ -190,12 +190,12 @@ def test_normalize_optional_export_text(raw: object, expected: object) -> None:
 @pytest.mark.parametrize(
     "raw, expected",
     [
-        (None, "linear"),
-        ("", "linear"),
+        (None, "log"),
+        ("", "log"),
         ("sum", "linear"),
         ("LOG", "log"),
         ("power", "power"),
-        ("unknown", "linear"),
+        ("unknown", "log"),
     ],
 )
 def test_normalise_density_weight_function(raw: object, expected: str) -> None:
@@ -209,7 +209,7 @@ def test_normalise_density_weight_function(raw: object, expected: str) -> None:
         ("d2", "linear"),
         ("d8", "d17"),
         ("sqrt", "sqrt"),
-        ("", "linear"),
+        ("", "log"),
     ],
 )
 def test_compile_operator_weight_function_key_preserves_discrete_keys(

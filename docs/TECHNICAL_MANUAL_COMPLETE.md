@@ -506,7 +506,9 @@ $$
 D_H = \sum_{i\in H} \phi(A_i)
 $$
 
-where $\phi$ is selected by weight function (linear/log/etc.).
+where $\phi$ is selected by weight function. The documented default is
+$\phi=\log$ (`DENSITY_WEIGHT_FUNCTION_DEFAULT`): log-amplitude as a
+first-order loudness proxy.
 
 **Algorithmic implementation.**
 Per-note extraction from harmonic sheets with canonical source prioritization and inclusion policy flags.

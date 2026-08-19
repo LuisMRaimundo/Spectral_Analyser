@@ -82,6 +82,7 @@ from constants import (
     INHARMONIC_MODE_FOR_EFFECTIVE_DENSITY,
     LEGACY_PARTIAL_COUNT_ALIASES_NOTE,
     SUBBASS_POLICY_FOR_EFFECTIVE_DENSITY_DOC,
+    DENSITY_WEIGHT_FUNCTION_DEFAULT,
 )
 
 CANONICAL_PIPELINE_ROLE = "canonical_stage2_compilation"
@@ -2934,7 +2935,6 @@ def _extract_band_power_sum_for_density(
 
 
 DENSITY_WEIGHT_FUNCTION_VALID: Tuple[str, ...] = ("linear", "log", "power")
-DENSITY_WEIGHT_FUNCTION_DEFAULT: str = "linear"
 DENSITY_WEIGHT_SUM_TOLERANCE: float = 1e-3
 
 
@@ -5548,7 +5548,7 @@ def _build_density_metrics_main_sheet(
     if has_new:
         work_w = work.copy()
         if "weight_function" not in work_w.columns:
-            work_w["weight_function"] = (wf if wf else "linear") or "linear"
+            work_w["weight_function"] = (wf if wf else DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT
         cols = [c for c in DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS if c in work_w.columns]
         out_df = work_w.loc[:, cols].copy()
     else:
@@ -5564,7 +5564,7 @@ def _build_density_metrics_main_sheet(
             si = pd.to_numeric(out_df[i_new], errors="coerce").fillna(0.0)
             ss = pd.to_numeric(out_df[s_new], errors="coerce").fillna(0.0)
             out_df[t_new] = sh + si + ss
-            out_df["weight_function"] = (wf if wf else "linear") or "linear"
+            out_df["weight_function"] = (wf if wf else DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT
             out_df = out_df[[c for c in DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS if c in out_df.columns]]
         else:
             return pd.DataFrame(
@@ -9107,7 +9107,7 @@ def apply_weighted_combination(
     inharmonic_col: str = "Filtered Density Metric",
     alpha: float = 0.5,
     beta: float = 0.5,
-    weight_function: str = "linear"
+    weight_function: str = DENSITY_WEIGHT_FUNCTION_DEFAULT
 ) -> pd.DataFrame:
     out = df.copy()
     if "Weighted Combined Metric" in out.columns:
@@ -9387,7 +9387,7 @@ def _compile_density_metrics_impl(
     harmonic_weight: float = 0.95,  # Default: 95% (alinhado com interface)
     inharmonic_weight: float = 0.05,  # Default: 5% (alinhado com interface)
     subbass_weight: Optional[float] = None,
-    weight_function: str = "linear",
+    weight_function: str = DENSITY_WEIGHT_FUNCTION_DEFAULT,
     *,
     compiled_public_columns: bool = True,
     enable_pca_export: bool = True,
@@ -10193,7 +10193,7 @@ def compile_density_metrics_with_pca(
     harmonic_weight: float = 0.95,  # Default: 95% (alinhado com interface)
     inharmonic_weight: float = 0.05,  # Default: 5% (alinhado com interface)
     subbass_weight: Optional[float] = None,
-    weight_function: str = "linear",
+    weight_function: str = DENSITY_WEIGHT_FUNCTION_DEFAULT,
     use_tsne: bool = False,
     use_umap: bool = False,
     detect_anomalies: bool = False,

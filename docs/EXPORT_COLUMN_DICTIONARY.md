@@ -33,7 +33,7 @@ Re-export guidance: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export
 
 ### Per-note v4.1.0 identity columns (`spectral_analysis.xlsx` Metrics / Analysis_Metadata)
 
-Provenance (Phase E): `analysis_version` is package metadata + `git describe --always --dirty`. Companion fields `package_version`, `code_commit`, `code_dirty`, `git_describe` sit on `Analysis_Metadata` and research `Stage3_Summary`. `export_schema_version` is the single `analysis_policy` token. Use `python verify_export.py <workbook>` for comparability.
+Provenance (Phase E): `analysis_version` is package metadata + `git describe --always --dirty`. Companion fields `package_version`, `code_commit`, `code_dirty`, `git_describe` sit on `Analysis_Metadata` and research `Stage3_Summary`. `export_schema_version` is the single `analysis_policy` token. Use `python verify_export.py <workbook>` for comparability. Default φ is `log` (`DENSITY_WEIGHT_FUNCTION_DEFAULT`); `weight_function` is on Stage 1/2/3 rows and inside `analysis_parameter_profile_id`.
 
 | Column | Meaning |
 |--------|---------|

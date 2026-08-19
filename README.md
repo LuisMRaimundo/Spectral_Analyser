@@ -125,6 +125,8 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | How much GUI-weighted H/I/S content? | **`note_density_final`** | 2 / research |
 | Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI | 3 (research) |
 
+Default φ is `log`. On the IOWA tuba *pp* SustainStable corpus (37 notes, `analysis_results_4`), EWSD ordering is **not** φ-invariant across all amplitude-family φ (minimum pairwise Spearman ρ = 0.075). Among compressive φ (`linear`, `log`, `sqrt`, `cbrt`) ρ ≥ 0.948. Full table: [`docs/validation/EWSD_SENSITIVITY_PHI.md`](docs/validation/EWSD_SENSITIVITY_PHI.md).
+
 Practical lookup steps: [`docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`](docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md). Schema audit repairs (v4.0): [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md). **Known ambiguous column names** (same header, different meaning): see §R.8 in [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md). Theory memo: [`docs/validation/EWSD_THEORY.md`](docs/validation/EWSD_THEORY.md).
 
 Stage 3 validation evidence (v18.1): pure reference math (`tools/ewsd_pure.py`), golden vectors, 49-note corpus regression, bootstrap UQ (`tools/ewsd_uncertainty.py`), sensitivity report (`tools/ewsd_sensitivity_report.py`), construct validity doc, CI gate in `.github/workflows/ci.yml`.

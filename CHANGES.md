@@ -1,3 +1,17 @@
+# Phase 20 / Phase G — Weight function φ provenance
+
+φ is a documented convention, not a free GUI-only choice.
+
+- `DENSITY_WEIGHT_FUNCTION_DEFAULT = "log"` (provenance class `convention`):
+  log-amplitude as a first-order loudness proxy (Fechner 1860; Stevens 1955;
+  Zwicker & Fastl 1990). Stage 1 / Stage 2 / orchestrator defaults follow it.
+- `weight_function` is on every Stage 1/2/3 row; `analysis_parameter_profile_id`
+  already encodes `wf=…`.
+- `tools/ewsd_sensitivity_report.py --phi` recomputes EWSD under all
+  amplitude-family φ and writes Spearman ranks to
+  `docs/validation/EWSD_SENSITIVITY_PHI.md`.
+- **Tests:** `tests/phase_20/test_weight_function_phi.py`
+
 # Phase 19 / Phase F — Schema and count hygiene
 
 One meaning per header, and F-020 diagnostic rows contribute 0 to S sums.

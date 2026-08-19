@@ -420,3 +420,12 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
 - Sub-bass rows above F-020 are exported as `lf_diagnostic_not_member`
   and contribute 0 to `subbass_density_sum` and `subbass_energy_sum`.
   Stage 1 `*_ungated` twins remain the audit copies.
+
+### R.17 Weight function φ (Phase G / phase_20)
+
+- Default φ is `log` (`DENSITY_WEIGHT_FUNCTION_DEFAULT`). Provenance class
+  `convention`: log-amplitude as a first-order loudness proxy.
+- `weight_function` is exported on Stage 1 `Metrics`, Stage 2
+  `Density_Metrics`, and Stage 3 research rows.
+  `analysis_parameter_profile_id` includes `wf=…`.
+- φ sensitivity: `docs/validation/EWSD_SENSITIVITY_PHI.md`.

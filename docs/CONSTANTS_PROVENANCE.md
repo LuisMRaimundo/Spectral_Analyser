@@ -87,6 +87,7 @@ Provenance classes:
 - `INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE` (`False`) - `internal_default` - When false, F-020 diagnostic LF rows are excluded from the validated-partial amplitude pie.
 - `EXPORT_COMPLETE_SPECTRUM_PITCH_NAMES` (`False`) - `internal_default` - Omit per-bin `Note` names on Complete Spectrum unless the GUI restores them.
 - `LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ` (`200.0`) - `internal_default` - Export ceiling for LF diagnostic rows above F-020 (`min(f0, 200)`).
+- `DENSITY_WEIGHT_FUNCTION_DEFAULT` (`log`) - `convention` - Default φ for D_k / EWSD. Log-amplitude is a first-order loudness proxy (Fechner, 1860; Stevens, 1955; Zwicker & Fastl, 1990). Other φ remain available for audit; they change the Stage 2/3 `analysis_parameter_profile_id`.
 - `DENSITY_WINDOW_PERTURBATION_MS` (`10.0`) - `internal_default` - ±window shift used for density fragility.
 - `DENSITY_FRAGILE_CI_PCT` (`10.0`) - `internal_default` - CI relative-width threshold for `density_fragile`.
 - `DENSITY_FRAGILE_PERTURBATION_PCT` (`10.0`) - `internal_default` - Window-perturbation spread threshold for `density_fragile`.
