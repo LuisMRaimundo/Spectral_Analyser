@@ -327,20 +327,32 @@ harvest once the search window is tens of bins wide. Three independent
 guards apply before the stop, in this order:
 
 1. **Spacing cap / exclusive assignment** (policy v2, F-051) — identity of
-   the match, not a noise test.
-2. **CFAR margin and false-alarm budget** — `include_for_density` requires
-   `cfar_margin_db ≥ HARMONIC_MIN_CFAR_MARGIN_DB` (3 dB). Rows with
-   \(0 \le\) margin \(< 3\) dB are `cfar_marginal`. Per note,
+   the match, not a noise test. An isolated `rejected_by_tolerance` slot
+   may re-enter when both *n*−1 and *n*+1 are included,
+   `persistence_fraction ≥ PARTIAL_PERSISTENCE_STRONG_FRACTION` (0.9), and
+   `|dev| < TOLERANCE_CONTINUITY_OVERRIDE_FACTOR × cap` (1.25). Reason:
+   `included (tolerance_continuity_override; …)`; limb
+   `spacing_cap_continuity`. The override does not fire when neighbours
+   are not both validated.
+2. **Temporal persistence** (Phase B) — `persistence_fraction ≥ 0.7`.
+3. **CFAR margin and false-alarm budget** — `include_for_density` requires
+   `cfar_margin_db ≥ HARMONIC_MIN_CFAR_MARGIN_DB` (3 dB), **or** a
+   detected row with `0 < margin < 3` dB and
+   `persistence_fraction ≥ 0.9` (`validated_weak`,
+   `included (weak_margin_persistence_override)`). Rows that fail both
+   stay `cfar_marginal`. Per note,
    `expected_false_harmonic_slots = harmonic_slot_expected_count × P_{fa}`;
    `accepted_slots_above_body_stop` must be 0 after gating;
    `harmonic_acceptance_suspect` when the accepted count exceeds
    (body-stop order + expected false slots).
-3. **Temporal persistence** (Phase B) — `persistence_fraction ≥ 0.7`.
+   `harmonic_validated_count` includes `validated_weak`;
+   `harmonic_validated_strict_count` is the previous (margin ≥ 3 dB)
+   definition.
 
 An optional **continuity rule** (off by default) then freezes higher
 accepts after `HARMONIC_CONTINUITY_REJECT_STREAK` (3) consecutive
 rejected slots unless `persistence_fraction ≥ 0.9`. The body stop is
-applied last.
+applied last and still excludes weak-margin rows above the stop.
 
 **Noise-gated density mass.** Policy v1 integrated noise-floor mass at *pp*
 (tuba C1 harvested ~190 floor ripples into `canonical_density`). Policy v2
@@ -402,9 +414,10 @@ gate, because on windowed FFTs it measures main-lobe curvature rather than
 partial validity.
 
 Candidate-status taxonomy (`candidate_status`): `strict_validated`,
-`snr_validated`, `weak_candidate`, `below_noise_floor`, `missing_window`,
-`rejected_bad_f0`, `off_frequency`, `rejected_by_tolerance`,
-`peak_already_assigned`. Candidates are re-aligned to the fitted f0
+`validated_weak`, `snr_validated`, `weak_candidate`, `below_noise_floor`,
+`missing_window`, `rejected_bad_f0`, `off_frequency`,
+`rejected_by_tolerance`, `peak_already_assigned`, `cfar_marginal`.
+Candidates are re-aligned to the fitted f0
 before final classification so detuned partials are not mislabelled
 `off_frequency`. Every order's decision (and its reason) is exported, read-only,
 to the per-note `Harmonic_Inclusion_Audit` sheet (see §14).

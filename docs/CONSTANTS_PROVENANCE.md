@@ -103,6 +103,9 @@ Provenance classes:
 - `HARMONIC_CONTINUITY_PERSISTENCE_OVERRIDE` (`0.9`) - `internal_default` - Persistence that may override a continuity freeze.
 - `INHARMONIC_MIN_PROMINENCE_DB` (`6.0`) - `internal_default` - Minimum saddle prominence for a residual candidate to confirm as an inharmonic partial. Chosen above typical Blackman–Harris main-lobe curvature (~0–2 dB) and below the 12 dB first-pass harmonic prominence, so isolated residual peaks can confirm without admitting floor ripple.
 - `PARTIAL_PERSISTENCE_MIN_FRACTION` (`0.7`) - `internal_default` - Minimum fraction of sustain frames that must contain a peak within `tol_hz` for `include_for_density` / confirmed-I.
+- `PARTIAL_PERSISTENCE_STRONG_FRACTION` (`0.9`) - `internal_default` - Persistence that may override a weak CFAR margin (`validated_weak`) or an isolated `rejected_by_tolerance` slot inside a continuous accepted run.
+- `TOLERANCE_CONTINUITY_OVERRIDE_FACTOR` (`1.25`) - `internal_default` - Isolated tolerance rejects may re-enter when `|dev| < 1.25 × cap` and both neighbours are included.
+- `CI_WIDTH_PARTIAL_CORRELATION_N` (`30`) - `internal_default` - When the CI resampling unit is `partials` and N exceeds this, a wide interval is noted as `high_partial_correlation`. The estimator is unchanged.
 - `FRAME_PEAK_MIN_ABOVE_MEDIAN_DB` (`6.0`) - `internal_default` - Per-frame peak must exceed that frame's median magnitude by this many dB before it counts as present. Keeps floor ripple from persisting.
 - `HARMONIC_VALIDATION_MAX_HARMONICS` (`1024`) - `convention` - Power-of-two validation cap convention.
 - `HARMONIC_VALIDATION_WARN_MEDIAN_ABS_CENTS` (`25.0`) - `internal_default` - QA warning threshold tuned for this pipeline.

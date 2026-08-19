@@ -314,6 +314,9 @@ name alone** — read the sheet and the canonical name in
 | `floor_rows_rejected_count` | `Validation_Metrics` / `Metrics` | `inharmonic_status = rejected_floor` (not a partial count) |
 | `subbass_upper_bound_hz` | `Metrics` / `Analysis_Metadata` | F-020 `min(0.5 f0, 80)` |
 | `subbass_membership` | `Sub-bass band` | `subbass_member` or `lf_diagnostic_not_member` |
+| `harmonic_energy_ratio` | Stage 1 `Metrics` / compile | **Basis:** H / (H+I+S) from `*_energy_sum` of validated H, confirmed I, and F-020 S members. Normalisation is the three-compartment energy total. Not the residual-window ratio. |
+| `outside_harmonic_window_candidate_energy_ratio` | Stage 1 validation / residual audit | **Basis:** candidate residual rows *outside* the accepted-harmonic search windows, divided by the residual-candidate energy total (not H+I+S). Not interchangeable with `harmonic_energy_ratio`. |
+| `harmonic_alignment_energy_coverage_ratio` | `Validation_Summary` / alignment | **Basis:** energy of slots that match the F-007 comb within the spacing-capped tolerance, divided by the energy of all searched harmonic slots (missing slots contribute 0). Not a compartment balance. |
 
 Per-row partial sheets no longer export `Note` as a sample tag. Do not treat
 `partial_pitch_name` as the analysed take.
@@ -370,7 +373,8 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
 - `include_for_density` requires `persistence_fraction ≥ 0.7`.
   Exclusion: `low_temporal_persistence (p=…)`.
 - Metadata: `sustain_frame_count`, `sustain_frame_count_independent`,
-  `frame_duration_s`.
+  `hop_duration_s`, `window_duration_s`. `frame_duration_s` is a
+  deprecated alias of `hop_duration_s`.
 
 ### R.13 Independent high-n guards (Phase C / phase_16)
 
@@ -380,8 +384,13 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
   (body-stop order + expected false slots).
 - `cfar_marginal` when `0 ≤ cfar_margin_db < 3` dB; excluded from density.
 - Continuity rule off by default.
-- Guard order: spacing cap → CFAR margin → persistence → continuity →
-  body stop. The body stop is load-bearing for high-n rejection.
+- Guard order: spacing cap (+ isolated tolerance-continuity override) →
+  persistence → CFAR margin (with `validated_weak` persistence override)
+  → optional continuity → body stop. The body stop is load-bearing for
+  high-n rejection.
+- `cfar_marginal` remains for rows that fail both margin and strong
+  persistence. `validated_weak` is included in
+  `harmonic_validated_count`.
 
 ### R.14 Uncertainty by default (Phase D / phase_17)
 

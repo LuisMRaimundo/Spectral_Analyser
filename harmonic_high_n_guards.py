@@ -22,11 +22,14 @@ from constants import (
     HARMONIC_CONTINUITY_REJECT_STREAK,
     HARMONIC_CONTINUITY_RULE_ENABLED,
     HARMONIC_MIN_CFAR_MARGIN_DB,
+    PARTIAL_PERSISTENCE_STRONG_FRACTION,
 )
 from harmonic_peak_validation import apply_harmonic_body_stop
 
 CFAR_MARGINAL = "cfar_marginal"
 CONTINUITY_BREAK = "continuity_break"
+VALIDATED_WEAK = "validated_weak"
+WEAK_MARGIN_OVERRIDE_REASON = "included (weak_margin_persistence_override)"
 _PROTECTED_STATUSES = frozenset(
     {
         "rejected_by_tolerance",
@@ -76,12 +79,27 @@ def expected_false_harmonic_slots(
     return float(n) * float(p)
 
 
+def _finite_row_float(row: Mapping[str, Any], key: str) -> float:
+    try:
+        val = float(row.get(key, float("nan")))
+    except (TypeError, ValueError):
+        return float("nan")
+    return val if np.isfinite(val) else float("nan")
+
+
 def apply_cfar_margin_gate(
     rows: Sequence[Mapping[str, Any]],
     *,
     min_margin_db: float = HARMONIC_MIN_CFAR_MARGIN_DB,
+    strong_persistence: float = PARTIAL_PERSISTENCE_STRONG_FRACTION,
 ) -> list[dict[str, Any]]:
-    """Exclude included rows whose CFAR margin is in ``[0, min)`` dB."""
+    """Gate weak CFAR margins; persist strongly detected rows as ``validated_weak``.
+
+    Detected rows with ``0 < margin < min`` and
+    ``persistence_fraction ≥ strong_persistence`` stay in density. Rows that
+    fail both remain ``cfar_marginal``. Body stop still applies after this
+    rule.
+    """
     out: list[dict[str, Any]] = []
     try:
         min_m = float(min_margin_db)
@@ -89,21 +107,56 @@ def apply_cfar_margin_gate(
         min_m = float(HARMONIC_MIN_CFAR_MARGIN_DB)
     if not np.isfinite(min_m):
         min_m = float(HARMONIC_MIN_CFAR_MARGIN_DB)
+    try:
+        p_strong = float(strong_persistence)
+    except (TypeError, ValueError):
+        p_strong = float(PARTIAL_PERSISTENCE_STRONG_FRACTION)
+    if not np.isfinite(p_strong):
+        p_strong = float(PARTIAL_PERSISTENCE_STRONG_FRACTION)
     for raw in rows:
         row = dict(raw)
-        if _protected(row) or not bool(row.get("include_for_density", False)):
+        status = str(row.get("candidate_status") or "")
+        reason = str(row.get("exclusion_reason") or "")
+        hard = status in {
+            "rejected_by_tolerance",
+            "peak_already_assigned",
+            "low_temporal_persistence",
+            CONTINUITY_BREAK,
+        } or reason.startswith("rejected_by_tolerance") or reason.startswith(
+            "low_temporal_persistence"
+        )
+        if hard:
             out.append(row)
             continue
-        try:
-            margin = float(row.get("cfar_margin_db", float("nan")))
-        except (TypeError, ValueError):
-            margin = float("nan")
-        if np.isfinite(margin) and 0.0 <= margin < min_m:
+        margin = _finite_row_float(row, "cfar_margin_db")
+        persist = _finite_row_float(row, "persistence_fraction")
+        detected_raw = row.get("cfar_detected")
+        if detected_raw is None:
+            detected = bool(np.isfinite(margin) and margin > 0.0)
+        else:
+            detected = bool(detected_raw)
+        weak_band = bool(np.isfinite(margin) and 0.0 < margin < min_m)
+        strong_p = bool(np.isfinite(persist) and persist >= p_strong)
+        included = bool(row.get("include_for_density", False))
+        if detected and weak_band and strong_p:
+            row["include_for_density"] = True
+            row["candidate_status"] = VALIDATED_WEAK
+            row["exclusion_reason"] = WEAK_MARGIN_OVERRIDE_REASON
+        elif included and np.isfinite(margin) and 0.0 <= margin < min_m:
             row["include_for_density"] = False
             row["candidate_status"] = CFAR_MARGINAL
             row["exclusion_reason"] = (
                 f"{CFAR_MARGINAL} (margin={margin:.2f} dB < {min_m:.1f} dB)"
             )
+        elif (status == CFAR_MARGINAL or (detected and weak_band)) and not strong_p:
+            row["include_for_density"] = False
+            row["candidate_status"] = CFAR_MARGINAL
+            if not str(row.get("exclusion_reason") or "").startswith(CFAR_MARGINAL):
+                row["exclusion_reason"] = (
+                    f"{CFAR_MARGINAL} (margin={margin:.2f} dB < {min_m:.1f} dB)"
+                    if np.isfinite(margin)
+                    else CFAR_MARGINAL
+                )
         out.append(row)
     return out
 
@@ -209,10 +262,17 @@ def summarize_high_n_guards(
     marginal = sum(
         1 for r in rows if str(r.get("candidate_status") or "") == CFAR_MARGINAL
     )
+    weak_n = sum(
+        1
+        for r in accepted
+        if str(r.get("candidate_status") or "") == VALIDATED_WEAK
+    )
     return {
         "expected_false_harmonic_slots": float(expected_fa),
         "accepted_slots_above_body_stop": int(above),
         "harmonic_acceptance_suspect": bool(suspect),
         "cfar_marginal_count": int(marginal),
         "harmonic_validated_count": int(accepted_n),
+        "harmonic_validated_weak_count": int(weak_n),
+        "harmonic_validated_strict_count": int(accepted_n - weak_n),
     }

@@ -1,3 +1,35 @@
+# Post-A–I defect fixes: weak-margin persistence override, tolerance continuity override, sub-bass bound unification, CI provenance, naming hygiene
+
+Defects from the IOWA trombone A♯2 *ff* SustainStable review of `5b1a1c7`.
+F-042 / F-047 / F-048 / F-049 algebra is unchanged.
+
+- **D1** Weak CFAR margin + strong persistence → `validated_weak` and
+  `include_for_density`. New constant `PARTIAL_PERSISTENCE_STRONG_FRACTION`
+  (0.9). Counts: `harmonic_validated_weak_count`;
+  `harmonic_validated_count` includes the weak class;
+  `harmonic_validated_strict_count` is the previous definition. Body stop
+  still applies after the override; `accepted_slots_above_body_stop` stays 0.
+- **D2** Isolated `rejected_by_tolerance` inside a continuous accepted run
+  may re-enter when both neighbours are included, persistence ≥ 0.9, and
+  `|dev| < TOLERANCE_CONTINUITY_OVERRIDE_FACTOR × cap` (1.25). Limb
+  `spacing_cap_continuity`. Export `tolerance_continuity_override_count`
+  and `frequency_refinement_method` / `refined_frequency_hz`. Triple-assignment
+  losers stay rejected.
+- **D3** `subbass_upper_bound_hz` is computed once from F-020
+  (`SubBassPolicy.resolve_f020_bound`). Export `subbass_bound_formula =
+  min(0.5*f0, 80)` and `subbass_bound_f0_used_hz`. Member counts use that
+  bound.
+- **D4** CI provenance only: `ci_resampling_unit`, `ci_n_resampled`,
+  `ci_bootstrap_iterations`, `ci_block_length_frames`, `ci_seed`,
+  `ci_width_flag`, `ci_width_note`. Estimator unchanged.
+  `CI_WIDTH_PARTIAL_CORRELATION_N` (30) names the wide-interval cause.
+- **D5** `hop_duration_s` + `window_duration_s`; `frame_duration_s` remains
+  a deprecated alias. One energy pie (`component_energy_pie.png`) titled
+  Validated-partial energy balance. Dictionary states the incompatible
+  bases of the three “energy ratio” columns.
+
+- **Tests:** `tests/phase_23/test_trombone_as2_defect_fixes.py`
+
 # Phase 22 / Phase I — Construct validation + perceptual scaffold
 
 The pipeline recovers planted N, B, EPD, and confirmed-I on a synthetic

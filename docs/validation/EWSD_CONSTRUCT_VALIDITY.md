@@ -70,6 +70,23 @@ F-042 / F-047 / F-048 / F-049 algebra is unchanged; only the input domain
 (`validated_partials_only`) changed. Confirmed-inharmonic I compartment:
 `docs/validation/UPGRADE_PROGRAMME_STATUS.md` Phase A.
 
+## CI interpretation
+
+The exported interval is a bootstrap of the stated **resampling unit**,
+not a laboratory measurement-error bar. `ci_resampling_unit` is
+`partials` for F-047 / `note_density_final` (the amplitude vector is
+redrawn with replacement). `ci_n_resampled` is that vector’s length;
+`ci_bootstrap_iterations` and `ci_seed` identify the draw.
+
+A long, smooth series with many highly correlated partials can produce a
+**wide** interval (`ci_width_flag = wide` when relative width > 25 %)
+even when the take is high-SNR. That is expected when the unit is
+`partials` and N > 30 (`ci_width_note` includes
+`high_partial_correlation`). A short sustain
+(`sustain_frame_count_independent < 10`) is noted as
+`low_independent_frames`. Neither note changes the point estimate or
+the F-047 algebra.
+
 ## Explicit non-claims
 
 - No assertion that EWSD equals listener "fatness" or "brightness".

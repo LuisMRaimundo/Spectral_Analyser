@@ -26,10 +26,21 @@ def overlap_factor(*, n_fft: int, hop_length: int) -> float:
     return float(max(int(n_fft), 1)) / float(hop)
 
 
-def frame_duration_s(*, hop_length: int, sr_hz: float) -> float:
+def hop_duration_s(*, hop_length: int, sr_hz: float) -> float:
     if not np.isfinite(sr_hz) or sr_hz <= 0.0:
         return float("nan")
     return float(max(int(hop_length), 1)) / float(sr_hz)
+
+
+def frame_duration_s(*, hop_length: int, sr_hz: float) -> float:
+    """Deprecated alias of ``hop_duration_s`` (hop period, not window length)."""
+    return hop_duration_s(hop_length=hop_length, sr_hz=sr_hz)
+
+
+def window_duration_s(*, n_fft: int, sr_hz: float) -> float:
+    if not np.isfinite(sr_hz) or sr_hz <= 0.0:
+        return float("nan")
+    return float(max(int(n_fft), 1)) / float(sr_hz)
 
 
 def sustain_frame_span(

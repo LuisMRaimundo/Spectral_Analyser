@@ -48,6 +48,7 @@ __all__ = [
     "TOLERANCE_LIMB_CENTS",
     "TOLERANCE_LIMB_SPACING_CAP",
     "apply_exclusive_harmonic_assignment",
+    "apply_tolerance_continuity_override",
     "apply_harmonic_body_stop",
     "compute_spacing_capped_tolerance_hz",
     "evaluate_low_f0_resolution_guard",
@@ -68,6 +69,7 @@ __all__ = [
 
 TOLERANCE_LIMB_CENTS: str = "cents"
 TOLERANCE_LIMB_SPACING_CAP: str = "spacing_cap"
+TOLERANCE_LIMB_SPACING_CAP_CONTINUITY: str = "spacing_cap_continuity"
 TOLERANCE_LIMB_BIN_FLOOR: str = "bin_floor"
 
 
@@ -336,6 +338,129 @@ def apply_exclusive_harmonic_assignment(
                     f"peak_already_assigned (bin={pbi}, winner_n={winner_n})"
                 )
     return out
+
+
+def apply_tolerance_continuity_override(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    strong_persistence: float = None,
+    override_factor: float = None,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Re-include an isolated spacing-cap miss inside a continuous accepted run.
+
+    Requires both neighbours ``include_for_density``, strong persistence, and
+    ``|dev| < factor × cap``. Does not fire when neighbours are not both
+    validated (triple-assignment losers stay rejected).
+    """
+    from constants import (
+        PARTIAL_PERSISTENCE_STRONG_FRACTION,
+        TOLERANCE_CONTINUITY_OVERRIDE_FACTOR,
+    )
+
+    out: List[Dict[str, Any]] = [dict(r) for r in rows]
+    try:
+        p_min = float(
+            PARTIAL_PERSISTENCE_STRONG_FRACTION
+            if strong_persistence is None
+            else strong_persistence
+        )
+    except (TypeError, ValueError):
+        p_min = float(PARTIAL_PERSISTENCE_STRONG_FRACTION)
+    try:
+        factor = float(
+            TOLERANCE_CONTINUITY_OVERRIDE_FACTOR
+            if override_factor is None
+            else override_factor
+        )
+    except (TypeError, ValueError):
+        factor = float(TOLERANCE_CONTINUITY_OVERRIDE_FACTOR)
+
+    def _n(row: Mapping[str, Any]) -> int:
+        for key in ("Harmonic Number", "harmonic_number", "n"):
+            if key in row:
+                try:
+                    return int(row[key])
+                except (TypeError, ValueError):
+                    continue
+        return 0
+
+    by_n: Dict[int, int] = {}
+    for idx, row in enumerate(out):
+        n = _n(row)
+        if n >= 1:
+            by_n[n] = idx
+
+    count = 0
+    for n, idx in list(by_n.items()):
+        row = out[idx]
+        if str(row.get("candidate_status") or "") != "rejected_by_tolerance":
+            continue
+        left = out[by_n[n - 1]] if (n - 1) in by_n else None
+        right = out[by_n[n + 1]] if (n + 1) in by_n else None
+        if left is None or right is None:
+            continue
+        if not (
+            bool(left.get("include_for_density", False))
+            and bool(right.get("include_for_density", False))
+        ):
+            continue
+        try:
+            persist = float(row.get("persistence_fraction", float("nan")))
+        except (TypeError, ValueError):
+            persist = float("nan")
+        if not (np.isfinite(persist) and persist >= p_min):
+            continue
+        cap = float("nan")
+        for key in ("search_tol_hz", "tolerance_hz", "tol_hz"):
+            if key in row:
+                try:
+                    cap = float(row[key])
+                except (TypeError, ValueError):
+                    continue
+                if np.isfinite(cap) and cap > 0.0:
+                    break
+        try:
+            dev = abs(float(row.get("frequency_deviation_hz", float("nan"))))
+        except (TypeError, ValueError):
+            dev = float("nan")
+        if not (
+            np.isfinite(cap)
+            and cap > 0.0
+            and np.isfinite(dev)
+            and dev < float(factor) * cap
+        ):
+            continue
+        row["include_for_density"] = True
+        row["candidate_status"] = "strict_validated"
+        row["exclusion_reason"] = (
+            f"included (tolerance_continuity_override; "
+            f"dev={dev:.2f} Hz > cap={cap:.2f} Hz)"
+        )
+        row["tolerance_limb"] = TOLERANCE_LIMB_SPACING_CAP_CONTINUITY
+        if not str(row.get("frequency_refinement_method") or "").strip():
+            if bool(row.get("subbin_interpolation_valid")):
+                row["frequency_refinement_method"] = "parabolic_log_magnitude"
+            else:
+                row["frequency_refinement_method"] = "bin_centre"
+        try:
+            refined = float(row.get("refined_frequency_hz", float("nan")))
+        except (TypeError, ValueError):
+            refined = float("nan")
+        if not np.isfinite(refined):
+            for key in (
+                "interpolated_frequency_hz",
+                "extracted_frequency_hz",
+                "Frequency (Hz)",
+            ):
+                try:
+                    cand = float(row.get(key, float("nan")))
+                except (TypeError, ValueError):
+                    continue
+                if np.isfinite(cand):
+                    row["refined_frequency_hz"] = cand
+                    break
+        count += 1
+    return out, int(count)
 
 
 def apply_harmonic_body_stop(
@@ -1097,12 +1222,13 @@ HARMONIC_CANDIDATE_STATUS_VALUES: Tuple[str, ...] = (
     "rejected_by_tolerance",
     "peak_already_assigned",
     "cfar_marginal",
+    "validated_weak",
     "continuity_break",
     "low_temporal_persistence",
 )
 
 VALIDATED_CANDIDATE_STATUSES: frozenset = frozenset(
-    {"strict_validated", "snr_validated"}
+    {"strict_validated", "snr_validated", "validated_weak"}
 )
 
 

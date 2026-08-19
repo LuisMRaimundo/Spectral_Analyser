@@ -55,7 +55,15 @@ Provenance (Phase E): `analysis_version` is package metadata + `git describe --a
 | `frequency_jitter_cents` / `magnitude_jitter_db` | Std of per-frame frequency (cents) and magnitude (dB) |
 | `sustain_frame_count` | STFT frames covering the sustain (or whole file) |
 | `sustain_frame_count_independent` | `sustain_frame_count / (n_fft / hop)` |
-| `frame_duration_s` | Hop period `hop_length / sr` |
+| `hop_duration_s` | Hop period `hop_length / sr` |
+| `window_duration_s` | Analysis window `n_fft / sr` |
+| `frame_duration_s` | Deprecated alias of `hop_duration_s` (`deprecated_alias_of: hop_duration_s`) |
+| `harmonic_validated_weak_count` | `validated_weak` rows (weak CFAR margin, persistence ≥ 0.9) |
+| `harmonic_validated_strict_count` | `harmonic_validated_count` minus the weak class |
+| `tolerance_continuity_override_count` | Isolated cap misses re-included by neighbour continuity |
+| `subbass_bound_formula` / `subbass_bound_f0_used_hz` | F-020 `min(0.5*f0, 80)` and the f0 used |
+| `ci_resampling_unit` / `ci_n_resampled` / `ci_bootstrap_iterations` / `ci_seed` | What the CI resamples (estimator unchanged) |
+| `ci_width_flag` / `ci_width_note` | `wide` when relative width > 25 %; cause `low_independent_frames` and/or `high_partial_correlation` |
 | `not_leakage_i` / `leakage_guarding_harmonic_order` | Outside accepted-harmonic main-lobe/sidelobe footprint |
 | `not_stretched_harmonic_i` | Outside F-007 comb when stretch is applied |
 | `inharmonic_confirmed_count` | Count of `confirmed_inharmonic_partial` rows |

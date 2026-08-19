@@ -55,6 +55,7 @@ def test_harmonic_candidate_status_values_are_stable() -> None:
         "rejected_by_tolerance",
         "peak_already_assigned",
         "cfar_marginal",
+        "validated_weak",
         "continuity_break",
         "low_temporal_persistence",
     )
