@@ -171,6 +171,22 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Equating with residual-candidate or floor-row counts.",
         ontology_family="partial_count_descriptor",
     )
+    persistence_fraction = MetricDefinition(
+        name="persistence_fraction",
+        formula="n_frames_with_peak_within_tol_hz / sustain_frame_count",
+        input_domain="per-frame sustain peaks",
+        unit_or_scale="ratio [0, 1]",
+        amplitude_basis="per-frame linear magnitude",
+        power_basis="not used",
+        normalization_scope="sustain frames of this note",
+        physical_interpretation=(
+            "Fraction of sustain STFT frames that contain a detected peak "
+            "within search_tol_hz of the time-averaged candidate frequency. "
+            "Required ≥ PARTIAL_PERSISTENCE_MIN_FRACTION for include_for_density."
+        ),
+        not_valid_for="Time-averaged spectra or Complete Spectrum bins.",
+        ontology_family="validation_status",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -180,6 +196,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         inharmonic_density_sum.name: inharmonic_density_sum,
         inharmonic_status.name: inharmonic_status,
         inharmonic_confirmed_count.name: inharmonic_confirmed_count,
+        persistence_fraction.name: persistence_fraction,
     }
 
 

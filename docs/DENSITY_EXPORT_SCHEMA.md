@@ -349,3 +349,14 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
 - Survivors only: `Confirmed_Inharmonic_Partials`.
 - `inharmonic_density_sum` / `inharmonic_energy_sum` / pies / Sethares
   use confirmed rows only. F-014 algebra is unchanged.
+
+### R.12 Temporal persistence (Phase B / phase_15)
+
+- Per-frame sustain peaks (local max ≥ 6 dB above the frame median)
+  feed `persistence_fraction`, `frequency_jitter_cents`,
+  `magnitude_jitter_db`. Score is against the time-averaged peak
+  frequency, not a band maximum inside `tol_hz`.
+- `include_for_density` requires `persistence_fraction ≥ 0.7`.
+  Exclusion: `low_temporal_persistence (p=…)`.
+- Metadata: `sustain_frame_count`, `sustain_frame_count_independent`,
+  `frame_duration_s`.

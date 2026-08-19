@@ -6,8 +6,8 @@ bump is recorded.
 
 | Phase | Topic | Tests | Acceptance | Status |
 |-------|--------|-------|------------|--------|
-| A | Confirmed-inharmonic partial class | `tests/phase_14/test_inharmonic_confirmation.py` | A2-like floor → 0 confirmed, all `rejected_floor` on CFAR. Piano B=2e-4, 30 stretched → 0 I, 30 H (`rejected_stretched_harmonic`). Bell, 10 partials at 20 dB SNR → exactly 10 confirmed. Two H3 sidelobes → 0 confirmed, `rejected_leakage` guarding order 3. | **in this PR** |
-| B | Temporal persistence | `tests/phase_15/` | H1–H8 on A2 ≥ 0.95; three 12 kHz floor bins < 0.3 even with body stop off. Steady partial accepted, 2-frame burst rejected. | pending |
+| A | Confirmed-inharmonic partial class | `tests/phase_14/test_inharmonic_confirmation.py` | A2-like floor → 0 confirmed, all `rejected_floor` on CFAR. Piano B=2e-4, 30 stretched → 0 I, 30 H (`rejected_stretched_harmonic`). Bell, 10 partials at 20 dB SNR → exactly 10 confirmed. Two H3 sidelobes → 0 confirmed, `rejected_leakage` guarding order 3. | **done (PR #66)** |
+| B | Temporal persistence | `tests/phase_15/test_temporal_persistence.py` | H1–H8 on A2 ≥ 0.95 at the time-averaged peak. The three 12 kHz floor slots fail the 0.7 inclusion gate with body stop off. Synthetic: steady ≥ 0.95, 2-frame burst rejected, unstructured floor < 0.3. | **in this PR** |
 | C | Independent high-n guards | `tests/phase_16/` | Body stop off, A2 still H1–H8. Run-2 duplicate notes pass invariant; `accepted_slots_above_body_stop = 0`. | pending |
 | D | Uncertainty by default | `tests/phase_17/` | CI bands on Stage 3 EWSD; A2 EPD CI reported; < 10 independent frames flagged. | pending |
 | E | Provenance | `tests/phase_18/` | Fresh export stamps commit + version. `verify_export.py` on run-2 → not comparable. | pending |
@@ -23,3 +23,13 @@ Module: `inharmonic_confirmation.py`. Constants: `CFAR_PFA`,
 New sheet: `Confirmed_Inharmonic_Partials`. Persistence uses a default
 fraction of 1.0 when the Phase B frame table is absent; A2 floor
 rejection is CFAR, not persistence.
+
+## Phase B notes
+
+Module: `temporal_persistence.py`. Constant:
+`FRAME_PEAK_MIN_ABOVE_MEDIAN_DB`. Persistence uses the per-frame peak
+table against the time-averaged peak frequency. On IOWA tuba A2
+(SustainStable, 1.08 s) H1–H8 persist ≥ 0.95 at that frequency. The
+12 094 Hz residual line is temporally present (p ≈ 0.6) but still
+fails the 0.7 inclusion gate; unstructured synthetic floor remains
+< 0.3. Body-stop labelling does not overwrite a persistence reject.

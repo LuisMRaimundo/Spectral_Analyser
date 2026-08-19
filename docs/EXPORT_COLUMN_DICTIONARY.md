@@ -49,7 +49,11 @@ Re-export guidance: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export
 | `inharmonic_status` | Confirmation outcome on residual candidates (Phase A) |
 | `cfar_detected_i` / `cfar_margin_db_i` | F-043 on the residual candidate (same `P_fa` as harmonics) |
 | `local_peak_valid_i` / `prominence_db_i` | Local maximum + saddle prominence ≥ 6 dB |
-| `temporal_persistence_i` / `persistence_fraction` | Sustain-frame persistence (Phase B fills the fraction) |
+| `temporal_persistence_i` / `persistence_fraction` | Sustain-frame persistence (Phase B) |
+| `frequency_jitter_cents` / `magnitude_jitter_db` | Std of per-frame frequency (cents) and magnitude (dB) |
+| `sustain_frame_count` | STFT frames covering the sustain (or whole file) |
+| `sustain_frame_count_independent` | `sustain_frame_count / (n_fft / hop)` |
+| `frame_duration_s` | Hop period `hop_length / sr` |
 | `not_leakage_i` / `leakage_guarding_harmonic_order` | Outside accepted-harmonic main-lobe/sidelobe footprint |
 | `not_stretched_harmonic_i` | Outside F-007 comb when stretch is applied |
 | `inharmonic_confirmed_count` | Count of `confirmed_inharmonic_partial` rows |
