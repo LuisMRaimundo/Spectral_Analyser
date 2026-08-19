@@ -337,3 +337,15 @@ uncapped / un-refit harmonic list until Stage 1 is repeated.
 
 **Re-export:** Stage 1 must be repeated. Workbooks from before this phase may
 contain multiply-assigned floor peaks and ungated amplitude sums.
+
+### R.11 Confirmed-inharmonic partial class (Phase A / phase_14)
+
+- Residual rows on `Inharmonic Spectrum` are candidates. Status
+  `inharmonic_status ∈ {confirmed_inharmonic_partial,
+  candidate_not_confirmed_partial, rejected_floor, rejected_leakage,
+  rejected_stretched_harmonic}`.
+- Boolean evidence columns: `cfar_detected_i`, `local_peak_valid_i`,
+  `temporal_persistence_i`, `not_leakage_i`, `not_stretched_harmonic_i`.
+- Survivors only: `Confirmed_Inharmonic_Partials`.
+- `inharmonic_density_sum` / `inharmonic_energy_sum` / pies / Sethares
+  use confirmed rows only. F-014 algebra is unchanged.

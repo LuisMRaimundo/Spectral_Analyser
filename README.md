@@ -113,6 +113,7 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | [`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`](docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) | Pipeline + **§3–4** f0/harmonics + **§11** version map |
 | [`docs/GUI_OPTION_REFERENCE.md`](docs/GUI_OPTION_REFERENCE.md) | GUI controls; **§A1** β / body-stop / CI; **§A5** export weight naming |
 | [`CHANGES.md`](CHANGES.md) | Versioned change log |
+| [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md) | Post-`70525e3` upgrade programme (Phases A–I) |
 
 **Re-export:** workbooks on disk keep old Stage 1 harmonic identity until **re-analysed with v4.1.0** (Stage 1 + 2 + 3), including exclusive peak-to-slot assignment and validated-partial gating (`spectral_analysis_schema_2026_08`). Export-schema-only refresh from v4.0.3 still needs Stage 2 + 3.
 

@@ -246,6 +246,21 @@ DENSITY_FRAGILE_PERTURBATION_PCT: Final[float] = 10.0
 # Escalate n_fft when bin_spacing_hz > f0 / 8 (low-f0 resolution guard)
 LOW_F0_BIN_TO_F0_MAX_RATIO: Final[float] = 0.125
 
+# CFAR (F-043) — same P_fa for harmonic and confirmed-inharmonic tests
+CFAR_PFA: Final[float] = 1e-2
+
+# Confirmed-inharmonic partial class (Phase A / phase_14)
+# 6 dB is a conservative internal default: above typical Blackman–Harris
+# main-lobe curvature (~0–2 dB) and below the 12 dB first-pass harmonic
+# prominence used for f0 refit, so isolated residual peaks can confirm
+# without admitting floor ripple.
+INHARMONIC_MIN_PROMINENCE_DB: Final[float] = 6.0
+# Fraction of sustain frames that must contain a peak within tol_hz.
+# Phase B populates the per-frame detector; Phase A defaults missing
+# persistence to 1.0 (not yet measured) so CFAR / leakage / stretch
+# remain the active gates.
+PARTIAL_PERSISTENCE_MIN_FRACTION: Final[float] = 0.7
+
 # Fixed frequency maximum for harmonic detection (comparability)
 FIXED_FREQ_MAX_HZ: Final[float] = 20000.0  # Fixed maximum frequency for summation (Option A: recommended)
 
@@ -432,6 +447,7 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "BARK_TO_HZ_LOW_FREQ_SLOPE",
         "BARK_TO_HZ_LOW_THRESHOLD",
         "BARK_TO_HZ_MID_THRESHOLD",
+        "CFAR_PFA",
         "CLIP_MAX",
         "CLIP_MIN",
         "CRITICAL_BAND_MASKING_MODERATE_THRESHOLD",
@@ -483,8 +499,10 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "DENSITY_FRAGILE_PERTURBATION_PCT",
         "DENSITY_WINDOW_PERTURBATION_MS",
         "LOW_F0_BIN_TO_F0_MAX_RATIO",
+        "INHARMONIC_MIN_PROMINENCE_DB",
         "INHARMONICITY_FIT_CENTS_WINDOW",
         "INHARMONICITY_FIT_ORDER_CAP",
+        "PARTIAL_PERSISTENCE_MIN_FRACTION",
         "KAISER_DEFAULT_BETA",
         "MAIN_LOBE_THRESHOLD_DB",
         "MASKING_ABSOLUTE_THRESHOLD_DB",

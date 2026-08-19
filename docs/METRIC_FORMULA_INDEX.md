@@ -20,7 +20,7 @@
 | F-011 | $H_{norm}=H/\log_2 K$ | Normalized entropy | `_normalized_entropy` | `spectral_entropy` |
 | F-012 | $D_{eff}=(\sum_i P_i)^2/\sum_i P_i^2$ on **validated harmonics only** (`include_for_density`); ungated copy `effective_partial_density_ungated` | Effective component count/density | `validated_partials.gated_effective_partial_density` | `effective_partial_density` |
 | F-013 | $D_H=\sum_{i\in H}\phi(A_i)$ | Harmonic density sum | compile extraction + weight function path | `harmonic_density_sum` |
-| F-014 | $D_I=\sum_{i\in I}\phi(A_i)$ | Inharmonic density sum | compile extraction + weight function path | `inharmonic_density_sum` |
+| F-014 | $D_I=\sum_{i\in I}\phi(A_i)$ over **confirmed inharmonic partials** only (`inharmonic_status=confirmed_inharmonic_partial`); algebra of $\phi$ unchanged | Inharmonic density sum | compile extraction + `inharmonic_confirmation` | `inharmonic_density_sum` |
 | F-015 | $D_S=\sum_{i\in S}\phi(A_i)$ | Subbass density sum | compile extraction + weight function path | `subbass_density_sum` |
 | F-016 | $D_{raw}=w_HD_H+w_ID_I+w_SD_S$ | Canonical weighted density | compile weighted composition | `density_metric_raw` |
 | F-017 | $D_{per-note}=r_HD_H+r_ID_I+r_SD_S$ | Per-note balance density | compile weighted composition | `density_metric_raw_per_note_balance` |

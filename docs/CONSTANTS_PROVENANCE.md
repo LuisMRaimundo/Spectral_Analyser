@@ -86,6 +86,9 @@ Provenance classes:
 - `DENSITY_FRAGILE_CI_PCT` (`10.0`) - `internal_default` - CI relative-width threshold for `density_fragile`.
 - `DENSITY_FRAGILE_PERTURBATION_PCT` (`10.0`) - `internal_default` - Window-perturbation spread threshold for `density_fragile`.
 - `LOW_F0_BIN_TO_F0_MAX_RATIO` (`0.125`) - `derived` - Escalate n_fft when bin spacing exceeds f0/8.
+- `CFAR_PFA` (`1e-2`) - `internal_default` - Same cell-averaging CFAR false-alarm probability for harmonic acceptance (F-043) and confirmed-inharmonic tests.
+- `INHARMONIC_MIN_PROMINENCE_DB` (`6.0`) - `internal_default` - Minimum saddle prominence for a residual candidate to confirm as an inharmonic partial. Chosen above typical Blackman–Harris main-lobe curvature (~0–2 dB) and below the 12 dB first-pass harmonic prominence, so isolated residual peaks can confirm without admitting floor ripple.
+- `PARTIAL_PERSISTENCE_MIN_FRACTION` (`0.7`) - `internal_default` - Minimum fraction of sustain frames that must contain a peak within `tol_hz`. Phase B populates the per-frame detector; Phase A defaults a missing fraction to 1.0 so CFAR / leakage / stretch remain the active gates.
 - `HARMONIC_VALIDATION_MAX_HARMONICS` (`1024`) - `convention` - Power-of-two validation cap convention.
 - `HARMONIC_VALIDATION_WARN_MEDIAN_ABS_CENTS` (`25.0`) - `internal_default` - QA warning threshold tuned for this pipeline.
 - `HARMONIC_VALIDATION_WARN_MAX_ABS_CENTS` (`80.0`) - `internal_default` - QA warning threshold tuned for this pipeline.

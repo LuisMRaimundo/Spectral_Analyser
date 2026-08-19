@@ -374,6 +374,11 @@ from acoustic_density_core import (
 from inharmonicity_model import fit_inharmonicity_coefficient
 from mir_descriptors import compute_mir_descriptors_from_spectrum
 from temporal_segmentation import segment_attack_sustain_release
+from inharmonic_confirmation import (
+    STATUS_CONFIRMED,
+    confirm_inharmonic_dataframe,
+    reassign_stretched_to_harmonics,
+)
 
 # logging base
 logger = logging.getLogger(__name__)
@@ -1930,8 +1935,11 @@ class AudioProcessor:
         self.linear_amplitude_fraction_inharmonic_of_HI: Optional[float] = None
         self.linear_amplitude_fraction_nonharmonic_of_total: Optional[float] = None
         self.linear_amplitude_batch_alignment_factor: Optional[float] = None
-        # Inharmonic *energy* path uses the same harmonic-window residual mask as export
-        # (``identify_nonharmonic_residual_rows``); rows are not confirmed inharmonic partials.
+        # Inharmonic energy path: residual candidates are confirmed in
+        # ``inharmonic_confirmation`` before they enter ``inharmonic_energy_sum``.
+        self.inharmonic_list_df: Optional[pd.DataFrame] = None
+        self.confirmed_inharmonic_df: Optional[pd.DataFrame] = None
+        self.inharmonic_confirmed_count: Optional[int] = None
         self._metrics_ih_amps_eff: np.ndarray = np.asarray([], dtype=float)
         self._metrics_ih_freqs_eff: Optional[np.ndarray] = None
         self.harmonic_partial_count: Optional[int] = None
@@ -5096,6 +5104,133 @@ class AudioProcessor:
                 pass
         return ih_full, ih_sel
 
+    def _time_averaged_magnitude_spectrum(
+        self,
+    ) -> tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        freqs = getattr(self, "freqs", None)
+        if freqs is None:
+            return None, None
+        fr = np.asarray(freqs, dtype=float)
+        S = getattr(self, "S", None)
+        if S is not None:
+            mag = np.asarray(S, dtype=float)
+            if mag.ndim == 2:
+                mag = np.mean(np.abs(mag), axis=1)
+            else:
+                mag = np.abs(mag)
+            n = int(min(fr.size, mag.size))
+            return fr[:n], mag[:n]
+        complete = getattr(self, "complete_list_df", None)
+        if (
+            isinstance(complete, pd.DataFrame)
+            and not complete.empty
+            and "Frequency (Hz)" in complete.columns
+        ):
+            fr2 = pd.to_numeric(complete["Frequency (Hz)"], errors="coerce").to_numpy(dtype=float)
+            if "Amplitude" in complete.columns:
+                mag2 = pd.to_numeric(complete["Amplitude"], errors="coerce").to_numpy(dtype=float)
+            elif "Magnitude (dB)" in complete.columns:
+                mag2 = np.power(
+                    10.0,
+                    pd.to_numeric(complete["Magnitude (dB)"], errors="coerce").to_numpy(dtype=float)
+                    / 20.0,
+                )
+            else:
+                return fr, None
+            keep = np.isfinite(fr2) & np.isfinite(mag2)
+            return fr2[keep], np.maximum(mag2[keep], 1e-12)
+        return fr, None
+
+    def _merge_stretched_reassignments(self, extra: list[dict]) -> None:
+        if not extra:
+            return
+        add = pd.DataFrame(extra)
+        for attr in ("harmonic_list_df", "harmonic_spectrum_candidates_df"):
+            current = getattr(self, attr, None)
+            if isinstance(current, pd.DataFrame) and not current.empty:
+                setattr(self, attr, pd.concat([current, add], ignore_index=True, sort=False))
+            elif current is None or (isinstance(current, pd.DataFrame) and current.empty):
+                setattr(self, attr, add.copy())
+
+    def _annotate_inharmonic_confirmation(self, ih_df: pd.DataFrame) -> pd.DataFrame:
+        """Run Phase A confirmation and store confirmed-I frames on ``self``."""
+        empty = pd.DataFrame()
+        if ih_df is None or not isinstance(ih_df, pd.DataFrame) or ih_df.empty:
+            self.inharmonic_list_df = empty.copy()
+            self.confirmed_inharmonic_df = empty.copy()
+            self.inharmonic_confirmed_count = 0
+            return empty.copy()
+        freqs, mags = self._time_averaged_magnitude_spectrum()
+        if freqs is None or mags is None or int(getattr(freqs, "size", 0) or 0) < 8:
+            out = ih_df.copy()
+            out["inharmonic_status"] = "candidate_not_confirmed_partial"
+            out["Acoustic_Interpretation_Status"] = "candidate_not_confirmed_partial"
+            self.inharmonic_list_df = out
+            self.confirmed_inharmonic_df = empty.copy()
+            self.inharmonic_confirmed_count = 0
+            return out
+        try:
+            f0 = float(getattr(self, "f0_final", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            f0 = 0.0
+        try:
+            B = float(getattr(self, "_harmonic_comb_B", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            B = 0.0
+        if (not np.isfinite(B) or B <= 0.0) and f0 > 0.0:
+            try:
+                B = float(self._estimate_comb_inharmonicity_B(f0) or 0.0)
+            except Exception:
+                B = 0.0
+        accepted_src = getattr(self, "harmonic_spectrum_candidates_df", None)
+        if not isinstance(accepted_src, pd.DataFrame) or accepted_src.empty:
+            accepted_src = getattr(self, "harmonic_list_df", None)
+        accepted: list[dict] = []
+        if isinstance(accepted_src, pd.DataFrame) and not accepted_src.empty:
+            if "include_for_density" in accepted_src.columns:
+                accepted = accepted_src.loc[
+                    accepted_src["include_for_density"].astype(bool)
+                ].to_dict(orient="records")
+            else:
+                accepted = accepted_src.to_dict(orient="records")
+        try:
+            n_fft = int(self._get_actual_n_fft())
+        except Exception:
+            n_fft = int(getattr(self, "n_fft", 0) or 0)
+        try:
+            sr = float(getattr(self, "sr", None) or getattr(self, "sample_rate", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            sr = 0.0
+        model_on = bool(getattr(self, "inharmonicity_model_applied", False)) or (
+            np.isfinite(B) and B > 0.0
+        )
+        annotated = confirm_inharmonic_dataframe(
+            ih_df,
+            magnitudes=mags,
+            freqs=freqs,
+            accepted_harmonics=accepted,
+            f0_hz=f0,
+            B=B,
+            inharmonicity_model_applied=model_on,
+            sr=sr if sr > 0.0 else None,
+            n_fft=n_fft if n_fft > 0 else None,
+        )
+        extra = reassign_stretched_to_harmonics(
+            annotated.to_dict(orient="records") if not annotated.empty else []
+        )
+        if extra:
+            self._merge_stretched_reassignments(extra)
+        self.inharmonic_list_df = annotated
+        if not annotated.empty and "inharmonic_status" in annotated.columns:
+            conf = annotated.loc[
+                annotated["inharmonic_status"].astype(str) == STATUS_CONFIRMED
+            ].copy()
+        else:
+            conf = empty.copy()
+        self.confirmed_inharmonic_df = conf
+        self.inharmonic_confirmed_count = int(len(conf))
+        return annotated
+
     def _assign_hierarchical_residual_debug_counts(
         self,
         ih_identified_full: pd.DataFrame,
@@ -7352,34 +7487,60 @@ class AudioProcessor:
                                 _e_ih_pk,
                             )
                     if ih_df_eff is not None and not ih_df_eff.empty:
-                        if "Amplitude" in ih_df_eff.columns:
-                            ih_amps_eff = pd.to_numeric(ih_df_eff["Amplitude"], errors="coerce").to_numpy(dtype=float)
-                        elif "Magnitude (dB)" in ih_df_eff.columns:
-                            ih_amps_eff = np.power(
-                                10.0,
-                                pd.to_numeric(ih_df_eff["Magnitude (dB)"], errors="coerce").to_numpy(dtype=float) / 20.0,
+                        try:
+                            ih_df_eff = self._annotate_inharmonic_confirmation(ih_df_eff)
+                        except Exception as _e_ih_conf:
+                            self.logger.warning(
+                                "Inharmonic confirmation failed (%s); treating candidates as unconfirmed.",
+                                _e_ih_conf,
                             )
-                        ih_amps_eff = np.nan_to_num(ih_amps_eff, nan=0.0, posinf=0.0, neginf=0.0)
-                        ih_amps_eff = np.maximum(ih_amps_eff, 0.0)
+                        ih_for_energy = ih_df_eff
                         if (
-                            bool(getattr(self, "density_noise_gate_enabled", DENSITY_NOISE_GATE_ENABLED))
-                            and "snr_db" in ih_df_eff.columns
-                            and ih_amps_eff.size
+                            isinstance(ih_df_eff, pd.DataFrame)
+                            and not ih_df_eff.empty
+                            and "inharmonic_status" in ih_df_eff.columns
                         ):
-                            _snr_ih = pd.to_numeric(ih_df_eff["snr_db"], errors="coerce").to_numpy(dtype=float)
-                            ih_amps_eff = np.asarray(
-                                [
-                                    noise_gated_linear_mass(
-                                        float(a),
-                                        snr_db=float(_snr_ih[i]) if i < _snr_ih.size else float("nan"),
-                                    )
-                                    for i, a in enumerate(ih_amps_eff)
-                                ],
-                                dtype=float,
-                            )
-                        if "Frequency (Hz)" in ih_df_eff.columns:
+                            ih_for_energy = ih_df_eff.loc[
+                                ih_df_eff["inharmonic_status"].astype(str) == STATUS_CONFIRMED
+                            ]
+
+                        def _ih_amp_vector(df_ih: pd.DataFrame) -> np.ndarray:
+                            if df_ih is None or df_ih.empty:
+                                return np.asarray([], dtype=float)
+                            if "Amplitude" in df_ih.columns:
+                                vec = pd.to_numeric(df_ih["Amplitude"], errors="coerce").to_numpy(dtype=float)
+                            elif "Magnitude (dB)" in df_ih.columns:
+                                vec = np.power(
+                                    10.0,
+                                    pd.to_numeric(df_ih["Magnitude (dB)"], errors="coerce").to_numpy(dtype=float) / 20.0,
+                                )
+                            else:
+                                return np.asarray([], dtype=float)
+                            vec = np.nan_to_num(vec, nan=0.0, posinf=0.0, neginf=0.0)
+                            vec = np.maximum(vec, 0.0)
+                            if (
+                                bool(getattr(self, "density_noise_gate_enabled", DENSITY_NOISE_GATE_ENABLED))
+                                and "snr_db" in df_ih.columns
+                                and vec.size
+                            ):
+                                _snr_ih = pd.to_numeric(df_ih["snr_db"], errors="coerce").to_numpy(dtype=float)
+                                vec = np.asarray(
+                                    [
+                                        noise_gated_linear_mass(
+                                            float(a),
+                                            snr_db=float(_snr_ih[i]) if i < _snr_ih.size else float("nan"),
+                                        )
+                                        for i, a in enumerate(vec)
+                                    ],
+                                    dtype=float,
+                                )
+                            return vec
+
+                        self._metrics_ih_amps_ungated = _ih_amp_vector(ih_df_eff)
+                        ih_amps_eff = _ih_amp_vector(ih_for_energy)
+                        if "Frequency (Hz)" in ih_for_energy.columns:
                             ih_freqs_eff = pd.to_numeric(
-                                ih_df_eff["Frequency (Hz)"], errors="coerce"
+                                ih_for_energy["Frequency (Hz)"], errors="coerce"
                             ).to_numpy(dtype=float)
             except Exception as _e_eff:
                 self.logger.debug("Effective partial density: inharmonic list failed: %s", _e_eff)
@@ -7472,7 +7633,12 @@ class AudioProcessor:
             den_lin_hi = sum_lin_h + sum_lin_ih
             frac_lin_ih = float(sum_lin_ih / den_lin_hi) if den_lin_hi > 1e-30 else 0.0
             self.linear_sum_amplitude_harmonic_ungated = sum_lin_h
-            self.linear_sum_amplitude_inharmonic_partial_ungated = sum_lin_ih
+            _ih_ung = getattr(self, "_metrics_ih_amps_ungated", None)
+            if _ih_ung is None:
+                _ih_ung = ih_amps_eff
+            self.linear_sum_amplitude_inharmonic_partial_ungated = (
+                float(np.sum(_ih_ung)) if getattr(_ih_ung, "size", 0) else 0.0
+            )
             self.linear_sum_amplitude_harmonic = sum_lin_h
             try:
                 from validated_partials import (
@@ -8007,6 +8173,9 @@ class AudioProcessor:
                         "harmonic_slot_matched_count": int(_vr.get("harmonic_slot_matched_count", 0) or 0),
                         "harmonic_validated_count": int(
                             getattr(self, "harmonic_validated_count", 0) or 0
+                        ),
+                        "inharmonic_confirmed_count": int(
+                            getattr(self, "inharmonic_confirmed_count", 0) or 0
                         ),
                         "harmonic_slot_missing_count": int(_vr.get("harmonic_slot_missing_count", 0) or 0),
                         "non_harmonic_candidate_count": _spc,
@@ -8731,6 +8900,25 @@ class AudioProcessor:
                 _src_note = "strict harmonic list (legacy fallback)"
             if "Amplitude" not in df_calc.columns and "Amplitude_raw" in df_calc.columns:
                 df_calc["Amplitude"] = pd.to_numeric(df_calc["Amplitude_raw"], errors="coerce")
+            _ihc = getattr(self, "confirmed_inharmonic_df", None)
+            if isinstance(_ihc, pd.DataFrame) and not _ihc.empty:
+                _ihc_use = _ihc.copy()
+                if "Amplitude" not in _ihc_use.columns and "Amplitude_raw" in _ihc_use.columns:
+                    _ihc_use["Amplitude"] = pd.to_numeric(
+                        _ihc_use["Amplitude_raw"], errors="coerce"
+                    )
+                keep_cols = [
+                    c
+                    for c in ("Frequency (Hz)", "Amplitude", "Amplitude_raw")
+                    if c in _ihc_use.columns
+                ]
+                if "Frequency (Hz)" in keep_cols and "Amplitude" in _ihc_use.columns:
+                    df_calc = pd.concat(
+                        [df_calc, _ihc_use[keep_cols]],
+                        ignore_index=True,
+                        sort=False,
+                    )
+                    _src_note = "validated harmonics + confirmed inharmonic partials"
             n_before = int(len(df_calc))
             self.dissonance_partial_count_before_cap = n_before
 
@@ -10205,6 +10393,9 @@ class AudioProcessor:
             "harmonic_validated_count": metric_int_or_nan(
                 getattr(self, "harmonic_validated_count", None)
             ),
+            "inharmonic_confirmed_count": metric_int_or_nan(
+                getattr(self, "inharmonic_confirmed_count", None)
+            ),
             "harmonic_slot_matched_count": metric_int_or_nan(
                 getattr(self, "harmonic_slot_matched_count", None)
             ),
@@ -11253,6 +11444,10 @@ class AudioProcessor:
 
             ih_df = _attach_raw_and_display_amplitude_columns(ih_df, k_align)
             sub_df = _attach_raw_and_display_amplitude_columns(sub_df, k_align)
+            try:
+                ih_df = self._annotate_inharmonic_confirmation(ih_df)
+            except Exception as _e_ih_exp_conf:
+                log.warning("Inharmonic confirmation at export failed: %s", _e_ih_exp_conf)
 
             sum_ih = float(s_ih_raw)
             sum_sb = float(s_sb_raw)
@@ -11332,12 +11527,46 @@ class AudioProcessor:
                 out.insert(2, "Acoustic_Interpretation_Status", acoustic_status)
                 return out
 
+            _ih_status_default = "candidate_not_confirmed_partial"
+            if (
+                isinstance(ih_df, pd.DataFrame)
+                and not ih_df.empty
+                and "inharmonic_status" in ih_df.columns
+            ):
+                _ih_status_default = None
             ih_partials = _tag_component_type(
                 ih_df,
                 "nonharmonic_peak_candidate",
                 classification_level="residual_rows_ranked_by_amplitude_after_harmonic_exclusion",
-                acoustic_status="candidate_not_confirmed_partial",
+                acoustic_status=_ih_status_default or "candidate_not_confirmed_partial",
             )
+            if (
+                isinstance(ih_df, pd.DataFrame)
+                and not ih_df.empty
+                and "inharmonic_status" in ih_df.columns
+                and isinstance(ih_partials, pd.DataFrame)
+                and not ih_partials.empty
+            ):
+                ih_partials["inharmonic_status"] = ih_df["inharmonic_status"].to_numpy()
+                ih_partials["Acoustic_Interpretation_Status"] = ih_df[
+                    "inharmonic_status"
+                ].to_numpy()
+                for _col in (
+                    "cfar_detected_i",
+                    "cfar_margin_db_i",
+                    "local_peak_valid_i",
+                    "prominence_db_i",
+                    "temporal_persistence_i",
+                    "persistence_fraction",
+                    "not_leakage_i",
+                    "leakage_guarding_harmonic_order",
+                    "not_stretched_harmonic_i",
+                    "nearest_stretched_order",
+                    "stretched_deviation_hz",
+                    "confirmation_failing_test",
+                ):
+                    if _col in ih_df.columns:
+                        ih_partials[_col] = ih_df[_col].to_numpy()
             _dc_lo_sb = float(getattr(self, "subbass_aggregate_lower_hz", SUBBASS_AGGREGATE_LOWER_HZ))
             _phys_hi_sb = float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz()))
             try:
@@ -11432,6 +11661,19 @@ class AudioProcessor:
 
             _pub_df(ih_export).to_excel(writer, sheet_name="Inharmonic Spectrum", index=False)
             log.debug("Inharmonic Spectrum (parciais inarmónicos): %s rows", len(ih_export))
+            if (
+                isinstance(ih_export, pd.DataFrame)
+                and not ih_export.empty
+                and "inharmonic_status" in ih_export.columns
+            ):
+                _ih_confirmed_export = ih_export.loc[
+                    ih_export["inharmonic_status"].astype(str) == STATUS_CONFIRMED
+                ].copy()
+            else:
+                _ih_confirmed_export = pd.DataFrame()
+            _pub_df(_ih_confirmed_export).to_excel(
+                writer, sheet_name="Confirmed_Inharmonic_Partials", index=False
+            )
 
             if sb_export is not None and not sb_export.empty:
                 _pub_df(sb_export).to_excel(writer, sheet_name="Sub-bass band", index=False)
@@ -11450,8 +11692,17 @@ class AudioProcessor:
             # ``Harmonic Partials sum`` … ``Total sum``: ``partial_metric_sums_h_i_s_total`` — **linear** on per-band
             # ΣA² scalars when the UI key is continuous (``log``/``sqrt``/… still use linear here for energy bookkeeping).
             # Discrete UI keys use native partial vectors. ``weight_function`` continues to drive canonical density / SDM.
+            _ih_for_sums = ih_df
+            if (
+                isinstance(ih_df, pd.DataFrame)
+                and not ih_df.empty
+                and "inharmonic_status" in ih_df.columns
+            ):
+                _ih_for_sums = ih_df.loc[
+                    ih_df["inharmonic_status"].astype(str) == STATUS_CONFIRMED
+                ]
             _h_psum, _i_psum, _s_psum, _t_psum = self._partial_metric_sums_for_metrics_export(
-                h_for_sum, ih_df, sub_df
+                h_for_sum, _ih_for_sums, sub_df
             )
 
             # Phase 5: MIR descriptors (whole-note + per-segment attack/sustain/release).
@@ -11850,6 +12101,9 @@ class AudioProcessor:
                     )
                 _val_row["harmonic_validated_count"] = metric_int_or_nan(
                     getattr(self, "harmonic_validated_count", None)
+                )
+                _val_row["inharmonic_confirmed_count"] = metric_int_or_nan(
+                    getattr(self, "inharmonic_confirmed_count", None)
                 )
                 _pub_df(pd.DataFrame([_val_row])).to_excel(writer, sheet_name="Validation_Metrics", index=False)
 

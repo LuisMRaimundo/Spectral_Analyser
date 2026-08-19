@@ -18,6 +18,7 @@ Generated / maintained deliverables:
 6. `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`
 7. `docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md` (§3–4, §9, §11)
 8. `docs/MANUAL_COVERAGE_REPORT.md`
+9. `docs/validation/UPGRADE_PROGRAMME_STATUS.md` (Phases A–I acceptance tracker)
 
 ---
 

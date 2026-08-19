@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover — defensive for partial installs
 
 F0_POLICY_VERSION: Final[str] = "f0_prior_constrained_harmonic_fit_v1"
 HARMONIC_FREQUENCY_POLICY_VERSION: Final[str] = "subbin_interpolated_peak_frequency_v1"
-NONHARMONIC_POLICY_VERSION: Final[str] = "nonharmonic_peak_candidates_not_partials_v1"
+NONHARMONIC_POLICY_VERSION: Final[str] = "confirmed_inharmonic_partial_v1"
 try:
     from low_frequency_policy import LOW_FREQUENCY_POLICY_VERSION as LOW_FREQUENCY_POLICY_VERSION
 except ImportError:  # pragma: no cover — defensive for partial installs

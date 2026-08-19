@@ -1,3 +1,30 @@
+# Phase 14 / Phase A — Confirmed-inharmonic partial class
+
+Residual rows after harmonic exclusion are candidates, not the I
+compartment. `inharmonic_confirmation.py` applies the same evidential
+standard as harmonic acceptance:
+
+- CFAR (F-043) at `CFAR_PFA` (`1e-2`); export `cfar_detected_i`,
+  `cfar_margin_db_i`.
+- Local peak + prominence ≥ `INHARMONIC_MIN_PROMINENCE_DB` (6 dB).
+- Temporal persistence ≥ `PARTIAL_PERSISTENCE_MIN_FRACTION` (0.7);
+  missing frame table defaults to 1.0 until Phase B.
+- Not in the main-lobe/sidelobe footprint of an accepted harmonic
+  (`spectral_leakage_guards`); export `leakage_guarding_harmonic_order`.
+- Not on the F-007 comb when the inharmonicity model is applied
+  (`rejected_stretched_harmonic` → reassign to H as
+  `strict_validated_stretched`).
+
+Confirmed rows (`inharmonic_status = confirmed_inharmonic_partial`) form
+I for F-014, `inharmonic_energy_sum`, pies, Sethares, and EWSD D_I.
+`Inharmonic Spectrum` keeps all candidates plus test columns;
+`Confirmed_Inharmonic_Partials` holds survivors only. F-042 / F-047 /
+F-048 / F-049 algebra is unchanged.
+
+- **Tests:** `tests/phase_14/test_inharmonic_confirmation.py`
+- **Docs:** CONSTANTS_PROVENANCE, EXPORT_COLUMN_DICTIONARY, METRIC_FORMULA_INDEX F-014,
+  `docs/validation/UPGRADE_PROGRAMME_STATUS.md`
+
 # Exclusive harmonic assignment; validated-partial gating; column semantics
 
 Stage 1 corrections after the IOWA tuba *pp* A2 (run 2) audit. Metric *formulas*
@@ -15,8 +42,8 @@ validated partials only.
   `debug_counts_invariant_status = failed`.
 - **F-012 gating (Fix 2):** `effective_partial_density`, `linear_sum_amplitude_*`,
   Sethares, and amplitude pies use `is_validated_partial` (`include_for_density`
-  for harmonics; inharmonic rows stay excluded until a confirmed-partial class
-  exists). Ungated copies keep `*_ungated`.
+  for harmonics; inharmonic rows enter only as `confirmed_inharmonic_partial`,
+  see Phase 14 / Phase A). Ungated copies keep `*_ungated`.
 - **Column semantics:** per-row sheets use `sample_note_tag` + `sample_id` +
   `partial_pitch_name`. `Note` remains the take identity on summary sheets only.
   Complete Spectrum pitch names are off by default (`export_complete_spectrum_pitch_names`).

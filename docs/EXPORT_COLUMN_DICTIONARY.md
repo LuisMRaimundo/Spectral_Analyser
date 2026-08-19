@@ -46,6 +46,17 @@ Re-export guidance: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export
 | `harmonic_slot_candidate_count` | Matching diagnostic (legacy name: `harmonic_slot_matched_count`) |
 | `harmonic_validated_count` | `include_for_density = TRUE` count |
 | `effective_partial_density` / `linear_sum_amplitude_*` | Validated partials only; ungated copies `*_ungated` |
+| `inharmonic_status` | Confirmation outcome on residual candidates (Phase A) |
+| `cfar_detected_i` / `cfar_margin_db_i` | F-043 on the residual candidate (same `P_fa` as harmonics) |
+| `local_peak_valid_i` / `prominence_db_i` | Local maximum + saddle prominence ≥ 6 dB |
+| `temporal_persistence_i` / `persistence_fraction` | Sustain-frame persistence (Phase B fills the fraction) |
+| `not_leakage_i` / `leakage_guarding_harmonic_order` | Outside accepted-harmonic main-lobe/sidelobe footprint |
+| `not_stretched_harmonic_i` | Outside F-007 comb when stretch is applied |
+| `inharmonic_confirmed_count` | Count of `confirmed_inharmonic_partial` rows |
+
+`Inharmonic Spectrum` keeps every candidate. `Confirmed_Inharmonic_Partials`
+is the survivor sheet. Only `*_validated_count` / `*_confirmed_count` are
+partial counts.
 
 ---
 

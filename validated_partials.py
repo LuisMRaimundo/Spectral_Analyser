@@ -1,9 +1,10 @@
-"""Validated-partial predicate and gated consumer helpers (Fix 2).
+"""Validated-partial predicate and gated consumer helpers (Fix 2 / Phase A).
 
 Harmonic rows enter density / dissonance / amplitude pies only when
-``include_for_density`` is True. Inharmonic rows currently carry
-``candidate_not_confirmed_partial`` and are excluded until a documented
-confirmation class exists. Ungated values stay available under ``*_ungated``.
+``include_for_density`` is True. Inharmonic rows enter only when
+``inharmonic_status`` (or the acoustic-status alias) is
+``confirmed_inharmonic_partial``. Ungated values stay available under
+``*_ungated``.
 """
 
 from __future__ import annotations
@@ -31,7 +32,8 @@ def is_validated_partial(row: Mapping[str, Any], *, kind: str = "harmonic") -> b
     if family == "harmonic":
         return bool(row.get("include_for_density", False))
     status = str(
-        row.get("Acoustic_Interpretation_Status")
+        row.get("inharmonic_status")
+        or row.get("Acoustic_Interpretation_Status")
         or row.get("acoustic_status")
         or row.get("partial_confirmation_status")
         or ""
@@ -113,19 +115,25 @@ def gated_effective_partial_density(
 
 def gated_dissonance_partials(
     harmonic_rows: Sequence[Mapping[str, Any]],
+    inharmonic_rows: Sequence[Mapping[str, Any]] = (),
 ) -> list[tuple[float, float]]:
     """(frequency_hz, amplitude) pairs for the dissonance model."""
     out: list[tuple[float, float]] = []
-    for row in harmonic_rows:
-        if not is_validated_partial(row, kind="harmonic"):
-            continue
-        try:
-            freq = float(row.get("Frequency (Hz)", row.get("extracted_frequency_hz")))
-        except (TypeError, ValueError):
-            continue
-        amp = _row_linear_amplitude(row)
-        if np.isfinite(freq) and freq > 0.0 and amp > 0.0:
-            out.append((freq, amp))
+    families = (
+        (harmonic_rows, "harmonic"),
+        (inharmonic_rows, "inharmonic"),
+    )
+    for rows, kind in families:
+        for row in rows:
+            if not is_validated_partial(row, kind=kind):
+                continue
+            try:
+                freq = float(row.get("Frequency (Hz)", row.get("extracted_frequency_hz")))
+            except (TypeError, ValueError):
+                continue
+            amp = _row_linear_amplitude(row)
+            if np.isfinite(freq) and freq > 0.0 and amp > 0.0:
+                out.append((freq, amp))
     return out
 
 
