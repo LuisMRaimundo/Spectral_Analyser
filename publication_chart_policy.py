@@ -263,17 +263,46 @@ def filter_out_forbidden_default_columns(columns: Iterable[str]) -> List[str]:
 # ---------------------------------------------------------------------------
 # Chart title composition
 # ---------------------------------------------------------------------------
+CI_COLUMN_PAIRS: dict[str, tuple[str, str]] = {
+    "note_density_final": (
+        "note_density_final_ci_low",
+        "note_density_final_ci_high",
+    ),
+    "note_effective_component_density": (
+        "note_effective_component_density_ci_low",
+        "note_effective_component_density_ci_high",
+    ),
+    "EWSD_score_acoustic_balanced": (
+        "EWSD_score_acoustic_balanced_ci_low",
+        "EWSD_score_acoustic_balanced_ci_high",
+    ),
+    "EWSD_score_total": (
+        "EWSD_score_total_ci_low",
+        "EWSD_score_total_ci_high",
+    ),
+}
+
+
+def ci_columns_for_metric(metric: str) -> Optional[tuple[str, str]]:
+    """Return ``(ci_low, ci_high)`` column names for a per-note scalar."""
+    return CI_COLUMN_PAIRS.get(str(metric))
+
+
 def compose_chart_title(
     sheet_name: str,
     metric: str,
     *,
     status: Optional[str] = None,
+    note_tag: Optional[str] = None,
+    run_id: Optional[str] = None,
+    commit: Optional[str] = None,
+    analysis_version: Optional[str] = None,
 ) -> str:
     """Compose a chart title with the audit-mandated tag set.
 
     Format::
 
-        "<sheet_name> — <metric> — <status>"
+        "<sheet_name> — <metric> — <status>[ — <note> · <run> · <commit> · <version>]"
 
     A trailing ``" — WARNING: …"`` is appended whenever the metric is not
     canonical so the visualisation cannot be silently misleading.
@@ -282,10 +311,100 @@ def compose_chart_title(
     m = str(metric).strip()
     eff_status = (status or classify_metric_for_publication(m)).strip().lower()
     title = f"{s} — {m} — {eff_status}"
+    extras = [
+        str(x).strip()
+        for x in (note_tag, run_id, commit, analysis_version)
+        if x is not None and str(x).strip()
+    ]
+    if extras:
+        title += " — " + " · ".join(extras)
     warn = metric_requires_warning(m)
     if warn:
         title += f" — WARNING: {warn}"
     return title
+
+
+def draw_scalar_ci_bands(ax, x, y, y_low, y_high, **kwargs):
+    """Draw a CI band / error bar for a per-note scalar that has a CI."""
+    import numpy as np
+
+    y_arr = np.asarray(list(y), dtype=float)
+    lo = np.asarray(list(y_low), dtype=float)
+    hi = np.asarray(list(y_high), dtype=float)
+    lower = np.clip(y_arr - lo, 0.0, None)
+    upper = np.clip(hi - y_arr, 0.0, None)
+    fmt = kwargs.pop("fmt", "o")
+    capsize = kwargs.pop("capsize", 3)
+    return ax.errorbar(x, y_arr, yerr=[lower, upper], fmt=fmt, capsize=capsize, **kwargs)
+
+
+def write_stage3_ewsd_ci_chart(
+    frame,
+    output_path,
+    *,
+    note_tag: Optional[str] = None,
+    run_id: Optional[str] = None,
+    commit: Optional[str] = None,
+    analysis_version: Optional[str] = None,
+) -> Optional[str]:
+    """Bar + CI chart of ``EWSD_score_acoustic_balanced`` for Stage 3."""
+    try:
+        import matplotlib.pyplot as plt
+        import numpy as np
+    except Exception:
+        return None
+    metric = "EWSD_score_acoustic_balanced"
+    if metric not in getattr(frame, "columns", []):
+        return None
+    y = pd.to_numeric(frame[metric], errors="coerce")
+    lo_col, hi_col = CI_COLUMN_PAIRS[metric]
+    lo = (
+        pd.to_numeric(frame[lo_col], errors="coerce")
+        if lo_col in frame.columns
+        else pd.Series([float("nan")] * len(frame))
+    )
+    hi = (
+        pd.to_numeric(frame[hi_col], errors="coerce")
+        if hi_col in frame.columns
+        else pd.Series([float("nan")] * len(frame))
+    )
+    labels = (
+        frame["Note"].astype(str).tolist()
+        if "Note" in frame.columns
+        else [str(i) for i in range(len(frame))]
+    )
+    fig, ax = plt.subplots(figsize=(max(6.0, 0.45 * len(labels) + 2.0), 4.5))
+    x = list(range(len(labels)))
+    ax.bar(x, y.fillna(0.0).to_numpy(dtype=float), color="#C00000", alpha=0.65)
+    draw_scalar_ci_bands(
+        ax,
+        x,
+        y.fillna(0.0).to_numpy(dtype=float),
+        lo.fillna(y).to_numpy(dtype=float),
+        hi.fillna(y).to_numpy(dtype=float),
+        color="black",
+        zorder=3,
+    )
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=45, ha="right")
+    ax.set_ylabel(metric)
+    ax.set_title(
+        compose_chart_title(
+            "Spectral_Density_Metrics",
+            metric,
+            status="canonical",
+            note_tag=note_tag,
+            run_id=run_id,
+            commit=commit,
+            analysis_version=analysis_version,
+        )
+    )
+    fig.tight_layout()
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return str(path)
 
 
 # ---------------------------------------------------------------------------
@@ -360,5 +479,9 @@ __all__ = [
     "select_default_publication_metric",
     "filter_out_forbidden_default_columns",
     "compose_chart_title",
+    "ci_columns_for_metric",
+    "CI_COLUMN_PAIRS",
+    "draw_scalar_ci_bands",
+    "write_stage3_ewsd_ci_chart",
     "load_canonical_sheet_with_fallback_warning",
 ]

@@ -30,22 +30,27 @@ it.
 
 from __future__ import annotations
 
-from typing import Dict, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
 from constants import (
+    CI_BASIS_INDEPENDENT_FRAME_MIN,
     DENSITY_CI_DEFAULT_ON,
     DENSITY_CI_N_BOOT,
     DENSITY_CI_SEED,
     DENSITY_FRAGILE_CI_PCT,
     DENSITY_FRAGILE_PERTURBATION_PCT,
     DENSITY_WINDOW_PERTURBATION_MS,
+    UNCERTAINTY_REL_FLAG_PCT,
 )
 
 __all__ = [
     "bootstrap_density_ci",
+    "bootstrap_effective_component_density",
     "bootstrap_note_density_final",
+    "build_uncertainty_summary",
+    "ci_basis_counts",
     "ci_relative_width_pct",
     "evaluate_density_fragility",
     "nfft_sensitivity",
@@ -314,6 +319,169 @@ def evaluate_density_fragility(
         "density_fragile_from_ci": bool(fragile_ci),
         "density_fragile_from_perturbation": bool(fragile_pert),
     }
+
+
+def bootstrap_effective_component_density(
+    amplitudes: Sequence[float],
+    *,
+    n_boot: int = DENSITY_CI_N_BOOT,
+    ci: float = 0.95,
+    seed: int = DENSITY_CI_SEED,
+) -> Dict[str, float]:
+    """Bootstrap CI for F-047 ``note_effective_component_density``.
+
+    Resamples the pooled validated-partial amplitudes and recomputes
+    ``(Σ A²)² / Σ A⁴``. The point estimate is the participation ratio on
+    the original amplitudes; algebra is unchanged.
+    """
+    from validated_partials import participation_ratio_from_amplitudes
+
+    if not (0.0 < float(ci) < 1.0):
+        raise ValueError("ci must be in (0, 1)")
+    amps = _as_1d_float(amplitudes)
+    amps = amps[amps > 0.0]
+    point = float(participation_ratio_from_amplitudes(amps))
+    n_boot = max(1, int(n_boot))
+    nan = float("nan")
+    if amps.size < 2:
+        return {
+            "point_estimate": point,
+            "ci_low": nan,
+            "ci_high": nan,
+            "relative_uncertainty": nan,
+            "n_boot": int(n_boot),
+            "ci_mass": float(ci),
+            "ci_basis_partial_count": int(amps.size),
+        }
+    rng = np.random.default_rng(int(seed))
+    boot = np.empty(n_boot, dtype=float)
+    for b in range(n_boot):
+        idx = rng.integers(0, amps.size, amps.size)
+        boot[b] = float(participation_ratio_from_amplitudes(amps[idx]))
+    lo_q = (1.0 - float(ci)) / 2.0 * 100.0
+    hi_q = (1.0 + float(ci)) / 2.0 * 100.0
+    bstd = float(np.std(boot, ddof=1)) if n_boot > 1 else 0.0
+    rel = float(bstd / abs(point)) if abs(point) > 1e-30 else nan
+    return {
+        "point_estimate": point,
+        "ci_low": float(np.percentile(boot, lo_q)),
+        "ci_high": float(np.percentile(boot, hi_q)),
+        "relative_uncertainty": rel,
+        "n_boot": int(n_boot),
+        "ci_mass": float(ci),
+        "ci_basis_partial_count": int(amps.size),
+    }
+
+
+def ci_basis_counts(
+    *,
+    independent_frame_count: float = float("nan"),
+    partial_count: float = float("nan"),
+    min_independent_frames: int = CI_BASIS_INDEPENDENT_FRAME_MIN,
+) -> Dict[str, Any]:
+    """Sample-size metadata that must sit beside every exported CI."""
+    try:
+        frames = float(independent_frame_count)
+    except (TypeError, ValueError):
+        frames = float("nan")
+    try:
+        parts = float(partial_count)
+    except (TypeError, ValueError):
+        parts = float("nan")
+    try:
+        min_n = int(min_independent_frames)
+    except (TypeError, ValueError):
+        min_n = int(CI_BASIS_INDEPENDENT_FRAME_MIN)
+    insufficient = bool(np.isfinite(frames) and frames < float(min_n))
+    return {
+        "ci_basis_frame_count": frames,
+        "ci_basis_partial_count": parts,
+        "ci_basis_frames_insufficient": insufficient,
+    }
+
+
+def build_uncertainty_summary(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    rel_flag_pct: float = UNCERTAINTY_REL_FLAG_PCT,
+) -> "pd.DataFrame":
+    """Per-note relative uncertainty and flags for the research workbook."""
+    import pandas as pd
+
+    try:
+        thresh = float(rel_flag_pct)
+    except (TypeError, ValueError):
+        thresh = float(UNCERTAINTY_REL_FLAG_PCT)
+    metrics = (
+        (
+            "note_density_final",
+            "note_density_final_rel_uncertainty",
+            "note_density_final_ci_low",
+            "note_density_final_ci_high",
+        ),
+        (
+            "note_effective_component_density",
+            "note_effective_component_density_rel_uncertainty",
+            "note_effective_component_density_ci_low",
+            "note_effective_component_density_ci_high",
+        ),
+        (
+            "EWSD_score_acoustic_balanced",
+            "EWSD_score_acoustic_balanced_rel_uncertainty",
+            "EWSD_score_acoustic_balanced_ci_low",
+            "EWSD_score_acoustic_balanced_ci_high",
+        ),
+    )
+    out_rows: list[dict[str, Any]] = []
+    for raw in rows:
+        note = str(raw.get("Note") or raw.get("sample_note_tag") or "")
+        try:
+            frames = float(raw.get("ci_basis_frame_count", raw.get(
+                "sustain_frame_count_independent", float("nan")
+            )))
+        except (TypeError, ValueError):
+            frames = float("nan")
+        try:
+            parts = float(raw.get("ci_basis_partial_count", float("nan")))
+        except (TypeError, ValueError):
+            parts = float("nan")
+        basis = ci_basis_counts(
+            independent_frame_count=frames, partial_count=parts
+        )
+        for name, rel_key, lo_key, hi_key in metrics:
+            try:
+                rel = float(raw.get(rel_key, float("nan")))
+            except (TypeError, ValueError):
+                rel = float("nan")
+            if not np.isfinite(rel):
+                try:
+                    point = float(raw.get(name, float("nan")))
+                    lo = float(raw.get(lo_key, float("nan")))
+                    hi = float(raw.get(hi_key, float("nan")))
+                    width = ci_relative_width_pct(point, lo, hi)
+                    rel = float(width / 100.0) if np.isfinite(width) else float("nan")
+                except (TypeError, ValueError):
+                    rel = float("nan")
+            rel_pct = float(rel * 100.0) if np.isfinite(rel) and abs(rel) <= 2.0 else (
+                float(rel) if np.isfinite(rel) else float("nan")
+            )
+            flagged = bool(np.isfinite(rel_pct) and rel_pct > thresh)
+            out_rows.append(
+                {
+                    "Note": note,
+                    "metric": name,
+                    "rel_uncertainty": rel if np.isfinite(rel) else float("nan"),
+                    "rel_uncertainty_pct": rel_pct,
+                    "uncertainty_flag": flagged,
+                    "uncertainty_flag_threshold_pct": thresh,
+                    "ci_basis_frame_count": basis["ci_basis_frame_count"],
+                    "ci_basis_partial_count": basis["ci_basis_partial_count"],
+                    "ci_basis_frames_insufficient": basis[
+                        "ci_basis_frames_insufficient"
+                    ],
+                }
+            )
+    return pd.DataFrame(out_rows)
 
 
 def nfft_sensitivity(values_by_resolution: Mapping[object, float]) -> Dict[str, float]:

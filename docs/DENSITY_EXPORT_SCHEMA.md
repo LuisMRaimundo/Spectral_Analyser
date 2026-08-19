@@ -89,6 +89,13 @@ Emitted on `Density_Metrics` and research `Spectral_Density_Metrics`.
 - **Non-interchangeability:** distinct from `note_density_final` (§2.1, weighted
   density) and from EWSD scores (§R.4, anti-concentration weighted density).
 - **Harmonic-only variant:** `harmonic_effective_partial_count` (F-045).
+- **Uncertainty (companion columns):** each note also carries a
+  bootstrap CI for F-047 (`note_effective_component_density_ci_low` /
+  `ci_high` / `rel_uncertainty`) by resampling the pooled amplitudes and
+  recomputing the same participation ratio. Algebra is unchanged.
+  `ci_basis_frame_count` and `ci_basis_partial_count` sit beside every
+  CI; `ci_basis_frames_insufficient` is true when independent frames
+  are below 10.
 - **Practical guide:** `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
 
 ## 2b. Per-note `Harmonic_Inclusion_Audit` sheet (in each `spectral_analysis.xlsx`)
@@ -371,3 +378,17 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
 - Continuity rule off by default.
 - Guard order: spacing cap → CFAR margin → persistence → continuity →
   body stop. The body stop is load-bearing for high-n rejection.
+
+### R.14 Uncertainty by default (Phase D / phase_17)
+
+- Stage 2/3 CIs are on by default (`DENSITY_CI_DEFAULT_ON`):
+  `note_density_final` (F-044), `EWSD_score_acoustic_balanced` (F-050),
+  and `note_effective_component_density` (F-047 bootstrap; algebra
+  unchanged).
+- Companion sample-size columns: `ci_basis_frame_count`,
+  `ci_basis_partial_count`, `ci_basis_frames_insufficient` (true when
+  independent frames < 10).
+- Research sheet `Uncertainty_Summary`: one row per note × metric with
+  `rel_uncertainty_pct` and a flag when that exceeds 25 %.
+- Publication Stage 3 EWSD chart (`ewsd_acoustic_balanced_ci.png`)
+  draws the CI band; title carries note tag, run id, commit, version.

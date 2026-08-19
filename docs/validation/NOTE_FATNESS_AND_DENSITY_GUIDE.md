@@ -52,7 +52,7 @@ See `docs/validation/EWSD_THEORY.md` for the full metric hierarchy.
 - **`ewsd_primary_analysis_eligible == True`** — gate EWSD columns only (Stage 3).
 - Match **`Register`**, **`Dynamic`**, and **`analysis_parameter_profile_id`** when comparing notes or instruments.
 
-Bootstrap CI columns exist for **`note_density_final`** and **`EWSD_score_acoustic_balanced`**, not for `note_effective_component_density`.
+Bootstrap CI columns exist for **`note_density_final`**, **`note_effective_component_density`**, and **`EWSD_score_acoustic_balanced`**. Each CI is accompanied by `ci_basis_frame_count` and `ci_basis_partial_count`; fewer than 10 independent frames is flagged. The research workbook `Uncertainty_Summary` sheet flags relative uncertainty above 25 %.
 
 ## Related documentation
 

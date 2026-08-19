@@ -82,6 +82,8 @@ Provenance classes:
 - `DENSITY_CI_DEFAULT_ON` (`True`) - `internal_default` - Per-note bootstrap CI is exported by default.
 - `DENSITY_CI_N_BOOT` (`1200`) - `internal_default` - Bootstrap resample count.
 - `DENSITY_CI_SEED` (`0`) - `internal_default` - Fixed bootstrap seed.
+- `UNCERTAINTY_REL_FLAG_PCT` (`25.0`) - `internal_default` - Relative-uncertainty threshold for the `Uncertainty_Summary` flag.
+- `CI_BASIS_INDEPENDENT_FRAME_MIN` (`10`) - `internal_default` - Independent-frame floor below which a CI is flagged as under-powered.
 - `DENSITY_WINDOW_PERTURBATION_MS` (`10.0`) - `internal_default` - ±window shift used for density fragility.
 - `DENSITY_FRAGILE_CI_PCT` (`10.0`) - `internal_default` - CI relative-width threshold for `density_fragile`.
 - `DENSITY_FRAGILE_PERTURBATION_PCT` (`10.0`) - `internal_default` - Window-perturbation spread threshold for `density_fragile`.
