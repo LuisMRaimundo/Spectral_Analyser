@@ -150,6 +150,8 @@ class RobustOrchestrator:
         harmonic_body_stop_enabled: bool = True,
         harmonic_body_stop_margin_db: float = 3.0,
         density_ci_enabled: bool = True,
+        stage1_search_root: Optional[Path] = None,
+        figures: bool = False,
     ):
         """Initialise the orchestrator.
 
@@ -165,17 +167,21 @@ class RobustOrchestrator:
                 surfaced to ``proc_audio`` so each per-note
                 ``Analysis_Metadata`` records which algorithm Stage 1
                 expected Stage 2 to use.
+            stage1_search_root: Optional existing Stage 1 tree used when
+                Stage 1 is skipped (re-export). Defaults to
+                ``main_analysis_output_dir``.
+            figures: When true, Stage 3 writes publication charts.
         """
         self.audio_files: List[Path] = [Path(f) for f in audio_files]
         self.main_analysis_output_dir = Path(main_analysis_output_dir)
         self.super_analyzer_path = (
             Path(super_analyzer_path) if super_analyzer_path else None
         )
-        # AUDIT FIX (Fgt_pp finding L2) — accept weight_function from the
-        # caller so CLI / GUI invocations no longer hard-code "linear".
-        wf_norm = str(weight_function or "linear").strip().lower()
-        if wf_norm not in ("linear", "log", "power"):
+        wf_norm = str(weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
+        if wf_norm == "sum":
             wf_norm = "linear"
+        if wf_norm not in ("linear", "log", "power"):
+            wf_norm = DENSITY_WEIGHT_FUNCTION_DEFAULT
         self.weight_function: str = wf_norm
         self.harmonic_tolerance_spacing_cap_fraction = float(
             harmonic_tolerance_spacing_cap_fraction
@@ -183,13 +189,17 @@ class RobustOrchestrator:
         self.harmonic_body_stop_enabled = bool(harmonic_body_stop_enabled)
         self.harmonic_body_stop_margin_db = float(harmonic_body_stop_margin_db)
         self.density_ci_enabled = bool(density_ci_enabled)
+        self.stage1_search_root = (
+            Path(stage1_search_root)
+            if stage1_search_root is not None
+            else self.main_analysis_output_dir
+        )
+        self.figures = bool(figures)
+        self.research_excel_path: Optional[Path] = None
 
         self.main_analysis_output_dir.mkdir(parents=True, exist_ok=True)
 
-        if self.audio_files:
-            log_dir = self.audio_files[0].parent
-        else:
-            log_dir = self.main_analysis_output_dir
+        log_dir = self.main_analysis_output_dir
         log_dir.mkdir(parents=True, exist_ok=True)
         log_path = log_dir / "orchestrator.log"
         _configure_file_logging(log_path)
@@ -491,7 +501,7 @@ class RobustOrchestrator:
     # ------------------------------------------------------------------
     # Stage 2 - compilation
     # ------------------------------------------------------------------
-    def run_stage2_compilation(self) -> bool:
+    def run_stage2_compilation(self, *, run_stage3: bool = True) -> bool:
         """Compile per-note spectral_analysis.xlsx files into one workbook."""
         logger.info("=" * 80)
         logger.info("STAGE 2: Compilation (per-note spectral_analysis.xlsx)")
@@ -506,12 +516,9 @@ class RobustOrchestrator:
         try:
             from compile_metrics import compile_density_metrics_with_pca
 
-            if not self.audio_files:
-                logger.error("No audio files to compile")
-                return False
-
             main_out = self.main_analysis_output_dir.resolve()
             main_out.mkdir(parents=True, exist_ok=True)
+            search_root = Path(self.stage1_search_root).resolve()
 
             def _count_metric_files(root: Path, needle: str) -> int:
                 if not root.is_dir():
@@ -522,15 +529,14 @@ class RobustOrchestrator:
                     if p.is_file() and nl in p.name.lower()
                 )
 
-            n_xlsx = _count_metric_files(main_out, "spectral_analysis.xlsx")
+            n_xlsx = _count_metric_files(search_root, "spectral_analysis.xlsx")
             if n_xlsx == 0:
                 logger.error(
                     "Stage 2: no spectral_analysis.xlsx found under %s (recursive).",
-                    main_out,
+                    search_root,
                 )
                 return False
 
-            search_root = main_out
             file_pattern = "spectral_analysis.xlsx"
             logger.info(
                 "Stage 2: using search_root=%s file_pattern=%r — matched %d file(s)",
@@ -620,8 +626,6 @@ class RobustOrchestrator:
                             lc_err,
                         )
 
-            from post_compile_research_export import run_research_workbook_export
-
             if compiled_df is not None and not compiled_df.empty:
                 self.compiled_excel_path = compiled_output_path
                 logger.info(
@@ -634,7 +638,8 @@ class RobustOrchestrator:
                     "[OK] compiled_density_metrics.xlsx created: %s",
                     compiled_output_path,
                 )
-                run_research_workbook_export(compiled_output_path, log=logger)
+                if run_stage3:
+                    return self.run_stage3_research_export(figures=self.figures)
                 return True
 
             if compiled_output_path.is_file():
@@ -648,7 +653,8 @@ class RobustOrchestrator:
                     "[OK] compiled_density_metrics.xlsx created: %s",
                     compiled_output_path,
                 )
-                run_research_workbook_export(compiled_output_path, log=logger)
+                if run_stage3:
+                    return self.run_stage3_research_export(figures=self.figures)
                 return True
 
             logger.error(
@@ -663,48 +669,128 @@ class RobustOrchestrator:
             return False
 
     # ------------------------------------------------------------------
-    # Complete pipeline
+    # Stage 3 - research export + EWSD
     # ------------------------------------------------------------------
-    def run_complete_pipeline(self) -> Dict[str, Any]:
+    def run_stage3_research_export(self, *, figures: Optional[bool] = None) -> bool:
+        """Build the research workbook and optional Stage 3 figures."""
         logger.info("=" * 80)
-        logger.info("PIPELINE ORCHESTRATOR - COMPLETE PIPELINE (Stage 1 + Stage 2 + Stage 3)")
+        logger.info("STAGE 3: Research export + EWSD")
         logger.info("=" * 80)
-        logger.info(f"Start time: {datetime.now()}")
+        compiled = self.compiled_excel_path or (
+            self.main_analysis_output_dir / "compiled_density_metrics.xlsx"
+        )
+        compiled = Path(compiled)
+        if not compiled.is_file():
+            logger.error("Stage 3: compiled workbook not found: %s", compiled)
+            return False
+        self.compiled_excel_path = compiled
+        write_figures = self.figures if figures is None else bool(figures)
+        try:
+            from post_compile_research_export import run_research_workbook_export
+
+            out = run_research_workbook_export(
+                compiled,
+                log=logger,
+                no_charts=not write_figures,
+                analysis_root=self.stage1_search_root,
+            )
+            if out is None:
+                return False
+            self.research_excel_path = Path(out)
+            return True
+        except Exception as exc:
+            logger.error("Error in Stage 3 (research export): %s", exc)
+            logger.error(traceback.format_exc())
+            return False
+
+    def _peek_parameter_profile_id(self) -> Optional[str]:
+        compiled = self.compiled_excel_path or (
+            self.main_analysis_output_dir / "compiled_density_metrics.xlsx"
+        )
+        compiled = Path(compiled)
+        if not compiled.is_file():
+            return None
+        try:
+            df = pd.read_excel(compiled, sheet_name="Density_Metrics")
+            if "analysis_parameter_profile_id" in df.columns and not df.empty:
+                value = str(df["analysis_parameter_profile_id"].iloc[0] or "").strip()
+                if value:
+                    return value
+        except Exception:
+            return None
+        return None
+
+    def run_selected_stages(
+        self,
+        stages: List[int],
+        *,
+        figures: Optional[bool] = None,
+        write_manifest: bool = True,
+        corpus: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Run an explicit subset of Stage 1 / 2 / 3 and write ``run_manifest.json``."""
+        import time
+
+        from run_manifest import (
+            build_run_manifest,
+            default_parameter_profile_id,
+            write_run_manifest,
+        )
+
+        if figures is not None:
+            self.figures = bool(figures)
+        t0 = time.perf_counter()
+        logger.info("=" * 80)
+        logger.info(
+            "PIPELINE ORCHESTRATOR — stages %s (figures=%s)",
+            ",".join(str(s) for s in stages),
+            self.figures,
+        )
+        logger.info("=" * 80)
+        logger.info("Start time: %s", datetime.now())
 
         pipeline_results: Dict[str, Any] = {
-            'start_time': datetime.now().isoformat(),
-            'audio_files_count': len(self.audio_files),
-            'stages': {},
+            "start_time": datetime.now().isoformat(),
+            "audio_files_count": len(self.audio_files),
+            "stages": {},
         }
+        ok = True
+        if 1 in stages:
+            stage1_success = self.run_stage1_analysis()
+            pipeline_results["stages"]["stage1_analysis"] = {
+                "success": stage1_success,
+                "results_count": len(self.main_analysis_results),
+                "component_profile_source": "current_analysis",
+                "model_weights_source": "current_analysis",
+            }
+            ok = bool(stage1_success)
+        if ok and 2 in stages:
+            stage2_success = self.run_stage2_compilation(run_stage3=False)
+            pipeline_results["stages"]["stage2_compilation"] = {
+                "success": stage2_success,
+                "compiled_workbook": (
+                    str(self.compiled_excel_path)
+                    if self.compiled_excel_path
+                    else None
+                ),
+            }
+            ok = bool(stage2_success)
+        if ok and 3 in stages:
+            stage3_success = self.run_stage3_research_export(figures=self.figures)
+            pipeline_results["stages"]["stage3_research_export"] = {
+                "success": stage3_success,
+                "research_workbook": (
+                    str(self.research_excel_path)
+                    if self.research_excel_path
+                    else None
+                ),
+            }
+            ok = bool(stage3_success)
 
-        stage1_success = self.run_stage1_analysis()
-        pipeline_results['stages']['stage1_analysis'] = {
-            'success': stage1_success,
-            'results_count': len(self.main_analysis_results),
-            'component_profile_source': 'current_analysis',
-            'model_weights_source': 'current_analysis',
-        }
+        pipeline_results["status"] = "success" if ok else "failed"
+        pipeline_results["end_time"] = datetime.now().isoformat()
+        wall_time_s = time.perf_counter() - t0
 
-        if not stage1_success:
-            logger.error("Pipeline failed at Stage 1 (per-note analysis)")
-            pipeline_results['status'] = 'failed'
-            pipeline_results['end_time'] = datetime.now().isoformat()
-            return pipeline_results
-
-        stage2_success = self.run_stage2_compilation()
-        pipeline_results['stages']['stage2_compilation'] = {
-            'success': stage2_success,
-            'compiled_workbook': (
-                str(self.compiled_excel_path)
-                if self.compiled_excel_path
-                else None
-            ),
-        }
-
-        pipeline_results['status'] = 'success' if stage2_success else 'failed'
-        pipeline_results['end_time'] = datetime.now().isoformat()
-
-        # Persist a tiny pipeline summary alongside the compiled workbook.
         results_path = self.main_analysis_output_dir / "orchestrator_results.json"
         try:
             from metadata_sanitizer import (
@@ -719,19 +805,59 @@ class RobustOrchestrator:
         except Exception:
             pass
         try:
-            with open(results_path, 'w', encoding='utf-8') as f:
+            with open(results_path, "w", encoding="utf-8") as f:
                 json.dump(pipeline_results, f, indent=2, default=str)
         except Exception as exc_save:
             logger.warning("Could not write orchestrator results JSON: %s", exc_save)
 
+        if write_manifest:
+            chart = self.main_analysis_output_dir / "ewsd_acoustic_balanced_ci.png"
+            try:
+                payload = build_run_manifest(
+                    corpus=corpus or self.stage1_search_root,
+                    out_dir=self.main_analysis_output_dir,
+                    stages=stages,
+                    figures=self.figures,
+                    weight_function=self.weight_function,
+                    input_files=self.audio_files,
+                    wall_time_s=wall_time_s,
+                    analysis_parameter_profile_id=(
+                        self._peek_parameter_profile_id()
+                        or default_parameter_profile_id(self.weight_function)
+                    ),
+                    outputs={
+                        "compiled_workbook": (
+                            str(self.compiled_excel_path)
+                            if self.compiled_excel_path
+                            else None
+                        ),
+                        "research_workbook": (
+                            str(self.research_excel_path)
+                            if self.research_excel_path
+                            else None
+                        ),
+                        "stage3_chart": str(chart) if chart.is_file() else None,
+                        "orchestrator_results": str(results_path),
+                    },
+                )
+                manifest_path = write_run_manifest(
+                    self.main_analysis_output_dir, payload
+                )
+                pipeline_results["run_manifest"] = str(manifest_path)
+                logger.info("Run manifest: %s", manifest_path)
+            except Exception as exc_man:
+                logger.warning("Could not write run_manifest.json: %s", exc_man)
+
         logger.info("=" * 80)
         logger.info("PIPELINE COMPLETE")
         logger.info("=" * 80)
-        logger.info(f"Results saved to: {results_path}")
+        logger.info("Results saved to: %s", results_path)
         if self.compiled_excel_path:
-            logger.info(f"Final compiled Excel: {self.compiled_excel_path}")
-
+            logger.info("Final compiled Excel: %s", self.compiled_excel_path)
         return pipeline_results
+
+    def run_complete_pipeline(self) -> Dict[str, Any]:
+        return self.run_selected_stages([1, 2, 3], figures=self.figures)
 
 
 def main() -> int:

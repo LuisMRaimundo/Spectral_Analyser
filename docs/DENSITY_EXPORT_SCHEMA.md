@@ -429,3 +429,13 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
   `Density_Metrics`, and Stage 3 research rows.
   `analysis_parameter_profile_id` includes `wf=…`.
 - φ sensitivity: `docs/validation/EWSD_SENSITIVITY_PHI.md`.
+
+### R.18 Run manifest (Phase H / phase_21)
+
+- `run_orchestrator.py --corpus … --out … --stages 1,2,3 --figures` writes
+  `run_manifest.json` beside the compiled workbooks.
+- Required fields: `code_commit`, `package_version`, `analysis_version`,
+  `constants_hash`, `analysis_parameter_profile_id`, `input_files[].sha256`,
+  `wall_time_s`.
+- `tools/reexport_corpus.py` diffs Stage 3 `EWSD_score_acoustic_balanced`
+  against a previous manifest or series.

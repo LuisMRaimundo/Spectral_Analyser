@@ -73,6 +73,27 @@ The full module manifest (48 top-level modules) is declared under `[tool.setupto
 The canonical entry point is `run_orchestrator.py`, which runs the full Stage 1 + Stage 2 + Stage 3 pipeline on a folder of audio files:
 
 ```bash
+python run_orchestrator.py --corpus <path> --out <dir> --stages 1,2,3 --figures
+```
+
+That command writes `run_manifest.json` (commit, versions, constants hash,
+parameter profile id, input file hashes, wall time). To re-export Stage 2/3
+after a code change and diff Stage 3 against a previous series:
+
+```bash
+python -m tools.reexport_corpus --stage1-root <analysis_results> --out <dir> --figures
+```
+
+The default baseline is the 19 Aug Análise 3 tuba *pp* series
+(`docs/validation/ANALISE_3_TUBA_PP_EWSD_2026_08_19.json`). Notes whose
+`EWSD_score_acoustic_balanced` relative change exceeds 4 % are listed with
+any `rejected_floor` CFAR margins. The Stage 2+3 re-export under this
+commit stays within 0.042 % on all 37 notes
+(`docs/validation/TUBA_PP_REEXPORT_DIFF.md`).
+
+Legacy invocation (all `*.wav` in the current directory):
+
+```bash
 python run_orchestrator.py
 ```
 
