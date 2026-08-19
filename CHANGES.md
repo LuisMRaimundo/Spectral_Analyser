@@ -1,3 +1,22 @@
+# Phase 19 / Phase F — Schema and count hygiene
+
+One meaning per header, and F-020 diagnostic rows contribute 0 to S sums.
+
+- Per-row sheets keep `sample_note_tag` / `sample_id` / `partial_pitch_name`
+  and drop overloaded `Note`. Complete Spectrum pitch names stay off
+  (`EXPORT_COMPLETE_SPECTRUM_PITCH_NAMES`).
+- `Validation_Metrics` / `Metrics` / `Analysis_Metadata` export
+  `subbass_upper_bound_hz` (F-020), `subbass_member_count`, and
+  `floor_rows_rejected_count`. Only `*_validated_count` /
+  `*_confirmed_count` are partial counts.
+- The Sub-bass sheet now includes the LF diagnostic band above F-020
+  (capped at `min(f0, LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ)`). Those rows
+  are `lf_diagnostic_not_member` and are excluded from
+  `subbass_density_sum` and `subbass_energy_sum`.
+- `*_ungated` twins remain the audit copies; compile S defaults to
+  F-020 members.
+- **Tests:** `tests/phase_19/test_schema_and_count_hygiene.py`
+
 # Phase 18 / Phase E — Provenance that cannot be wrong
 
 `analysis_version` and `export_schema_version` come from one module

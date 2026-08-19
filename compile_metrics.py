@@ -2780,6 +2780,21 @@ def _extract_band_amplitude_sum_for_density(
 
     amps = pd.to_numeric(df[amp_col], errors="coerce")
     finite_mask = amps.notna() & (amps > 0)
+    if str(label).strip().lower() == "subbass":
+        sb_mask, sb_policy, _ = _resolve_subbass_member_mask(df)
+        if sb_mask is not None:
+            finite_mask = finite_mask & pd.Series(sb_mask, index=df.index)
+            if not finite_mask.any():
+                return 0.0, 0, (
+                    f"sheet={sheet};column={amp_col};no_finite_rows;"
+                    f"inclusion_policy={sb_policy}"
+                )
+            total = float(amps.loc[finite_mask].sum())
+            return (
+                total,
+                int(finite_mask.sum()),
+                f"sheet={sheet};column={amp_col};inclusion_policy={sb_policy}",
+            )
     if not finite_mask.any():
         return 0.0, 0, f"sheet={sheet};column={amp_col};no_finite_rows"
     total = float(amps.loc[finite_mask].sum())
@@ -2881,21 +2896,41 @@ def _extract_band_power_sum_for_density(
     cols_lower = {str(c).lower(): c for c in usable_cols}
 
     p_col = cols_lower.get("power_raw")
+    sb_mask = None
+    sb_policy = ""
+    if str(label).strip().lower() == "subbass":
+        sb_mask, sb_policy, _ = _resolve_subbass_member_mask(df)
     if p_col is not None:
         p = pd.to_numeric(df[p_col], errors="coerce")
         finite_mask = p.notna() & (p > 0)
+        if sb_mask is not None:
+            finite_mask = finite_mask & pd.Series(sb_mask, index=df.index)
         if not finite_mask.any():
-            return 0.0, 0, f"sheet={sheet};column={p_col};no_finite_rows"
-        return float(p.loc[finite_mask].sum()), int(finite_mask.sum()), f"sheet={sheet};column={p_col}"
+            src = f"sheet={sheet};column={p_col};no_finite_rows"
+            if sb_policy:
+                src += f";inclusion_policy={sb_policy}"
+            return 0.0, 0, src
+        src = f"sheet={sheet};column={p_col}"
+        if sb_policy:
+            src += f";inclusion_policy={sb_policy}"
+        return float(p.loc[finite_mask].sum()), int(finite_mask.sum()), src
 
     a_col = cols_lower.get("amplitude_raw") or cols_lower.get("amplitude")
     if a_col is None:
         return None, 0, f"sheet={sheet};column=<not_found>"
     a = pd.to_numeric(df[a_col], errors="coerce")
     finite_mask = a.notna() & (a > 0)
+    if sb_mask is not None:
+        finite_mask = finite_mask & pd.Series(sb_mask, index=df.index)
     if not finite_mask.any():
-        return 0.0, 0, f"sheet={sheet};column={a_col};no_finite_rows"
-    return float((a.loc[finite_mask] ** 2).sum()), int(finite_mask.sum()), f"sheet={sheet};column={a_col}^2"
+        src = f"sheet={sheet};column={a_col};no_finite_rows"
+        if sb_policy:
+            src += f";inclusion_policy={sb_policy}"
+        return 0.0, 0, src
+    src = f"sheet={sheet};column={a_col}^2"
+    if sb_policy:
+        src += f";inclusion_policy={sb_policy}"
+    return float((a.loc[finite_mask] ** 2).sum()), int(finite_mask.sum()), src
 
 
 DENSITY_WEIGHT_FUNCTION_VALID: Tuple[str, ...] = ("linear", "log", "power")
@@ -3015,6 +3050,20 @@ def _resolve_include_for_density_mask(
     return mask, excluded
 
 
+def _resolve_subbass_member_mask(
+    df: pd.DataFrame,
+    *,
+    f0_hz: Optional[float] = None,
+) -> tuple[Optional[np.ndarray], str, int]:
+    """F-020 membership mask for Sub-bass compile sums."""
+    from validated_partials import resolve_subbass_member_mask
+
+    mask, policy, excluded = resolve_subbass_member_mask(df, f0_hz=f0_hz)
+    if policy == "all_rows_no_membership_column":
+        return None, policy, 0
+    return mask, policy, excluded
+
+
 def extract_density_component_sum(
     workbook_path: Union[str, Path],
     sheet_name: str,
@@ -3055,9 +3104,11 @@ def extract_density_component_sum(
     Anything else (``False``, ``0``, ``"false"``, ``"no"``, empty,
     NaN) is treated as excluded.
 
-    The filter NEVER applies to ``Inharmonic Spectrum`` or
-    ``Sub-bass band`` (their inclusion contract is summing all
-    finite non-negative amplitudes).
+    The filter NEVER applies to ``Inharmonic Spectrum`` (confirmed-I
+    gating is applied on that sheet's own status column by Stage 1).
+    ``Sub-bass band`` uses F-020 membership: rows labelled
+    ``lf_diagnostic_not_member`` (or otherwise failing
+    ``is_subbass_compartment_member``) contribute 0 to ``D_S``.
 
     The function **never** reads ``Amplitude_display_scaled``, never
     reads ``Power_raw`` for the ``"linear"`` / ``"log"`` modes, never
@@ -3100,6 +3151,7 @@ def extract_density_component_sum(
     wf = wf_in if wf_in in DENSITY_WEIGHT_FUNCTION_VALID else "linear"
     sheet_prefs = _density_sheet_preferences_for(sheet_name)
     is_harmonic_sheet = sheet_prefs is HARMONIC_SPECTRUM_SHEET_PREFERENCES
+    is_subbass_sheet = sheet_prefs is SUBBASS_SPECTRUM_SHEET_PREFERENCES
 
     result: Dict[str, Any] = {
         "D": None,
@@ -3182,6 +3234,14 @@ def extract_density_component_sum(
             inclusion_policy_label = "include_for_density_true"
         else:
             inclusion_policy_label = "all_rows_no_include_column"
+    elif is_subbass_sheet:
+        sb_mask, sb_policy, sb_excluded = _resolve_subbass_member_mask(df)
+        if sb_mask is not None:
+            include_mask = sb_mask
+            inclusion_policy_label = sb_policy
+            excluded_count = sb_excluded
+        else:
+            inclusion_policy_label = sb_policy or "all_rows_no_membership_column"
     result["inclusion_policy"] = inclusion_policy_label
     result["excluded_count"] = excluded_count
 
@@ -3254,7 +3314,7 @@ def extract_density_component_sum(
         source_str = f"sheet={sheet};column={column_used};weight_function={wf}"
         if max_frequency_hz is not None:
             source_str += f";max_frequency_hz={max_frequency_hz}"
-        if is_harmonic_sheet and inclusion_policy_label:
+        if (is_harmonic_sheet or is_subbass_sheet) and inclusion_policy_label:
             source_str += f";inclusion_policy={inclusion_policy_label}"
         result["density_component_sum_source"] = source_str
         return result
@@ -3295,7 +3355,7 @@ def extract_density_component_sum(
     )
     if max_frequency_hz is not None:
         source_str += f";max_frequency_hz={max_frequency_hz}"
-    if is_harmonic_sheet and inclusion_policy_label:
+    if (is_harmonic_sheet or is_subbass_sheet) and inclusion_policy_label:
         source_str += f";inclusion_policy={inclusion_policy_label}"
     result["density_component_sum_source"] = source_str
     result["status"] = "ok"
@@ -4418,6 +4478,10 @@ def _energy_distribution_density(workbook_path: Union[str, Path]) -> Dict[str, f
             inc = d["include_for_density"].astype(str).str.lower().isin(["true", "1", "1.0"])
             if inc.any():
                 d = d[inc]
+        if sheet == "Sub-bass band":
+            sb_mask, _, _ = _resolve_subbass_member_mask(d)
+            if sb_mask is not None:
+                d = d.loc[sb_mask]
         a = pd.to_numeric(d[col], errors="coerce").to_numpy(dtype=float)
         a = a[np.isfinite(a) & (a > 0.0)]
         # keep order alongside for the harmonic sheet
@@ -4539,6 +4603,10 @@ def _note_density_final_bootstrap_ci(
                     _INCLUDE_FOR_DENSITY_TRUE_TOKENS
                 ) | (df["include_for_density"] == True)  # noqa: E712
                 a = a[mask.to_numpy()]
+            elif sheet_prefs is SUBBASS_SPECTRUM_SHEET_PREFERENCES:
+                sb_mask, _, _ = _resolve_subbass_member_mask(df)
+                if sb_mask is not None:
+                    a = a[sb_mask]
             arr = a.to_numpy(dtype=float)
             return arr[np.isfinite(arr) & (arr > 0.0)]
 

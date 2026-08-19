@@ -262,6 +262,75 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Treating as an effective-count or fatness scalar.",
         ontology_family="uncertainty",
     )
+    harmonic_slot_candidate_count = MetricDefinition(
+        name="harmonic_slot_candidate_count",
+        formula="count of harmonic slots that found a candidate peak",
+        input_domain="harmonic slots searched",
+        unit_or_scale="count (matching diagnostic)",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Matching diagnostic (legacy alias: harmonic_slot_matched_count). "
+            "Not a validated-partial count."
+        ),
+        not_valid_for="Equating with harmonic_validated_count or a partial count.",
+        ontology_family="validation_status",
+    )
+    harmonic_validated_count = MetricDefinition(
+        name="harmonic_validated_count",
+        formula="count(include_for_density = TRUE)",
+        input_domain="validated_partials_only",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation="Number of validated harmonic partials.",
+        not_valid_for="Equating with harmonic_slot_candidate_count.",
+        ontology_family="partial_count_descriptor",
+    )
+    subbass_member_count = MetricDefinition(
+        name="subbass_member_count",
+        formula="count(subbass_membership = subbass_member) at or below F-020",
+        input_domain="subbass_compartment_members",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "F-020 compartment members on the Sub-bass sheet. "
+            "Not a validated-partial count."
+        ),
+        not_valid_for="Equating with *_validated_count or *_confirmed_count.",
+        ontology_family="validation_status",
+    )
+    floor_rows_rejected_count = MetricDefinition(
+        name="floor_rows_rejected_count",
+        formula="count(inharmonic_status = rejected_floor)",
+        input_domain="residual spectral candidates after harmonic exclusion",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation="Residual candidates rejected as floor by CFAR.",
+        not_valid_for="Equating with inharmonic_confirmed_count or a partial count.",
+        ontology_family="validation_status",
+    )
+    subbass_upper_bound_hz = MetricDefinition(
+        name="subbass_upper_bound_hz",
+        formula="min(0.5 * f0, 80)  (F-020)",
+        input_domain="per-note F-020 policy bound",
+        unit_or_scale="Hz",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Operational S-compartment ceiling. Rows above it are "
+            "lf_diagnostic_not_member and contribute 0 to S sums."
+        ),
+        not_valid_for="Treating as a partial count or as the diagnostic-export ceiling.",
+        ontology_family="policy_bound",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -277,6 +346,11 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         note_effective_component_density_ci.name: note_effective_component_density_ci,
         ci_basis_frame_count.name: ci_basis_frame_count,
         ci_basis_partial_count.name: ci_basis_partial_count,
+        harmonic_slot_candidate_count.name: harmonic_slot_candidate_count,
+        harmonic_validated_count.name: harmonic_validated_count,
+        subbass_member_count.name: subbass_member_count,
+        floor_rows_rejected_count.name: floor_rows_rejected_count,
+        subbass_upper_bound_hz.name: subbass_upper_bound_hz,
     }
 
 
