@@ -2,7 +2,8 @@
 
 IOWA tuba *pp* `_Sustains_Stable` exports and audio:
 
-- `C1/` — `spectral_analysis.xlsx` (main / pre-4.1.0), `audio.aif`
+- `C1/` — `spectral_analysis.xlsx` (main / pre-4.1.0), `C1.aif`
+  (keep the note in the filename; `audio.aif` is refused by the parser)
 - `Ds1/` — D#1
 - `C2/`
 

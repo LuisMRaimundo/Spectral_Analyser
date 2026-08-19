@@ -147,7 +147,7 @@ class RobustOrchestrator:
         weight_function: str = "linear",
         harmonic_tolerance_spacing_cap_fraction: float = 0.30,
         harmonic_body_stop_enabled: bool = True,
-        harmonic_body_stop_margin_db: float = 6.0,
+        harmonic_body_stop_margin_db: float = 3.0,
         density_ci_enabled: bool = True,
     ):
         """Initialise the orchestrator.
@@ -814,8 +814,8 @@ def main() -> int:
     parser.add_argument(
         '--harmonic-body-stop-margin-db',
         type=float,
-        default=6.0,
-        help='Margin (dB) for the harmonic-body noise-floor stop (default 6).',
+        default=3.0,
+        help='Margin (dB) for the harmonic-body noise-floor stop (default 3).',
     )
     parser.add_argument(
         '--density-ci',

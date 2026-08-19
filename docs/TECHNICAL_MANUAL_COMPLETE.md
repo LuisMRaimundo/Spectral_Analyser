@@ -292,21 +292,40 @@ comb \(n f_0\). The active limb is exported as `tolerance_limb`
 \(\in \{\mathrm{cents}, \mathrm{spacing\_cap}, \mathrm{bin\_floor}\}\).
 `HARMONIC_TOLERANCE_POLICY_VERSION = "2"`.
 
+**Iterative f0 refinement.** Before the policy-v2 match, H1–H8 are matched
+with the cents limb only. Peaks with SNR ≥ 20 dB and prominence ≥ 12 dB
+are kept and an amplitude-weighted least-squares f0 (and B, when enabled)
+is fitted on those peaks. `f0_fit_discrepancy_cents = 1200 log2(f0_refit /
+f0_joint)` is exported. When `|discrepancy| > 15` cents the refit becomes
+the match centre (`f0_refit_applied = True`). The second pass then matches
+all orders against that centre with the spacing-capped policy. This stops
+a drifted joint fit (trombone G3: 191.7 Hz vs measured H1 195.8 Hz) from
+rejecting real mid-order partials as `off_frequency`.
+
 **Harmonic-body noise-floor stop.** After candidate matching, the smoothed
 harmonic envelope (median of the last five validated magnitudes) is compared
 to the existing percentile/multiplier noise-floor estimate. When the envelope
-has been within `HARMONIC_BODY_STOP_MARGIN_DB` (6 dB) of that floor for
-`HARMONIC_BODY_STOP_CONSECUTIVE` (5) orders, `harmonic_body_stop_hz` is set at
+has been within `HARMONIC_BODY_STOP_MARGIN_DB` (3 dB) of that floor for
+`HARMONIC_BODY_STOP_CONSECUTIVE` (5) orders *and* the envelope slope over
+that window is a plateau (`|slope| ≤ HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER`,
+1 dB/order), `harmonic_body_stop_hz` is set at
 the last accepted order. Orders above the stop are excluded from the
-strict/validated set and from every density integration, but remain on
-`Harmonic_Inclusion_Audit` with reason `above_harmonic_body_stop`. Notes whose
-body never approaches the floor before 20 kHz are unaffected.
+strict/validated set and remain on `Harmonic_Inclusion_Audit` with reason
+`above_harmonic_body_stop`. The stop is a validation cut only.
+
+**Noise-gated density mass.** Policy v1 integrated noise-floor mass at *pp*
+(tuba C1 harvested ~190 floor ripples into `canonical_density`). Policy v2
+plus the noise gate correct that. Every density integral (harmonic,
+inharmonic, residual/sub-bass; `canonical_density`, `note_density_final`,
+EWSD inputs) counts only mass above the smoothed noise floor: subtract the
+local percentile/multiplier floor and clip at 0
+(`DENSITY_NOISE_GATE_POLICY = subtract_floor_clip_0`,
+`DENSITY_NOISE_GATE_ENABLED = True`) over the full 0–20 kHz domain.
+`density_effective_ceiling_hz` is the global ceiling, not
+`min(ceiling, harmonic_body_stop_hz)`.
 
 **Global comparability is preserved.** `density_frequency_ceiling_hz` stays at
-20 kHz. The per-note effective ceiling
-`density_effective_ceiling_hz = min(density_frequency_ceiling_hz,
-harmonic_body_stop_hz)` is reported so every table cell can name the policy
-that produced it.
+20 kHz. `density_effective_ceiling_hz` reports that same global ceiling.
 
 **Fragility flag.** `bootstrap_density_ci` runs by default
 (`DENSITY_CI_DEFAULT_ON`). An optional ±10 ms window perturbation reports

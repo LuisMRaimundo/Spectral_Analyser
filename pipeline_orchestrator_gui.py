@@ -840,7 +840,7 @@ class RobustOrchestratorApp:
             row=4, column=0, sticky="w", pady=(8, 0)
         )
         self.entry_body_stop_margin_db = ttk.Entry(lf_harmonic, width=12)
-        self.entry_body_stop_margin_db.insert(0, "6.0")
+        self.entry_body_stop_margin_db.insert(0, "3.0")
         self.entry_body_stop_margin_db.grid(row=5, column=0, sticky="ew", padx=(0, 8))
         self.var_density_ci = tk.BooleanVar(value=True)
         ttk.Checkbutton(
@@ -1549,7 +1549,7 @@ class RobustOrchestratorApp:
                 'density_frequency_ceiling_hz': float(self.entry_max_freq.get() or "20000"),
                 'harmonic_tolerance_spacing_cap_fraction': float(self.entry_spacing_cap_beta.get() or "0.30"),
                 'harmonic_body_stop_enabled': bool(self.var_harmonic_body_stop.get()),
-                'harmonic_body_stop_margin_db': float(self.entry_body_stop_margin_db.get() or "6.0"),
+                'harmonic_body_stop_margin_db': float(self.entry_body_stop_margin_db.get() or "3.0"),
                 'density_ci_enabled': bool(self.var_density_ci.get()),
                 'compile': self.var_compile.get(),
                 'smart': self.var_smart.get(),
@@ -2248,7 +2248,7 @@ class RobustOrchestratorApp:
                             params.get("harmonic_body_stop_enabled", True)
                         ),
                         harmonic_body_stop_margin_db=float(
-                            params.get("harmonic_body_stop_margin_db", 6.0)
+                            params.get("harmonic_body_stop_margin_db", 3.0)
                         ),
                         density_ci_enabled=bool(params.get("density_ci_enabled", True)),
                         use_tsne=params.get('use_tsne', False),

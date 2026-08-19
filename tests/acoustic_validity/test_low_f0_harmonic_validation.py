@@ -300,7 +300,12 @@ def _fixture_audio(folder: Path) -> Path | None:
     return generic[0] if generic else None
 
 
-def _run_fixture_audio(audio: Path, out: Path, settings: dict | None = None) -> Path:
+def _run_fixture_audio(
+    audio: Path,
+    out: Path,
+    settings: dict | None = None,
+    **apply_kwargs,
+) -> Path:
     cfg = {
         "n_fft": FIXTURE_N_FFT,
         "zero_padding": FIXTURE_ZERO_PADDING,
@@ -314,6 +319,23 @@ def _run_fixture_audio(audio: Path, out: Path, settings: dict | None = None) -> 
     }
     if settings:
         cfg.update(settings)
+    cfg.update(apply_kwargs)
+    extra = {
+        k: cfg.pop(k)
+        for k in list(cfg)
+        if k
+        not in {
+            "n_fft",
+            "zero_padding",
+            "hop_length",
+            "window",
+            "weight_function",
+            "density_salience_threshold_db",
+            "density_frequency_ceiling_hz",
+            "freq_min",
+            "freq_max",
+        }
+    }
     ap = AudioProcessor()
     ap.load_audio_files([str(audio)])
     ap.apply_filters_and_generate_data(
@@ -333,6 +355,7 @@ def _run_fixture_audio(audio: Path, out: Path, settings: dict | None = None) -> 
         compare_models=False,
         compile_per_call=False,
         parallel_processing=False,
+        **extra,
     )
     workbooks = list(out.rglob("spectral_analysis.xlsx"))
     assert workbooks, f"no workbook for {audio}"
@@ -399,14 +422,33 @@ def test_trombone_pp_regression_if_present(tmp_path: Path) -> None:
         if not np.isfinite(old) or abs(old) < 1e-12 or not np.isfinite(new):
             continue
         rel = abs(new - old) / abs(old)
+        fragile = bool(row.get("density_fragile", False))
         band_dev[band].append(rel)
+        if note == "G3":
+            g3_count = float(row.get("validated_harmonic_component_count_body_ceiling", np.nan))
+            if not (np.isfinite(g3_count) and g3_count >= 19):
+                moved.append(f"G3 validated count {g3_count} < 19")
+            if rel > 0.10:
+                moved.append(f"G3 density {rel:.1%} > 10%")
+            harm = pd.read_excel(new_wb, sheet_name="Harmonic Spectrum")
+            if "Harmonic Number" in harm.columns and "candidate_status" in harm.columns:
+                mid = harm.loc[
+                    pd.to_numeric(harm["Harmonic Number"], errors="coerce").isin([4, 5, 6, 7])
+                ]
+                bad = mid.loc[mid["candidate_status"].astype(str) == "off_frequency"]
+                if not bad.empty:
+                    moved.append("G3 H4–H7 still off_frequency")
+                if "include_for_density" in mid.columns and not bool(mid["include_for_density"].astype(bool).all()):
+                    moved.append("G3 H4–H7 not all include_for_density")
+        elif band == "E3-C5" and (not fragile) and rel > 0.25:
+            moved.append(f"{note} E3–C5 density {rel:.1%} > 25% (not fragile)")
     if not any(band_dev.values()):
         pytest.skip("trombone pp audio not present")
     max_low = max(band_dev["E2-D#3"]) if band_dev["E2-D#3"] else float("nan")
     max_high = max(band_dev["E3-C5"]) if band_dev["E3-C5"] else float("nan")
     report = (
-        f"trombone max |Δcanonical_density| E2–D#3={max_low:.2%} "
-        f"(n={len(band_dev['E2-D#3'])}); E3–C5={max_high:.2%} "
+        f"trombone max |d canonical_density| E2-D#3={max_low:.2%} "
+        f"(n={len(band_dev['E2-D#3'])}); E3-C5={max_high:.2%} "
         f"(n={len(band_dev['E3-C5'])})"
     )
     if moved:

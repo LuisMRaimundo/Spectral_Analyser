@@ -218,9 +218,22 @@ ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC: Final[str] = (
 )
 
 # Harmonic-body noise-floor stop (adaptive effective ceiling; global 20 kHz unchanged)
-HARMONIC_BODY_STOP_MARGIN_DB: Final[float] = 6.0
+# Margin 3 dB: a real decaying tail sits 6–10 dB above the floor; C1 harvest sits at 0–3 dB.
+HARMONIC_BODY_STOP_MARGIN_DB: Final[float] = 3.0
 HARMONIC_BODY_STOP_CONSECUTIVE: Final[int] = 5
+# Fire only when the envelope slope over the window is ~0 (plateau), not a decaying tail.
+HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER: Final[float] = 1.0
 HARMONIC_BODY_STOP_ENABLED: Final[bool] = True
+
+# Iterative f0 refinement before the policy-v2 capped match
+F0_REFIT_LOW_ORDER_MAX: Final[int] = 8
+F0_REFIT_SNR_MIN_DB: Final[float] = 20.0
+F0_REFIT_PROMINENCE_MIN_DB: Final[float] = 12.0
+F0_REFIT_DISCREPANCY_CENTS: Final[float] = 15.0
+
+# Density integrals count only mass above the smoothed noise floor
+DENSITY_NOISE_GATE_ENABLED: Final[bool] = True
+DENSITY_NOISE_GATE_POLICY: Final[str] = "subtract_floor_clip_0"
 
 # Density uncertainty / fragility (per-note export; default on)
 DENSITY_CI_DEFAULT_ON: Final[bool] = True
@@ -456,6 +469,13 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "HARMONIC_BODY_STOP_CONSECUTIVE",
         "HARMONIC_BODY_STOP_ENABLED",
         "HARMONIC_BODY_STOP_MARGIN_DB",
+        "HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER",
+        "F0_REFIT_DISCREPANCY_CENTS",
+        "F0_REFIT_LOW_ORDER_MAX",
+        "F0_REFIT_PROMINENCE_MIN_DB",
+        "F0_REFIT_SNR_MIN_DB",
+        "DENSITY_NOISE_GATE_ENABLED",
+        "DENSITY_NOISE_GATE_POLICY",
         "DENSITY_CI_DEFAULT_ON",
         "DENSITY_CI_N_BOOT",
         "DENSITY_CI_SEED",

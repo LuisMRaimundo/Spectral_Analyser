@@ -69,9 +69,16 @@ Provenance classes:
 - `HARMONIC_MATCH_TOLERANCE_CENTS` (`35.0`) - `convention` - Standard cents-domain matching tolerance convention.
 - `HARMONIC_TOLERANCE_SPACING_CAP_FRACTION` (`0.30`) - `derived` - β cap so the cents window cannot exceed 30 % of the inter-harmonic spacing (policy v2).
 - `HARMONIC_TOLERANCE_POLICY_VERSION` (`2`) - `internal_default` - Version stamp for the spacing-capped tolerance policy.
-- `HARMONIC_BODY_STOP_MARGIN_DB` (`6.0`) - `internal_default` - Envelope-to-floor margin that ends the harmonic body.
+- `HARMONIC_BODY_STOP_MARGIN_DB` (`3.0`) - `internal_default` - Envelope-to-floor margin that ends the harmonic body (real tails sit 6–10 dB up; harvest sits at 0–3 dB).
 - `HARMONIC_BODY_STOP_CONSECUTIVE` (`5`) - `internal_default` - Consecutive at-floor orders required to trigger the body stop.
-- `HARMONIC_BODY_STOP_ENABLED` (`True`) - `internal_default` - Default-on harmonic-body noise-floor stop.
+- `HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER` (`1.0`) - `internal_default` - Max |envelope slope| (dB/order) still treated as a plateau; decaying tails do not fire the stop.
+- `HARMONIC_BODY_STOP_ENABLED` (`True`) - `internal_default` - Default-on harmonic-body noise-floor stop (validation cut only).
+- `F0_REFIT_LOW_ORDER_MAX` (`8`) - `internal_default` - First-pass orders for the iterative f0 refit.
+- `F0_REFIT_SNR_MIN_DB` (`20.0`) - `internal_default` - Minimum SNR to keep a first-pass peak.
+- `F0_REFIT_PROMINENCE_MIN_DB` (`12.0`) - `internal_default` - Minimum prominence to keep a first-pass peak.
+- `F0_REFIT_DISCREPANCY_CENTS` (`15.0`) - `internal_default` - Apply the refit when |refit − joint| exceeds this.
+- `DENSITY_NOISE_GATE_ENABLED` (`True`) - `internal_default` - Density integrals count only mass above the floor.
+- `DENSITY_NOISE_GATE_POLICY` (`subtract_floor_clip_0`) - `internal_default` - Subtract the smoothed floor and clip at 0.
 - `DENSITY_CI_DEFAULT_ON` (`True`) - `internal_default` - Per-note bootstrap CI is exported by default.
 - `DENSITY_CI_N_BOOT` (`1200`) - `internal_default` - Bootstrap resample count.
 - `DENSITY_CI_SEED` (`0`) - `internal_default` - Fixed bootstrap seed.

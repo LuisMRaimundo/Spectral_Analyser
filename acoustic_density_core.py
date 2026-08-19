@@ -67,9 +67,12 @@ import numpy as np
 import pandas as pd
 from subbass_policy import SubBassPolicy
 from inharmonicity_model import fit_inharmonicity_coefficient
+from harmonic_peak_validation import noise_gated_power
 from constants import (
     ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC,
     BODY_DENSITY_MAX_HZ,
+    DENSITY_NOISE_GATE_ENABLED,
+    DENSITY_NOISE_GATE_POLICY,
     FULL_SPECTRUM_MAX_HZ,
     HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
     INHARMONICITY_B_ENABLE_THRESHOLD,
@@ -411,6 +414,8 @@ def compute_acoustic_density_descriptors(
     # path resolves sub-bass boundary via SubBassPolicy directly.
     del subbass_upper_ratio
     freq, power = _extract_peak_vectors(peaks_df)
+    if bool(DENSITY_NOISE_GATE_ENABLED) and power.size:
+        power = noise_gated_power(power, freq, enabled=True)
 
     _freq_max_runtime = float(freq_max_hz) if np.isfinite(float(freq_max_hz)) else float(FULL_SPECTRUM_MAX_HZ)
     _body_ceiling_default_hz = float(max(1.0, min(_freq_max_runtime, float(BODY_DENSITY_MAX_HZ))))
@@ -520,6 +525,8 @@ def compute_acoustic_density_descriptors(
         "density_summation_mode": str(density_summation_mode or "his_note_adaptive"),
         "density_salience_threshold_db": float(_density_salience_threshold_db),
         "density_frequency_ceiling_hz": float(_density_frequency_ceiling_hz),
+        "density_noise_gate_enabled": bool(DENSITY_NOISE_GATE_ENABLED),
+        "density_noise_gate_policy": str(DENSITY_NOISE_GATE_POLICY),
         "density_metric_raw": float("nan"),
         "effective_components_weighted_diagnostic": float("nan"),
         "diagnostic_effective_components_h": float("nan"),
