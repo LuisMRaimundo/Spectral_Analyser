@@ -10,8 +10,8 @@ bump is recorded.
 | B | Temporal persistence | `tests/phase_15/test_temporal_persistence.py` | H1–H8 on A2 ≥ 0.95 at the time-averaged peak. The three 12 kHz floor slots fail the 0.7 inclusion gate with body stop off. Synthetic: steady ≥ 0.95, 2-frame burst rejected, unstructured floor < 0.3. | **done (PR #67)** |
 | C | Independent high-n guards | `tests/phase_16/test_high_n_harmonic_guards.py` | Body stop off: A2 keeps the low-order body and nothing above H8 (H7/H8 may be `cfar_marginal` on this take). Run-2 notes pass the peak-bin invariant; `accepted_slots_above_body_stop = 0`. | **done (PR #68)** |
 | D | Uncertainty by default | `tests/phase_17/test_uncertainty_defaults.py` | CI bands on Stage 3 EWSD; A2 EPD CI reported; < 10 independent frames flagged. | **done (PR #69)** |
-| E | Provenance | `tests/phase_18/test_provenance_and_verify_export.py` | Fresh export stamps commit + version. `verify_export.py` on run-2 → not comparable. | **in this PR** |
-| F | Schema / count hygiene | `tests/phase_19/` | One meaning per header; F-020 rows contribute 0 to S sums. | pending |
+| E | Provenance | `tests/phase_18/test_provenance_and_verify_export.py` | Fresh export stamps commit + version. `verify_export.py` on run-2 → not comparable. | **done (PR #70)** |
+| F | Schema / count hygiene | `tests/phase_19/test_schema_and_count_hygiene.py` | One meaning per header; F-020 rows contribute 0 to S sums. | **in this PR** |
 | G | Weight function φ | `tests/phase_20/` | Sensitivity report on tuba corpus; README records ρ. | pending |
 | H | Reproducibility command | `tests/phase_21/` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | pending |
 | I | Construct validation | `tests/validation/synthetic_corpus/` | Recover N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at SNR 10–40 dB. Perceptual scaffold only (no data collection). | pending |
@@ -64,3 +64,14 @@ diagnostic rows are excluded unless
 `INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE`. Header-contract invariant is
 fail-closed. A v4.0.3 / run-2 workbook is
 `not comparable (pre-exclusive-assignment)`.
+
+## Phase F notes
+
+`Note` is take identity on `Metrics` / compile keys only. Per-row
+sheets use `sample_note_tag` + `sample_id`; `partial_pitch_name` is
+the nearest pitch of that row. Complete Spectrum per-bin `Note` names
+remain opt-in. `Validation_Metrics` adds `subbass_member_count` and
+`floor_rows_rejected_count`; only `*_validated_count` /
+`*_confirmed_count` are partial counts. The Sub-bass sheet exports
+rows above F-020 as `lf_diagnostic_not_member`; compile
+`subbass_density_sum` / `subbass_energy_sum` ignore them.

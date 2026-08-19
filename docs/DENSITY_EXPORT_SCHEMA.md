@@ -310,6 +310,10 @@ name alone** — read the sheet and the canonical name in
 | `harmonic_slot_matched_count` | `Validation_Metrics` | Legacy alias of `harmonic_slot_candidate_count` (matching diagnostic, not a partial count) |
 | `harmonic_slot_candidate_count` | `Validation_Metrics` | Slots that found a candidate peak (e.g. 166/181) |
 | `harmonic_validated_count` | `Validation_Metrics` | Rows with `include_for_density = TRUE` |
+| `subbass_member_count` | `Validation_Metrics` / `Metrics` | F-020 compartment members (not a partial count) |
+| `floor_rows_rejected_count` | `Validation_Metrics` / `Metrics` | `inharmonic_status = rejected_floor` (not a partial count) |
+| `subbass_upper_bound_hz` | `Metrics` / `Analysis_Metadata` | F-020 `min(0.5 f0, 80)` |
+| `subbass_membership` | `Sub-bass band` | `subbass_member` or `lf_diagnostic_not_member` |
 
 Per-row partial sheets no longer export `Note` as a sample tag. Do not treat
 `partial_pitch_name` as the analysed take.
@@ -404,3 +408,15 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
   amplitude pie. Amplitude title: `Validated-partial amplitude balance`.
 - `python verify_export.py <workbook>` reports comparability. Pre-
   exclusive-assignment / v4.0.3 workbooks are not comparable.
+
+### R.16 Schema and count hygiene (Phase F / phase_19)
+
+- One meaning per header: `Note` is take identity on `Metrics` /
+  `Density_Metrics` only. Per-row sheets use `sample_note_tag` +
+  `sample_id`; `partial_pitch_name` is the nearest pitch of that row.
+- Complete Spectrum per-bin `Note` names remain off unless
+  `export_complete_spectrum_pitch_names=True`.
+- Only `*_validated_count` / `*_confirmed_count` are partial counts.
+- Sub-bass rows above F-020 are exported as `lf_diagnostic_not_member`
+  and contribute 0 to `subbass_density_sum` and `subbass_energy_sum`.
+  Stage 1 `*_ungated` twins remain the audit copies.

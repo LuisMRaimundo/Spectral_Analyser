@@ -437,6 +437,9 @@ $$
 
 **Interpretation.**
 Operational low-frequency residual boundary, not automatic physical subbass claim.
+Rows above this bound may still appear on the Sub-bass sheet as
+`lf_diagnostic_not_member`; they contribute 0 to `subbass_density_sum`
+and `subbass_energy_sum`.
 
 **Limitations and non-claims.**
 High `obs_wS` can exist with negligible subbass energy; see artifact flags.
@@ -1058,6 +1061,9 @@ they change only after Stage 1 is re-run.
 | `sample_note_tag` / `sample_id` / `partial_pitch_name` | Take identity vs nearest-pitch+cents on per-row sheets |
 | `harmonic_slot_candidate_count` | Matching diagnostic (legacy alias: `harmonic_slot_matched_count`) |
 | `harmonic_validated_count` | Rows with `include_for_density = TRUE` |
+| `subbass_upper_bound_hz` | F-020 ceiling `min(0.5 f0, 80)` |
+| `subbass_member_count` | F-020 compartment members (not a partial count) |
+| `floor_rows_rejected_count` | `inharmonic_status = rejected_floor` (not a partial count) |
 | `harmonic_search_range_hz` / `low_frequency_diagnostic_range_hz` | Search vs F-020 diagnostic band (Analysis Parameters) |
 
 `canonical_density` still follows the validated / stop-trimmed harmonic list.

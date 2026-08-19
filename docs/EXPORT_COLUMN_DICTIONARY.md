@@ -59,6 +59,10 @@ Provenance (Phase E): `analysis_version` is package metadata + `git describe --a
 | `not_leakage_i` / `leakage_guarding_harmonic_order` | Outside accepted-harmonic main-lobe/sidelobe footprint |
 | `not_stretched_harmonic_i` | Outside F-007 comb when stretch is applied |
 | `inharmonic_confirmed_count` | Count of `confirmed_inharmonic_partial` rows |
+| `subbass_upper_bound_hz` | F-020 ceiling `min(0.5 f0, 80)` |
+| `subbass_member_count` | Sub-bass rows with `subbass_membership = subbass_member` |
+| `floor_rows_rejected_count` | Residual candidates with `inharmonic_status = rejected_floor` |
+| `subbass_membership` | `subbass_member` or `lf_diagnostic_not_member` on the Sub-bass sheet |
 | `expected_false_harmonic_slots` | `harmonic_slot_expected_count × CFAR_PFA` (budget, not a count) |
 | `accepted_slots_above_body_stop` | Included slots above the body stop; must be 0 after gating |
 | `harmonic_acceptance_suspect` | Accepted count exceeds body-stop order + expected false slots |
@@ -66,7 +70,8 @@ Provenance (Phase E): `analysis_version` is package metadata + `git describe --a
 
 `Inharmonic Spectrum` keeps every candidate. `Confirmed_Inharmonic_Partials`
 is the survivor sheet. Only `*_validated_count` / `*_confirmed_count` are
-partial counts.
+partial counts. `harmonic_slot_candidate_count`, `subbass_member_count`,
+and `floor_rows_rejected_count` are diagnostics, not partial counts.
 
 ---
 

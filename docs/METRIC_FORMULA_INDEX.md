@@ -21,12 +21,12 @@
 | F-012 | $D_{eff}=(\sum_i P_i)^2/\sum_i P_i^2$ on **validated harmonics only** (`include_for_density`); ungated copy `effective_partial_density_ungated` | Effective component count/density | `validated_partials.gated_effective_partial_density` | `effective_partial_density` |
 | F-013 | $D_H=\sum_{i\in H}\phi(A_i)$ | Harmonic density sum | compile extraction + weight function path | `harmonic_density_sum` |
 | F-014 | $D_I=\sum_{i\in I}\phi(A_i)$ over **confirmed inharmonic partials** only (`inharmonic_status=confirmed_inharmonic_partial`); algebra of $\phi$ unchanged | Inharmonic density sum | compile extraction + `inharmonic_confirmation` | `inharmonic_density_sum` |
-| F-015 | $D_S=\sum_{i\in S}\phi(A_i)$ | Subbass density sum | compile extraction + weight function path | `subbass_density_sum` |
+| F-015 | $D_S=\sum_{i\in S}\phi(A_i)$ over **F-020 members only** (`subbass_membership=subbass_member`); algebra of $\phi$ unchanged | Subbass density sum | compile extraction + `validated_partials.resolve_subbass_member_mask` | `subbass_density_sum` |
 | F-016 | $D_{raw}=w_HD_H+w_ID_I+w_SD_S$ | Canonical weighted density | compile weighted composition | `density_metric_raw` |
 | F-017 | $D_{per-note}=r_HD_H+r_ID_I+r_SD_S$ | Per-note balance density | compile weighted composition | `density_metric_raw_per_note_balance` |
 | F-018 | $r_H=E_H/(E_H+E_I+E_S)$ (analogous $r_I,r_S$) | Per-note energy ratios | per-note extraction/metadata | `component_*_energy_ratio` |
 | F-019 | $D_{norm}=D_{raw}/\max(D_{raw}^+)$ | Corpus-relative normalization | compile normalization pass | `density_metric_normalized` |
-| F-020 | $f_{sub,max}=\min(0.5f_0,80)$ | Subbass upper bound | `SubBassPolicy.upper_bound_hz` | subbass policy columns |
+| F-020 | $f_{sub,max}=\min(0.5f_0,80)$ | Subbass upper bound | `SubBassPolicy.upper_bound_hz` | `subbass_upper_bound_hz` |
 | F-021 | $\alpha_{peak\_amp}(N)=N_{ref}/N$ | Tier normalization for peak-amplitude sums (`quantity_kind="peak_amplitude_sum"`) | `spectral_normalization.n_fft_normalization_factor` | `*_amplitude_sum_tier_normalized` |
 | F-022 | $\alpha_{peak\_pow}(N)=(N_{ref}/N)^2$ | Tier normalization for peak-power sums (`quantity_kind="peak_power_sum"`) | `spectral_normalization.n_fft_normalization_factor` | `*_energy_sum_tier_normalized` |
 | F-023 | $o_H=s_H/(s_H+s_I+s_S)$ (analogous $o_I,o_S$) | Pure observation triplet | acoustic core/adaptive path | `pure_observation_w_*` |

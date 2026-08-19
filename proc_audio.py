@@ -53,6 +53,8 @@ from constants import (
     DENSITY_NOISE_GATE_POLICY,
     DENSITY_WINDOW_PERTURBATION_MS,
     INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE,
+    EXPORT_COMPLETE_SPECTRUM_PITCH_NAMES,
+    LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ,
     PARTIAL_PERSISTENCE_MIN_FRACTION,
     FRAME_PEAK_MIN_ABOVE_MEDIAN_DB,
     F0_REFIT_DISCREPANCY_CENTS,
@@ -1943,7 +1945,12 @@ class AudioProcessor:
         self.effective_partial_density_ungated: Optional[float] = None
         self.partial_density_effective_components: Optional[float] = None  # alias of effective_partial_density
         self.sample_id: Optional[str] = None
-        self.export_complete_spectrum_pitch_names: bool = False
+        self.export_complete_spectrum_pitch_names: bool = bool(
+            EXPORT_COMPLETE_SPECTRUM_PITCH_NAMES
+        )
+        self.subbass_upper_bound_hz: Optional[float] = None
+        self.subbass_member_count: Optional[int] = None
+        self.floor_rows_rejected_count: Optional[int] = None
         self.harmonic_energy_sum: Optional[float] = None
         self.inharmonic_energy_sum: Optional[float] = None
         self.subbass_energy_sum: Optional[float] = None
@@ -2210,6 +2217,7 @@ class AudioProcessor:
             pass
 
         resolved_subbass_hz = float(self._current_subbass_upper_bound_hz())
+        self.subbass_upper_bound_hz = float(resolved_subbass_hz)
         guard = {
             "adaptive_subfundamental_cutoff_hz": resolved_subbass_hz,
             "subfundamental_margin_percent": float("nan"),
@@ -10772,6 +10780,19 @@ class AudioProcessor:
             "inharmonic_confirmed_count": metric_int_or_nan(
                 getattr(self, "inharmonic_confirmed_count", None)
             ),
+            "subbass_upper_bound_hz": metric_float_or_nan(
+                getattr(
+                    self,
+                    "subbass_upper_bound_hz",
+                    getattr(self, "subbass_aggregate_hz", None),
+                )
+            ),
+            "subbass_member_count": metric_int_or_nan(
+                getattr(self, "subbass_member_count", None)
+            ),
+            "floor_rows_rejected_count": metric_int_or_nan(
+                getattr(self, "floor_rows_rejected_count", None)
+            ),
             "harmonic_slot_matched_count": metric_int_or_nan(
                 getattr(self, "harmonic_slot_matched_count", None)
             ),
@@ -11670,12 +11691,30 @@ class AudioProcessor:
             _lo_sb = float(getattr(
                 self, "subbass_aggregate_lower_hz", SUBBASS_AGGREGATE_LOWER_HZ
             ))
+            try:
+                _f0_sb_export = float(getattr(self, "f0_final", float("nan")))
+            except (TypeError, ValueError):
+                _f0_sb_export = float("nan")
+            if not np.isfinite(_f0_sb_export) or _f0_sb_export <= 0.0:
+                try:
+                    _f0_sb_export = float(
+                        getattr(self, "f0_used_for_density_hz", float("nan"))
+                    )
+                except (TypeError, ValueError):
+                    _f0_sb_export = float("nan")
+            from validated_partials import low_frequency_diagnostic_upper_hz
+
+            _diag_hi_sb = low_frequency_diagnostic_upper_hz(
+                _f0_sb_export,
+                _cut_sb,
+                cap_hz=float(LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ),
+            )
             sub_df = pd.DataFrame()
             if isinstance(getattr(self, "complete_list_df", None), pd.DataFrame) and not self.complete_list_df.empty:
                 compf = _ensure_amp_column(self.complete_list_df.copy())
                 if "Frequency (Hz)" in compf.columns:
                     ff = pd.to_numeric(compf["Frequency (Hz)"], errors="coerce").to_numpy(dtype=float)
-                    mask_sb = np.isfinite(ff) & (ff > _lo_sb) & (ff <= _cut_sb)
+                    mask_sb = np.isfinite(ff) & (ff > _lo_sb) & (ff <= _diag_hi_sb)
                     sub_df = compf.loc[mask_sb].copy()
 
             if not ih_df.empty and not sub_df.empty and "Frequency (Hz)" in ih_df.columns and "Frequency (Hz)" in sub_df.columns:
@@ -11967,6 +12006,13 @@ class AudioProcessor:
             except (TypeError, ValueError):
                 _adf = float("nan")
             _ad_cut_sb = _adf if np.isfinite(_adf) and _adf > 0.0 else float(_dc_lo_sb)
+            from validated_partials import (
+                annotate_subbass_membership,
+                attach_sample_identity_columns,
+                count_floor_rows_rejected,
+                count_subbass_members,
+            )
+
             if sub_df is None or sub_df.empty:
                 sb_rows = pd.DataFrame()
             else:
@@ -11983,7 +12029,7 @@ class AudioProcessor:
                             classify_low_frequency_row(
                                 float(_f),
                                 dc_floor_hz=_dc_lo_sb,
-                                physical_low_band_upper_hz=_phys_hi_sb,
+                                physical_low_band_upper_hz=float(_diag_hi_sb),
                                 adaptive_subfundamental_cutoff_hz=_ad_cut_sb,
                             )
                         )
@@ -11993,16 +12039,20 @@ class AudioProcessor:
                     "Acoustic_Interpretation_Status",
                     "diagnostic_low_frequency_residual_not_partial",
                 )
+                sb_rows = annotate_subbass_membership(
+                    sb_rows,
+                    f0_hz=_f0_sb_export if np.isfinite(_f0_sb_export) else float(_phys_hi_sb) * 2.0,
+                )
 
             def _attach_note_column(dfx: pd.DataFrame) -> pd.DataFrame:
                 """Attach sample identity and nearest-pitch labels to partial rows."""
-                out = dfx.copy() if dfx is not None else pd.DataFrame()
                 tag = str(note or getattr(self, "note", "") or "")
                 sid = str(getattr(self, "sample_id", None) or "")
                 if not sid:
                     sid = self._ensure_sample_identity(tag)
-                out["sample_note_tag"] = tag
-                out["sample_id"] = sid
+                out = attach_sample_identity_columns(
+                    dfx, sample_note_tag=tag, sample_id=sid
+                )
                 if not out.empty and "Frequency (Hz)" in out.columns:
                     freqs = pd.to_numeric(out["Frequency (Hz)"], errors="coerce")
                     out["partial_pitch_name"] = [
@@ -12011,8 +12061,6 @@ class AudioProcessor:
                     ]
                 elif "partial_pitch_name" not in out.columns:
                     out["partial_pitch_name"] = ""
-                if "Note" in out.columns:
-                    out = out.drop(columns=["Note"])
                 return out
 
             ih_export = _attach_note_column(ih_partials)
@@ -12025,6 +12073,7 @@ class AudioProcessor:
                         "Classification_Level",
                         "Low_Frequency_Class",
                         "Acoustic_Interpretation_Status",
+                        "subbass_membership",
                         "Frequency (Hz)",
                         "Magnitude (dB)",
                         "Amplitude",
@@ -12050,6 +12099,13 @@ class AudioProcessor:
                     ]
                 )
                 ih_export = _attach_note_column(ih_export)
+
+            self.subbass_upper_bound_hz = float(_phys_hi_sb)
+            self.subbass_member_count = count_subbass_members(
+                sb_export,
+                f0_hz=_f0_sb_export if np.isfinite(_f0_sb_export) else None,
+            )
+            self.floor_rows_rejected_count = count_floor_rows_rejected(ih_export)
 
             _pub_df(ih_export).to_excel(writer, sheet_name="Inharmonic Spectrum", index=False)
             log.debug("Inharmonic Spectrum (parciais inarmónicos): %s rows", len(ih_export))
@@ -12496,6 +12552,15 @@ class AudioProcessor:
                 )
                 _val_row["inharmonic_confirmed_count"] = metric_int_or_nan(
                     getattr(self, "inharmonic_confirmed_count", None)
+                )
+                _val_row["subbass_upper_bound_hz"] = metric_float_or_nan(
+                    getattr(self, "subbass_upper_bound_hz", None)
+                )
+                _val_row["subbass_member_count"] = metric_int_or_nan(
+                    getattr(self, "subbass_member_count", None)
+                )
+                _val_row["floor_rows_rejected_count"] = metric_int_or_nan(
+                    getattr(self, "floor_rows_rejected_count", None)
                 )
                 _pub_df(pd.DataFrame([_val_row])).to_excel(writer, sheet_name="Validation_Metrics", index=False)
 
@@ -13193,6 +13258,28 @@ class AudioProcessor:
                         getattr(self, "subbass_aggregate_hz",
                                 self._current_subbass_upper_bound_hz())
                     ),
+                ),
+                (
+                    "subbass_upper_bound_hz",
+                    float(
+                        getattr(
+                            self,
+                            "subbass_upper_bound_hz",
+                            getattr(
+                                self,
+                                "subbass_aggregate_hz",
+                                self._current_subbass_upper_bound_hz(),
+                            ),
+                        )
+                    ),
+                ),
+                (
+                    "subbass_member_count",
+                    metric_int_or_nan(getattr(self, "subbass_member_count", None)),
+                ),
+                (
+                    "floor_rows_rejected_count",
+                    metric_int_or_nan(getattr(self, "floor_rows_rejected_count", None)),
                 ),
                 (
                     "subbass_aggregate_lower_hz",
