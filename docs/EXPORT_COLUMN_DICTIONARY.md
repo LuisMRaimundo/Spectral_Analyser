@@ -57,6 +57,10 @@ Re-export guidance: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export
 | `not_leakage_i` / `leakage_guarding_harmonic_order` | Outside accepted-harmonic main-lobe/sidelobe footprint |
 | `not_stretched_harmonic_i` | Outside F-007 comb when stretch is applied |
 | `inharmonic_confirmed_count` | Count of `confirmed_inharmonic_partial` rows |
+| `expected_false_harmonic_slots` | `harmonic_slot_expected_count × CFAR_PFA` (budget, not a count) |
+| `accepted_slots_above_body_stop` | Included slots above the body stop; must be 0 after gating |
+| `harmonic_acceptance_suspect` | Accepted count exceeds body-stop order + expected false slots |
+| `cfar_marginal_count` | Rows with `0 ≤ cfar_margin_db < HARMONIC_MIN_CFAR_MARGIN_DB` |
 
 `Inharmonic Spectrum` keeps every candidate. `Confirmed_Inharmonic_Partials`
 is the survivor sheet. Only `*_validated_count` / `*_confirmed_count` are

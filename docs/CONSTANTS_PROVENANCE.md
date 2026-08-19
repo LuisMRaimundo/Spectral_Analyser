@@ -87,6 +87,10 @@ Provenance classes:
 - `DENSITY_FRAGILE_PERTURBATION_PCT` (`10.0`) - `internal_default` - Window-perturbation spread threshold for `density_fragile`.
 - `LOW_F0_BIN_TO_F0_MAX_RATIO` (`0.125`) - `derived` - Escalate n_fft when bin spacing exceeds f0/8.
 - `CFAR_PFA` (`1e-2`) - `internal_default` - Same cell-averaging CFAR false-alarm probability for harmonic acceptance (F-043) and confirmed-inharmonic tests.
+- `HARMONIC_MIN_CFAR_MARGIN_DB` (`3.0`) - `internal_default` - Minimum CFAR margin (dB) for `include_for_density`. Rows with `0 ≤ cfar_margin_db < 3` are `cfar_marginal`.
+- `HARMONIC_CONTINUITY_RULE_ENABLED` (`False`) - `internal_default` - Optional continuity cut after a rejected-slot streak. Off by default.
+- `HARMONIC_CONTINUITY_REJECT_STREAK` (`3`) - `internal_default` - Consecutive rejected slots before the continuity rule freezes higher accepts.
+- `HARMONIC_CONTINUITY_PERSISTENCE_OVERRIDE` (`0.9`) - `internal_default` - Persistence that may override a continuity freeze.
 - `INHARMONIC_MIN_PROMINENCE_DB` (`6.0`) - `internal_default` - Minimum saddle prominence for a residual candidate to confirm as an inharmonic partial. Chosen above typical Blackman–Harris main-lobe curvature (~0–2 dB) and below the 12 dB first-pass harmonic prominence, so isolated residual peaks can confirm without admitting floor ripple.
 - `PARTIAL_PERSISTENCE_MIN_FRACTION` (`0.7`) - `internal_default` - Minimum fraction of sustain frames that must contain a peak within `tol_hz` for `include_for_density` / confirmed-I.
 - `FRAME_PEAK_MIN_ABOVE_MEDIAN_DB` (`6.0`) - `internal_default` - Per-frame peak must exceed that frame's median magnitude by this many dB before it counts as present. Keeps floor ripple from persisting.

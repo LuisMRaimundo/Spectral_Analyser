@@ -71,6 +71,8 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "inharmonic_status",
         "inharmonic_confirmed_count",
         "persistence_fraction",
+        "expected_false_harmonic_slots",
+        "accepted_slots_above_body_stop",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():

@@ -35,6 +35,7 @@ from constants import (
     HARMONIC_BODY_STOP_MARGIN_DB,
     HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER,
     HARMONIC_MATCH_TOLERANCE_CENTS,
+    HARMONIC_MIN_CFAR_MARGIN_DB,
     HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
     LOW_F0_BIN_TO_F0_MAX_RATIO,
     SMOOTHING_NOISE_FLOOR_MULTIPLIER,
@@ -515,10 +516,14 @@ def apply_harmonic_body_stop(
         # a body-stop exclusion (audit reason priority).
         if already.startswith("rejected_by_tolerance") or already.startswith(
             "low_temporal_persistence"
+        ) or already.startswith("cfar_marginal") or already.startswith(
+            "continuity_break"
         ) or already_status in {
             "rejected_by_tolerance",
             "peak_already_assigned",
             "low_temporal_persistence",
+            "cfar_marginal",
+            "continuity_break",
         }:
             row["include_for_density"] = False
             continue
@@ -1091,6 +1096,9 @@ HARMONIC_CANDIDATE_STATUS_VALUES: Tuple[str, ...] = (
     "off_frequency",
     "rejected_by_tolerance",
     "peak_already_assigned",
+    "cfar_marginal",
+    "continuity_break",
+    "low_temporal_persistence",
 )
 
 VALIDATED_CANDIDATE_STATUSES: frozenset = frozenset(
@@ -1118,6 +1126,10 @@ def _harmonic_inclusion_audit_exclusion_reason(
     status = str(candidate_status or "")
     if stored.startswith("low_temporal_persistence") or status == "low_temporal_persistence":
         return stored or "low_temporal_persistence"
+    if stored.startswith("cfar_marginal") or status == "cfar_marginal":
+        return stored or "cfar_marginal"
+    if stored.startswith("continuity_break") or status == "continuity_break":
+        return stored or "continuity_break"
     if stored.startswith("rejected_by_tolerance") or status == "rejected_by_tolerance":
         if stored.startswith("rejected_by_tolerance"):
             return stored
@@ -1310,6 +1322,8 @@ def _classify_harmonic_candidate(
     rejected_bad_f0: bool = False,
     harmonic_number: Optional[int] = None,
     cfar_detected: Optional[bool] = None,
+    cfar_margin_db: Optional[float] = None,
+    min_cfar_margin_db: float = HARMONIC_MIN_CFAR_MARGIN_DB,
 ) -> Tuple[str, bool]:
     """Classify a per-order harmonic candidate.
 
@@ -1350,17 +1364,43 @@ def _classify_harmonic_candidate(
     # against the locally-estimated noise floor. This replaces the ad-hoc fixed
     # SNR margin with an adaptive, principled criterion. When CFAR is not
     # available (legacy callers) the fixed SNR margin is used as a fallback.
+    marginal = False
     if cfar_detected is None:
         snr_significant = snr >= _strict_snr_eff
     else:
         # Require BOTH the CFAR detection and a minimal SNR margin so a noisy
         # local floor estimate cannot, on its own, admit a sub-floor bin.
         snr_significant = bool(cfar_detected) and (snr >= _strict_snr_eff)
+        try:
+            margin = (
+                float(cfar_margin_db)
+                if cfar_margin_db is not None
+                else float("nan")
+            )
+        except (TypeError, ValueError):
+            margin = float("nan")
+        try:
+            min_m = float(min_cfar_margin_db)
+        except (TypeError, ValueError):
+            min_m = float(HARMONIC_MIN_CFAR_MARGIN_DB)
+        # Legacy callers that pass cfar_detected without a margin keep the
+        # pre-Phase-C path. When the margin is present, [0, min) dB is
+        # detected-but-too-close-to-threshold.
+        if (
+            bool(cfar_detected)
+            and np.isfinite(margin)
+            and np.isfinite(min_m)
+            and 0.0 <= margin < min_m
+        ):
+            marginal = True
+            snr_significant = False
 
     # Saddle prominence + the noise-significance gate are the primary criteria.
     # The ±1-bin ``local_peak_valid`` flag measures main-lobe curvature on
     # windowed FFTs and falsely rejects legitimate harmonics on dense
     # low-register spectra (cello, bass), so it is diagnostic only.
+    if marginal and prom >= _strict_prom_eff and snr >= _strict_snr_eff:
+        return "cfar_marginal", False
     if snr_significant and prom >= _strict_prom_eff:
         return "strict_validated", True
     if snr >= minimum_snr_db:

@@ -30,12 +30,17 @@ from subbass_policy import SubBassPolicy
 import math
 from constants import (
     BODY_DENSITY_MAX_HZ,
+    CFAR_PFA,
     FULL_SPECTRUM_MAX_HZ,
     HARMONIC_BODY_STOP_CONSECUTIVE,
     HARMONIC_BODY_STOP_ENABLED,
     HARMONIC_BODY_STOP_MARGIN_DB,
     HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER,
+    HARMONIC_CONTINUITY_PERSISTENCE_OVERRIDE,
+    HARMONIC_CONTINUITY_REJECT_STREAK,
+    HARMONIC_CONTINUITY_RULE_ENABLED,
     HARMONIC_MATCH_TOLERANCE_CENTS,
+    HARMONIC_MIN_CFAR_MARGIN_DB,
     HARMONIC_TOLERANCE_POLICY_VERSION,
     HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
     INHARMONICITY_B_ENABLE_THRESHOLD,
@@ -1071,6 +1076,13 @@ def _parabolic_peak(y, x):
 # Re-imported here so existing references (``proc_audio._foo`` and
 # ``from proc_audio import _foo``) keep working unchanged.
 # ============================================================================
+from harmonic_high_n_guards import (  # noqa: E402
+    apply_cfar_margin_gate,
+    apply_continuity_rule,
+    estimate_harmonic_body_stop_order,
+    expected_false_harmonic_slots,
+    summarize_high_n_guards,
+)
 from harmonic_peak_validation import (  # noqa: E402
     HARMONIC_CANDIDATE_STATUS_VALUES,
     apply_exclusive_harmonic_assignment,
@@ -3778,6 +3790,10 @@ class AudioProcessor:
         self.harmonic_body_stop_order = float("nan")
         self.density_effective_ceiling_hz = float("nan")
         self.validated_harmonics_above_body_stop_count = 0
+        self.expected_false_harmonic_slots = float("nan")
+        self.accepted_slots_above_body_stop = 0
+        self.harmonic_acceptance_suspect = False
+        self.cfar_marginal_count = 0
         self.low_f0_resolution_warning = False
         self.bin_to_f0_ratio = float("nan")
         self.density_fragile = False
@@ -4790,6 +4806,19 @@ class AudioProcessor:
             _dceil_stop = float(BODY_DENSITY_MAX_HZ)
         candidate_rows = apply_exclusive_harmonic_assignment(candidate_rows)
         try:
+            candidate_rows = apply_cfar_margin_gate(
+                candidate_rows,
+                min_margin_db=float(
+                    getattr(
+                        self,
+                        "harmonic_min_cfar_margin_db",
+                        HARMONIC_MIN_CFAR_MARGIN_DB,
+                    )
+                ),
+            )
+        except Exception as _e_margin:
+            self.logger.warning("CFAR margin gate failed: %s", _e_margin)
+        try:
             self._ensure_sustain_frame_peaks()
             candidate_rows = apply_persistence_gate(
                 candidate_rows,
@@ -4807,6 +4836,33 @@ class AudioProcessor:
             )
         except Exception as _e_persist:
             self.logger.warning("Temporal persistence gate failed: %s", _e_persist)
+        try:
+            candidate_rows = apply_continuity_rule(
+                candidate_rows,
+                enabled=bool(
+                    getattr(
+                        self,
+                        "harmonic_continuity_rule_enabled",
+                        HARMONIC_CONTINUITY_RULE_ENABLED,
+                    )
+                ),
+                streak_k=int(
+                    getattr(
+                        self,
+                        "harmonic_continuity_reject_streak",
+                        HARMONIC_CONTINUITY_REJECT_STREAK,
+                    )
+                ),
+                persistence_override=float(
+                    getattr(
+                        self,
+                        "harmonic_continuity_persistence_override",
+                        HARMONIC_CONTINUITY_PERSISTENCE_OVERRIDE,
+                    )
+                ),
+            )
+        except Exception as _e_cont:
+            self.logger.warning("Continuity rule failed: %s", _e_cont)
         candidate_rows, _body_stop_meta = apply_harmonic_body_stop(
             candidate_rows,
             f0_hz=float(_f0_for_candidates if np.isfinite(_f0_for_candidates) else f0),
@@ -4826,6 +4882,55 @@ class AudioProcessor:
         self.validated_harmonics_above_body_stop_count = int(
             _body_stop_meta.get("validated_harmonics_above_body_stop_count", 0) or 0
         )
+        _stop_enabled = bool(
+            getattr(self, "harmonic_body_stop_enabled", HARMONIC_BODY_STOP_ENABLED)
+        )
+        _diag_stop = None
+        if _body_stop_meta.get("harmonic_body_stop_triggered"):
+            try:
+                _diag_stop = int(_body_stop_meta.get("harmonic_body_stop_order"))
+            except (TypeError, ValueError):
+                _diag_stop = None
+        elif not _stop_enabled:
+            try:
+                _diag_stop = estimate_harmonic_body_stop_order(
+                    candidate_rows,
+                    float(_f0_for_candidates if np.isfinite(_f0_for_candidates) else f0),
+                    margin_db=float(
+                        getattr(
+                            self,
+                            "harmonic_body_stop_margin_db",
+                            HARMONIC_BODY_STOP_MARGIN_DB,
+                        )
+                    ),
+                    consecutive=int(HARMONIC_BODY_STOP_CONSECUTIVE),
+                    density_frequency_ceiling_hz=_dceil_stop,
+                    complete_magnitudes=complete_magnitudes,
+                    complete_freqs=complete_freqs,
+                )
+            except Exception:
+                _diag_stop = None
+        try:
+            _slot_n = int(getattr(self, "harmonic_slot_expected_count", 0) or 0)
+        except (TypeError, ValueError):
+            _slot_n = 0
+        if _slot_n <= 0 and candidate_rows:
+            _slot_n = len(candidate_rows)
+        _guard = summarize_high_n_guards(
+            candidate_rows,
+            slot_count=_slot_n,
+            body_stop_order=_diag_stop,
+        )
+        self.expected_false_harmonic_slots = float(
+            _guard.get("expected_false_harmonic_slots", float("nan"))
+        )
+        self.accepted_slots_above_body_stop = int(
+            _guard.get("accepted_slots_above_body_stop", 0) or 0
+        )
+        self.harmonic_acceptance_suspect = bool(
+            _guard.get("harmonic_acceptance_suspect", False)
+        )
+        self.cfar_marginal_count = int(_guard.get("cfar_marginal_count", 0) or 0)
         _stop_order = _body_stop_meta.get("harmonic_body_stop_order")
         if harmonic_list and _body_stop_meta.get("harmonic_body_stop_triggered"):
             try:
@@ -5953,6 +6058,14 @@ class AudioProcessor:
                 prominence_db=prominence_db,
                 harmonic_number=int(hnum),
                 cfar_detected=cfar_detected,
+                cfar_margin_db=cfar_margin_db,
+                min_cfar_margin_db=float(
+                    getattr(
+                        self,
+                        "harmonic_min_cfar_margin_db",
+                        HARMONIC_MIN_CFAR_MARGIN_DB,
+                    )
+                ),
             )
 
         row.update(
@@ -8252,6 +8365,28 @@ class AudioProcessor:
                         _vr.get("non_harmonic_candidate_count", _vr.get("inharmonic_candidate_count", 0)) or 0
                     )
                     self.harmonic_slot_expected_count = int(_vr.get("harmonic_slot_expected_count", 0) or 0)
+                    try:
+                        self.expected_false_harmonic_slots = float(
+                            expected_false_harmonic_slots(
+                                int(self.harmonic_slot_expected_count), CFAR_PFA
+                            )
+                        )
+                        _stop_for_flag = getattr(self, "harmonic_body_stop_order", float("nan"))
+                        try:
+                            _stop_i = int(_stop_for_flag)
+                        except (TypeError, ValueError):
+                            _stop_i = 0
+                        _acc = int(getattr(self, "harmonic_validated_count", 0) or 0)
+                        if _stop_i >= 1 and np.isfinite(self.expected_false_harmonic_slots):
+                            self.harmonic_acceptance_suspect = bool(
+                                _acc
+                                > (
+                                    float(_stop_i)
+                                    + float(self.expected_false_harmonic_slots)
+                                )
+                            )
+                    except Exception:
+                        pass
                     self.harmonic_slot_matched_count = int(_vr.get("harmonic_slot_matched_count", 0) or 0)
                     self.harmonic_slot_candidate_count = int(self.harmonic_slot_matched_count)
                     self.harmonic_slot_missing_count = int(_vr.get("harmonic_slot_missing_count", 0) or 0)
@@ -8307,6 +8442,18 @@ class AudioProcessor:
                         "harmonic_slot_matched_count": int(_vr.get("harmonic_slot_matched_count", 0) or 0),
                         "harmonic_validated_count": int(
                             getattr(self, "harmonic_validated_count", 0) or 0
+                        ),
+                        "expected_false_harmonic_slots": float(
+                            getattr(self, "expected_false_harmonic_slots", float("nan"))
+                        ),
+                        "accepted_slots_above_body_stop": int(
+                            getattr(self, "accepted_slots_above_body_stop", 0) or 0
+                        ),
+                        "harmonic_acceptance_suspect": bool(
+                            getattr(self, "harmonic_acceptance_suspect", False)
+                        ),
+                        "cfar_marginal_count": int(
+                            getattr(self, "cfar_marginal_count", 0) or 0
                         ),
                         "inharmonic_confirmed_count": int(
                             getattr(self, "inharmonic_confirmed_count", 0) or 0
@@ -10446,6 +10593,18 @@ class AudioProcessor:
             ),
             "validated_harmonics_above_body_stop_count": metric_int_or_nan(
                 getattr(self, "validated_harmonics_above_body_stop_count", None)
+            ),
+            "expected_false_harmonic_slots": metric_float_or_nan(
+                getattr(self, "expected_false_harmonic_slots", None)
+            ),
+            "accepted_slots_above_body_stop": metric_int_or_nan(
+                getattr(self, "accepted_slots_above_body_stop", None)
+            ),
+            "harmonic_acceptance_suspect": bool(
+                getattr(self, "harmonic_acceptance_suspect", False)
+            ),
+            "cfar_marginal_count": metric_int_or_nan(
+                getattr(self, "cfar_marginal_count", None)
             ),
             "bin_to_f0_ratio": metric_float_or_nan(
                 getattr(self, "bin_to_f0_ratio", None)

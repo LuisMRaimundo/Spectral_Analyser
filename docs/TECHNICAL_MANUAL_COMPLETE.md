@@ -321,7 +321,26 @@ that window is a plateau (`|slope| ≤ HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_O
 1 dB/order), `harmonic_body_stop_hz` is set at
 the last accepted order. Orders above the stop are excluded from the
 strict/validated set and remain on `Harmonic_Inclusion_Audit` with reason
-`above_harmonic_body_stop`. The stop is a validation cut only.
+`above_harmonic_body_stop`. The stop is a validation cut only, but it is
+**load-bearing for high-n rejection**: the spacing cap cannot stop floor
+harvest once the search window is tens of bins wide. Three independent
+guards apply before the stop, in this order:
+
+1. **Spacing cap / exclusive assignment** (policy v2, F-051) — identity of
+   the match, not a noise test.
+2. **CFAR margin and false-alarm budget** — `include_for_density` requires
+   `cfar_margin_db ≥ HARMONIC_MIN_CFAR_MARGIN_DB` (3 dB). Rows with
+   \(0 \le\) margin \(< 3\) dB are `cfar_marginal`. Per note,
+   `expected_false_harmonic_slots = harmonic_slot_expected_count × P_{fa}`;
+   `accepted_slots_above_body_stop` must be 0 after gating;
+   `harmonic_acceptance_suspect` when the accepted count exceeds
+   (body-stop order + expected false slots).
+3. **Temporal persistence** (Phase B) — `persistence_fraction ≥ 0.7`.
+
+An optional **continuity rule** (off by default) then freezes higher
+accepts after `HARMONIC_CONTINUITY_REJECT_STREAK` (3) consecutive
+rejected slots unless `persistence_fraction ≥ 0.9`. The body stop is
+applied last.
 
 **Noise-gated density mass.** Policy v1 integrated noise-floor mass at *pp*
 (tuba C1 harvested ~190 floor ripples into `canonical_density`). Policy v2

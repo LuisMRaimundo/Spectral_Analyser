@@ -187,6 +187,36 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Time-averaged spectra or Complete Spectrum bins.",
         ontology_family="validation_status",
     )
+    expected_false_harmonic_slots = MetricDefinition(
+        name="expected_false_harmonic_slots",
+        formula="harmonic_slot_expected_count × CFAR_PFA",
+        input_domain="harmonic slots searched",
+        unit_or_scale="count (expected)",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "False-alarm budget for harmonic slot tests at the stated P_fa. "
+            "Not a measured partial count."
+        ),
+        not_valid_for="Equating with validated or candidate harmonic counts.",
+        ontology_family="validation_status",
+    )
+    accepted_slots_above_body_stop = MetricDefinition(
+        name="accepted_slots_above_body_stop",
+        formula="count(include_for_density ∧ n > body_stop_order)",
+        input_domain="gated harmonic candidates",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Included harmonic slots above the (diagnostic) body stop. "
+            "Must be 0 after gating."
+        ),
+        not_valid_for="Density integrals or un-gated candidate lists.",
+        ontology_family="validation_status",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -197,6 +227,8 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         inharmonic_status.name: inharmonic_status,
         inharmonic_confirmed_count.name: inharmonic_confirmed_count,
         persistence_fraction.name: persistence_fraction,
+        expected_false_harmonic_slots.name: expected_false_harmonic_slots,
+        accepted_slots_above_body_stop.name: accepted_slots_above_body_stop,
     }
 
 
