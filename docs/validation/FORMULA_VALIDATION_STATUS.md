@@ -72,7 +72,7 @@ The status of each formula is one of:
 
 - **Canonical form**: `D_eff = (sum_i P_i)^2 / sum_i(P_i^2)`.
 - **Module**: `density.py` (documented in module-level docstring or canonical-formula constant).
-- **Interpretation**: scale-invariant in power; equivalent to the inverse Herfindahl concentration index of the power-component vector.
+- **Interpretation**: scale-invariant in power; equivalent to the inverse Herfindahl concentration index of the power-component vector. Stage 1 export `effective_partial_density` applies this formula to **validated harmonics only** (`include_for_density`); the ungated copy is `effective_partial_density_ungated`.
 - **Test**: `tests/formula_validation/test_effective_partial_density_canonical.py`.
 - **Status**: canonicalised_and_tested.
 

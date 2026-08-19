@@ -52,6 +52,8 @@ def test_harmonic_candidate_status_values_are_stable() -> None:
         "missing_window",
         "rejected_bad_f0",
         "off_frequency",
+        "rejected_by_tolerance",
+        "peak_already_assigned",
     )
 
 

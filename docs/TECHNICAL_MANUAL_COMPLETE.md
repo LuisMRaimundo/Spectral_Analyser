@@ -3,7 +3,7 @@
 **Package version:** 4.1.0 (`pyproject.toml`).  
 **Export schema:** v4.0.0–v4.1.0 — normative detail in
 [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) and
-[`docs/DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.8.
+[`docs/DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.10.
 
 ## 0. Scope and epistemic status
 
@@ -302,6 +302,16 @@ all orders against that centre with the spacing-capped policy. This stops
 a drifted joint fit (trombone G3: 191.7 Hz vs measured H1 195.8 Hz) from
 rejecting real mid-order partials as `off_frequency`.
 
+**Exclusive peak-to-slot assignment.** Each `peak_bin_index` may satisfy at
+most one harmonic order (`apply_exclusive_harmonic_assignment`). F-051 is
+applied before any `include_for_density` or validated status is kept. Slots
+with `|Δf| > tol_hz(n)` are exported as
+`exclusion_reason = rejected_by_tolerance (dev=… Hz > cap=… Hz)` and
+`tolerance_limb = spacing_cap`; they are not relabelled
+`above_harmonic_body_stop`. Remaining conflicts resolve by minimum |Δcents|,
+then lower *n*. `debug_counts` fails closed if a validated or included row
+reuses a peak bin.
+
 **Harmonic-body noise-floor stop.** After candidate matching, the smoothed
 harmonic envelope (median of the last five validated magnitudes) is compared
 to the existing percentile/multiplier noise-floor estimate. When the envelope
@@ -374,10 +384,23 @@ partial validity.
 
 Candidate-status taxonomy (`candidate_status`): `strict_validated`,
 `snr_validated`, `weak_candidate`, `below_noise_floor`, `missing_window`,
-`rejected_bad_f0`, `off_frequency`. Candidates are re-aligned to the fitted f0
+`rejected_bad_f0`, `off_frequency`, `rejected_by_tolerance`,
+`peak_already_assigned`. Candidates are re-aligned to the fitted f0
 before final classification so detuned partials are not mislabelled
 `off_frequency`. Every order's decision (and its reason) is exported, read-only,
 to the per-note `Harmonic_Inclusion_Audit` sheet (see §14).
+
+On per-row partial sheets, `sample_note_tag` / `sample_id` identify the take;
+`partial_pitch_name` is `frequency_to_note_name` of that partial (with cents).
+`Note` remains the take identity on summary sheets (`Metrics`, compile keys)
+only. Complete Spectrum per-bin pitch names are off unless
+`export_complete_spectrum_pitch_names` is True.
+
+`effective_partial_density` (F-012), `linear_sum_amplitude_*`, Sethares, and
+the amplitude pies consume **validated partials only**
+(`include_for_density = True` for harmonics; inharmonic rows stay excluded
+until a confirmed-partial class exists). Ungated copies use `*_ungated`.
+F-042 / F-047 / F-048 / F-049 algebra is unchanged.
 
 ### 5.5 Subbass policy
 
@@ -988,8 +1011,10 @@ sheets must not receive synthetic mismatched `sample_id` values before merge.
 
 **Re-export:** existing workbooks on disk retain old semantics until recompiled.
 v4.0.3 export-schema refresh requires **Stage 2 + Stage 3**. v4.1.0 harmonic
-identity (spacing cap, f0 refit, body stop, noise gate) requires **Stage 1 +
-2 + 3**. See re-export table in `EXPORT_SCHEMA_AUDIT_REPAIR.md`.
+identity (spacing cap, f0 refit, body stop, noise gate) and the exclusive-
+assignment / validated-partial gating phase (`export_schema_version`
+`spectral_analysis_schema_2026_08`) require **Stage 1 + 2 + 3**. See
+re-export table in `EXPORT_SCHEMA_AUDIT_REPAIR.md`.
 
 ### 14.4 Stage 1 low-f₀ identity columns (v4.1.0)
 
@@ -1006,6 +1031,10 @@ they change only after Stage 1 is re-run.
 | `density_effective_ceiling_hz` | Global 20 kHz ceiling, not \(\min(\mathrm{ceiling}, \mathrm{stop})\) |
 | `density_noise_gate_enabled` / `density_noise_gate_policy` | `subtract_floor_clip_0` on core peak-power integrals |
 | `density_fragile` | CI width or ±10 ms perturbation spread > 10 % |
+| `sample_note_tag` / `sample_id` / `partial_pitch_name` | Take identity vs nearest-pitch+cents on per-row sheets |
+| `harmonic_slot_candidate_count` | Matching diagnostic (legacy alias: `harmonic_slot_matched_count`) |
+| `harmonic_validated_count` | Rows with `include_for_density = TRUE` |
+| `harmonic_search_range_hz` / `low_frequency_diagnostic_range_hz` | Search vs F-020 diagnostic band (Analysis Parameters) |
 
 `canonical_density` still follows the validated / stop-trimmed harmonic list.
 Core peak-power integrals that feed `note_density_final` and EWSD are gated

@@ -75,9 +75,60 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Treating as an independent metric from density_metric_raw.",
         ontology_family="legacy_only",
     )
+    effective_partial_density = MetricDefinition(
+        name="effective_partial_density",
+        formula="(Σ P_i)^2 / Σ P_i^2 with P_i = A_i^2 (Hill q=2 / inverse Herfindahl)",
+        input_domain="validated_partials_only",
+        unit_or_scale="dimensionless participation ratio",
+        amplitude_basis="Amplitude_raw of include_for_density=True harmonics",
+        power_basis="P_i = Amplitude_raw^2",
+        normalization_scope="validated harmonic partials only (Fix 2)",
+        physical_interpretation=(
+            "Effective number of harmonic partials after exclusive slot "
+            "assignment and include_for_density gating. Floor / unconfirmed "
+            "inharmonic rows are excluded; ungated copy is effective_partial_density_ungated."
+        ),
+        not_valid_for="Ungated peak-candidate lists or Complete Spectrum bins.",
+        ontology_family="partial_count_descriptor",
+    )
+    linear_sum_amplitude = MetricDefinition(
+        name="linear_sum_amplitude_*",
+        formula="Σ Amplitude_raw over validated partials of each family",
+        input_domain="validated_partials_only",
+        unit_or_scale="linear amplitude (arbitrary units)",
+        amplitude_basis="Amplitude_raw",
+        power_basis="not used (linear sum, not energy)",
+        normalization_scope="validated_partials_only (Fix 2); ungated copies keep *_ungated",
+        physical_interpretation=(
+            "Diagnostic linear-amplitude mass for H/I/S pies. Inharmonic rows "
+            "are excluded until a confirmed-partial class exists. Sub-bass "
+            "includes only F-020 compartment members."
+        ),
+        not_valid_for="Treating as energy or as an ungated peak-candidate sum.",
+        ontology_family="diagnostic_amplitude_mass",
+    )
+    sethares_dissonance = MetricDefinition(
+        name="sethares_dissonance",
+        formula="Sethares pairwise roughness on (frequency, amplitude) pairs",
+        input_domain="validated_partials_only",
+        unit_or_scale="model units (Sethares)",
+        amplitude_basis="Amplitude_raw of include_for_density=True harmonics",
+        power_basis="not used",
+        normalization_scope="validated harmonic partials only (Fix 2)",
+        physical_interpretation=(
+            "Dissonance from validated harmonic partials after exclusive "
+            "assignment. Source note states the validated list, not the "
+            "nonharmonic candidate count."
+        ),
+        not_valid_for="Retained nonharmonic / floor-candidate lists.",
+        ontology_family="sensory_dissonance",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
+        effective_partial_density.name: effective_partial_density,
+        linear_sum_amplitude.name: linear_sum_amplitude,
+        sethares_dissonance.name: sethares_dissonance,
     }
 
 

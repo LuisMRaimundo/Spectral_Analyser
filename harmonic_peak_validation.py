@@ -46,6 +46,7 @@ __all__ = [
     "TOLERANCE_LIMB_BIN_FLOOR",
     "TOLERANCE_LIMB_CENTS",
     "TOLERANCE_LIMB_SPACING_CAP",
+    "apply_exclusive_harmonic_assignment",
     "apply_harmonic_body_stop",
     "compute_spacing_capped_tolerance_hz",
     "evaluate_low_f0_resolution_guard",
@@ -212,6 +213,128 @@ def _noise_floor_db_at_frequency(
     nf_mag = float(np.percentile(mags[lo:hi], float(noise_floor_percentile)))
     nf_mag *= float(noise_floor_multiplier)
     return float(20.0 * np.log10(max(nf_mag, 1e-10)))
+
+
+def _abs_cents_deviation(extracted_hz: float, expected_hz: float) -> float:
+    try:
+        extracted = float(extracted_hz)
+        expected = float(expected_hz)
+    except (TypeError, ValueError):
+        return float("inf")
+    if (
+        not np.isfinite(extracted)
+        or not np.isfinite(expected)
+        or extracted <= 0.0
+        or expected <= 0.0
+    ):
+        return float("inf")
+    return float(abs(1200.0 * np.log2(extracted / expected)))
+
+
+def _finite_peak_bin(row: Mapping[str, Any]) -> Optional[int]:
+    raw = row.get("peak_bin_index")
+    try:
+        val = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(val):
+        return None
+    return int(val)
+
+
+def _rejected_by_tolerance_reason(dev_hz: float, cap_hz: float) -> str:
+    return f"rejected_by_tolerance (dev={float(dev_hz):.2f} Hz > cap={float(cap_hz):.2f} Hz)"
+
+
+def apply_exclusive_harmonic_assignment(
+    rows: Sequence[Mapping[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Assign each ``peak_bin_index`` to at most one harmonic slot.
+
+    F-051 (``search_tol_hz``) is applied before any ``include_for_density``
+    or validated status is kept. Conflicts resolve by minimum |Δcents|,
+    then lower harmonic number. Losers lose the peak so they cannot share
+    a validated ``peak_bin_index``.
+    """
+    out: List[Dict[str, Any]] = [dict(r) for r in rows]
+    if not out:
+        return out
+
+    def _order(row: Mapping[str, Any]) -> int:
+        for key in ("Harmonic Number", "harmonic_number", "n"):
+            if key in row:
+                try:
+                    return int(row[key])
+                except (TypeError, ValueError):
+                    continue
+        return 10**9
+
+    def _tol_hz(row: Mapping[str, Any]) -> float:
+        for key in ("search_tol_hz", "tolerance_hz", "tol_hz"):
+            if key in row:
+                try:
+                    val = float(row[key])
+                except (TypeError, ValueError):
+                    continue
+                if np.isfinite(val) and val > 0.0:
+                    return val
+        return float("nan")
+
+    def _dev_hz(row: Mapping[str, Any]) -> float:
+        try:
+            return abs(float(row.get("frequency_deviation_hz", float("nan"))))
+        except (TypeError, ValueError):
+            return float("nan")
+
+    # Pass 1 — F-051 before any include/status is retained.
+    for row in out:
+        cap = _tol_hz(row)
+        dev = _dev_hz(row)
+        if np.isfinite(cap) and np.isfinite(dev) and dev > cap:
+            row["include_for_density"] = False
+            row["candidate_status"] = "rejected_by_tolerance"
+            row["exclusion_reason"] = _rejected_by_tolerance_reason(dev, cap)
+            row["above_harmonic_body_stop"] = False
+
+    # Pass 2 — exclusive peak ownership among remaining assigned bins.
+    by_bin: Dict[int, List[int]] = {}
+    for idx, row in enumerate(out):
+        pbi = _finite_peak_bin(row)
+        if pbi is None:
+            continue
+        by_bin.setdefault(pbi, []).append(idx)
+
+    for pbi, idxs in by_bin.items():
+        if len(idxs) <= 1:
+            continue
+
+        def _conflict_key(i: int) -> Tuple[float, int]:
+            row = out[i]
+            cents = _abs_cents_deviation(
+                row.get("extracted_frequency_hz", row.get("Frequency (Hz)")),
+                row.get("expected_frequency_hz"),
+            )
+            return (cents, _order(row))
+
+        ranked = sorted(idxs, key=_conflict_key)
+        winner_idx = ranked[0]
+        winner_n = _order(out[winner_idx])
+        for idx in ranked[1:]:
+            row = out[idx]
+            cap = _tol_hz(row)
+            dev = _dev_hz(row)
+            row["include_for_density"] = False
+            row["above_harmonic_body_stop"] = False
+            row["peak_bin_index"] = float("nan")
+            if np.isfinite(cap) and np.isfinite(dev) and dev > cap:
+                row["candidate_status"] = "rejected_by_tolerance"
+                row["exclusion_reason"] = _rejected_by_tolerance_reason(dev, cap)
+            else:
+                row["candidate_status"] = "peak_already_assigned"
+                row["exclusion_reason"] = (
+                    f"peak_already_assigned (bin={pbi}, winner_n={winner_n})"
+                )
+    return out
 
 
 def apply_harmonic_body_stop(
@@ -385,6 +508,16 @@ def apply_harmonic_body_stop(
         n = _order(row)
         if n <= stop_n:
             row["above_harmonic_body_stop"] = False
+            continue
+        already = str(row.get("exclusion_reason") or "")
+        already_status = str(row.get("candidate_status") or "")
+        # F-051 / exclusive-assignment rejects must not be relabelled as
+        # a body-stop exclusion (audit reason priority).
+        if already.startswith("rejected_by_tolerance") or already_status in {
+            "rejected_by_tolerance",
+            "peak_already_assigned",
+        }:
+            row["include_for_density"] = False
             continue
         if _included(row):
             above += 1
@@ -953,6 +1086,12 @@ HARMONIC_CANDIDATE_STATUS_VALUES: Tuple[str, ...] = (
     "missing_window",
     "rejected_bad_f0",
     "off_frequency",
+    "rejected_by_tolerance",
+    "peak_already_assigned",
+)
+
+VALIDATED_CANDIDATE_STATUSES: frozenset = frozenset(
+    {"strict_validated", "snr_validated"}
 )
 
 
@@ -966,10 +1105,30 @@ def _harmonic_inclusion_audit_exclusion_reason(
     snr_db: Any,
     prominence_db: Any,
     above_harmonic_body_stop: bool = False,
+    exclusion_reason: str = "",
+    search_tol_hz: float = float("nan"),
 ) -> str:
     """Read-only diagnostic label for Harmonic_Inclusion_Audit (export only)."""
     if bool(include_for_density):
         return "included"
+    stored = str(exclusion_reason or "").strip()
+    status = str(candidate_status or "")
+    if stored.startswith("rejected_by_tolerance") or status == "rejected_by_tolerance":
+        if stored.startswith("rejected_by_tolerance"):
+            return stored
+        try:
+            dev_hz = float(frequency_deviation_hz)
+        except (TypeError, ValueError):
+            dev_hz = float("nan")
+        try:
+            cap_hz = float(search_tol_hz)
+        except (TypeError, ValueError):
+            cap_hz = float("nan")
+        if np.isfinite(dev_hz) and np.isfinite(cap_hz):
+            return _rejected_by_tolerance_reason(dev_hz, cap_hz)
+        return "rejected_by_tolerance"
+    if stored.startswith("peak_already_assigned") or status == "peak_already_assigned":
+        return stored or "peak_already_assigned"
     if bool(above_harmonic_body_stop):
         return "above_harmonic_body_stop"
     try:

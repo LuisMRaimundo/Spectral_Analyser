@@ -3,9 +3,10 @@
 ## Scope
 
 Documentation pass synchronized to package **v4.1.0** (low-f₀ harmonic identity,
-spacing-capped match, f0/B refit, body-stop count cut, noise-gated mass; plus
-export schema hygiene, EWSD Stage 3, constants-provenance registry,
-formula-validation suite).
+spacing-capped match, f0/B refit, body-stop count cut, noise-gated mass;
+exclusive peak-to-slot assignment and validated-partial gating,
+`spectral_analysis_schema_2026_08`; plus export schema hygiene, EWSD Stage 3,
+constants-provenance registry, formula-validation suite).
 
 Generated / maintained deliverables:
 
@@ -13,7 +14,7 @@ Generated / maintained deliverables:
 2. `docs/METRIC_FORMULA_INDEX.md` (F-001–F-055)
 3. `docs/GUI_OPTION_REFERENCE.md` (includes §A1 β / body-stop / CI; export weight naming §A5)
 4. `docs/EXPORT_COLUMN_DICTIONARY.md` (column traps + v4.1.0 identity columns + crosswalk)
-5. `docs/DENSITY_EXPORT_SCHEMA.md` (§R.6–R.9)
+5. `docs/DENSITY_EXPORT_SCHEMA.md` (§R.6–R.10)
 6. `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`
 7. `docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md` (§3–4, §9, §11)
 8. `docs/MANUAL_COVERAGE_REPORT.md`
@@ -182,6 +183,7 @@ Included where project-level transformation/wrapping is present.
 | Full inharmonicity family in research workbook | requires code/export change | export mapping in `tools/export_research_density_workbook.py` still omits `inharmonicity_*` set |
 | Export schema v4.0.3 (Metadata weights, sample_id, dedupe, zero_padding) | resolved | `export_row_identity.py`, `tests/phase_11/test_export_schema_v403.py`, manual §14.3, schema §R.7–R.8 |
 | Low-f₀ harmonic identity v4.1.0 (spacing cap, f0 refit, body stop, noise gate) | resolved | `proc_audio.py`, `harmonic_peak_validation.py`, `acoustic_density_core.py`, tests under `tests/phase_12/` and `tests/acoustic_validity/`, manual §5.2.1 / §14.4, F-051–F-055, schema §R.9 |
+| Exclusive assignment + validated-partial gating (`2026_08`) | resolved | `apply_exclusive_harmonic_assignment`, `validated_partials.py`, `data_integrity.validate_unique_peak_bin_assignment`, tests under `tests/phase_13/`, schema §R.8 / §R.10, F-012 domain, F-051 exclusive slot |
 | Rename overloaded export headers (`density_weighted_sum`, settings weights) | requires code change | documented as open in §R.8 / manual §19A item 7 |
 | Uniform publication redaction across all sheets | requires code change | documented in manual §19A item 8 |
 | Constants provenance registry completion | resolved | `docs/CONSTANTS_PROVENANCE.md` now classifies constants as `primary_source` / `derived` / `convention` / `internal_default` |

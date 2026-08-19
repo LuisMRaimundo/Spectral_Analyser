@@ -22,4 +22,4 @@ try:
 except ImportError:  # pragma: no cover — defensive for partial installs
     LOW_FREQUENCY_POLICY_VERSION: Final[str] = "dc_removed_adaptive_subfundamental_guard_v1"
 MISSING_METRIC_POLICY_VERSION: Final[str] = "nan_not_zero_v1"
-EXPORT_SCHEMA_VERSION: Final[str] = "spectral_analysis_schema_2026_05"
+EXPORT_SCHEMA_VERSION: Final[str] = "spectral_analysis_schema_2026_08"

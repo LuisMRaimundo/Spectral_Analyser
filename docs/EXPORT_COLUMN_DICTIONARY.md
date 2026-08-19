@@ -1,7 +1,8 @@
 # Export Column Dictionary
 
 **Package version:** 4.1.0. Export schema repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
-Normative export rules: `docs/DENSITY_EXPORT_SCHEMA.md` §R.6–R.9. Implementation manual: `docs/TECHNICAL_MANUAL_COMPLETE.md` §5.2.1 and §14.3.
+Normative export rules: `docs/DENSITY_EXPORT_SCHEMA.md` §R.6–R.10. Implementation manual: `docs/TECHNICAL_MANUAL_COMPLETE.md` §5.2.1 and §14.3.
+Export schema version: `spectral_analysis_schema_2026_08`.
 
 This dictionary covers exported workbook sheets for:
 
@@ -40,6 +41,11 @@ Re-export guidance: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export
 | `density_effective_ceiling_hz` | Global 20 kHz ceiling |
 | `density_fragile` | CI or ±10 ms perturbation > 10 % |
 | `tolerance_limb` | `cents` / `spacing_cap` / `bin_floor` (Harmonic Spectrum) |
+| `sample_note_tag` / `sample_id` | Take identity on per-row partial sheets |
+| `partial_pitch_name` | Nearest pitch + cents of that partial |
+| `harmonic_slot_candidate_count` | Matching diagnostic (legacy name: `harmonic_slot_matched_count`) |
+| `harmonic_validated_count` | `include_for_density = TRUE` count |
+| `effective_partial_density` / `linear_sum_amplitude_*` | Validated partials only; ungated copies `*_ungated` |
 
 ---
 

@@ -38,8 +38,11 @@ A candidate is a harmonic when a local peak falls inside the policy-v2
 half-width around the Inharmonicity_Fit prediction
 `n · f0 · √(1 + B n²)` (B off ⇒ ideal comb). The half-width is
 `tol_hz(n) = max(bin, min(n·f0·τ_n/1200, β·f0))` with `β = 0.30`.
-`include_for_density` is cleared above `harmonic_body_stop_hz` (validation
-cut). Strict acceptance still requires CFAR + saddle prominence (F-043).
+Each `peak_bin_index` is assigned to at most one order (minimum |Δcents|,
+then lower *n*). `include_for_density` is cleared above
+`harmonic_body_stop_hz` (validation cut) and on F-051 / exclusive-assignment
+rejects. Strict acceptance still requires CFAR + saddle prominence (F-043).
+Amplitude pies, F-012, and Sethares use validated partials only.
 First-pass B (including 0) is the second-pass stretch when ≥ 3 low-order
 peaks were used; a global peak-centre B is not allowed to invent stretch
 on a harmonic instrument.
@@ -105,9 +108,10 @@ helpers to `export_row_identity.py`:
 | v4.0.2 | Export hygiene | `merge_keys_for_frames`; dead-column pruning; satellite `sample_id` propagation |
 | v4.0.3 | Metadata + dedupe | Distinct Phase-2 H/I/S in research `Metadata`; `Diagnostic_Metrics.sample_id` fill; post-uniquify dedupe; numeric `zero_padding` per note |
 | v4.1.0 | Low-f₀ harmonic identity | Spacing-capped match; f0/B refit; body-stop count cut; noise-gated mass; `density_fragile`; `density_effective_ceiling_hz` = global 20 kHz |
+| v4.1.0 + schema `2026_08` | Exclusive assignment / gating | One `peak_bin_index` per slot; F-012 / amplitude / Sethares on validated partials; `sample_note_tag` + `partial_pitch_name`; `harmonic_validated_count` |
 
 **Re-export:** v4.0.3 schema refresh requires Stage 2 + Stage 3. v4.1.0 harmonic
-identity requires Stage 1 + 2 + 3. See
+identity and the `2026_08` exclusive-assignment / gating phase require Stage 1 + 2 + 3. See
 `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md` § Re-export required.
 
 **Column traps:** same header, different meaning — `docs/DENSITY_EXPORT_SCHEMA.md` §R.8.

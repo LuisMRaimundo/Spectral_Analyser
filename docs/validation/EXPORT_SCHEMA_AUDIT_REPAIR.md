@@ -105,10 +105,11 @@ On `Diagnostic_Metrics`, raw-power / wide-frame variants are prefixed, e.g.
 | Metadata H/I/S weights, `_2` dedupe, research `zero_padding` | Stage 3 with **v4.0.3+** |
 | `Diagnostic_Metrics.sample_id` on **compiled** workbook | Stage 2 with **v4.0.3+** |
 | Spacing cap, f0 refit, body stop, noise gate, fragility | **Stage 1 + 2 + 3** with **v4.1.0** |
+| Exclusive assignment, validated-partial gating, `Note` column split | **Stage 1 + 2 + 3** (`spectral_analysis_schema_2026_08`) |
 
 Existing workbooks on disk retain old semantics until recompiled. For a full refresh after
-v4.0.3, re-run **Stage 2 and Stage 3** on the corpus. For v4.1.0 harmonic identity,
-re-run **Stage 1 + 2 + 3**.
+v4.0.3, re-run **Stage 2 and Stage 3** on the corpus. For v4.1.0 harmonic identity
+and the exclusive-assignment / gating phase, re-run **Stage 1 + 2 + 3**.
 
 ## Known ambiguous columns (still exported under legacy names)
 

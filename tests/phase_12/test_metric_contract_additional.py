@@ -61,7 +61,13 @@ _FIELD_NAMES = (
 
 def test_registry_contains_exactly_the_canonical_identifiers() -> None:
     contracts = build_metric_contracts()
-    assert set(contracts.keys()) == {"density_metric_raw", "density_weighted_sum"}
+    assert set(contracts.keys()) == {
+        "density_metric_raw",
+        "density_weighted_sum",
+        "effective_partial_density",
+        "linear_sum_amplitude_*",
+        "sethares_dissonance",
+    }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():
         assert definition.name == key

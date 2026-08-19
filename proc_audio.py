@@ -1058,6 +1058,7 @@ def _parabolic_peak(y, x):
 # ============================================================================
 from harmonic_peak_validation import (  # noqa: E402
     HARMONIC_CANDIDATE_STATUS_VALUES,
+    apply_exclusive_harmonic_assignment,
     apply_harmonic_body_stop,
     cfar_peak_detection,
     noise_gated_linear_mass,
@@ -1911,7 +1912,10 @@ class AudioProcessor:
             )
         )
         self.effective_partial_density: Optional[float] = None
+        self.effective_partial_density_ungated: Optional[float] = None
         self.partial_density_effective_components: Optional[float] = None  # alias of effective_partial_density
+        self.sample_id: Optional[str] = None
+        self.export_complete_spectrum_pitch_names: bool = False
         self.harmonic_energy_sum: Optional[float] = None
         self.inharmonic_energy_sum: Optional[float] = None
         self.subbass_energy_sum: Optional[float] = None
@@ -2695,17 +2699,19 @@ class AudioProcessor:
                 # amplitude -> dB de amplitude
                 mag_db = 20.0 * np.log10(amp_lin)
 
-                note_str = frequency_to_note_name(f)
-                complete_list.append((f, mag_db, note_str))
+                if bool(getattr(self, "export_complete_spectrum_pitch_names", False)):
+                    complete_list.append((f, mag_db, frequency_to_note_name(f)))
+                else:
+                    complete_list.append((f, mag_db))
 
             except Exception as e:
                 self.logger.warning(f"generate_complete_list failed (i={i}, f={f:.2f} Hz): {e}")
                 continue
 
-        self.complete_list_df = pd.DataFrame(
-            complete_list,
-            columns=["Frequency (Hz)", "Magnitude (dB)", "Note"]
-        )
+        _cs_cols = ["Frequency (Hz)", "Magnitude (dB)"]
+        if bool(getattr(self, "export_complete_spectrum_pitch_names", False)):
+            _cs_cols.append("Note")
+        self.complete_list_df = pd.DataFrame(complete_list, columns=_cs_cols)
 
         self.logger.info(f"Complete list: {len(complete_list)} partials in {time.time()-start:.3f}s")
 
@@ -3107,6 +3113,7 @@ class AudioProcessor:
 
                 # 3. Execute Analysis (FFT)
                 self.note = note
+                self._ensure_sample_identity(note)
                 try:
                     _f0_guard = float(self.calculate_fundamental_frequency(note))
                 except Exception:
@@ -3319,6 +3326,7 @@ class AudioProcessor:
         import pandas as pd
 
         self.note = note
+        self._ensure_sample_identity(note)
         if self.complete_list_df is None or self.complete_list_df.empty:
             self.logger.error("Complete list not generated.")
             self.filtered_list_df = pd.DataFrame()
@@ -4756,6 +4764,7 @@ class AudioProcessor:
             )
         except (TypeError, ValueError):
             _dceil_stop = float(BODY_DENSITY_MAX_HZ)
+        candidate_rows = apply_exclusive_harmonic_assignment(candidate_rows)
         candidate_rows, _body_stop_meta = apply_harmonic_body_stop(
             candidate_rows,
             f0_hz=float(_f0_for_candidates if np.isfinite(_f0_for_candidates) else f0),
@@ -4787,6 +4796,21 @@ class AudioProcessor:
                     for row in harmonic_list
                     if int(row.get("Harmonic Number", 0) or 0) <= _stop_n
                 ]
+        _included_orders: set = set()
+        for _cr in candidate_rows:
+            if not bool(_cr.get("include_for_density")):
+                continue
+            try:
+                _included_orders.add(int(_cr.get("Harmonic Number")))
+            except (TypeError, ValueError):
+                continue
+        self.harmonic_validated_count = int(len(_included_orders))
+        if harmonic_list and _included_orders:
+            harmonic_list = [
+                row
+                for row in harmonic_list
+                if int(row.get("Harmonic Number", 0) or 0) in _included_orders
+            ]
 
         self.harmonic_list_df = pd.DataFrame(harmonic_list).reset_index(drop=True) if harmonic_list else pd.DataFrame()
 
@@ -5305,6 +5329,46 @@ class AudioProcessor:
                 pass
             raise RuntimeError(msg)
 
+    def _ensure_sample_identity(self, note: Optional[str] = None) -> str:
+        """Populate ``sample_id`` from the note tag and source filename."""
+        from export_row_identity import compute_sample_id
+
+        if note is not None:
+            self.note = note
+        tag = str(getattr(self, "note", "") or "")
+        src = str(
+            getattr(self, "source_file_name", None)
+            or getattr(self, "audio_path", None)
+            or getattr(self, "input_path", None)
+            or ""
+        )
+        self.sample_id = compute_sample_id(
+            note=tag, source_file_name=src, row_index=0
+        )
+        return str(self.sample_id)
+
+    def _component_pie_caption(self, note: str, *, chart: str) -> str:
+        """Pie title: sample tag · run label · analysis version."""
+        tag = str(note or getattr(self, "note", "") or "").strip() or "unknown"
+        version = str(
+            getattr(self, "analysis_version", None)
+            or getattr(self, "package_version", None)
+            or "4.1.0"
+        )
+        run_id = str(
+            getattr(self, "analysis_run_label", None)
+            or getattr(self, "analysis_run_id", "")
+            or ""
+        ).strip()
+        if not run_id:
+            stamp = str(getattr(self, "analysis_date", "") or "").strip()
+            if "T" in stamp:
+                stamp = stamp.split("T", 1)[0]
+            run_id = stamp
+        if run_id:
+            return f"{chart} — {tag} · {run_id} · v{version.lstrip('v')}"
+        return f"{chart} — {tag} · v{version.lstrip('v')}"
+
     # ---------------------------------------------------------------------
     # Rebuild harmonic candidates on the final f0 comb.
     # ---------------------------------------------------------------------
@@ -5353,7 +5417,7 @@ class AudioProcessor:
                     tolerance_limb=str(tol_limb),
                 )
             )
-        return rows
+        return apply_exclusive_harmonic_assignment(rows)
 
     # ---------------------------------------------------------------------
     # Harmonic spectrum candidate row builder.
@@ -5389,7 +5453,8 @@ class AudioProcessor:
             subbin_interpolation_valid, peak_bin_index,
             Frequency (Hz),
             Amplitude_raw, Power_raw, snr_db, prominence_db,
-            local_peak_valid, candidate_status, include_for_density, Note.
+            local_peak_valid, candidate_status, include_for_density,
+            sample_note_tag, sample_id, partial_pitch_name.
         """
         nan = float("nan")
         row: Dict[str, Any] = {
@@ -5414,9 +5479,13 @@ class AudioProcessor:
             "candidate_status": "missing_window",
             "include_for_density": False,
             "tolerance_limb": str(tolerance_limb or "cents"),
+            "search_tol_hz": float(tol_hz) if np.isfinite(float(tol_hz)) else nan,
             "above_harmonic_body_stop": False,
+            "exclusion_reason": "",
             "Magnitude (dB)": nan,
-            "Note": getattr(self, "note", None),
+            "sample_note_tag": getattr(self, "note", None),
+            "sample_id": getattr(self, "sample_id", None),
+            "partial_pitch_name": "",
         }
 
         def _search(df_opt) -> Optional[pd.DataFrame]:
@@ -5648,13 +5717,20 @@ class AudioProcessor:
                 "candidate_status": str(status),
                 "include_for_density": bool(include),
                 "tolerance_limb": str(tolerance_limb or "cents"),
+                "search_tol_hz": float(tol_hz) if np.isfinite(float(tol_hz)) else nan,
                 "above_harmonic_body_stop": False,
+                "exclusion_reason": "",
                 "Magnitude (dB)": float(
                     peak_refinement.get(
                         "peak_magnitude_db",
                         20.0 * float(np.log10(max(amplitude_raw, 1e-12))),
                     )
                 ),
+                "sample_note_tag": getattr(self, "note", None),
+                "sample_id": getattr(self, "sample_id", None),
+                "partial_pitch_name": frequency_to_note_name(extracted_freq)
+                if np.isfinite(extracted_freq)
+                else "",
             }
         )
         return row
@@ -7395,18 +7471,72 @@ class AudioProcessor:
             sum_lin_ih = float(np.sum(ih_amps_eff)) if ih_amps_eff.size else 0.0
             den_lin_hi = sum_lin_h + sum_lin_ih
             frac_lin_ih = float(sum_lin_ih / den_lin_hi) if den_lin_hi > 1e-30 else 0.0
+            self.linear_sum_amplitude_harmonic_ungated = sum_lin_h
+            self.linear_sum_amplitude_inharmonic_partial_ungated = sum_lin_ih
             self.linear_sum_amplitude_harmonic = sum_lin_h
-            self.linear_sum_amplitude_inharmonic_partial = sum_lin_ih
+            try:
+                from validated_partials import (
+                    dataframe_rows,
+                    gated_linear_amplitude_sums,
+                )
+
+                _h_g, _i_g, _s_g = gated_linear_amplitude_sums(
+                    harmonic_rows=dataframe_rows(
+                        getattr(self, "harmonic_spectrum_candidates_df", None)
+                        if isinstance(
+                            getattr(self, "harmonic_spectrum_candidates_df", None),
+                            pd.DataFrame,
+                        )
+                        else self.harmonic_list_df
+                    ),
+                    inharmonic_rows=dataframe_rows(
+                        getattr(self, "inharmonic_list_df", None)
+                    ),
+                    subbass_rows=[],
+                )
+                self.linear_sum_amplitude_harmonic = float(_h_g)
+                self.linear_sum_amplitude_inharmonic_partial = float(_i_g)
+                sum_lin_ih = float(_i_g)
+                den_lin_hi = float(_h_g) + float(_i_g)
+                frac_lin_ih = float(sum_lin_ih / den_lin_hi) if den_lin_hi > 1e-30 else 0.0
+            except Exception:
+                self.linear_sum_amplitude_inharmonic_partial = 0.0
+                sum_lin_ih = 0.0
+                den_lin_hi = sum_lin_h
+                frac_lin_ih = 0.0
             self.linear_amplitude_fraction_inharmonic_of_HI = frac_lin_ih
 
             if np.isfinite(d_eff):
-                self.effective_partial_density = float(d_eff)
+                self.effective_partial_density_ungated = float(d_eff)
                 if getattr(self, "effective_partial_density_status", "") != "failed_exception":
                     self.effective_partial_density_status = "computed"
             else:
-                self.effective_partial_density = float("nan")
+                self.effective_partial_density_ungated = float("nan")
                 if getattr(self, "effective_partial_density_status", "") != "failed_exception":
                     self.effective_partial_density_status = "not_computed"
+            # Gated F-012 domain: validated harmonics only. Floor / unconfirmed
+            # inharmonic rows stay on the ungated copy for audit.
+            try:
+                from validated_partials import (
+                    dataframe_rows,
+                    gated_effective_partial_density,
+                )
+
+                _cand_g = getattr(self, "harmonic_spectrum_candidates_df", None)
+                if isinstance(_cand_g, pd.DataFrame) and not _cand_g.empty:
+                    self.effective_partial_density = float(
+                        gated_effective_partial_density(dataframe_rows(_cand_g))
+                    )
+                else:
+                    self.effective_partial_density = float(
+                        gated_effective_partial_density(
+                            dataframe_rows(self.harmonic_list_df)
+                        )
+                    )
+            except Exception:
+                self.effective_partial_density = getattr(
+                    self, "effective_partial_density_ungated", float("nan")
+                )
             self.partial_density_effective_components = self.effective_partial_density
 
             # SEMANTIC HARDENING — ``effective_partial_count`` is computed
@@ -7823,6 +7953,7 @@ class AudioProcessor:
                     )
                     self.harmonic_slot_expected_count = int(_vr.get("harmonic_slot_expected_count", 0) or 0)
                     self.harmonic_slot_matched_count = int(_vr.get("harmonic_slot_matched_count", 0) or 0)
+                    self.harmonic_slot_candidate_count = int(self.harmonic_slot_matched_count)
                     self.harmonic_slot_missing_count = int(_vr.get("harmonic_slot_missing_count", 0) or 0)
                     try:
                         _f0_rep = float(getattr(self, "f0_final", float("nan")))
@@ -7872,7 +8003,11 @@ class AudioProcessor:
                         "f0_used_for_harmonic_validation_source": str(f0_source),
                         "acoustic_f0_status": str(acoustic_f0_status),
                         "harmonic_slot_expected_count": int(_vr.get("harmonic_slot_expected_count", 0) or 0),
+                        "harmonic_slot_candidate_count": int(_vr.get("harmonic_slot_matched_count", 0) or 0),
                         "harmonic_slot_matched_count": int(_vr.get("harmonic_slot_matched_count", 0) or 0),
+                        "harmonic_validated_count": int(
+                            getattr(self, "harmonic_validated_count", 0) or 0
+                        ),
                         "harmonic_slot_missing_count": int(_vr.get("harmonic_slot_missing_count", 0) or 0),
                         "non_harmonic_candidate_count": _spc,
                         "unmatched_spectral_row_count": int(
@@ -7982,7 +8117,10 @@ class AudioProcessor:
                 self.subbass_energy_ratio = float(_ac_desc.get("subbass_energy_ratio", float("nan")))
                 self.harmonic_energy_ratio = float(_ac_desc.get("harmonic_energy_ratio", float("nan")))
                 self.spectral_entropy = float(_ac_desc.get("spectral_entropy", float("nan")))
-                self.effective_partial_density = float(_ac_desc.get("effective_partial_density", float("nan")))
+                _ac_epd = float(_ac_desc.get("effective_partial_density", float("nan")))
+                if getattr(self, "effective_partial_density_ungated", None) is None:
+                    self.effective_partial_density_ungated = _ac_epd
+                # Keep the gated F-012 value already computed from validated partials.
                 self.energy_weighted_component_density_diagnostic = float(
                     _ac_desc.get("energy_weighted_component_density_diagnostic", float("nan"))
                 )
@@ -8582,20 +8720,31 @@ class AudioProcessor:
                 self.harmonic_list_df['Amplitude'] = np.power(10.0, self.harmonic_list_df['Magnitude (dB)'] / 20.0)
 
             # --- OTIMIZAÇÃO CRÍTICA (Limitador de Picos) ---
-            # Pairwise dissonance scales as O(n^2); cap the harmonic partial list for stability.
+            # Pairwise dissonance scales as O(n^2); cap the validated partial list.
             _cap = int(DISSONANCE_PAIRWISE_PARTIAL_CAP)
-            df_calc = self.harmonic_list_df.copy()
+            _src = getattr(self, "harmonic_spectrum_candidates_df", None)
+            if isinstance(_src, pd.DataFrame) and not _src.empty and "include_for_density" in _src.columns:
+                df_calc = _src.loc[_src["include_for_density"].astype(bool)].copy()
+                _src_note = "validated harmonics (include_for_density=True)"
+            else:
+                df_calc = self.harmonic_list_df.copy()
+                _src_note = "strict harmonic list (legacy fallback)"
+            if "Amplitude" not in df_calc.columns and "Amplitude_raw" in df_calc.columns:
+                df_calc["Amplitude"] = pd.to_numeric(df_calc["Amplitude_raw"], errors="coerce")
             n_before = int(len(df_calc))
             self.dissonance_partial_count_before_cap = n_before
 
             if n_before > _cap:
                 df_calc = df_calc.nlargest(_cap, "Amplitude")
                 self.dissonance_partial_cap = _cap
-                self.dissonance_cap_computation_note = str(DISSONANCE_CAP_COMPUTATION_NOTE)
+                self.dissonance_cap_computation_note = (
+                    f"{DISSONANCE_CAP_COMPUTATION_NOTE} Source: {_src_note}."
+                )
             else:
                 self.dissonance_partial_cap = "not_applied"
                 self.dissonance_cap_computation_note = (
-                    "Full harmonic partial list used for dissonance (pairwise cap not applied)."
+                    f"Validated harmonic partials used for dissonance "
+                    f"({_src_note}; pairwise cap not applied)."
                 )
 
             n_after = int(len(df_calc))
@@ -9495,7 +9644,9 @@ class AudioProcessor:
                     facecolor="0.98",
                 )
                 ax.set_title(
-                    f"{COMPONENT_AMPLITUDE_MASS_PIE_TITLE_PREFIX} — {note}",
+                    self._component_pie_caption(
+                        note, chart=COMPONENT_AMPLITUDE_MASS_PIE_TITLE_PREFIX
+                    ),
                     fontsize=11,
                 )
                 ax.set_aspect("equal")
@@ -9589,7 +9740,10 @@ class AudioProcessor:
                     edgecolor="0.75",
                     facecolor="0.98",
                 )
-                ax.set_title(f"Component energy balance — {note}", fontsize=11)
+                ax.set_title(
+                    self._component_pie_caption(note, chart="Component energy balance"),
+                    fontsize=11,
+                )
                 ax.set_aspect("equal")
                 fig.subplots_adjust(bottom=0.14)
                 fig.text(
@@ -10041,6 +10195,16 @@ class AudioProcessor:
             "harmonic_slot_expected_count": metric_int_or_nan(
                 getattr(self, "harmonic_slot_expected_count", getattr(self, "expected_harmonic_slot_count", None))
             ),
+            "harmonic_slot_candidate_count": metric_int_or_nan(
+                getattr(
+                    self,
+                    "harmonic_slot_candidate_count",
+                    getattr(self, "harmonic_slot_matched_count", None),
+                )
+            ),
+            "harmonic_validated_count": metric_int_or_nan(
+                getattr(self, "harmonic_validated_count", None)
+            ),
             "harmonic_slot_matched_count": metric_int_or_nan(
                 getattr(self, "harmonic_slot_matched_count", None)
             ),
@@ -10109,6 +10273,18 @@ class AudioProcessor:
             ),
             "linear_sum_amplitude_subbass_band": metric_float_or_nan(
                 getattr(self, "linear_sum_amplitude_subbass_band", None)
+            ),
+            "linear_sum_amplitude_harmonic_ungated": metric_float_or_nan(
+                getattr(self, "linear_sum_amplitude_harmonic_ungated", None)
+            ),
+            "linear_sum_amplitude_inharmonic_partial_ungated": metric_float_or_nan(
+                getattr(self, "linear_sum_amplitude_inharmonic_partial_ungated", None)
+            ),
+            "linear_sum_amplitude_subbass_band_ungated": metric_float_or_nan(
+                getattr(self, "linear_sum_amplitude_subbass_band_ungated", None)
+            ),
+            "effective_partial_density_ungated": metric_float_or_nan(
+                getattr(self, "effective_partial_density_ungated", None)
             ),
             "linear_amplitude_fraction_inharmonic_of_HI": metric_float_or_nan(
                 getattr(self, "linear_amplitude_fraction_inharmonic_of_HI", None)
@@ -10538,13 +10714,16 @@ class AudioProcessor:
 
             if isinstance(self.complete_list_df, pd.DataFrame) and not self.complete_list_df.empty:
                 df_complete = _ensure_amp_column(self.complete_list_df)
-                cols = [c for c in ["Frequency (Hz)", "Magnitude (dB)", "Amplitude", "Note"] if c in df_complete.columns]
+                _cs_cols = ["Frequency (Hz)", "Magnitude (dB)", "Amplitude"]
+                if bool(getattr(self, "export_complete_spectrum_pitch_names", False)):
+                    _cs_cols.append("Note")
+                cols = [c for c in _cs_cols if c in df_complete.columns]
                 (df_complete[cols] if cols else df_complete).to_excel(writer, sheet_name="Complete Spectrum", index=False)
                 log.debug(f"Espectro completo salvo: {len(df_complete)}")
 
             if isinstance(self.filtered_list_df, pd.DataFrame) and not self.filtered_list_df.empty:
                 df_filt = _ensure_amp_column(self.filtered_list_df)
-                cols = [c for c in ["Frequency (Hz)", "Magnitude (dB)", "Amplitude", "Note"] if c in df_filt.columns]
+                cols = [c for c in ["Frequency (Hz)", "Magnitude (dB)", "Amplitude"] if c in df_filt.columns]
                 (df_filt[cols] if cols else df_filt).to_excel(writer, sheet_name="Filtered Spectrum", index=False)
                 log.debug(f"Espectro filtrado salvo: {len(df_filt)}")
 
@@ -10617,7 +10796,11 @@ class AudioProcessor:
                     "candidate_status",
                     "include_for_density",
                     "tolerance_limb",
-                    "Note",
+                    "search_tol_hz",
+                    "exclusion_reason",
+                    "sample_note_tag",
+                    "sample_id",
+                    "partial_pitch_name",
                 ]
                 cols = [c for c in preferred_cols if c in harmonic_sheet_df.columns]
                 _harm_to_write = (
@@ -10712,6 +10895,12 @@ class AudioProcessor:
                         above_harmonic_body_stop=bool(
                             _arow.get("above_harmonic_body_stop", False)
                         ),
+                        exclusion_reason=str(_arow.get("exclusion_reason", "") or ""),
+                        search_tol_hz=float(
+                            pd.to_numeric(_arow.get("search_tol_hz"), errors="coerce")
+                        )
+                        if _arow.get("search_tol_hz") is not None
+                        else float("nan"),
                     )
                     try:
                         _in_strict = int(_hnum) in _audit_strict_hnums
@@ -10727,6 +10916,13 @@ class AudioProcessor:
                             "harmonic_number": _hnum,
                             "expected_frequency_hz": _expected_hz,
                             "extracted_frequency_hz": _extracted_hz,
+                            "partial_pitch_name": (
+                                frequency_to_note_name(float(_extracted_hz))
+                                if np.isfinite(_extracted_hz)
+                                else ""
+                            ),
+                            "sample_note_tag": getattr(self, "note", None),
+                            "sample_id": getattr(self, "sample_id", None),
                             "frequency_deviation_hz": _freq_dev_hz,
                             "frequency_deviation_cents": _freq_dev_cents,
                             "magnitude_db": _arow.get("Magnitude (dB)"),
@@ -10755,6 +10951,9 @@ class AudioProcessor:
                         "harmonic_number",
                         "expected_frequency_hz",
                         "extracted_frequency_hz",
+                        "partial_pitch_name",
+                        "sample_note_tag",
+                        "sample_id",
                         "frequency_deviation_hz",
                         "frequency_deviation_cents",
                         "magnitude_db",
@@ -10814,6 +11013,18 @@ class AudioProcessor:
                     )
                     strict_df["Amplitude_raw"] = _amps_raw_s
                     strict_df["Power_raw"] = _amps_raw_s ** 2
+                if "sample_note_tag" not in strict_df.columns:
+                    strict_df["sample_note_tag"] = note
+                if "sample_id" not in strict_df.columns:
+                    strict_df["sample_id"] = getattr(self, "sample_id", None)
+                if "partial_pitch_name" not in strict_df.columns and "Frequency (Hz)" in strict_df.columns:
+                    _sf = pd.to_numeric(strict_df["Frequency (Hz)"], errors="coerce")
+                    strict_df["partial_pitch_name"] = [
+                        frequency_to_note_name(float(f)) if np.isfinite(float(f)) else ""
+                        for f in _sf.to_numpy(dtype=float)
+                    ]
+                if "Note" in strict_df.columns:
+                    strict_df = strict_df.drop(columns=["Note"])
                 strict_cols = [
                     c
                     for c in [
@@ -10829,7 +11040,9 @@ class AudioProcessor:
                         "candidate_status",
                         "include_for_density",
                         "SubBinCorrected",
-                        "Note",
+                        "sample_note_tag",
+                        "sample_id",
+                        "partial_pitch_name",
                     ]
                     if c in strict_df.columns
                 ]
@@ -11045,9 +11258,57 @@ class AudioProcessor:
             sum_sb = float(s_sb_raw)
             nh = sum_ih + sum_sb
             den_all = s_h + nh
-            self.linear_sum_amplitude_harmonic = float(s_h)
-            self.linear_sum_amplitude_inharmonic_partial = float(sum_ih)
-            self.linear_sum_amplitude_subbass_band = float(sum_sb)
+            self.linear_sum_amplitude_harmonic_ungated = float(s_h)
+            self.linear_sum_amplitude_inharmonic_partial_ungated = float(sum_ih)
+            self.linear_sum_amplitude_subbass_band_ungated = float(sum_sb)
+            try:
+                from validated_partials import (
+                    dataframe_rows,
+                    gated_linear_amplitude_sums,
+                    is_subbass_compartment_member,
+                )
+
+                _f0_gate = float(getattr(self, "f0_final", float("nan")))
+                if not np.isfinite(_f0_gate) or _f0_gate <= 0.0:
+                    _f0_gate = float(getattr(self, "f0_used_for_density_hz", float("nan")))
+                _sb_gated = 0.0
+                if not sub_df.empty and "Frequency (Hz)" in sub_df.columns:
+                    _sb_cls = (
+                        sub_df["Low_Frequency_Class"]
+                        if "Low_Frequency_Class" in sub_df.columns
+                        else pd.Series([""] * len(sub_df), index=sub_df.index)
+                    )
+                    _sb_amp = (
+                        pd.to_numeric(sub_df["Amplitude"], errors="coerce").fillna(0.0)
+                        if "Amplitude" in sub_df.columns
+                        else pd.Series(0.0, index=sub_df.index)
+                    )
+                    _sb_f = pd.to_numeric(sub_df["Frequency (Hz)"], errors="coerce")
+                    for _idx in sub_df.index:
+                        if is_subbass_compartment_member(
+                            float(_sb_f.loc[_idx]),
+                            f0_hz=_f0_gate,
+                            low_frequency_class=str(_sb_cls.loc[_idx] or ""),
+                        ):
+                            _sb_gated += float(_sb_amp.loc[_idx])
+                _h_g, _i_g, _s_ignored = gated_linear_amplitude_sums(
+                    harmonic_rows=dataframe_rows(
+                        getattr(self, "harmonic_spectrum_candidates_df", None)
+                    ),
+                    inharmonic_rows=dataframe_rows(ih_df),
+                    subbass_rows=[],
+                )
+                self.linear_sum_amplitude_harmonic = float(_h_g)
+                self.linear_sum_amplitude_inharmonic_partial = float(_i_g)
+                self.linear_sum_amplitude_subbass_band = float(_sb_gated)
+                sum_ih = float(_i_g)
+                sum_sb = float(_sb_gated)
+            except Exception:
+                self.linear_sum_amplitude_harmonic = float(s_h)
+                self.linear_sum_amplitude_inharmonic_partial = 0.0
+                self.linear_sum_amplitude_subbass_band = 0.0
+                sum_ih = 0.0
+                sum_sb = 0.0
             self.linear_amplitude_fraction_nonharmonic_of_total = (
                 float(nh / den_all) if den_all > 1e-30 else 0.0
             )
@@ -11113,18 +11374,24 @@ class AudioProcessor:
                 )
 
             def _attach_note_column(dfx: pd.DataFrame) -> pd.DataFrame:
-                """Ensure the per-row spectrum sheet carries the Note column.
-
-                In current-analysis mode the user-facing Inharmonic Spectrum
-                and Sub-bass band sheets never carry internal-only
-                compatibility columns; they expose Amplitude_raw / Power_raw
-                only.
-                """
+                """Attach sample identity and nearest-pitch labels to partial rows."""
                 out = dfx.copy() if dfx is not None else pd.DataFrame()
-                if "Note" not in out.columns:
-                    out["Note"] = note
-                elif not out.empty:
-                    out["Note"] = out["Note"].fillna(note)
+                tag = str(note or getattr(self, "note", "") or "")
+                sid = str(getattr(self, "sample_id", None) or "")
+                if not sid:
+                    sid = self._ensure_sample_identity(tag)
+                out["sample_note_tag"] = tag
+                out["sample_id"] = sid
+                if not out.empty and "Frequency (Hz)" in out.columns:
+                    freqs = pd.to_numeric(out["Frequency (Hz)"], errors="coerce")
+                    out["partial_pitch_name"] = [
+                        frequency_to_note_name(float(f)) if np.isfinite(float(f)) else ""
+                        for f in freqs.to_numpy(dtype=float)
+                    ]
+                elif "partial_pitch_name" not in out.columns:
+                    out["partial_pitch_name"] = ""
+                if "Note" in out.columns:
+                    out = out.drop(columns=["Note"])
                 return out
 
             ih_export = _attach_note_column(ih_partials)
@@ -11140,7 +11407,9 @@ class AudioProcessor:
                         "Frequency (Hz)",
                         "Magnitude (dB)",
                         "Amplitude",
-                        "Note",
+                        "sample_note_tag",
+                        "sample_id",
+                        "partial_pitch_name",
                     ]
                 )
                 sb_export = _attach_note_column(sb_export)
@@ -11154,7 +11423,9 @@ class AudioProcessor:
                         "Frequency (Hz)",
                         "Magnitude (dB)",
                         "Amplitude",
-                        "Note",
+                        "sample_note_tag",
+                        "sample_id",
+                        "partial_pitch_name",
                     ]
                 )
                 ih_export = _attach_note_column(ih_export)
@@ -11477,7 +11748,10 @@ class AudioProcessor:
                 "accepted_inharmonic_peak_count": getattr(self, "accepted_inharmonic_peak_count", None),
                 "accepted_inharmonic_partial_count": getattr(self, "accepted_inharmonic_partial_count", None),
             }
-            validate_debug_count_invariants(_dbg_inv)
+            validate_debug_count_invariants(
+                _dbg_inv,
+                harmonic_df=getattr(self, "harmonic_spectrum_candidates_df", None),
+            )
             self.debug_counts_invariant_status = str(_dbg_inv.get("debug_counts_invariant_status", "") or "")
             self.debug_counts_invariant_failures = str(_dbg_inv.get("debug_counts_invariant_failures", "") or "")
 
@@ -11570,6 +11844,13 @@ class AudioProcessor:
             _hv = getattr(self, "harmonic_validation_report", None)
             if isinstance(_hv, dict) and _hv:
                 _val_row = {"Note": note, **_hv}
+                if "harmonic_slot_candidate_count" not in _val_row:
+                    _val_row["harmonic_slot_candidate_count"] = _val_row.get(
+                        "harmonic_slot_matched_count"
+                    )
+                _val_row["harmonic_validated_count"] = metric_int_or_nan(
+                    getattr(self, "harmonic_validated_count", None)
+                )
                 _pub_df(pd.DataFrame([_val_row])).to_excel(writer, sheet_name="Validation_Metrics", index=False)
 
             tol_hz = float(getattr(self, "tolerance", 10.0) or 10.0)
@@ -12723,25 +13004,43 @@ class AudioProcessor:
             else:
                 hop_length_param = int(hop_length_param)
             
+            try:
+                _f0_range = float(getattr(self, "f0_final", float("nan")))
+            except (TypeError, ValueError):
+                _f0_range = float("nan")
+            if not np.isfinite(_f0_range) or _f0_range <= 0.0:
+                try:
+                    _f0_range = float(getattr(self, "f0_used_for_density_hz", float("nan")))
+                except (TypeError, ValueError):
+                    _f0_range = float("nan")
+            _f020_hz = min(0.5 * _f0_range, 80.0) if np.isfinite(_f0_range) and _f0_range > 0.0 else 80.0
+            _lf_lo = float(
+                getattr(self, "subbass_aggregate_lower_hz", SUBBASS_AGGREGATE_LOWER_HZ)
+                or SUBBASS_AGGREGATE_LOWER_HZ
+            )
+            _h_lo = float(getattr(self, "freq_min", 20.0) or 20.0)
+            _h_hi = float(getattr(self, "freq_max", 20000.0) or 20000.0)
             params_data = {
                 "Parameter": [
                     "Note", "Sample Rate (Hz)", "FFT Size", "Hop Length", "Window Type", "Weight Function",
-                    "Frequency Range (Hz)", "Magnitude Range (dB)", "Tolerance (Hz)", "Adaptive Tolerance", "Analysis Method",
-                    "Tier",  # NEW: Add tier to parameters
+                    "harmonic_search_range_hz", "low_frequency_diagnostic_range_hz",
+                    "Magnitude Range (dB)", "Tolerance (Hz)", "Adaptive Tolerance", "Analysis Method",
+                    "Tier",
                 ],
                 "Value": [
                     note,
                     int(getattr(self, "sr", 0) or 0),
                     int(getattr(self, "n_fft", 0) or 0),
-                    hop_length_param,  # FIXED: Use calculated value
+                    hop_length_param,
                     str(getattr(self, "window", "")),
                     str(getattr(self, "weight_function", "linear")),
-                    f"{float(getattr(self, 'freq_min', 20.0) or 20.0)} - {float(getattr(self, 'freq_max', 20000.0) or 20000.0)}",
+                    f"{_h_lo} - {_h_hi}",
+                    f"{_lf_lo} - {_f020_hz}",
                     f"{float(getattr(self, 'db_min', -90.0) or -90.0)} - {float(getattr(self, 'db_max', 0.0) or 0.0)}",
                     float(getattr(self, "tolerance", 10.0) or 10.0),
                     bool(getattr(self, "use_adaptive_tolerance", True)),
                     "STFT",
-                    str(getattr(self, "tier", "")) if getattr(self, "tier", None) is not None else "",  # NEW: Add tier value
+                    str(getattr(self, "tier", "")) if getattr(self, "tier", None) is not None else "",
                 ],
             }
             _pub_df(pd.DataFrame(params_data)).to_excel(writer, sheet_name="Analysis Parameters", index=False)

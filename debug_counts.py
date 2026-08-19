@@ -8,6 +8,8 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
+from data_integrity import validate_unique_peak_bin_assignment
+
 DEBUG_COUNTS_SEMANTICS = (
     "hierarchical residual counts are separate from independent peaklist window counts"
 )
@@ -44,7 +46,11 @@ def _as_int_count(x: Any) -> Optional[int]:
         return None
 
 
-def validate_debug_count_invariants(row: Dict[str, Any]) -> Dict[str, Any]:
+def validate_debug_count_invariants(
+    row: Dict[str, Any],
+    *,
+    harmonic_df: Optional[pd.DataFrame] = None,
+) -> Dict[str, Any]:
     """
     Validate Debug_Counts hierarchy for residual-pipeline fields.
 
@@ -59,6 +65,13 @@ def validate_debug_count_invariants(row: Dict[str, Any]) -> Dict[str, Any]:
     acc_partial = _as_int_count(row.get("accepted_inharmonic_partial_count"))
 
     failures: list[str] = []
+    peak_check = validate_unique_peak_bin_assignment(
+        harmonic_df if harmonic_df is not None else row.get("harmonic_spectrum_df")
+    )
+    if not bool(peak_check.get("ok", True)):
+        extra = str(peak_check.get("failures") or "").strip()
+        if extra:
+            failures.append(extra)
 
     if residual is not None and candidate is not None and candidate > residual:
         failures.append("nonharmonic_candidate_row_count_exceeds_residual_spectral_row_count")

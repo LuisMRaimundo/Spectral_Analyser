@@ -1,7 +1,7 @@
 # DENSITY_EXPORT_SCHEMA — Authoritative export schema
 
 > **Status:** normative for export-column semantics (package **v4.1.0**). Skeleton sections
-> marked `TODO(author)` remain for full column inventories; §R.6–R.9 and §2.1–2.3 are
+> marked `TODO(author)` remain for full column inventories; §R.6–R.10 and §2.1–2.3 are
 > maintained for current export behaviour. Where this file conflicts with older docs under
 > `docs/`, this file prevails for export semantics.
 
@@ -281,7 +281,7 @@ the tier-dependent label string.
 and research workbooks. Stage 3 alone updates research `Metadata` weights and research-sheet
 dedupe; Stage 2 is required for `Diagnostic_Metrics.sample_id` on compiled output.
 
-### R.8 Known ambiguous column names (documented, not yet renamed in export)
+### R.8 Known ambiguous column names (documented; `Note` resolved on per-row sheets)
 
 These headers still appear in current exports. **Do not join or compare across workbooks on
 name alone** — read the sheet and the canonical name in
@@ -296,9 +296,16 @@ name alone** — read the sheet and the canonical name in
 | `harmonic_density_weight` | `Analysis_Settings_By_Note` | GUI **base** multiplier (typically 1 / 0.5 / 0.25), not Phase-2 |
 | `harmonic_density_weight` | research `Spectral_Density_Metrics` | Per-note energy-ratio–derived weight column, not Phase-2 |
 | Same names as `Density_Metrics` | `Diagnostic_Metrics` (subset) | Often log/diagnostic scale — prefixed columns (`diagnostic_*`) where renamed; others may still collide |
+| `Note` | `Metrics` / `Density_Metrics` / compile keys | **Sample / take identity** (filename tag, e.g. A2) |
+| `Note` | `Complete Spectrum` (optional) | Nearest equal-temperament pitch of that bin; off by default |
+| `sample_note_tag` | Harmonic / Inharmonic / Sub-bass / audit | Sample / take identity (replaces per-row `Note`) |
+| `partial_pitch_name` | same per-row sheets | `frequency_to_note_name(extracted_frequency_hz)` with cents |
+| `harmonic_slot_matched_count` | `Validation_Metrics` | Legacy alias of `harmonic_slot_candidate_count` (matching diagnostic, not a partial count) |
+| `harmonic_slot_candidate_count` | `Validation_Metrics` | Slots that found a candidate peak (e.g. 166/181) |
+| `harmonic_validated_count` | `Validation_Metrics` | Rows with `include_for_density = TRUE` |
 
-Planned follow-up (not in v4.1.0): rename ambiguous public columns to explicit canonical
-names only; unify publication redaction across all sheets.
+Per-row partial sheets no longer export `Note` as a sample tag. Do not treat
+`partial_pitch_name` as the analysed take.
 
 ### R.9 Low-f₀ harmonic identity (v4.1.0)
 
@@ -316,3 +323,17 @@ Stage 1 exports (per-note `Metrics` / `Analysis_Metadata`; carried where compile
 
 **Re-export (v4.1.0):** re-run **Stage 1 + 2 + 3**. Old per-note workbooks keep the
 uncapped / un-refit harmonic list until Stage 1 is repeated.
+
+### R.10 Validated-partial gating and exclusive assignment (`export_schema_version` 2026_08)
+
+- Exclusive peak-to-slot assignment (F-051) before body-stop labelling.
+- `effective_partial_density`, `linear_sum_amplitude_*`, Sethares, and amplitude
+  pies consume `validated_partials_only`. Ungated copies use `*_ungated`.
+- Analysis Parameters: `harmonic_search_range_hz` and
+  `low_frequency_diagnostic_range_hz` replace the single Frequency Range string.
+- Complete Spectrum `Note` names are omitted unless
+  `export_complete_spectrum_pitch_names=True`.
+- Pie titles: `{chart} — {sample_note_tag} · {run_label or date} · v{version}`.
+
+**Re-export:** Stage 1 must be repeated. Workbooks from before this phase may
+contain multiply-assigned floor peaks and ungated amplitude sums.

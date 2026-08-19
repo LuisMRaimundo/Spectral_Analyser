@@ -23,6 +23,7 @@ This document covers visible options in:
 | Harmonic-body noise-floor stop | `harmonic_body_stop_enabled` | `True` | bool | harmonic validation | validation/count cut once the envelope meets a floor plateau; density ceiling stays 20 kHz | Stage 1 |
 | Body-stop margin (dB) | `harmonic_body_stop_margin_db` | `3.0` | float ≥ 0 | harmonic validation | envelope-to-floor margin (plateau, not decaying tail) | Stage 1 |
 | Density CI / fragility | `density_ci_enabled` | `True` | bool | uncertainty | default-on bootstrap CI and `density_fragile` | Stage 1, Stage 3 |
+| Complete Spectrum pitch names | `export_complete_spectrum_pitch_names` | `False` | bool | export | optional per-bin `Note` names (~8 000 rows); off by default | Stage 1 |
 
 Notes:
 

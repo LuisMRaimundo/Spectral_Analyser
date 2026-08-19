@@ -41,7 +41,9 @@ AUDIT_CANONICAL_CANDIDATE_KEYS = frozenset(
         "local_peak_valid",
         "candidate_status",
         "include_for_density",
-        "Note",
+        "sample_note_tag",
+        "sample_id",
+        "partial_pitch_name",
     }
 )
 
@@ -338,4 +340,4 @@ def test_rebuild_harmonic_candidate_rows_list_maps_to_dataframe_with_stable_colu
     df = pd.DataFrame(rows)
     assert not df.empty
     assert AUDIT_CANONICAL_CANDIDATE_KEYS.issubset(set(df.columns))
-    assert df["Note"].iloc[0] == "A4"
+    assert df["sample_note_tag"].iloc[0] == "A4"

@@ -52,6 +52,23 @@ The report documents Spearman rank stability across α ∈ {0.25, 0.5, 0.75, 1.0
 5. Filter `ewsd_primary_analysis_eligible == True`.
 6. Report `EWSD_score_acoustic_balanced` with bootstrap CI columns.
 
+## Pre-phase Stage 1 workbooks (exclusive assignment / gating)
+
+Runs exported **before** the exclusive-assignment + validated-partial gating
+phase (`CHANGES.md`, export schema `spectral_analysis_schema_2026_08`) may
+contain:
+
+- the same floor peak assigned to several high-*n* slots
+  (`include_for_density = TRUE` on more than one `peak_bin_index`);
+- ungated linear-amplitude sums and `effective_partial_density` that include
+  near-floor inharmonic / sub-bass residual rows.
+
+Those workbooks are **not comparable** to post-phase exports on
+`effective_partial_density`, amplitude pies, Sethares, or validated harmonic
+counts. Cross-run comparison requires a Stage 1 re-export (then Stage 2 + 3).
+F-042 / F-047 / F-048 / F-049 algebra is unchanged; only the input domain
+(`validated_partials_only`) changed.
+
 ## Explicit non-claims
 
 - No assertion that EWSD equals listener "fatness" or "brightness".

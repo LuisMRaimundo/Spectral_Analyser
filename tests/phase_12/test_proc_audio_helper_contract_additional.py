@@ -253,7 +253,7 @@ def test_build_harmonic_candidate_row_missing_window_when_no_data() -> None:
     assert row["candidate_status"] == "missing_window"
     assert row["include_for_density"] is False
     assert math.isnan(row["Frequency (Hz)"])
-    assert row["Note"] == "A4"
+    assert row["sample_note_tag"] == "A4"
 
 
 def test_build_harmonic_candidate_picks_closest_frequency_not_loudest_outlier() -> None:

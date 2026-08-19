@@ -18,6 +18,90 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+VALIDATED_HARMONIC_STATUSES = frozenset({"strict_validated", "snr_validated"})
+
+
+def _finite_peak_bin_index(value: Any) -> Optional[int]:
+    try:
+        raw = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(raw):
+        return None
+    return int(raw)
+
+
+def duplicated_peak_bin_indices(
+    harm_df: Optional[pd.DataFrame],
+    *,
+    mask: Optional[pd.Series] = None,
+) -> list[int]:
+    """Return ``peak_bin_index`` values that appear more than once under ``mask``."""
+    if harm_df is None or not isinstance(harm_df, pd.DataFrame) or harm_df.empty:
+        return []
+    if "peak_bin_index" not in harm_df.columns:
+        return []
+    frame = harm_df if mask is None else harm_df.loc[mask]
+    bins: list[int] = []
+    for raw in frame["peak_bin_index"].tolist():
+        pbi = _finite_peak_bin_index(raw)
+        if pbi is not None:
+            bins.append(pbi)
+    if not bins:
+        return []
+    counts = pd.Series(bins).value_counts()
+    return [int(v) for v in counts.index[counts > 1].tolist()]
+
+
+def validate_unique_peak_bin_assignment(
+    harm_df: Optional[pd.DataFrame],
+) -> Dict[str, Any]:
+    """Fail-closed uniqueness of ``peak_bin_index`` on included / validated rows.
+
+    Checks two populations independently:
+
+    * ``include_for_density == True``
+    * ``candidate_status in {strict_validated, snr_validated}``
+
+    Returns a dict with ``ok``, ``failures`` (semicolon-joined tokens) and
+    ``duplicated_bins`` (sorted unique integers).
+    """
+    failures: list[str] = []
+    duplicated: set[int] = set()
+    if harm_df is None or not isinstance(harm_df, pd.DataFrame) or harm_df.empty:
+        return {"ok": True, "failures": "", "duplicated_bins": []}
+    if "peak_bin_index" not in harm_df.columns:
+        return {"ok": True, "failures": "", "duplicated_bins": []}
+
+    if "include_for_density" in harm_df.columns:
+        inc_dups = duplicated_peak_bin_indices(
+            harm_df, mask=harm_df["include_for_density"].astype(bool)
+        )
+        if inc_dups:
+            failures.append(
+                "duplicate_peak_bin_index_among_include_for_density:"
+                + ",".join(str(v) for v in inc_dups)
+            )
+            duplicated.update(inc_dups)
+
+    if "candidate_status" in harm_df.columns:
+        status = harm_df["candidate_status"].astype(str)
+        val_dups = duplicated_peak_bin_indices(
+            harm_df, mask=status.isin(VALIDATED_HARMONIC_STATUSES)
+        )
+        if val_dups:
+            failures.append(
+                "duplicate_peak_bin_index_among_validated_status:"
+                + ",".join(str(v) for v in val_dups)
+            )
+            duplicated.update(val_dups)
+
+    return {
+        "ok": not failures,
+        "failures": ";".join(failures),
+        "duplicated_bins": sorted(duplicated),
+    }
+
 # Canonical missing sentinel for exported floats (not computed / undefined).
 MISSING_FLOAT = float("nan")
 

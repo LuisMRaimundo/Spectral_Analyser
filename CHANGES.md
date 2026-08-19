@@ -1,3 +1,35 @@
+# Exclusive harmonic assignment; validated-partial gating; column semantics
+
+Stage 1 corrections after the IOWA tuba *pp* A2 (run 2) audit. Metric *formulas*
+F-042 / F-047 / F-048 / F-049 are unchanged; their **input domain** is now
+validated partials only.
+
+- **F-051 exclusive assignment:** each `peak_bin_index` may satisfy at most one
+  slot (`apply_exclusive_harmonic_assignment`). Conflicts resolve by minimum
+  |Δcents|, then lower *n*. Tolerance rejects are written as
+  `exclusion_reason = rejected_by_tolerance (dev=… Hz > cap=… Hz)` with
+  `tolerance_limb = spacing_cap` and are not relabelled `above_harmonic_body_stop`.
+- **Fail-closed invariant:** `peak_bin_index` unique among
+  `include_for_density=True` and among `{strict_validated, snr_validated}`
+  (`data_integrity.validate_unique_peak_bin_assignment`). Failure sets
+  `debug_counts_invariant_status = failed`.
+- **F-012 gating (Fix 2):** `effective_partial_density`, `linear_sum_amplitude_*`,
+  Sethares, and amplitude pies use `is_validated_partial` (`include_for_density`
+  for harmonics; inharmonic rows stay excluded until a confirmed-partial class
+  exists). Ungated copies keep `*_ungated`.
+- **Column semantics:** per-row sheets use `sample_note_tag` + `sample_id` +
+  `partial_pitch_name`. `Note` remains the take identity on summary sheets only.
+  Complete Spectrum pitch names are off by default (`export_complete_spectrum_pitch_names`).
+- **Counts / ranges:** `harmonic_slot_candidate_count` (matching diagnostic;
+  formerly `harmonic_slot_matched_count`) and `harmonic_validated_count`.
+  Analysis Parameters export `harmonic_search_range_hz` and
+  `low_frequency_diagnostic_range_hz`. Sub-bass rows above F-020 are
+  `physical_low_frequency_residual` and contribute 0 to `subbass_energy_sum`.
+- **Export schema:** `spectral_analysis_schema_2026_08`.
+- **Tests:** `tests/phase_13/test_exclusive_assignment_and_validated_gating.py`.
+- **Docs:** `DENSITY_EXPORT_SCHEMA` §R.8 / §R.10, `EXPORT_COLUMN_DICTIONARY`,
+  `EWSD_CONSTRUCT_VALIDITY` (pre-phase runs are not comparable without re-export).
+
 # Documentation alignment — full v4.1.0 sweep
 
 Synchronized user-facing documentation and citation metadata with package **v4.1.0**
