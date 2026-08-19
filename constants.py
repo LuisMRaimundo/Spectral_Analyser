@@ -243,6 +243,8 @@ DENSITY_CI_SEED: Final[int] = 0
 UNCERTAINTY_REL_FLAG_PCT: Final[float] = 25.0
 # Phase D: flag when independent sustain frames are below this count.
 CI_BASIS_INDEPENDENT_FRAME_MIN: Final[int] = 10
+# Phase E: include F-020 diagnostic LF rows in the amplitude pie (default off).
+INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE: Final[bool] = False
 DENSITY_WINDOW_PERTURBATION_MS: Final[float] = 10.0
 DENSITY_FRAGILE_CI_PCT: Final[float] = 10.0
 DENSITY_FRAGILE_PERTURBATION_PCT: Final[float] = 10.0
@@ -515,6 +517,7 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "DENSITY_NOISE_GATE_ENABLED",
         "DENSITY_NOISE_GATE_POLICY",
         "CI_BASIS_INDEPENDENT_FRAME_MIN",
+        "INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE",
         "DENSITY_CI_DEFAULT_ON",
         "DENSITY_CI_N_BOOT",
         "DENSITY_CI_SEED",

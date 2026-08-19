@@ -9,8 +9,8 @@ bump is recorded.
 | A | Confirmed-inharmonic partial class | `tests/phase_14/test_inharmonic_confirmation.py` | A2-like floor → 0 confirmed, all `rejected_floor` on CFAR. Piano B=2e-4, 30 stretched → 0 I, 30 H (`rejected_stretched_harmonic`). Bell, 10 partials at 20 dB SNR → exactly 10 confirmed. Two H3 sidelobes → 0 confirmed, `rejected_leakage` guarding order 3. | **done (PR #66)** |
 | B | Temporal persistence | `tests/phase_15/test_temporal_persistence.py` | H1–H8 on A2 ≥ 0.95 at the time-averaged peak. The three 12 kHz floor slots fail the 0.7 inclusion gate with body stop off. Synthetic: steady ≥ 0.95, 2-frame burst rejected, unstructured floor < 0.3. | **done (PR #67)** |
 | C | Independent high-n guards | `tests/phase_16/test_high_n_harmonic_guards.py` | Body stop off: A2 keeps the low-order body and nothing above H8 (H7/H8 may be `cfar_marginal` on this take). Run-2 notes pass the peak-bin invariant; `accepted_slots_above_body_stop = 0`. | **done (PR #68)** |
-| D | Uncertainty by default | `tests/phase_17/test_uncertainty_defaults.py` | CI bands on Stage 3 EWSD; A2 EPD CI reported; < 10 independent frames flagged. | **in this PR** |
-| E | Provenance | `tests/phase_18/` | Fresh export stamps commit + version. `verify_export.py` on run-2 → not comparable. | pending |
+| D | Uncertainty by default | `tests/phase_17/test_uncertainty_defaults.py` | CI bands on Stage 3 EWSD; A2 EPD CI reported; < 10 independent frames flagged. | **done (PR #69)** |
+| E | Provenance | `tests/phase_18/test_provenance_and_verify_export.py` | Fresh export stamps commit + version. `verify_export.py` on run-2 → not comparable. | **in this PR** |
 | F | Schema / count hygiene | `tests/phase_19/` | One meaning per header; F-020 rows contribute 0 to S sums. | pending |
 | G | Weight function φ | `tests/phase_20/` | Sensitivity report on tuba corpus; README records ρ. | pending |
 | H | Reproducibility command | `tests/phase_21/` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | pending |
@@ -54,3 +54,13 @@ F-047 point estimate is unchanged. Research workbook writes
 `Uncertainty_Summary` and, when charts are on,
 `ewsd_acoustic_balanced_ci.png`. A2-like H1–H8 workbooks report an EPD
 CI; a note with fewer than 10 independent frames is flagged.
+
+## Phase E notes
+
+Module: `analysis_provenance.py`. CLI: `verify_export.py`.
+`component_energy_pie.png` is computed from `*_energy_sum`.
+Amplitude pie title is `Validated-partial amplitude balance`; F-020
+diagnostic rows are excluded unless
+`INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE`. Header-contract invariant is
+fail-closed. A v4.0.3 / run-2 workbook is
+`not comparable (pre-exclusive-assignment)`.

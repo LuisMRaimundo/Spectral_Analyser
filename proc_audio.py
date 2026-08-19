@@ -52,6 +52,7 @@ from constants import (
     DENSITY_NOISE_GATE_ENABLED,
     DENSITY_NOISE_GATE_POLICY,
     DENSITY_WINDOW_PERTURBATION_MS,
+    INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE,
     PARTIAL_PERSISTENCE_MIN_FRACTION,
     FRAME_PEAK_MIN_ABOVE_MEDIAN_DB,
     F0_REFIT_DISCREPANCY_CENTS,
@@ -417,7 +418,7 @@ DEFAULT_PLOT_DPI: int = 300
 COMPONENT_AMPLITUDE_MASS_PIE_FILENAME = "component_amplitude_mass_pie.png"
 COMPONENT_ENERGY_RATIO_PIE_FILENAME = "component_energy_ratio_pie.png"
 COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME = "component_energy_pie.png"
-COMPONENT_AMPLITUDE_MASS_PIE_TITLE_PREFIX = "Candidate amplitude balance"
+COMPONENT_AMPLITUDE_MASS_PIE_TITLE_PREFIX = "Validated-partial amplitude balance"
 COMPONENT_AMPLITUDE_MASS_PIE_BASIS_FOOTNOTE = (
     "Basis: linear amplitude sums; not power/energy ratios."
 )
@@ -2047,6 +2048,9 @@ class AudioProcessor:
         self.energy_ratio_chart_status: str = "not_attempted"
         self.component_energy_pie_file: str = ""
         self.component_energy_pie_alias_basis: str = ""
+        self.include_lf_diagnostic_in_amplitude_pie: bool = bool(
+            INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE
+        )
         self.effective_partial_density_status: str = "not_computed"
         self.density_metric_status: str = "not_computed"
         self.normalization_status: str = "not_computed"
@@ -5721,14 +5725,27 @@ class AudioProcessor:
         )
         return str(self.sample_id)
 
+    def _stamp_analysis_provenance(self) -> None:
+        """Attach the single-source package + git identity to this processor."""
+        from analysis_provenance import resolve_analysis_provenance
+
+        p = resolve_analysis_provenance()
+        self.analysis_version = str(p["analysis_version"])
+        self.package_version = str(p["package_version"])
+        self.code_commit = str(p["code_commit"])
+        self.code_dirty = bool(p["code_dirty"])
+        self.export_schema_version = str(p["export_schema_version"])
+        self.git_describe = str(p["git_describe"])
+
     def _component_pie_caption(self, note: str, *, chart: str) -> str:
-        """Pie title: sample tag · run label · analysis version."""
+        """Pie title: chart · note · run_id · commit."""
         tag = str(note or getattr(self, "note", "") or "").strip() or "unknown"
-        version = str(
-            getattr(self, "analysis_version", None)
+        commit = str(
+            getattr(self, "code_commit", None)
+            or getattr(self, "analysis_version", None)
             or getattr(self, "package_version", None)
-            or "4.1.0"
-        )
+            or "unknown"
+        ).strip()
         run_id = str(
             getattr(self, "analysis_run_label", None)
             or getattr(self, "analysis_run_id", "")
@@ -5739,9 +5756,11 @@ class AudioProcessor:
             if "T" in stamp:
                 stamp = stamp.split("T", 1)[0]
             run_id = stamp
+        parts = [str(chart).strip(), tag]
         if run_id:
-            return f"{chart} — {tag} · {run_id} · v{version.lstrip('v')}"
-        return f"{chart} — {tag} · v{version.lstrip('v')}"
+            parts.append(run_id)
+        parts.append(commit)
+        return " · ".join(parts)
 
     # ---------------------------------------------------------------------
     # Rebuild harmonic candidates on the final f0 comb.
@@ -9994,12 +10013,72 @@ class AudioProcessor:
                 preferred_missing.append(n)
         preferred = self._preferred_component_amplitude_sum_triple()
         if preferred is not None:
-            return preferred, "harmonic_amplitude_sum", preferred_missing, "harmonic_amplitude_sum_triple"
+            h, i, s = preferred
+            s = self._amplitude_pie_subbass_mass(float(s))
+            return (h, i, s), "harmonic_amplitude_sum", preferred_missing, "harmonic_amplitude_sum_triple"
         h, i, s, basis = self._linear_component_density_balance_triple_with_basis()
+        s = self._amplitude_pie_subbass_mass(float(s))
         tot = float(h + i + s)
         if tot > 1e-18:
             return (h, i, s), "linear_amplitude_sum", preferred_missing, basis
         return None, "linear_amplitude_sum", preferred_missing, basis
+
+    def _amplitude_pie_subbass_mass(self, fallback_s: float) -> float:
+        """S wedge: F-020 members only unless the diagnostic GUI flag is on."""
+        if bool(
+            getattr(
+                self,
+                "include_lf_diagnostic_in_amplitude_pie",
+                INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE,
+            )
+        ):
+            return float(fallback_s)
+        df = getattr(self, "subbass_list_df", None)
+        if not isinstance(df, pd.DataFrame) or df.empty:
+            return float(fallback_s)
+        from validated_partials import is_subbass_compartment_member, _row_linear_amplitude
+
+        f0 = None
+        for key in ("f0_used_for_density_hz", "f0_final_hz", "f0"):
+            try:
+                raw = float(getattr(self, key, float("nan")))
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(raw) and raw > 0.0:
+                f0 = raw
+                break
+        if f0 is None:
+            return float(fallback_s)
+        total = 0.0
+        for row in df.to_dict(orient="records"):
+            try:
+                freq = float(row.get("Frequency (Hz)", float("nan")))
+            except (TypeError, ValueError):
+                continue
+            cls = str(
+                row.get("Low_Frequency_Class") or row.get("low_frequency_class") or ""
+            )
+            if not is_subbass_compartment_member(
+                freq, f0_hz=f0, low_frequency_class=cls
+            ):
+                continue
+            total += float(_row_linear_amplitude(row))
+        return float(total)
+
+    def _component_energy_sum_triple_for_pie(
+        self,
+    ) -> Optional[Tuple[float, float, float]]:
+        """Energy pie wedges from ``*_energy_sum`` (not amplitude copies)."""
+        try:
+            h = float(getattr(self, "harmonic_energy_sum", float("nan")))
+            i = float(getattr(self, "inharmonic_energy_sum", float("nan")))
+            s = float(getattr(self, "subbass_energy_sum", float("nan")))
+        except (TypeError, ValueError):
+            return None
+        vals = [max(0.0, v) if np.isfinite(v) else 0.0 for v in (h, i, s)]
+        if sum(vals) <= 1e-30:
+            return None
+        return (vals[0], vals[1], vals[2])
 
     def _component_energy_ratio_triple_for_pie(
         self,
@@ -10040,6 +10119,10 @@ class AudioProcessor:
         """
         output_folder = Path(output_folder)
         output_folder.mkdir(parents=True, exist_ok=True)
+        try:
+            self._stamp_analysis_provenance()
+        except Exception:
+            pass
 
         self.component_energy_pie_basis = "not_written"
         self.amplitude_mass_chart_file = ""
@@ -10130,32 +10213,16 @@ class AudioProcessor:
                     color="0.35",
                 )
                 amp_path = output_folder / COMPONENT_AMPLITUDE_MASS_PIE_FILENAME
-                legacy_path = output_folder / COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME
                 fig.savefig(amp_path, dpi=150, bbox_inches="tight")
                 plt.close(fig)
                 self.component_energy_pie_basis = pie_tech_basis
                 self.amplitude_mass_chart_basis = amp_meta_basis
                 self.amplitude_mass_chart_file = COMPONENT_AMPLITUDE_MASS_PIE_FILENAME
                 self.amplitude_mass_chart_status = "saved"
-                self.logger.info("Candidate amplitude-mass pie saved: %s", amp_path)
+                self.logger.info("Validated-partial amplitude pie saved: %s", amp_path)
                 self.logger.info(
-                    "Basis: linear amplitude sums; not power/energy ratios.",
+                    "Basis: validated-partial linear amplitude sums; not power/energy ratios.",
                 )
-                try:
-                    shutil.copyfile(amp_path, legacy_path)
-                    self.component_energy_pie_file = COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME
-                    self.component_energy_pie_alias_basis = "legacy_alias_of_amplitude_mass_chart"
-                    self.logger.info(
-                        "Legacy component_energy_pie.png copied from component_amplitude_mass_pie.png: %s",
-                        legacy_path,
-                    )
-                except OSError as copy_exc:
-                    self.logger.warning(
-                        "Legacy component_energy_pie.png copy failed (source=%s target=%s): %s",
-                        amp_path,
-                        legacy_path,
-                        copy_exc,
-                    )
         except Exception as exc:
             self.component_energy_pie_basis = "error"
             self.amplitude_mass_chart_status = "error"
@@ -10163,8 +10230,9 @@ class AudioProcessor:
 
         # --- Energy / power ratios ---
         try:
+            trip_sums = self._component_energy_sum_triple_for_pie()
             trip, pmiss, fmiss = self._component_energy_ratio_triple_for_pie()
-            if trip is None:
+            if trip_sums is None and trip is None:
                 union = sorted({*pmiss, *fmiss})
                 self.energy_ratio_chart_file = ""
                 self.energy_ratio_chart_basis = ""
@@ -10180,7 +10248,12 @@ class AudioProcessor:
                         "Component energy-ratio pie skipped: no positive finite energy-ratio values",
                     )
             else:
-                hf, inf, sf = trip
+                if trip_sums is not None:
+                    hf, inf, sf = trip_sums
+                    energy_basis = "energy_sum"
+                else:
+                    hf, inf, sf = trip
+                    energy_basis = "energy_ratio"
                 import matplotlib.pyplot as plt
 
                 sizes = [hf, inf, sf]
@@ -10210,7 +10283,9 @@ class AudioProcessor:
                     facecolor="0.98",
                 )
                 ax.set_title(
-                    self._component_pie_caption(note, chart="Component energy balance"),
+                    self._component_pie_caption(
+                        note, chart="Component energy balance"
+                    ),
                     fontsize=11,
                 )
                 ax.set_aspect("equal")
@@ -10225,11 +10300,15 @@ class AudioProcessor:
                     color="0.35",
                 )
                 en_path = output_folder / COMPONENT_ENERGY_RATIO_PIE_FILENAME
+                energy_pie_path = output_folder / COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME
                 fig.savefig(en_path, dpi=150, bbox_inches="tight")
+                fig.savefig(energy_pie_path, dpi=150, bbox_inches="tight")
                 plt.close(fig)
                 self.energy_ratio_chart_file = COMPONENT_ENERGY_RATIO_PIE_FILENAME
                 self.energy_ratio_chart_status = "saved"
-                self.logger.info("Component energy-ratio pie saved: %s", en_path)
+                self.component_energy_pie_file = COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME
+                self.component_energy_pie_alias_basis = energy_basis
+                self.logger.info("Component energy pie saved: %s (%s)", energy_pie_path, energy_basis)
                 self.logger.info(
                     "Basis: component (peak) energy — harmonic_energy_ratio / "
                     "inharmonic_energy_ratio (peak) / subbass_energy_ratio. Partial-physics "
@@ -10246,6 +10325,10 @@ class AudioProcessor:
 
         analysis_method = "STFT"  # Always STFT (zero padding and time averaging are STFT options)
         self.logger.info(f"Saving results ({analysis_method}) for '{note}' to {output_folder}")
+        try:
+            self._stamp_analysis_provenance()
+        except Exception as e:
+            self.logger.warning(f"Provenance stamp failed: {e}")
 
         # garantir mÃ©tricas completas
         try:
@@ -12549,8 +12632,8 @@ class AudioProcessor:
             )
 
             try:
-                from compile_metrics import _get_project_version_info as _gv
-                _ver, _ = _gv()
+                self._stamp_analysis_provenance()
+                _ver = str(getattr(self, "analysis_version", None) or "unknown")
             except Exception:
                 _ver = "unknown"
 
@@ -12695,6 +12778,16 @@ class AudioProcessor:
                     ),
                 ),
                 ("analysis_version", _ver),
+                (
+                    "package_version",
+                    str(getattr(self, "package_version", "") or "unknown"),
+                ),
+                ("code_commit", str(getattr(self, "code_commit", "") or "unknown")),
+                ("code_dirty", bool(getattr(self, "code_dirty", False))),
+                (
+                    "git_describe",
+                    str(getattr(self, "git_describe", "") or "unknown"),
+                ),
                 ("run_id", str(_uuid.uuid4())),
                 ("analysis_date", _dtmod.datetime.now().isoformat()),
                 ("python_version", _meta_atom(_sys.version.split()[0] if _sys.version else None)),
