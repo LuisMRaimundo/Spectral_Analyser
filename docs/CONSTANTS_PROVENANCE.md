@@ -89,6 +89,9 @@ Provenance classes:
 - `LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ` (`200.0`) - `internal_default` - Export ceiling for LF diagnostic rows above F-020 (`min(f0, 200)`).
 - `DENSITY_WEIGHT_FUNCTION_DEFAULT` (`log`) - `convention` - Default φ for D_k / EWSD. Log-amplitude is a first-order loudness proxy (Fechner, 1860; Stevens, 1955; Zwicker & Fastl, 1990). Other φ remain available for audit; they change the Stage 2/3 `analysis_parameter_profile_id`.
 - `REEXPORT_REL_DELTA_FLAG_PCT` (`4.0`) - `internal_default` - Stage 3 re-export flag: a note is listed when `|Δ| / |baseline|` of `EWSD_score_acoustic_balanced` exceeds this percent.
+- `CONSTRUCT_N_ABS_TOL` (`1`) - `convention` - Synthetic-corpus recovery: accepted harmonic count N within ±1 of the planted count.
+- `CONSTRUCT_B_REL_TOL` (`0.10`) - `convention` - Synthetic-corpus recovery: stiff-string B within ±10 % of the planted coefficient.
+- `CONSTRUCT_EPD_REL_TOL` (`0.10`) - `convention` - Synthetic-corpus recovery: EPD (F-047 / participation ratio) within ±10 % of the planted validated set.
 - `DENSITY_WINDOW_PERTURBATION_MS` (`10.0`) - `internal_default` - ±window shift used for density fragility.
 - `DENSITY_FRAGILE_CI_PCT` (`10.0`) - `internal_default` - CI relative-width threshold for `density_fragile`.
 - `DENSITY_FRAGILE_PERTURBATION_PCT` (`10.0`) - `internal_default` - Window-perturbation spread threshold for `density_fragile`.

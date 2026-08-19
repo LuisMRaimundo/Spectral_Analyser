@@ -439,3 +439,10 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
   `wall_time_s`.
 - `tools/reexport_corpus.py` diffs Stage 3 `EWSD_score_acoustic_balanced`
   against a previous manifest or series.
+
+### R.19 Construct validation (Phase I / phase_22)
+
+- Synthetic corpus: `tests/validation/synthetic_corpus/`.
+- Recovered vs true: `docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`.
+- EWSD remains acoustic until the listener protocol in
+  `docs/validation/PERCEPTUAL_PROTOCOL.md` is run.

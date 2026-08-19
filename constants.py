@@ -253,6 +253,10 @@ LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ: Final[float] = 200.0
 DENSITY_WEIGHT_FUNCTION_DEFAULT: Final[str] = "log"
 # Phase H: flag a Stage 3 note when |Δ| / |baseline| exceeds this percent.
 REEXPORT_REL_DELTA_FLAG_PCT: Final[float] = 4.0
+# Phase I: construct-validation recovery tolerances (synthetic corpus).
+CONSTRUCT_N_ABS_TOL: Final[int] = 1
+CONSTRUCT_B_REL_TOL: Final[float] = 0.10
+CONSTRUCT_EPD_REL_TOL: Final[float] = 0.10
 DENSITY_WINDOW_PERTURBATION_MS: Final[float] = 10.0
 DENSITY_FRAGILE_CI_PCT: Final[float] = 10.0
 DENSITY_FRAGILE_PERTURBATION_PCT: Final[float] = 10.0
@@ -532,6 +536,9 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "DENSITY_CI_N_BOOT",
         "DENSITY_CI_SEED",
         "REEXPORT_REL_DELTA_FLAG_PCT",
+        "CONSTRUCT_N_ABS_TOL",
+        "CONSTRUCT_B_REL_TOL",
+        "CONSTRUCT_EPD_REL_TOL",
         "UNCERTAINTY_REL_FLAG_PCT",
         "DENSITY_FRAGILE_CI_PCT",
         "DENSITY_FRAGILE_PERTURBATION_PCT",

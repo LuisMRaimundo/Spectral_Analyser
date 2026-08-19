@@ -1,3 +1,20 @@
+# Phase 22 / Phase I — Construct validation + perceptual scaffold
+
+The pipeline recovers planted N, B, EPD, and confirmed-I on a synthetic
+corpus. Listener data are not collected.
+
+- `tests/validation/synthetic_corpus/` plants harmonic, stiff-string, and
+  bell constructs at SNR 10/20/30/40 dB and recovers them through the
+  Stage 1 evidence path. Acceptance: N ±1, B ±10 %, EPD ±10 %,
+  confirmed-I exact. Table:
+  `docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`.
+- `tools/perceptual_pairs.py` / `tools/perceptual_agreement.py` write the
+  pairwise judgement schema and score a filled CSV against EWSD rank.
+  Protocol: `docs/validation/PERCEPTUAL_PROTOCOL.md`. README states that
+  EWSD is acoustic until that study is run.
+- **Tests:** `tests/validation/synthetic_corpus/test_construct_recovery.py`,
+  `tests/phase_22/test_perceptual_scaffold.py`
+
 # Phase 21 / Phase H — Reproducibility as one command
 
 One command regenerates a corpus run and writes an audit manifest.

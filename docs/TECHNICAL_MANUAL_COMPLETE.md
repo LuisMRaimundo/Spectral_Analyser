@@ -1098,6 +1098,12 @@ ceilings). The count of `included` rows equals
 `harmonic_density_included_count` in `Analysis_Metadata`. See §5.4 and
 `docs/DENSITY_EXPORT_SCHEMA.md` §2b.
 
+Construct validation (Phase I) plants harmonic, stiff-string, and bell
+spectra at SNR 10–40 dB and recovers N, B, EPD, and confirmed-I through
+the same evidence path. See `docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`.
+EWSD is acoustic until the listener protocol in
+`docs/validation/PERCEPTUAL_PROTOCOL.md` is run.
+
 ---
 
 ## 15. GUI option tutorial (advanced user)
