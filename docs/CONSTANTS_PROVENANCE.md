@@ -16,6 +16,11 @@ Provenance classes:
 
 - `DEFAULT_N_FFT` (`4096`) - `convention` - Power-of-two FFT default for efficient radix-2 DFT.
 - `DEFAULT_HOP_LENGTH` (`1024`) - `convention` - Quarter-hop STFT default for Hann analysis workflows.
+- `FFT_POLICY_DEFAULT` (`fixed`) - `internal_default` - Default corpus FFT policy; `adaptive_tier` remains available but is not primary-comparable.
+- `FIXED_N_FFT_DEFAULT` (`8192`) - `internal_default` - Default window for cross-note comparable corpora (`fft_policy=fixed`).
+- `FIXED_HOP_LENGTH_DEFAULT` (`1024`) - `internal_default` - Hop for the fixed policy (`n_fft/8` at 8192).
+- `ENERGY_BASIS_PSD_PER_HZ` (`psd_per_hz`) - `convention` - Energy sums are Heinzel PSD integrated over Hz (Harris, 1978; Heinzel et al., 2002).
+- `HANN_ENBW_BINS` (`1.5`) - `primary_source` - Hann equivalent noise bandwidth in bins (Harris, 1978; Heinzel, Rüdiger & Schilling, 2002). Runtime ENBW is computed from the analysis window.
 - `DEFAULT_PLOT_DPI` (`300`) - `convention` - Publication-grade raster export default.
 - `DEFAULT_ZERO_PADDING` (`1`) - `convention` - No extra zero-padding by default.
 - `MAX_ZERO_PADDING` (`8`) - `convention` - Common upper bound for analysis-only interpolation.

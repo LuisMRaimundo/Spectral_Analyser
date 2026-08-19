@@ -22,6 +22,7 @@ dist/
 
 # Local fixture re-runs (not part of the committed corpus)
 _fixture_rerun/
+docs/validation/_d61_raw/
 
 # Pytest and coverage
 .pytest_cache/

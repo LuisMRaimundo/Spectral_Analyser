@@ -15,7 +15,7 @@ The status of each formula is one of:
 
 - **Canonical form**: `density_metric_raw = D_H * w_H + D_I * w_I + D_S * w_S`
 - **Module**: `metric_contract.py` (declaration); `density.py`, `compile_metrics.py` (application).
-- **Version tag**: `density_formula_version = "v5_apply_density_metric_adapted_v6_1"`.
+- **Version tag**: `density_formula_version = "v5_apply_density_metric_adapted_v6_2_psd"`.
 - **Test**: `tests/formula_validation/test_density_formula_canonical.py`.
 - **Status**: canonicalised_and_tested.
 

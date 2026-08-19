@@ -757,7 +757,7 @@ class RobustOrchestratorApp:
         self.entry_gaussian_std.insert(0, "auto")
         self._update_window_params_visibility()
 
-        self.var_smart = tk.BooleanVar(value=True)
+        self.var_smart = tk.BooleanVar(value=False)
         ttk.Checkbutton(
             lf_stft,
             text="90-tier granular clustering (tier strategy)",
@@ -774,7 +774,7 @@ class RobustOrchestratorApp:
 
         ttk.Label(lf_stft, text="N_FFT (fixed mode)").grid(row=4, column=0, sticky="w", pady=(8, 0))
         self.entry_n_fft = ttk.Entry(lf_stft, width=10)
-        self.entry_n_fft.insert(0, "4096")
+        self.entry_n_fft.insert(0, "8192")
         self.entry_n_fft.grid(row=5, column=0, sticky="ew", padx=(0, 8))
 
         ttk.Label(lf_stft, text="Hop length (fixed mode)").grid(row=4, column=1, sticky="w", pady=(8, 0))
@@ -2129,13 +2129,13 @@ class RobustOrchestratorApp:
                     )
                 else:
                     try:
-                        n_fft = int(self.entry_n_fft.get() or "4096")
+                        n_fft = int(self.entry_n_fft.get() or "8192")
                         hop_length = int(
                             self.entry_hop_length.get() or "1024"
                         )
                         zp = int(self.entry_zero_padding.get() or "2")
                     except (ValueError, AttributeError):
-                        n_fft = 4096
+                        n_fft = 8192
                         hop_length = 1024
                         zp = 2
                     tolerance = _calculate_adaptive_tolerance(
@@ -2182,6 +2182,8 @@ class RobustOrchestratorApp:
                     )
 
                 pr = local_proc_audio.AudioProcessor()
+                pr.fft_policy = "adaptive_tier" if params.get("smart") else "fixed"
+                pr.tier_name = str(tier_name) if params.get("smart") else "fixed"
                 pr.note_source = note_source
                 if extracted_note:
                     pr.note = extracted_note

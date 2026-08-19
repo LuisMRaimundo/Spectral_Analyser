@@ -78,6 +78,27 @@ def build_stage3_diagnostics(
     if sd is None or sd.empty or "Note" not in sd.columns:
         return empty_note, empty_summary
 
+    n_fft_col = "n_fft" if "n_fft" in sd.columns else None
+    mixed_tiers = False
+    tier_note_a = ""
+    tier_note_b = ""
+    if n_fft_col is not None:
+        nvals = pd.to_numeric(sd[n_fft_col], errors="coerce")
+        uniq = sorted({int(v) for v in nvals.dropna().tolist()})
+        mixed_tiers = len(uniq) > 1
+        if mixed_tiers:
+            notes = sd["Note"].astype(str).tolist()
+            nlist = nvals.tolist()
+            for i in range(len(notes) - 1):
+                a, b = nlist[i], nlist[i + 1]
+                if a == a and b == b and int(a) != int(b):
+                    tier_note_a = str(notes[i])
+                    tier_note_b = str(notes[i + 1])
+                    break
+    energy_basis = ""
+    if "energy_basis" in sd.columns:
+        energy_basis = str(sd["energy_basis"].dropna().astype(str).iloc[0]) if not sd["energy_basis"].dropna().empty else ""
+
     rows: list[dict[str, object]] = []
     for _, row in sd.iterrows():
         status = str(row.get("ewsd_merge_status", "")).strip()
@@ -88,6 +109,16 @@ def build_stage3_diagnostics(
             issue = "note_not_in_ewsd_output"
         elif not bool(row.get("ewsd_primary_analysis_eligible", False)):
             issue = "not_primary_analysis_eligible"
+        if mixed_tiers and not issue:
+            basis_ok = energy_basis == "psd_per_hz"
+            issue = (
+                f"tier boundary between {tier_note_a} and {tier_note_b}; "
+                + (
+                    "energy bases were per-Hz (ok)"
+                    if basis_ok
+                    else "energy bases were per-bin (not comparable)"
+                )
+            )
         rows.append(
             {
                 "Note": str(row.get("Note", "")).strip(),

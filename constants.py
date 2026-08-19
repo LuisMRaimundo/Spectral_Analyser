@@ -24,6 +24,15 @@ DEFAULT_N_FFT: Final[int] = 4096
 DEFAULT_HOP_LENGTH: Final[int] = 1024
 DEFAULT_WINDOW: Final[str] = "hann"
 DEFAULT_PLOT_DPI: Final[int] = 300
+# Comparable-corpus default (D6): one window for every note.
+FFT_POLICY_DEFAULT: Final[str] = "fixed"
+FIXED_N_FFT_DEFAULT: Final[int] = 8192
+FIXED_HOP_LENGTH_DEFAULT: Final[int] = 1024
+# Energy sums are power spectral density integrated over Hz.
+ENERGY_BASIS_PSD_PER_HZ: Final[str] = "psd_per_hz"
+# Heinzel / Harris ENBW for a Hann window, used only as a documented
+# reference; runtime ENBW is computed from the analysis window samples.
+HANN_ENBW_BINS: Final[float] = 1.5
 
 # Zero padding
 DEFAULT_ZERO_PADDING: Final[int] = 1
@@ -486,6 +495,11 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "CRITICAL_BAND_MASKING_WEAK_THRESHOLD",
         "DEFAULT_HOP_LENGTH",
         "DEFAULT_N_FFT",
+        "FFT_POLICY_DEFAULT",
+        "FIXED_N_FFT_DEFAULT",
+        "FIXED_HOP_LENGTH_DEFAULT",
+        "ENERGY_BASIS_PSD_PER_HZ",
+        "HANN_ENBW_BINS",
         "DEFAULT_PLOT_DPI",
         "DEFAULT_ZERO_PADDING",
         "DISSONANCE_PAIRWISE_PARTIAL_CAP",

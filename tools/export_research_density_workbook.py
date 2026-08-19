@@ -559,6 +559,31 @@ def _meta_numeric(meta: Mapping[str, Any], *keys: str) -> Optional[float]:
     return None
 
 
+_RANGE_PAIR_RE = re.compile(
+    r"(-?\d+(?:\.\d+)?)\s*(?:–|-|to|/)\s*(-?\d+(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+
+
+def _parse_range_pair(raw: Any) -> Tuple[Optional[float], Optional[float]]:
+    text = str(raw or "").strip()
+    if not text:
+        return None, None
+    match = _RANGE_PAIR_RE.search(text)
+    if match is None:
+        return None, None
+    return float(match.group(1)), float(match.group(2))
+
+
+def _meta_range_pair(meta: Mapping[str, Any], *keys: str) -> Tuple[Optional[float], Optional[float]]:
+    lmeta = {str(k).strip().lower(): v for k, v in meta.items()}
+    for k in keys:
+        lo, hi = _parse_range_pair(lmeta.get(str(k).strip().lower(), ""))
+        if lo is not None and hi is not None:
+            return lo, hi
+    return None, None
+
+
 def _resolve_freq_mag_field(
     out_note: pd.Series,
     lookup: pd.DataFrame,
@@ -578,6 +603,28 @@ def _resolve_freq_mag_field(
     mv = _meta_numeric(meta, *meta_candidates)
     if mv is not None:
         return pd.Series(float(mv), index=out_note.index), float(mv)
+    lo, hi = _meta_range_pair(
+        meta,
+        "harmonic_search_range_hz",
+        "low_frequency_diagnostic_range_hz",
+        "magnitude range (db)",
+        "Frequency Range",
+        "Magnitude Range (dB)",
+    )
+    lowered = {str(k).strip().lower() for k in meta_candidates}
+    pick = None
+    if lowered & {"frequency_min_hz", "freq_min"}:
+        pick = lo
+    elif lowered & {"frequency_max_hz", "freq_max"}:
+        pick = hi
+    elif lowered & {"magnitude_min_db", "db_min"}:
+        mag_lo, mag_hi = _meta_range_pair(meta, "magnitude range (db)", "Magnitude Range (dB)")
+        pick = mag_lo
+    elif lowered & {"magnitude_max_db", "db_max"}:
+        mag_lo, mag_hi = _meta_range_pair(meta, "magnitude range (db)", "Magnitude Range (dB)")
+        pick = mag_hi
+    if pick is not None:
+        return pd.Series(float(pick), index=out_note.index), float(pick)
     return pd.Series(UNKNOWN_NOT_PARSEABLE, index=out_note.index), UNKNOWN_NOT_PARSEABLE
 
 

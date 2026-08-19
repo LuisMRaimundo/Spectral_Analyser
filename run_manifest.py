@@ -131,7 +131,7 @@ def constants_hash() -> str:
 
 def default_parameter_profile_id(weight_function: Optional[str] = None) -> str:
     wf = str(weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
-    return f"wf={wf}|dst=runtime_configured|ceil=runtime_configured"
+    return f"wf={wf}|dst=runtime_configured|ceil=runtime_configured|fft=fixed"
 
 
 def _input_file_records(paths: Iterable[Union[str, Path]]) -> List[Dict[str, Any]]:

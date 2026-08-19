@@ -115,9 +115,13 @@ def assess_workbook_comparability(
         if export_schema != EXCLUSIVE_ASSIGNMENT_SCHEMA:
             pre_exclusive = True
 
+    energy_basis = _meta_get(meta, "energy_basis")
     if pre_exclusive:
         comparable = False
         reason = PRE_EXCLUSIVE_REASON
+    elif energy_basis and energy_basis not in {"psd_per_hz", "missing", ""}:
+        comparable = False
+        reason = "not comparable (per_bin_energy_basis)"
     elif code_commit and code_commit not in {
         str(current.get("code_commit") or ""),
         "unknown",
