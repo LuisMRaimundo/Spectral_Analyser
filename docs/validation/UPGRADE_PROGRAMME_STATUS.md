@@ -14,7 +14,7 @@ bump is recorded.
 | F | Schema / count hygiene | `tests/phase_19/test_schema_and_count_hygiene.py` | One meaning per header; F-020 rows contribute 0 to S sums. | **done (PR #71)** |
 | G | Weight function φ | `tests/phase_20/test_weight_function_phi.py` | Sensitivity report on tuba corpus; README records ρ. | **done (PR #72)** |
 | H | Reproducibility command | `tests/phase_21/test_reproducibility_command.py` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | **done (PR #73)** |
-| I | Construct validation | `tests/validation/synthetic_corpus/` | Recover N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at SNR 10–40 dB. Perceptual scaffold only (no data collection). | **in this PR** |
+| I | Construct validation | `tests/validation/synthetic_corpus/` | Recover N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at SNR 10–40 dB. Perceptual scaffold only (no data collection). | **done (PR #74)** |
 
 ## Phase A notes
 
