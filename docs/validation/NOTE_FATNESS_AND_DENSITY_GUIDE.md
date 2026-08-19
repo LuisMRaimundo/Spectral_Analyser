@@ -62,3 +62,4 @@ Bootstrap CI columns exist for **`note_density_final`** and **`EWSD_score_acoust
 - `docs/METRIC_FORMULA_INDEX.md` — F-045 (harmonic fatness), F-047 (unified fatness), F-048–F-050 (EWSD), F-051–F-055 (low-f₀ identity)
 - `docs/TECHNICAL_MANUAL_COMPLETE.md` §5.2.1 — spacing cap, f0 refit, body-stop count cut, noise gate
 - `docs/validation/EWSD_CONSTRUCT_VALIDITY.md` — acoustic construct checks
+- `docs/validation/UPGRADE_PROGRAMME_STATUS.md` — post-`70525e3` upgrade programme (Phase A confirmed I)

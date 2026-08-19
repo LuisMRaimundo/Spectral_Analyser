@@ -67,7 +67,8 @@ Those workbooks are **not comparable** to post-phase exports on
 `effective_partial_density`, amplitude pies, Sethares, or validated harmonic
 counts. Cross-run comparison requires a Stage 1 re-export (then Stage 2 + 3).
 F-042 / F-047 / F-048 / F-049 algebra is unchanged; only the input domain
-(`validated_partials_only`) changed.
+(`validated_partials_only`) changed. Confirmed-inharmonic I compartment:
+`docs/validation/UPGRADE_PROGRAMME_STATUS.md` Phase A.
 
 ## Explicit non-claims
 

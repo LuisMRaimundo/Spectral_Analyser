@@ -398,8 +398,9 @@ only. Complete Spectrum per-bin pitch names are off unless
 
 `effective_partial_density` (F-012), `linear_sum_amplitude_*`, Sethares, and
 the amplitude pies consume **validated partials only**
-(`include_for_density = True` for harmonics; inharmonic rows stay excluded
-until a confirmed-partial class exists). Ungated copies use `*_ungated`.
+(`include_for_density = True` for harmonics; inharmonic rows enter only
+when `inharmonic_status` is `confirmed_inharmonic_partial`; see
+`inharmonic_confirmation.py`). Ungated copies use `*_ungated`.
 F-042 / F-047 / F-048 / F-049 algebra is unchanged.
 
 ### 5.5 Subbass policy
@@ -1039,6 +1040,9 @@ they change only after Stage 1 is re-run.
 `canonical_density` still follows the validated / stop-trimmed harmonic list.
 Core peak-power integrals that feed `note_density_final` and EWSD are gated
 over 0–20 kHz. See §5.2.1 and F-051–F-055.
+
+Upgrade programme (confirmed-inharmonic class and later phases):
+`docs/validation/UPGRADE_PROGRAMME_STATUS.md`.
 
 ### Per-note workbook (`spectral_analysis.xlsx`)
 

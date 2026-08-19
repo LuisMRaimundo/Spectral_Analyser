@@ -101,8 +101,8 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         normalization_scope="validated_partials_only (Fix 2); ungated copies keep *_ungated",
         physical_interpretation=(
             "Diagnostic linear-amplitude mass for H/I/S pies. Inharmonic rows "
-            "are excluded until a confirmed-partial class exists. Sub-bass "
-            "includes only F-020 compartment members."
+            "enter only when inharmonic_status is confirmed_inharmonic_partial. "
+            "Sub-bass includes only F-020 compartment members."
         ),
         not_valid_for="Treating as energy or as an ungated peak-candidate sum.",
         ontology_family="diagnostic_amplitude_mass",
@@ -117,11 +117,59 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         normalization_scope="validated harmonic partials only (Fix 2)",
         physical_interpretation=(
             "Dissonance from validated harmonic partials after exclusive "
-            "assignment. Source note states the validated list, not the "
-            "nonharmonic candidate count."
+            "assignment plus confirmed inharmonic partials. Source note "
+            "states the validated list, not the residual-candidate count."
         ),
         not_valid_for="Retained nonharmonic / floor-candidate lists.",
         ontology_family="sensory_dissonance",
+    )
+    inharmonic_density_sum = MetricDefinition(
+        name="inharmonic_density_sum",
+        formula="D_I = Σ_{i ∈ I} φ(A_i)  (F-014; φ unchanged)",
+        input_domain="confirmed_inharmonic_partials",
+        unit_or_scale="dimensionless (weight-function dependent)",
+        amplitude_basis="Amplitude_raw of inharmonic_status=confirmed_inharmonic_partial",
+        power_basis="Power_raw = Amplitude_raw^2",
+        normalization_scope="confirmed_inharmonic_partials (Phase A)",
+        physical_interpretation=(
+            "Inharmonic compartment density. I is the confirmed-inharmonic "
+            "partial class (CFAR, prominence, persistence, leakage, F-007 "
+            "comb). Floor / leakage / stretched-comb residuals are excluded."
+        ),
+        not_valid_for="Ungated residual-candidate lists or Complete Spectrum bins.",
+        ontology_family="component_density",
+    )
+    inharmonic_status = MetricDefinition(
+        name="inharmonic_status",
+        formula=(
+            "confirmed iff cfar ∧ local_peak ∧ persistence ∧ not_leakage "
+            "∧ not_stretched_harmonic; else rejected_floor / "
+            "rejected_leakage / rejected_stretched_harmonic / "
+            "candidate_not_confirmed_partial"
+        ),
+        input_domain="residual spectral candidates after harmonic exclusion",
+        unit_or_scale="categorical status",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per candidate",
+        physical_interpretation=(
+            "Confirmation outcome for one residual candidate. Only "
+            "confirmed_inharmonic_partial rows enter the I compartment."
+        ),
+        not_valid_for="Treating residual-candidate rows as confirmed partials.",
+        ontology_family="validation_status",
+    )
+    inharmonic_confirmed_count = MetricDefinition(
+        name="inharmonic_confirmed_count",
+        formula="count(inharmonic_status = confirmed_inharmonic_partial)",
+        input_domain="confirmed_inharmonic_partials",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation="Number of confirmed inharmonic partials.",
+        not_valid_for="Equating with residual-candidate or floor-row counts.",
+        ontology_family="partial_count_descriptor",
     )
     return {
         density_raw.name: density_raw,
@@ -129,6 +177,9 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         effective_partial_density.name: effective_partial_density,
         linear_sum_amplitude.name: linear_sum_amplitude,
         sethares_dissonance.name: sethares_dissonance,
+        inharmonic_density_sum.name: inharmonic_density_sum,
+        inharmonic_status.name: inharmonic_status,
+        inharmonic_confirmed_count.name: inharmonic_confirmed_count,
     }
 
 
