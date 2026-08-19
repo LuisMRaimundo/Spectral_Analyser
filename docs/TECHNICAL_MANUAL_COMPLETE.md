@@ -636,7 +636,11 @@ same formula to harmonic peaks only.
 
 **Practical guide.** `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
 
-Export: `note_effective_component_density`, `harmonic_effective_partial_count`.
+Export: `note_effective_component_density` plus bootstrap CI companions
+(`note_effective_component_density_ci_low` / `ci_high` /
+`rel_uncertainty`) and `ci_basis_frame_count` /
+`ci_basis_partial_count`. The point estimate is still F-047; only the
+amplitude vector is resampled. Also `harmonic_effective_partial_count`.
 
 ### 7.8 Effective Weighted Spectral Density — EWSD-R v18 (Stage 3)
 

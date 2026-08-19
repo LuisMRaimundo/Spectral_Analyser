@@ -540,6 +540,13 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "note_density_final_ci_high",
     "note_density_final_rel_uncertainty",
     "note_density_final_uncertainty_sources",
+    "note_effective_component_density",
+    "note_effective_component_density_ci_low",
+    "note_effective_component_density_ci_high",
+    "note_effective_component_density_rel_uncertainty",
+    "ci_basis_frame_count",
+    "ci_basis_partial_count",
+    "ci_basis_frames_insufficient",
     "harmonic_density_component",
     "inharmonic_density_component",
     "subbass_density_component",
@@ -4385,9 +4392,15 @@ def _energy_distribution_density(workbook_path: Union[str, Path]) -> Dict[str, f
     nan = float("nan")
     fail = {
         "note_effective_component_density": nan,
+        "note_effective_component_density_ci_low": nan,
+        "note_effective_component_density_ci_high": nan,
+        "note_effective_component_density_rel_uncertainty": nan,
         "harmonic_effective_partial_count": nan,
         "harmonic_energy_above_fundamental_ratio": nan,
         "harmonic_energy_centroid_order": nan,
+        "ci_basis_frame_count": nan,
+        "ci_basis_partial_count": nan,
+        "ci_basis_frames_insufficient": False,
     }
 
     def _band_amps(xls: pd.ExcelFile, sheet: str) -> np.ndarray:
@@ -4448,6 +4461,36 @@ def _energy_distribution_density(workbook_path: Union[str, Path]) -> Dict[str, f
         allc = np.concatenate([h_amp, i_amp, s_amp]) if (h_amp.size + i_amp.size + s_amp.size) > 0 else np.array([])
         if allc.size > 0:
             out["note_effective_component_density"] = _neff(allc * allc)
+            try:
+                from density_uncertainty import (
+                    bootstrap_effective_component_density,
+                    ci_basis_counts,
+                )
+
+                epd = bootstrap_effective_component_density(allc)
+                out["note_effective_component_density_ci_low"] = float(epd["ci_low"])
+                out["note_effective_component_density_ci_high"] = float(epd["ci_high"])
+                out["note_effective_component_density_rel_uncertainty"] = float(
+                    epd["relative_uncertainty"]
+                )
+                frames = nan
+                try:
+                    pn = pd.read_excel(xls, sheet_name="Per_Note_Processing_Metadata")
+                    if "sustain_frame_count_independent" in pn.columns:
+                        frames = float(
+                            pd.to_numeric(
+                                pn["sustain_frame_count_independent"], errors="coerce"
+                            ).iloc[0]
+                        )
+                except Exception:
+                    frames = nan
+                basis = ci_basis_counts(
+                    independent_frame_count=frames,
+                    partial_count=float(allc.size),
+                )
+                out.update(basis)
+            except Exception:
+                out["ci_basis_partial_count"] = float(allc.size)
         return out
     except Exception:
         return fail

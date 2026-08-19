@@ -1737,6 +1737,20 @@ def build_spectral_density_metrics(
             "density_log_weighted": _series_or_nan(merged, "density_log_weighted"),
             "Total sum": _series_or_nan(merged, "Total sum"),
             "note_effective_component_density": _series_or_nan(merged, "note_effective_component_density"),
+            "note_effective_component_density_ci_low": _series_or_nan(
+                merged, "note_effective_component_density_ci_low"
+            ),
+            "note_effective_component_density_ci_high": _series_or_nan(
+                merged, "note_effective_component_density_ci_high"
+            ),
+            "note_effective_component_density_rel_uncertainty": _series_or_nan(
+                merged, "note_effective_component_density_rel_uncertainty"
+            ),
+            "ci_basis_frame_count": _series_or_nan(merged, "ci_basis_frame_count"),
+            "ci_basis_partial_count": _series_or_nan(merged, "ci_basis_partial_count"),
+            "ci_basis_frames_insufficient": _series_or_nan(
+                merged, "ci_basis_frames_insufficient"
+            ),
             "effective_partial_density": _series_or_nan(merged, "effective_partial_density"),
             "body_weighted_effective_density": body_weighted_effective_density,
             "low_mid_energy_ratio": low_mid_energy_ratio,
@@ -3793,6 +3807,13 @@ def build_workbook(
         "EWSD_score_acoustic_balanced_ci_low",
         "EWSD_score_acoustic_balanced_ci_high",
         "EWSD_score_acoustic_balanced_rel_uncertainty",
+        "note_effective_component_density",
+        "note_effective_component_density_ci_low",
+        "note_effective_component_density_ci_high",
+        "note_effective_component_density_rel_uncertainty",
+        "ci_basis_frame_count",
+        "ci_basis_partial_count",
+        "ci_basis_frames_insufficient",
         "ewsd_uncertainty_sources",
         "ewsd_mode",
         "ewsd_primary_analysis_eligible",
@@ -3899,6 +3920,20 @@ def build_workbook(
             tuple(),
             tuple(stage3_summary.columns),
         )
+    try:
+        from density_uncertainty import build_uncertainty_summary
+
+        uq = build_uncertainty_summary(sd.to_dict(orient="records"))
+        if not uq.empty:
+            _write_data_sheet(
+                wb,
+                "Uncertainty_Summary",
+                uq,
+                tuple(),
+                tuple(uq.columns),
+            )
+    except Exception as _e_uq:
+        warnings.append(f"Uncertainty_Summary skipped: {_e_uq}")
     sdm_ws = wb["Spectral_Density_Metrics"]
     hdrs = [sdm_ws.cell(1, c).value for c in range(1, sdm_ws.max_column + 1)]
     _hl = [
@@ -4106,6 +4141,26 @@ def build_workbook(
             ci = col_map.get(h)
             if ci:
                 dash.cell(tbl_r + ridx, j, sdm.cell(ridx + 1, ci).value)
+
+    if not no_charts and include_ewsd:
+        try:
+            from publication_chart_policy import write_stage3_ewsd_ci_chart
+
+            chart_path = output.parent / "ewsd_acoustic_balanced_ci.png"
+            write_stage3_ewsd_ci_chart(
+                sd,
+                chart_path,
+                note_tag=str(meta.instrument or "") or None,
+                run_id="stage3",
+                analysis_version=str(
+                    sd["analysis_version"].iloc[0]
+                    if "analysis_version" in sd.columns and len(sd)
+                    else ""
+                )
+                or None,
+            )
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"Stage 3 EWSD CI chart skipped: {e}")
 
     wb.save(output)
     return warnings

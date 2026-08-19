@@ -11824,9 +11824,16 @@ class AudioProcessor:
                 if dfx is None or dfx.empty:
                     return pd.DataFrame()
                 out = dfx.copy()
-                out.insert(0, "Component_Type", cat)
-                out.insert(1, "Classification_Level", classification_level)
-                out.insert(2, "Acoustic_Interpretation_Status", acoustic_status)
+                if "Component_Type" not in out.columns:
+                    out.insert(0, "Component_Type", cat)
+                else:
+                    out["Component_Type"] = cat
+                if "Classification_Level" not in out.columns:
+                    out.insert(1, "Classification_Level", classification_level)
+                else:
+                    out["Classification_Level"] = classification_level
+                if "Acoustic_Interpretation_Status" not in out.columns:
+                    out.insert(2, "Acoustic_Interpretation_Status", acoustic_status)
                 return out
 
             _ih_status_default = "candidate_not_confirmed_partial"

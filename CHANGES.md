@@ -1,3 +1,23 @@
+# Phase 17 / Phase D — Uncertainty by default
+
+Bootstrap CIs ship on every Stage 2/3 run without a GUI opt-in.
+
+- F-044 (`note_density_final`) and F-050 (`EWSD_score_acoustic_balanced`)
+  remain default-on.
+- F-047 (`note_effective_component_density`) now has a companion CI:
+  resample pooled H+I+S amplitudes and recompute the same participation
+  ratio. Algebra is unchanged.
+- `ci_basis_frame_count` and `ci_basis_partial_count` sit beside each
+  CI; fewer than 10 independent frames sets
+  `ci_basis_frames_insufficient`.
+- Research sheet `Uncertainty_Summary` flags relative uncertainty
+  above 25 %.
+- Stage 3 EWSD publication chart (`ewsd_acoustic_balanced_ci.png`)
+  draws the CI band; titles carry note tag, run id, commit, version.
+- Stage 1 export no longer fails when `Acoustic_Interpretation_Status`
+  is already present on confirmed inharmonic rows.
+- **Tests:** `tests/phase_17/test_uncertainty_defaults.py`
+
 # Phase 16 / Phase C — Independent high-n harmonic guards
 
 The spacing cap cannot stop floor harvest at high n. Persistence and a

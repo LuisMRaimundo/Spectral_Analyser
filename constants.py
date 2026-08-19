@@ -239,6 +239,10 @@ DENSITY_NOISE_GATE_POLICY: Final[str] = "subtract_floor_clip_0"
 DENSITY_CI_DEFAULT_ON: Final[bool] = True
 DENSITY_CI_N_BOOT: Final[int] = 1200
 DENSITY_CI_SEED: Final[int] = 0
+# Phase D: flag a note when relative CI width exceeds this percent.
+UNCERTAINTY_REL_FLAG_PCT: Final[float] = 25.0
+# Phase D: flag when independent sustain frames are below this count.
+CI_BASIS_INDEPENDENT_FRAME_MIN: Final[int] = 10
 DENSITY_WINDOW_PERTURBATION_MS: Final[float] = 10.0
 DENSITY_FRAGILE_CI_PCT: Final[float] = 10.0
 DENSITY_FRAGILE_PERTURBATION_PCT: Final[float] = 10.0
@@ -510,9 +514,11 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "F0_REFIT_SNR_MIN_DB",
         "DENSITY_NOISE_GATE_ENABLED",
         "DENSITY_NOISE_GATE_POLICY",
+        "CI_BASIS_INDEPENDENT_FRAME_MIN",
         "DENSITY_CI_DEFAULT_ON",
         "DENSITY_CI_N_BOOT",
         "DENSITY_CI_SEED",
+        "UNCERTAINTY_REL_FLAG_PCT",
         "DENSITY_FRAGILE_CI_PCT",
         "DENSITY_FRAGILE_PERTURBATION_PCT",
         "DENSITY_WINDOW_PERTURBATION_MS",

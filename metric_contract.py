@@ -217,6 +217,51 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Density integrals or un-gated candidate lists.",
         ontology_family="validation_status",
     )
+    note_effective_component_density_ci = MetricDefinition(
+        name="note_effective_component_density_ci",
+        formula="bootstrap percentiles of (Σ A²)² / Σ A⁴ on resampled amplitudes",
+        input_domain="validated H+I+S partial amplitudes (F-047 algebra unchanged)",
+        unit_or_scale="count (≥1) interval",
+        amplitude_basis="linear amplitude (resampled)",
+        power_basis="A² (participation ratio; not recomputed as a new formula)",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Non-parametric CI for note_effective_component_density. "
+            "The point estimate remains F-047; only the amplitude vector "
+            "is resampled."
+        ),
+        not_valid_for="Changing F-047 algebra or treating the CI as a new fatness formula.",
+        ontology_family="uncertainty",
+    )
+    ci_basis_frame_count = MetricDefinition(
+        name="ci_basis_frame_count",
+        formula="sustain_frame_count_independent",
+        input_domain="Per_Note_Processing_Metadata",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Independent-frame sample size sitting beside every exported CI. "
+            "Flagged when below CI_BASIS_INDEPENDENT_FRAME_MIN (10)."
+        ),
+        not_valid_for="Equating with raw STFT hop count or partial count.",
+        ontology_family="uncertainty",
+    )
+    ci_basis_partial_count = MetricDefinition(
+        name="ci_basis_partial_count",
+        formula="count of pooled validated H+I+S amplitudes used in the CI",
+        input_domain="validated partials",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Number of partial amplitudes resampled for the accompanying CI."
+        ),
+        not_valid_for="Treating as an effective-count or fatness scalar.",
+        ontology_family="uncertainty",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -229,6 +274,9 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         persistence_fraction.name: persistence_fraction,
         expected_false_harmonic_slots.name: expected_false_harmonic_slots,
         accepted_slots_above_body_stop.name: accepted_slots_above_body_stop,
+        note_effective_component_density_ci.name: note_effective_component_density_ci,
+        ci_basis_frame_count.name: ci_basis_frame_count,
+        ci_basis_partial_count.name: ci_basis_partial_count,
     }
 
 

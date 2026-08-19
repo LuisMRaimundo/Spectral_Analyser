@@ -73,6 +73,9 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "persistence_fraction",
         "expected_false_harmonic_slots",
         "accepted_slots_above_body_stop",
+        "note_effective_component_density_ci",
+        "ci_basis_frame_count",
+        "ci_basis_partial_count",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():
