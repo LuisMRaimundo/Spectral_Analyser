@@ -183,10 +183,12 @@ def test_partial_pitch_name_uses_frequency_not_sample_tag() -> None:
 
 def test_pie_caption_carries_tag_run_and_version() -> None:
     ap = AudioProcessor()
-    ap.analysis_version = "4.1.0"
+    ap.code_commit = "abc1234"
     ap.analysis_run_label = "run 3"
-    caption = ap._component_pie_caption("A2", chart="Amplitude mass")
-    assert caption == "Amplitude mass — A2 · run 3 · v4.1.0"
+    caption = ap._component_pie_caption(
+        "A2", chart="Validated-partial amplitude balance"
+    )
+    assert caption == "Validated-partial amplitude balance · A2 · run 3 · abc1234"
 
 
 def test_metric_contract_input_domain_is_validated_partials() -> None:

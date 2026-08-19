@@ -84,6 +84,7 @@ Provenance classes:
 - `DENSITY_CI_SEED` (`0`) - `internal_default` - Fixed bootstrap seed.
 - `UNCERTAINTY_REL_FLAG_PCT` (`25.0`) - `internal_default` - Relative-uncertainty threshold for the `Uncertainty_Summary` flag.
 - `CI_BASIS_INDEPENDENT_FRAME_MIN` (`10`) - `internal_default` - Independent-frame floor below which a CI is flagged as under-powered.
+- `INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE` (`False`) - `internal_default` - When false, F-020 diagnostic LF rows are excluded from the validated-partial amplitude pie.
 - `DENSITY_WINDOW_PERTURBATION_MS` (`10.0`) - `internal_default` - ±window shift used for density fragility.
 - `DENSITY_FRAGILE_CI_PCT` (`10.0`) - `internal_default` - CI relative-width threshold for `density_fragile`.
 - `DENSITY_FRAGILE_PERTURBATION_PCT` (`10.0`) - `internal_default` - Window-perturbation spread threshold for `density_fragile`.

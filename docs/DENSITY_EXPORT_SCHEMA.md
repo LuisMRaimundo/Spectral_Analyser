@@ -392,3 +392,15 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
   `rel_uncertainty_pct` and a flag when that exceeds 25 %.
 - Publication Stage 3 EWSD chart (`ewsd_acoustic_balanced_ci.png`)
   draws the CI band; title carries note tag, run id, commit, version.
+
+### R.15 Provenance (Phase E / phase_18)
+
+- `analysis_version` = package metadata + `git describe --always --dirty`
+  (`analysis_provenance.py`). Never a hard-coded `4.1.0`.
+- Companion fields: `package_version`, `code_commit`, `code_dirty`,
+  `git_describe`. `export_schema_version` is the
+  `analysis_policy.EXPORT_SCHEMA_VERSION` token.
+- `component_energy_pie.png` is the energy-sum pie, not a copy of the
+  amplitude pie. Amplitude title: `Validated-partial amplitude balance`.
+- `python verify_export.py <workbook>` reports comparability. Pre-
+  exclusive-assignment / v4.0.3 workbooks are not comparable.

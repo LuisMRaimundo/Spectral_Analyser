@@ -2473,6 +2473,9 @@ def build_metadata_rows(
         "output_path": output_path_val,
         "source_workbook_sha256": source_workbook_sha256,
         "git_commit": git_commit,
+        "package_version": "unavailable_not_recorded",
+        "code_commit": "unavailable_not_recorded",
+        "code_dirty": False,
         "git_status_reason": git_status_reason,
         "git_branch": git_branch,
         "research_export_created_at": now,
@@ -2640,6 +2643,28 @@ def build_metadata_rows(
         warnings.append(
             "Metadata sheet missing keys (left blank in Metadata sheet): " + ", ".join(sorted(meta_missing))
         )
+    try:
+        from analysis_provenance import provenance_export_fields
+
+        _prov = provenance_export_fields()
+        rows["package_version"] = _prov["package_version"]
+        rows["code_commit"] = _prov["code_commit"]
+        rows["code_dirty"] = _prov["code_dirty"]
+        rows["git_describe"] = _prov["git_describe"]
+        rows["analysis_version"] = (
+            mget("analysis_version")
+            if str(mget("analysis_version") or "").strip()
+            not in {"", "unavailable_not_recorded"}
+            else _prov["analysis_version"]
+        )
+        rows["export_schema_version"] = (
+            mget("export_schema_version")
+            if str(mget("export_schema_version") or "").strip()
+            not in {"", "unavailable_not_recorded"}
+            else _prov["export_schema_version"]
+        )
+    except Exception as _e_prov:
+        warnings.append(f"Provenance fields skipped: {_e_prov}")
     return pd.DataFrame([{"Field": k, "Value": rows[k]} for k in rows])
 
 
@@ -3502,6 +3527,14 @@ def build_workbook(
         sd = stage3_result.spectral_density_metrics
         stage3_diagnostics = stage3_result.diagnostics
         stage3_summary = stage3_result.diagnostics_summary
+        try:
+            from analysis_provenance import provenance_export_fields
+
+            if stage3_summary is not None and not stage3_summary.empty:
+                for _k, _v in provenance_export_fields().items():
+                    stage3_summary[_k] = _v
+        except Exception as _e_s3p:
+            warnings.append(f"Stage3_Summary provenance skipped: {_e_s3p}")
         stage3_status = stage3_result.status
         if stage3_status != "ok":
             warnings.append(f"Stage 3 status: {stage3_status}")
@@ -4147,17 +4180,16 @@ def build_workbook(
             from publication_chart_policy import write_stage3_ewsd_ci_chart
 
             chart_path = output.parent / "ewsd_acoustic_balanced_ci.png"
+            from analysis_provenance import provenance_export_fields
+
+            _prov = provenance_export_fields()
             write_stage3_ewsd_ci_chart(
                 sd,
                 chart_path,
                 note_tag=str(meta.instrument or "") or None,
                 run_id="stage3",
-                analysis_version=str(
-                    sd["analysis_version"].iloc[0]
-                    if "analysis_version" in sd.columns and len(sd)
-                    else ""
-                )
-                or None,
+                commit=str(_prov.get("code_commit") or "") or None,
+                analysis_version=str(_prov.get("analysis_version") or "") or None,
             )
         except Exception as e:  # noqa: BLE001
             warnings.append(f"Stage 3 EWSD CI chart skipped: {e}")

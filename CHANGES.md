@@ -1,3 +1,22 @@
+# Phase 18 / Phase E — Provenance that cannot be wrong
+
+`analysis_version` and `export_schema_version` come from one module
+(`analysis_provenance.py`): package metadata plus
+`git describe --always --dirty`. Callers no longer hard-code `4.1.0`.
+
+- Export `code_commit`, `code_dirty`, `package_version` on
+  `Analysis_Metadata` and `Stage3_Summary`. Figure titles carry the commit.
+- `component_energy_pie.png` is drawn from `*_energy_sum`, not copied
+  from the amplitude pie. Amplitude title:
+  `Validated-partial amplitude balance`. F-020 diagnostic LF rows are
+  excluded from the S wedge unless `include_lf_diagnostic_in_amplitude_pie`.
+- `data_integrity.validate_header_contract_consistency` fails closed when
+  the same header has two metric-contract identities.
+- CLI: `python verify_export.py <workbook>` prints commit, versions,
+  invariants, H/I/S counts, and comparability. Run-2 / v4.0.3 workbooks
+  report `not comparable (pre-exclusive-assignment)`.
+- **Tests:** `tests/phase_18/test_provenance_and_verify_export.py`
+
 # Phase 17 / Phase D — Uncertainty by default
 
 Bootstrap CIs ship on every Stage 2/3 run without a GUI opt-in.

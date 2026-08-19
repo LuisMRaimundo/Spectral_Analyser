@@ -674,3 +674,59 @@ def normalize_log_transform(
     result_flat[m] = normalized
     return result_flat.reshape(shape)
 
+
+def validate_header_contract_consistency(
+    headers_by_sheet: Dict[str, Any],
+    *,
+    contracts: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Fail closed: one exported header cannot carry two metric contracts.
+
+    When the same column name appears on more than one sheet, every
+    occurrence that is in ``metric_contract`` must share the same
+    ``formula``, ``input_domain``, and ``ontology_family``.
+    """
+    from metric_contract import build_metric_contracts
+
+    if contracts is None:
+        registry = build_metric_contracts()
+    elif hasattr(contracts, "get") and not isinstance(contracts, dict):
+        registry = contracts
+    else:
+        registry = dict(contracts)
+    identities: Dict[str, set[tuple[str, str, str]]] = {}
+    sheets_by_header: Dict[str, list[str]] = {}
+    for sheet, headers in (headers_by_sheet or {}).items():
+        if headers is None:
+            continue
+        for raw in headers:
+            name = str(raw or "").strip()
+            if not name:
+                continue
+            sheets_by_header.setdefault(name, []).append(str(sheet))
+            defn = registry.get(name)
+            if defn is None:
+                continue
+            ident = (
+                str(getattr(defn, "formula", "")),
+                str(getattr(defn, "input_domain", "")),
+                str(getattr(defn, "ontology_family", "")),
+            )
+            identities.setdefault(name, set()).add(ident)
+    conflicts = sorted(name for name, ids in identities.items() if len(ids) > 1)
+    failures = ""
+    if conflicts:
+        detail = []
+        for name in conflicts:
+            sheets = ",".join(sheets_by_header.get(name, []))
+            detail.append(f"{name}[{sheets}]")
+        failures = "header_contract_conflict:" + ";".join(detail)
+    return {
+        "ok": not conflicts,
+        "conflicts": conflicts,
+        "failures": failures,
+        "sheets_by_header": {
+            k: v for k, v in sheets_by_header.items() if k in identities
+        },
+    }
+

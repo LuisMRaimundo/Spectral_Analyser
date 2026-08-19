@@ -5817,29 +5817,17 @@ def _append_dissonance_excel_sheets(
 
 
 def _get_project_version_info() -> tuple[str, str]:
-    """
-    Resolve analysis code version for reproducibility stamping.
-    Prefers installed package metadata; falls back to pyproject.toml.
-    """
-    try:
-        from importlib import metadata as importlib_metadata
-        version = importlib_metadata.version("spectral-analyser")
-        return version, "importlib.metadata:spectral-analyser"
-    except Exception:
-        pass
+    """Resolve analysis version from the single provenance source."""
+    from analysis_provenance import resolve_analysis_provenance
 
-    try:
-        repo_root = Path(__file__).resolve().parent
-        pyproject_path = repo_root / "pyproject.toml"
-        if pyproject_path.exists():
-            content = pyproject_path.read_text(encoding="utf-8")
-            match = re.search(r'^\s*version\s*=\s*["\']([^"\']+)["\']\s*$', content, flags=re.MULTILINE)
-            if match:
-                return match.group(1), f"pyproject.toml:{pyproject_path}"
-    except Exception:
-        pass
+    p = resolve_analysis_provenance()
+    return str(p["analysis_version"]), str(p["analysis_version_source"])
 
-    return "unknown", "unavailable"
+
+def _provenance_metadata() -> Dict[str, Any]:
+    from analysis_provenance import provenance_export_fields
+
+    return provenance_export_fields()
 
 
 def _stable_hash(payload: Dict[str, Any]) -> str:
@@ -9560,11 +9548,9 @@ def _compile_density_metrics_impl(
                     outp = outp.parent / f"compiled_density_metrics_{dynamics}.xlsx"
                     logger.info("Dynamics %r detected, using filename: %s", dynamics, outp.name)
 
-            version, version_source = _get_project_version_info()
             metadata = {
                 "analysis_date": datetime.now().isoformat(),
-                "analysis_version": version,
-                "analysis_version_source": version_source,
+                **_provenance_metadata(),
                 "folder_path": _publication_safe_folder_path_marker(folder_path),
                 "file_pattern": file_pattern,
                 "include_pca_legacy_flag": include_pca,
@@ -10211,7 +10197,6 @@ def compile_density_metrics_with_pca(
             outp = Path(output_path)
             try:
                 outp.parent.mkdir(parents=True, exist_ok=True)
-                version, version_source = _get_project_version_info()
                 diag = pd.DataFrame(
                     {
                         "compilation_error": [
@@ -10222,8 +10207,7 @@ def compile_density_metrics_with_pca(
                 )
                 meta = {
                     "analysis_date": datetime.now().isoformat(),
-                    "analysis_version": version,
-                    "analysis_version_source": version_source,
+                    **_provenance_metadata(),
                     "folder_path": _publication_safe_folder_path_marker(folder_path),
                     "file_pattern": file_pattern,
                     "error": "no_compilable_rows",
@@ -10426,11 +10410,9 @@ def compile_density_metrics_with_pca(
                 logger.info("Removing 'Register' column from compiled metrics (instrument-specific)")
                 df = df.drop(columns=['Register'])
 
-            version, version_source = _get_project_version_info()
             metadata = {
                 "analysis_date": datetime.now().isoformat(),
-                "analysis_version": version,
-                "analysis_version_source": version_source,
+                **_provenance_metadata(),
                 "folder_path": _publication_safe_folder_path_marker(folder_path),
                 "file_pattern": file_pattern,
                 "include_pca": include_pca,
@@ -11076,11 +11058,9 @@ def extract_models_comparison(folder_path: Union[str, Path],
     # Salvar para Excel
     try:
         output_path = Path(output_path)
-        version, version_source = _get_project_version_info()
         metadata = {
             "analysis_date": datetime.now().isoformat(),
-            "analysis_version": version,
-            "analysis_version_source": version_source,
+            **_provenance_metadata(),
             "folder_path": _publication_safe_folder_path_marker(folder_path),
             "file_pattern": "spectral_analysis.xlsx",
             "comparison_type": "dissonance_models",

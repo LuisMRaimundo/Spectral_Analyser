@@ -452,30 +452,11 @@ class SuperAudioAnalyzer:
 
     @staticmethod
     def _get_project_version_info() -> tuple[str, str]:
-        """
-        Resolve analysis code version for reproducibility stamping.
-        Prefers installed package metadata; falls back to pyproject.toml.
-        """
-        try:
-            from importlib import metadata as importlib_metadata
-            version = importlib_metadata.version("spectral-analyser")
-            return version, "importlib.metadata:spectral-analyser"
-        except Exception:
-            pass
+        """Resolve analysis version from the single provenance source."""
+        from analysis_provenance import resolve_analysis_provenance
 
-        # Fallback: parse pyproject.toml in repo root
-        try:
-            repo_root = Path(__file__).resolve().parent.parent
-            pyproject_path = repo_root / "pyproject.toml"
-            if pyproject_path.exists():
-                content = pyproject_path.read_text(encoding="utf-8")
-                match = re.search(r'^\s*version\s*=\s*["\']([^"\']+)["\']\s*$', content, flags=re.MULTILINE)
-                if match:
-                    return match.group(1), f"pyproject.toml:{pyproject_path}"
-        except Exception:
-            pass
-
-        return "unknown", "unavailable"
+        p = resolve_analysis_provenance()
+        return str(p["analysis_version"]), str(p["analysis_version_source"])
 
     @staticmethod
     def _stable_hash(payload: Dict[str, Any]) -> str:
