@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Super Audio Analyzer - GUI Interface
-====================================
-PyQt5-based graphical user interface for the Super Audio Analyzer.
+Spectral_Analyser - GUI Interface
+=================================
+PyQt5-based graphical user interface for Spectral_Analyser super-analysis tools.
 
 Features:
 - Audio file selection
@@ -164,11 +164,11 @@ class SuperAnalysisWorker(QThread):
 
 
 class SuperAudioAnalyzerGUI(QMainWindow):
-    """Main GUI window for Super Audio Analyzer."""
+    """Main GUI window for Spectral_Analyser."""
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Super Audio Analyzer - State-of-the-Art Edition')
+        self.setWindowTitle('Spectral_Analyser — Super Analysis')
         self.setGeometry(100, 100, 1600, 1000)
         
         # Data storage
@@ -188,7 +188,7 @@ class SuperAudioAnalyzerGUI(QMainWindow):
         self.init_ui()
         
         # Set default output directory
-        default_output = Path.home() / "SuperAudioAnalysis"
+        default_output = Path.home() / "Spectral_Analyser"
         default_output.mkdir(exist_ok=True)
         self.output_dir = default_output
         self.output_dir_label.setText(f"Output: {self.output_dir}")
@@ -254,7 +254,7 @@ class SuperAudioAnalyzerGUI(QMainWindow):
         self.setup_visualization_tab()
         
         # Status bar
-        self.statusBar().showMessage("Ready - Super Audio Analyzer")
+        self.statusBar().showMessage("Ready - Spectral_Analyser")
     
     def setup_file_tab(self):
         """Setup file selection tab."""
@@ -1243,7 +1243,7 @@ def main():
         return 1
     
     app = QApplication(sys.argv)
-    app.setApplicationName("Super Audio Analyzer")
+    app.setApplicationName("Spectral_Analyser")
     
     window = SuperAudioAnalyzerGUI()
     window.show()

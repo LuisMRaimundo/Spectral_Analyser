@@ -4,8 +4,9 @@
 Batch Audio Analyzer - Process Multiple Audio Files (legacy batch wrapper)
 ==========================================================================
 
-This script is not the canonical publication-facing pipeline. Prefer
-``proc_audio.AudioProcessor`` followed by ``compile_metrics.compile_density_metrics_with_pca``.
+Part of Spectral_Analyser. This script is not the canonical publication-facing
+pipeline. Prefer ``proc_audio.AudioProcessor`` followed by
+``compile_metrics.compile_density_metrics_with_pca``.
 
 Features (historical):
 - Parallel processing for efficiency
@@ -14,7 +15,7 @@ Features (historical):
 - Individual and summary reports
 - Progress tracking
 
-Author: AI Assistant
+Author: Luís Raimundo
 Version: 1.0.0
 """
 
