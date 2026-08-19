@@ -1,3 +1,21 @@
+# Phase 16 / Phase C — Independent high-n harmonic guards
+
+The spacing cap cannot stop floor harvest at high n. Persistence and a
+minimum CFAR margin are independent of the body stop; the stop remains
+the load-bearing high-n cut.
+
+- `expected_false_harmonic_slots = harmonic_slot_expected_count × CFAR_PFA`.
+- `accepted_slots_above_body_stop` must be 0 after gating.
+- `harmonic_acceptance_suspect` when accepted count exceeds
+  (body-stop order + expected false slots).
+- `HARMONIC_MIN_CFAR_MARGIN_DB` (3 dB): `0 ≤ cfar_margin_db < 3` →
+  `cfar_marginal`, excluded from density. `cfar_marginal_count` per note.
+- Continuity rule off by default (`HARMONIC_CONTINUITY_RULE_ENABLED`).
+  After 3 consecutive rejects, later accepts need persistence ≥ 0.9.
+- Application order: cap / exclusive assignment → CFAR margin →
+  persistence → optional continuity → body stop.
+- **Tests:** `tests/phase_16/test_high_n_harmonic_guards.py`
+
 # Phase 15 / Phase B — Temporal persistence
 
 The STFT time axis is a first-class acceptance criterion.

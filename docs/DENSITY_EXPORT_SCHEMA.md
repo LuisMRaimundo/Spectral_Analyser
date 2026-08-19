@@ -360,3 +360,14 @@ contain multiply-assigned floor peaks and ungated amplitude sums.
   Exclusion: `low_temporal_persistence (p=…)`.
 - Metadata: `sustain_frame_count`, `sustain_frame_count_independent`,
   `frame_duration_s`.
+
+### R.13 Independent high-n guards (Phase C / phase_16)
+
+- `expected_false_harmonic_slots = harmonic_slot_expected_count × P_fa`.
+- `accepted_slots_above_body_stop` must be 0 after gating.
+- `harmonic_acceptance_suspect` when accepted count exceeds
+  (body-stop order + expected false slots).
+- `cfar_marginal` when `0 ≤ cfar_margin_db < 3` dB; excluded from density.
+- Continuity rule off by default.
+- Guard order: spacing cap → CFAR margin → persistence → continuity →
+  body stop. The body stop is load-bearing for high-n rejection.

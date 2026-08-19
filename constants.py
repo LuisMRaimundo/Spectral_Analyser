@@ -248,6 +248,15 @@ LOW_F0_BIN_TO_F0_MAX_RATIO: Final[float] = 0.125
 
 # CFAR (F-043) — same P_fa for harmonic and confirmed-inharmonic tests
 CFAR_PFA: Final[float] = 1e-2
+# Minimum CFAR margin for harmonic include_for_density (Phase C).
+# 0 ≤ margin < this value is cfar_marginal: detected at P_fa but too
+# close to the threshold to count as a partial.
+HARMONIC_MIN_CFAR_MARGIN_DB: Final[float] = 3.0
+# Optional continuity cut (off by default): after this many consecutive
+# rejected slots, later accepts need persistence ≥ the override.
+HARMONIC_CONTINUITY_RULE_ENABLED: Final[bool] = False
+HARMONIC_CONTINUITY_REJECT_STREAK: Final[int] = 3
+HARMONIC_CONTINUITY_PERSISTENCE_OVERRIDE: Final[float] = 0.9
 
 # Confirmed-inharmonic partial class (Phase A / phase_14)
 # 6 dB is a conservative internal default: above typical Blackman–Harris
@@ -490,6 +499,10 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "HARMONIC_BODY_STOP_ENABLED",
         "HARMONIC_BODY_STOP_MARGIN_DB",
         "HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER",
+        "HARMONIC_CONTINUITY_PERSISTENCE_OVERRIDE",
+        "HARMONIC_CONTINUITY_REJECT_STREAK",
+        "HARMONIC_CONTINUITY_RULE_ENABLED",
+        "HARMONIC_MIN_CFAR_MARGIN_DB",
         "FRAME_PEAK_MIN_ABOVE_MEDIAN_DB",
         "F0_REFIT_DISCREPANCY_CENTS",
         "F0_REFIT_LOW_ORDER_MAX",
