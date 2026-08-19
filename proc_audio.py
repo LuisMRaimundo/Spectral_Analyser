@@ -47,6 +47,8 @@ from constants import (
     DENSITY_NOISE_GATE_ENABLED,
     DENSITY_NOISE_GATE_POLICY,
     DENSITY_WINDOW_PERTURBATION_MS,
+    PARTIAL_PERSISTENCE_MIN_FRACTION,
+    FRAME_PEAK_MIN_ABOVE_MEDIAN_DB,
     F0_REFIT_DISCREPANCY_CENTS,
     F0_REFIT_LOW_ORDER_MAX,
     F0_REFIT_PROMINENCE_MIN_DB,
@@ -378,6 +380,14 @@ from inharmonic_confirmation import (
     STATUS_CONFIRMED,
     confirm_inharmonic_dataframe,
     reassign_stretched_to_harmonics,
+)
+from temporal_persistence import (
+    apply_persistence_gate,
+    attach_persistence_columns,
+    detect_frame_peaks,
+    frame_duration_s,
+    overlap_factor,
+    sustain_frame_span,
 )
 
 # logging base
@@ -1940,6 +1950,12 @@ class AudioProcessor:
         self.inharmonic_list_df: Optional[pd.DataFrame] = None
         self.confirmed_inharmonic_df: Optional[pd.DataFrame] = None
         self.inharmonic_confirmed_count: Optional[int] = None
+        self.frame_peak_table: list = []
+        self.sustain_frame_count: Optional[int] = None
+        self.sustain_frame_start: int = 0
+        self.sustain_frame_end: Optional[int] = None
+        self.sustain_frame_count_independent: Optional[float] = None
+        self.frame_duration_s: Optional[float] = None
         self._metrics_ih_amps_eff: np.ndarray = np.asarray([], dtype=float)
         self._metrics_ih_freqs_eff: Optional[np.ndarray] = None
         self.harmonic_partial_count: Optional[int] = None
@@ -4773,6 +4789,24 @@ class AudioProcessor:
         except (TypeError, ValueError):
             _dceil_stop = float(BODY_DENSITY_MAX_HZ)
         candidate_rows = apply_exclusive_harmonic_assignment(candidate_rows)
+        try:
+            self._ensure_sustain_frame_peaks()
+            candidate_rows = apply_persistence_gate(
+                candidate_rows,
+                getattr(self, "frame_peak_table", []) or [],
+                sustain_frame_count=int(getattr(self, "sustain_frame_count", 0) or 0),
+                min_fraction=float(
+                    getattr(
+                        self,
+                        "partial_persistence_min_fraction",
+                        PARTIAL_PERSISTENCE_MIN_FRACTION,
+                    )
+                ),
+                frame_start=int(getattr(self, "sustain_frame_start", 0) or 0),
+                frame_end=getattr(self, "sustain_frame_end", None),
+            )
+        except Exception as _e_persist:
+            self.logger.warning("Temporal persistence gate failed: %s", _e_persist)
         candidate_rows, _body_stop_meta = apply_harmonic_body_stop(
             candidate_rows,
             f0_hz=float(_f0_for_candidates if np.isfinite(_f0_for_candidates) else f0),
@@ -5104,6 +5138,82 @@ class AudioProcessor:
                 pass
         return ih_full, ih_sel
 
+    def _ensure_sustain_frame_peaks(self) -> list:
+        """Build the per-frame sustain peak table once per note."""
+        existing = getattr(self, "frame_peak_table", None)
+        if existing and int(getattr(self, "sustain_frame_count", 0) or 0) > 0:
+            return list(existing)
+        S = getattr(self, "S", None)
+        freqs = getattr(self, "freqs", None)
+        if S is None or freqs is None:
+            self.frame_peak_table = []
+            self.sustain_frame_count = 0
+            self.sustain_frame_count_independent = 0.0
+            self.frame_duration_s = float("nan")
+            return []
+        mag = np.abs(np.asarray(S))
+        if mag.ndim != 2:
+            self.frame_peak_table = []
+            self.sustain_frame_count = 0
+            self.sustain_frame_count_independent = 0.0
+            self.frame_duration_s = float("nan")
+            return []
+        try:
+            hop = int(getattr(self, "hop_length", 0) or 0)
+        except (TypeError, ValueError):
+            hop = 0
+        if hop <= 0:
+            hop = max(1, int(getattr(self, "n_fft", 4096) or 4096) // 4)
+        try:
+            sr = float(getattr(self, "sr", None) or getattr(self, "sample_rate", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            sr = 0.0
+        try:
+            n_fft = int(self._get_actual_n_fft())
+        except Exception:
+            n_fft = int(getattr(self, "n_fft", mag.shape[0] * 2) or mag.shape[0] * 2)
+        start_s = end_s = None
+        if bool(getattr(self, "temporal_segmentation_enabled", True)):
+            y = getattr(self, "y", None)
+            if y is not None and sr > 0.0:
+                try:
+                    seg = segment_attack_sustain_release(
+                        y=np.asarray(y, dtype=float), sr_hz=float(sr)
+                    )
+                    start_s = int(seg["sustain"]["start_sample"])
+                    end_s = int(seg["sustain"]["end_sample"])
+                except Exception as _e_seg:
+                    self.logger.debug("Sustain segmentation fallback to full file: %s", _e_seg)
+        f0, f1 = sustain_frame_span(
+            n_frames=int(mag.shape[1]),
+            hop_length=hop,
+            sr_hz=sr,
+            sustain_start_sample=start_s,
+            sustain_end_sample=end_s,
+        )
+        # Drop the padded STFT edge frames (center=True) when the span allows.
+        if (f1 - f0) > 4:
+            f0 += 1
+            f1 -= 1
+        peaks = detect_frame_peaks(
+            mag,
+            np.asarray(freqs, dtype=float),
+            frame_start=f0,
+            frame_end=f1,
+            min_above_median_db=float(
+                getattr(self, "frame_peak_min_above_median_db", FRAME_PEAK_MIN_ABOVE_MEDIAN_DB)
+            ),
+        )
+        n_sus = int(max(0, f1 - f0))
+        ov = overlap_factor(n_fft=n_fft, hop_length=hop)
+        self.frame_peak_table = peaks
+        self.sustain_frame_count = n_sus
+        self.sustain_frame_start = int(f0)
+        self.sustain_frame_end = int(f1)
+        self.sustain_frame_count_independent = float(n_sus) / ov if ov > 0.0 else float(n_sus)
+        self.frame_duration_s = frame_duration_s(hop_length=hop, sr_hz=sr)
+        return peaks
+
     def _time_averaged_magnitude_spectrum(
         self,
     ) -> tuple[Optional[np.ndarray], Optional[np.ndarray]]:
@@ -5113,11 +5223,9 @@ class AudioProcessor:
         fr = np.asarray(freqs, dtype=float)
         S = getattr(self, "S", None)
         if S is not None:
-            mag = np.asarray(S, dtype=float)
+            mag = np.abs(np.asarray(S))
             if mag.ndim == 2:
-                mag = np.mean(np.abs(mag), axis=1)
-            else:
-                mag = np.abs(mag)
+                mag = np.mean(mag, axis=1)
             n = int(min(fr.size, mag.size))
             return fr[:n], mag[:n]
         complete = getattr(self, "complete_list_df", None)
@@ -5204,6 +5312,32 @@ class AudioProcessor:
         model_on = bool(getattr(self, "inharmonicity_model_applied", False)) or (
             np.isfinite(B) and B > 0.0
         )
+        try:
+            self._ensure_sustain_frame_peaks()
+            _bin_hz_p = (
+                float(freqs[1] - freqs[0])
+                if freqs is not None and int(getattr(freqs, "size", 0) or 0) >= 2
+                else float("nan")
+            )
+            _ih_recs = ih_df.to_dict(orient="records")
+            for _r in _ih_recs:
+                _r["bin_width_hz"] = _bin_hz_p
+                if "search_tol_hz" not in _r or not np.isfinite(
+                    float(_r.get("search_tol_hz", float("nan")) or float("nan"))
+                ):
+                    _r["search_tol_hz"] = (
+                        float(_bin_hz_p) * 1.5 if np.isfinite(_bin_hz_p) and _bin_hz_p > 0.0 else 5.0
+                    )
+            _ih_recs = attach_persistence_columns(
+                _ih_recs,
+                getattr(self, "frame_peak_table", []) or [],
+                sustain_frame_count=int(getattr(self, "sustain_frame_count", 0) or 0),
+                frame_start=int(getattr(self, "sustain_frame_start", 0) or 0),
+                frame_end=getattr(self, "sustain_frame_end", None),
+            )
+            ih_df = pd.DataFrame(_ih_recs)
+        except Exception as _e_ih_p:
+            self.logger.debug("Inharmonic persistence attach failed: %s", _e_ih_p)
         annotated = confirm_inharmonic_dataframe(
             ih_df,
             magnitudes=mags,
@@ -10989,6 +11123,9 @@ class AudioProcessor:
                     "tolerance_limb",
                     "search_tol_hz",
                     "exclusion_reason",
+                    "persistence_fraction",
+                    "frequency_jitter_cents",
+                    "magnitude_jitter_db",
                     "sample_note_tag",
                     "sample_id",
                     "partial_pitch_name",
@@ -11128,6 +11265,9 @@ class AudioProcessor:
                             "included_in_strict_peaks": _in_strict,
                             "included_in_body_density_5khz": _included_body,
                             "exclusion_reason": _exclusion,
+                            "persistence_fraction": _arow.get("persistence_fraction"),
+                            "frequency_jitter_cents": _arow.get("frequency_jitter_cents"),
+                            "magnitude_jitter_db": _arow.get("magnitude_jitter_db"),
                             "tolerance_limb": str(_arow.get("tolerance_limb", "") or ""),
                             "search_ceiling_hz": _search_ceiling_hz,
                             "body_density_ceiling_hz": _body_density_ceiling_hz,
@@ -11159,6 +11299,9 @@ class AudioProcessor:
                         "included_in_strict_peaks",
                         "included_in_body_density_5khz",
                         "exclusion_reason",
+                        "persistence_fraction",
+                        "frequency_jitter_cents",
+                        "magnitude_jitter_db",
                         "tolerance_limb",
                         "search_ceiling_hz",
                         "body_density_ceiling_hz",
@@ -12226,6 +12369,15 @@ class AudioProcessor:
             _self_cps_pn = getattr(self, "component_profile_source", None)
             if _self_cps_pn:
                 per_note_row["component_profile_source"] = str(_self_cps_pn)
+            per_note_row["sustain_frame_count"] = metric_int_or_nan(
+                getattr(self, "sustain_frame_count", None)
+            )
+            per_note_row["sustain_frame_count_independent"] = metric_float_or_nan(
+                getattr(self, "sustain_frame_count_independent", None)
+            )
+            per_note_row["frame_duration_s"] = metric_float_or_nan(
+                getattr(self, "frame_duration_s", None)
+            )
             _pub_df(pd.DataFrame([per_note_row])).to_excel(
                 writer, sheet_name="Per_Note_Processing_Metadata", index=False
             )

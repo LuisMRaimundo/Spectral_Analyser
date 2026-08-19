@@ -244,8 +244,8 @@ def confirm_inharmonic_candidate(
         except (TypeError, ValueError):
             persistence_fraction = float("nan")
     if persistence_fraction is None or not np.isfinite(float(persistence_fraction)):
-        # Phase B will populate the per-frame detector. Until then a missing
-        # fraction does not veto a candidate that already passed CFAR.
+        # Missing fraction (no Phase B frame table) does not veto a
+        # candidate that already passed CFAR.
         persistence_value = 1.0
         persistence_reported = float("nan")
     else:

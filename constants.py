@@ -260,6 +260,10 @@ INHARMONIC_MIN_PROMINENCE_DB: Final[float] = 6.0
 # persistence to 1.0 (not yet measured) so CFAR / leakage / stretch
 # remain the active gates.
 PARTIAL_PERSISTENCE_MIN_FRACTION: Final[float] = 0.7
+# Per-frame peak must sit this many dB above that frame's median magnitude
+# before it counts as "present" for persistence. Matches the 6 dB
+# inharmonic prominence default so floor ripple does not persist.
+FRAME_PEAK_MIN_ABOVE_MEDIAN_DB: Final[float] = 6.0
 
 # Fixed frequency maximum for harmonic detection (comparability)
 FIXED_FREQ_MAX_HZ: Final[float] = 20000.0  # Fixed maximum frequency for summation (Option A: recommended)
@@ -486,6 +490,7 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "HARMONIC_BODY_STOP_ENABLED",
         "HARMONIC_BODY_STOP_MARGIN_DB",
         "HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER",
+        "FRAME_PEAK_MIN_ABOVE_MEDIAN_DB",
         "F0_REFIT_DISCREPANCY_CENTS",
         "F0_REFIT_LOW_ORDER_MAX",
         "F0_REFIT_PROMINENCE_MIN_DB",

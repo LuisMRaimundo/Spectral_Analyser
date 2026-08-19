@@ -70,6 +70,7 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "inharmonic_density_sum",
         "inharmonic_status",
         "inharmonic_confirmed_count",
+        "persistence_fraction",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():

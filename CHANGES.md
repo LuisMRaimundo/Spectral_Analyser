@@ -1,3 +1,25 @@
+# Phase 15 / Phase B — Temporal persistence
+
+The STFT time axis is a first-class acceptance criterion.
+
+- Per-frame local maxima on the sustain segment (`temporal_persistence.py`;
+  full file if segmentation is off). Peak table: frame, bin, magnitude.
+- `persistence_fraction` = fraction of sustain frames with a *detected*
+  peak (per-frame local max ≥ 6 dB above that frame’s median) within
+  `tol_hz` of the time-averaged peak frequency; also
+  `frequency_jitter_cents` and `magnitude_jitter_db`. Band-max harvesting
+  is not used: a ±β·f0 window at high n almost always contains a noise
+  maximum.
+- Harmonic `include_for_density` requires
+  `persistence_fraction ≥ PARTIAL_PERSISTENCE_MIN_FRACTION` (0.7).
+  Failing test: `exclusion_reason = low_temporal_persistence (p=…)`.
+- Inharmonic confirmation uses the same fraction (no longer defaults to 1.0
+  when the frame table exists).
+- `Per_Note_Processing_Metadata`: `sustain_frame_count`,
+  `sustain_frame_count_independent`, `frame_duration_s`.
+- Body-stop labelling does not overwrite a persistence reject.
+- **Tests:** `tests/phase_15/test_temporal_persistence.py`
+
 # Phase 14 / Phase A — Confirmed-inharmonic partial class
 
 Residual rows after harmonic exclusion are candidates, not the I

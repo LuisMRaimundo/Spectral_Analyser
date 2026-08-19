@@ -513,9 +513,12 @@ def apply_harmonic_body_stop(
         already_status = str(row.get("candidate_status") or "")
         # F-051 / exclusive-assignment rejects must not be relabelled as
         # a body-stop exclusion (audit reason priority).
-        if already.startswith("rejected_by_tolerance") or already_status in {
+        if already.startswith("rejected_by_tolerance") or already.startswith(
+            "low_temporal_persistence"
+        ) or already_status in {
             "rejected_by_tolerance",
             "peak_already_assigned",
+            "low_temporal_persistence",
         }:
             row["include_for_density"] = False
             continue
@@ -1113,6 +1116,8 @@ def _harmonic_inclusion_audit_exclusion_reason(
         return "included"
     stored = str(exclusion_reason or "").strip()
     status = str(candidate_status or "")
+    if stored.startswith("low_temporal_persistence") or status == "low_temporal_persistence":
+        return stored or "low_temporal_persistence"
     if stored.startswith("rejected_by_tolerance") or status == "rejected_by_tolerance":
         if stored.startswith("rejected_by_tolerance"):
             return stored
