@@ -118,6 +118,21 @@ def test_verify_export_flags_run2_style_workbook(tmp_path: Path) -> None:
     assert "validated_H:" in report
 
 
+def test_verify_export_flags_per_bin_energy_basis(tmp_path: Path) -> None:
+    path = tmp_path / "per_bin.xlsx"
+    meta = pd.DataFrame(
+        {
+            "Parameter": ["export_schema_version", "energy_basis"],
+            "Value": [EXPORT_SCHEMA_VERSION, "per_bin"],
+        }
+    )
+    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+        meta.to_excel(writer, sheet_name="Analysis_Metadata", index=False)
+    cmp_ = assess_workbook_comparability(path)
+    assert cmp_["comparable"] is False
+    assert cmp_["comparability_reason"] == "not comparable (per_bin_energy_basis)"
+
+
 def test_energy_pie_uses_energy_sums_not_amplitude_copy() -> None:
     from proc_audio import AudioProcessor
 

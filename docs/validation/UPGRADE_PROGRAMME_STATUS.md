@@ -15,6 +15,12 @@ bump is recorded.
 | G | Weight function φ | `tests/phase_20/test_weight_function_phi.py` | Sensitivity report on tuba corpus; README records ρ. | **done (PR #72)** |
 | H | Reproducibility command | `tests/phase_21/test_reproducibility_command.py` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | **done (PR #73)** |
 | I | Construct validation | `tests/validation/synthetic_corpus/` | Recover N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at SNR 10–40 dB. Perceptual scaffold only (no data collection). | **done (PR #74)** |
+| D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **in this PR** |
+| D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **in this PR** |
+| D6.3 | D_k n_fft norm | same | Density sums n_fft-normalised to 8192. | **in this PR** |
+| D6.4 | fft_policy fixed default | same | `fft_policy` in profile id; mixed-tier Stage 3 warning. | **in this PR** |
+| D6.5 | Settings parse / above-stop | dictionary | Range strings parse; included-above-stop = 0. | **in this PR** |
+| D6.6 | reexport / compare_runs | `tools/compare_runs.py` | Boundary-step guard. | **in this PR** |
 
 ## Phase A notes
 

@@ -559,6 +559,31 @@ def _meta_numeric(meta: Mapping[str, Any], *keys: str) -> Optional[float]:
     return None
 
 
+_RANGE_PAIR_RE = re.compile(
+    r"(-?\d+(?:\.\d+)?)\s*(?:–|-|to|/)\s*(-?\d+(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+
+
+def _parse_range_pair(raw: Any) -> Tuple[Optional[float], Optional[float]]:
+    text = str(raw or "").strip()
+    if not text:
+        return None, None
+    match = _RANGE_PAIR_RE.search(text)
+    if match is None:
+        return None, None
+    return float(match.group(1)), float(match.group(2))
+
+
+def _meta_range_pair(meta: Mapping[str, Any], *keys: str) -> Tuple[Optional[float], Optional[float]]:
+    lmeta = {str(k).strip().lower(): v for k, v in meta.items()}
+    for k in keys:
+        lo, hi = _parse_range_pair(lmeta.get(str(k).strip().lower(), ""))
+        if lo is not None and hi is not None:
+            return lo, hi
+    return None, None
+
+
 def _resolve_freq_mag_field(
     out_note: pd.Series,
     lookup: pd.DataFrame,
@@ -578,6 +603,28 @@ def _resolve_freq_mag_field(
     mv = _meta_numeric(meta, *meta_candidates)
     if mv is not None:
         return pd.Series(float(mv), index=out_note.index), float(mv)
+    lo, hi = _meta_range_pair(
+        meta,
+        "harmonic_search_range_hz",
+        "low_frequency_diagnostic_range_hz",
+        "magnitude range (db)",
+        "Frequency Range",
+        "Magnitude Range (dB)",
+    )
+    lowered = {str(k).strip().lower() for k in meta_candidates}
+    pick = None
+    if lowered & {"frequency_min_hz", "freq_min"}:
+        pick = lo
+    elif lowered & {"frequency_max_hz", "freq_max"}:
+        pick = hi
+    elif lowered & {"magnitude_min_db", "db_min"}:
+        mag_lo, mag_hi = _meta_range_pair(meta, "magnitude range (db)", "Magnitude Range (dB)")
+        pick = mag_lo
+    elif lowered & {"magnitude_max_db", "db_max"}:
+        mag_lo, mag_hi = _meta_range_pair(meta, "magnitude range (db)", "Magnitude Range (dB)")
+        pick = mag_hi
+    if pick is not None:
+        return pd.Series(float(pick), index=out_note.index), float(pick)
     return pd.Series(UNKNOWN_NOT_PARSEABLE, index=out_note.index), UNKNOWN_NOT_PARSEABLE
 
 
@@ -623,10 +670,81 @@ def _derive_source_corpus_path(path: Path, meta: Mapping[str, Any]) -> str:
     return str(path.parent)
 
 
+def _stage1_freq_mag_by_note(root: Path) -> Dict[str, Dict[str, Any]]:
+    """Read per-note FFT search / magnitude ranges from Stage 1 workbooks."""
+    found: Dict[str, Dict[str, Any]] = {}
+    if root is None or not Path(root).is_dir():
+        return found
+    for xlsx in Path(root).rglob("spectral_analysis.xlsx"):
+        rec: Dict[str, Any] = {}
+        note = ""
+        try:
+            meta = load_analysis_metadata(xlsx, [])
+        except Exception:
+            meta = {}
+        if meta:
+            note = str(meta.get("Note") or "").strip()
+            pol = str(meta.get("fft_policy") or "").strip()
+            if pol:
+                rec["fft_policy"] = pol
+            for key in (
+                "frequency_min_hz",
+                "frequency_max_hz",
+                "magnitude_min_db",
+                "magnitude_max_db",
+            ):
+                val = _as_optional_float(meta.get(key))
+                if val is not None:
+                    rec[key] = val
+            lo, hi = _parse_range_pair(meta.get("harmonic_search_range_hz"))
+            if lo is not None:
+                rec.setdefault("frequency_min_hz", lo)
+            if hi is not None:
+                rec.setdefault("frequency_max_hz", hi)
+            mlo, mhi = _parse_range_pair(meta.get("Magnitude Range (dB)"))
+            if mlo is not None:
+                rec.setdefault("magnitude_min_db", mlo)
+            if mhi is not None:
+                rec.setdefault("magnitude_max_db", mhi)
+        try:
+            xl = pd.ExcelFile(xlsx, engine="openpyxl")
+            if "Analysis Parameters" in xl.sheet_names:
+                ap = pd.read_excel(xlsx, sheet_name="Analysis Parameters")
+                cols = {str(c).strip().lower(): c for c in ap.columns}
+                pcol = cols.get("parameter")
+                vcol = cols.get("value")
+                params: Dict[str, Any] = {}
+                if pcol and vcol:
+                    for _, row in ap.iterrows():
+                        key = str(row.get(pcol, "")).strip()
+                        if key:
+                            params[key] = row.get(vcol)
+                note = note or str(params.get("Note") or "").strip()
+                lo, hi = _parse_range_pair(params.get("harmonic_search_range_hz"))
+                if lo is not None:
+                    rec.setdefault("frequency_min_hz", lo)
+                if hi is not None:
+                    rec.setdefault("frequency_max_hz", hi)
+                mlo, mhi = _parse_range_pair(params.get("Magnitude Range (dB)"))
+                if mlo is not None:
+                    rec.setdefault("magnitude_min_db", mlo)
+                if mhi is not None:
+                    rec.setdefault("magnitude_max_db", mhi)
+        except Exception:
+            pass
+        if not note:
+            note = str(xlsx.parent.name).strip()
+        if note and rec:
+            found[note] = rec
+    return found
+
+
 def build_analysis_settings_by_note(
     merged: pd.DataFrame,
     sd: pd.DataFrame,
     meta: Mapping[str, Any],
+    *,
+    stage1_root: Optional[Path] = None,
 ) -> pd.DataFrame:
     by_note = merged.groupby("Note", as_index=False, sort=False).last() if "Note" in merged.columns else pd.DataFrame()
     out = sd[["Note"]].copy() if "Note" in sd.columns else pd.DataFrame({"Note": by_note.get("Note", pd.Series(dtype=object))})
@@ -710,6 +828,36 @@ def build_analysis_settings_by_note(
     out["frequency_max_hz"] = freq_max_series
     out["magnitude_min_db"] = mag_min_series
     out["magnitude_max_db"] = mag_max_series
+    stage1_ranges = _stage1_freq_mag_by_note(stage1_root) if stage1_root else {}
+    if stage1_ranges:
+        for col in (
+            "frequency_min_hz",
+            "frequency_max_hz",
+            "magnitude_min_db",
+            "magnitude_max_db",
+        ):
+            filled = out["Note"].map(
+                {note: rec.get(col) for note, rec in stage1_ranges.items()}
+            )
+            current = out[col]
+            missing = current.isna() | current.astype(str).isin(
+                {UNKNOWN_NOT_PARSEABLE, TIER_DEPENDENT_LABEL, ""}
+            )
+            out.loc[missing, col] = filled[missing]
+    if "fft_policy" in lookup.columns:
+        out["fft_policy"] = out["Note"].map(lookup["fft_policy"].to_dict())
+    elif "fft_policy" in sd.columns:
+        out["fft_policy"] = sd["fft_policy"]
+    else:
+        out["fft_policy"] = meta.get("fft_policy", UNKNOWN_NOT_PARSEABLE)
+    if stage1_ranges:
+        pol = out["Note"].map(
+            {note: rec.get("fft_policy") for note, rec in stage1_ranges.items()}
+        )
+        missing_pol = out["fft_policy"].isna() | out["fft_policy"].astype(str).isin(
+            {UNKNOWN_NOT_PARSEABLE, TIER_DEPENDENT_LABEL, ""}
+        )
+        out.loc[missing_pol, "fft_policy"] = pol[missing_pol]
 
     for c in (
         "density_summation_mode",
@@ -745,6 +893,7 @@ def build_analysis_settings_by_note(
         "subbass_rumble_energy_sum",
         "acoustic_f0_status",
         "tier_name",
+        "fft_policy",
         "n_fft",
         "hop_length",
         "zero_padding",
@@ -3687,7 +3836,9 @@ def build_workbook(
                 cd[_cc] = np.nan
     meta_map = load_analysis_metadata(source, warnings)
     meta_df = build_metadata_rows(source, meta_map, sd, merged, warnings)
-    settings_by_note = build_analysis_settings_by_note(merged, sd, meta_map)
+    settings_by_note = build_analysis_settings_by_note(
+        merged, sd, meta_map, stage1_root=source.parent
+    )
     sd = drop_dead_columns(sd)
     cb = drop_dead_columns(cb)
     vs = drop_dead_columns(vs)

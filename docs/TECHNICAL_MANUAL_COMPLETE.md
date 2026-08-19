@@ -121,8 +121,24 @@ Provide time-frequency representation for peak extraction and all downstream met
 **Code location.**
 - Module: `proc_audio.py`
 - Function(s): `fft_analysis(...)` and dependent peak-processing routines.
-- GUI controls: window type, `n_fft`, hop length, zero padding, time averaging.
-- Exported columns: `n_fft`, `n_fft_effective`, `hop_length`, `bin_spacing_hz`.
+- GUI controls: window type, `n_fft`, hop length, zero padding, time averaging,
+  and `fft_policy` (GUI “smart / 90-tier” checkbox = `adaptive_tier`; unchecked
+  = `fixed`). **Default for comparable corpora is `fixed` (8192 / 1024).**
+- Exported columns: `n_fft`, `n_fft_effective`, `hop_length`, `bin_spacing_hz`,
+  `fft_policy`, `tier_name`, `energy_basis`, `window_enbw_hz`.
+
+**Adaptive-tier table (f0 → n_fft, hop = n_fft/8).** Rationale: keep several
+FFT bins below f0 so the fundamental is resolved. The trombone *ff* run at
+`5b1a1c7` used three operating points:
+
+| Notes (approx. f0) | Tier max_freq (Hz) | n_fft | hop |
+|---|---|---:|---:|
+| E2–G3 (82–196 Hz) | ≤ 205 (`Tier_25`) | 8192 | 1024 |
+| G♯3–B4 (208–494 Hz) | 205–… (`Tier_26+`) | 4096 | 512 |
+| C5 (523 Hz) | higher tiers | 2048 | 256 |
+
+The full 90-tier map lives in `pipeline_orchestrator_gui.FFT_SETTINGS_BY_CLUSTER`.
+Do not mix `adaptive_tier` notes across a boundary unless `energy_basis=psd_per_hz`.
 - Workbook sheets: per-note `Per_Note_Processing_Metadata`, compiled metadata sheets.
 
 **Inputs.**
@@ -1134,7 +1150,7 @@ Comparability-critical controls (primary comparable profile):
 - `density_frequency_ceiling_hz` = runtime-configured (no hardcoded value)
 
 Per current policy the primary comparable profile is
-`wf=log|dst=runtime_configured|ceil=runtime_configured`
+`wf=log|dst=runtime_configured|ceil=runtime_configured|fft=fixed`
 (`primary_comparable_profile_definition`). Runs on other profiles are flagged
 `EXPLORATORY` and must not be compared directly against primary-profile runs.
 

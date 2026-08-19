@@ -1,3 +1,32 @@
+# Resolution-invariant energy and density bases; fixed-FFT default for comparable corpora; tier policy documented
+
+D6 from the IOWA trombone *ff* E2–C5 review of `5b1a1c7`. F-042 / F-047 /
+F-048 / F-049 algebra is unchanged. `density_formula_version` is
+`v5_apply_density_metric_adapted_v6_2_psd` because D_k amplitudes are
+n_fft-normalised (same φ, corrected basis).
+
+- **D6.1** Diagnosis: the G3→G♯3 EWSD step follows the window, not the note
+  (`docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md`). Peak ΣA² scales as
+  N²; sub-bass row count scales with N.
+- **D6.2** Energy sums are Heinzel PSD `S(f)=|X|²/(f_s Σw²)` integrated over
+  Hz; peak energy is `|X|²/(Σw)²`. Residual excludes the ENBW footprint.
+  Export `energy_basis=psd_per_hz`, `window_enbw_hz`, `peak_footprint_bins`,
+  `residual_region_hz_total`.
+- **D6.3** D_k uses `n_fft_normalization_factor` onto `FIXED_N_FFT_DEFAULT`
+  (8192). Sub-bass remains F-020 members only.
+- **D6.4** `fft_policy ∈ {fixed, adaptive_tier}`; **fixed** (8192/1024) is
+  the default for corpus runs. `fft_policy` is in
+  `analysis_parameter_profile_id`; mixed-tier corpora are not primary.
+  Stage 3 emits a `stage3_issue` when a corpus mixes n_fft.
+- **D6.5** Research exporter reads `harmonic_search_range_hz` /
+  `Magnitude Range (dB)`. `included_above_body_stop_count` invariant is 0;
+  `validated_harmonics_above_body_stop_count` is CFAR-validated then excluded.
+- **D6.6** `tools/reexport_corpus.py --corpus --fft-policy` and
+  `tools/compare_runs.py`.
+- Constants: `FIXED_N_FFT_DEFAULT` (8192), `FIXED_HOP_LENGTH_DEFAULT` (1024),
+  `HANN_ENBW_BINS` (1.5), `FFT_POLICY_DEFAULT` (`fixed`).
+- **Tests:** `tests/phase_24/test_resolution_invariance.py`
+
 # Phase 22 / Phase I — Construct validation + perceptual scaffold
 
 The pipeline recovers planted N, B, EPD, and confirmed-I on a synthetic

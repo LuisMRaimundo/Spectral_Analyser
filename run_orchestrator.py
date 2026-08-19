@@ -23,7 +23,12 @@ import argparse
 import sys
 from pathlib import Path
 
-from constants import DENSITY_WEIGHT_FUNCTION_DEFAULT
+from constants import (
+    DENSITY_WEIGHT_FUNCTION_DEFAULT,
+    FFT_POLICY_DEFAULT,
+    FIXED_HOP_LENGTH_DEFAULT,
+    FIXED_N_FFT_DEFAULT,
+)
 from pipeline_orchestrator_integrated import RobustOrchestrator
 from run_manifest import discover_corpus_audio, looks_like_stage1_root, parse_stages
 
@@ -134,6 +139,28 @@ def build_parser() -> argparse.ArgumentParser:
             f"Default: {DENSITY_WEIGHT_FUNCTION_DEFAULT}."
         ),
     )
+    parser.add_argument(
+        "--fft-policy",
+        type=str,
+        default=FFT_POLICY_DEFAULT,
+        choices=("fixed", "adaptive_tier"),
+        help=(
+            "FFT sizing: fixed (default, one n_fft/hop for every note) or "
+            "adaptive_tier (legacy per-f0 window table)."
+        ),
+    )
+    parser.add_argument(
+        "--fixed-n-fft",
+        type=int,
+        default=FIXED_N_FFT_DEFAULT,
+        help=f"n_fft when --fft-policy=fixed (default {FIXED_N_FFT_DEFAULT}).",
+    )
+    parser.add_argument(
+        "--fixed-hop-length",
+        type=int,
+        default=FIXED_HOP_LENGTH_DEFAULT,
+        help=f"hop_length when --fft-policy=fixed (default {FIXED_HOP_LENGTH_DEFAULT}).",
+    )
     return parser
 
 
@@ -213,6 +240,9 @@ def main(argv: list[str] | None = None) -> int:
             weight_function=args.weight_function,
             stage1_search_root=stage1_search_root,
             figures=bool(args.figures),
+            fft_policy=str(args.fft_policy),
+            fixed_n_fft=int(args.fixed_n_fft),
+            fixed_hop_length=int(args.fixed_hop_length),
         )
         results = orchestrator.run_selected_stages(
             stages,

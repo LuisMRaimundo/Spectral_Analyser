@@ -331,6 +331,63 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Treating as a partial count or as the diagnostic-export ceiling.",
         ontology_family="policy_bound",
     )
+    energy_basis = MetricDefinition(
+        name="energy_basis",
+        formula="psd_per_hz = Σ P_bin × Δf  (peak: P_peak × ENBW_hz)",
+        input_domain="periodogram bin power and analysis window",
+        unit_or_scale="token",
+        amplitude_basis="not used",
+        power_basis="PSD integrated over Hz",
+        normalization_scope="per note / per window",
+        physical_interpretation=(
+            "Declares that Stage 2/3 energy sums are power spectral density "
+            "integrated over Hertz, not raw bin-power sums."
+        ),
+        not_valid_for="Comparing pre-fix per-bin energy workbooks across n_fft tiers.",
+        ontology_family="provenance",
+    )
+    window_enbw_hz = MetricDefinition(
+        name="window_enbw_hz",
+        formula="ENBW_bins × (sr / n_fft); ENBW_bins = N Σw² / (Σw)²",
+        input_domain="analysis window samples",
+        unit_or_scale="Hz",
+        amplitude_basis="not used",
+        power_basis="equivalent noise bandwidth",
+        normalization_scope="per note",
+        physical_interpretation="Window equivalent noise bandwidth used for peak energy.",
+        not_valid_for="Treating as a density or a partial count.",
+        ontology_family="analysis_parameter",
+    )
+    included_above_body_stop_count = MetricDefinition(
+        name="included_above_body_stop_count",
+        formula="count(include_for_density and n > harmonic_body_stop_order)",
+        input_domain="harmonic slots after body stop",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Included (density) harmonics above the body stop. Invariant: 0. "
+            "validated_harmonics_above_body_stop_count is CFAR-validated-then-excluded, not this."
+        ),
+        not_valid_for="Equating with validated_harmonics_above_body_stop_count.",
+        ontology_family="validation_status",
+    )
+    fft_policy = MetricDefinition(
+        name="fft_policy",
+        formula="fixed | adaptive_tier",
+        input_domain="corpus FFT sizing policy",
+        unit_or_scale="token",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per run",
+        physical_interpretation=(
+            "fixed uses one n_fft/hop for every note (default for comparable corpora). "
+            "adaptive_tier follows the f0 tier table."
+        ),
+        not_valid_for="Mixing adaptive_tier notes across a tier boundary without psd_per_hz.",
+        ontology_family="analysis_parameter",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -351,6 +408,10 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         subbass_member_count.name: subbass_member_count,
         floor_rows_rejected_count.name: floor_rows_rejected_count,
         subbass_upper_bound_hz.name: subbass_upper_bound_hz,
+        energy_basis.name: energy_basis,
+        window_enbw_hz.name: window_enbw_hz,
+        included_above_body_stop_count.name: included_above_body_stop_count,
+        fft_policy.name: fft_policy,
     }
 
 

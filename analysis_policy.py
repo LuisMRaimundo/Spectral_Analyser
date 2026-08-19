@@ -12,7 +12,7 @@ from typing import Final
 try:
     from density import CANONICAL_DENSITY_FORMULA_VERSION as DENSITY_FORMULA_VERSION
 except ImportError:  # pragma: no cover — defensive for partial installs
-    DENSITY_FORMULA_VERSION: Final[str] = "v5_apply_density_metric_adapted_v6_1"
+    DENSITY_FORMULA_VERSION: Final[str] = "v5_apply_density_metric_adapted_v6_2_psd"
 
 F0_POLICY_VERSION: Final[str] = "f0_prior_constrained_harmonic_fit_v1"
 HARMONIC_FREQUENCY_POLICY_VERSION: Final[str] = "subbin_interpolated_peak_frequency_v1"
