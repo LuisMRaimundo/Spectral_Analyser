@@ -41,4 +41,28 @@ Energy sums use Heinzel PSD `S(f) = |X|² / (f_s Σw²)` integrated over Hz; pea
 
 ## D6.5.3 — Body-stop order after the PSD fix
 
-Pre-fix `harmonic_body_stop_order` on trombone *ff* jumped across adjacent notes (32 at C3, 80 at A♯2, 85 at F♯2). That diagnostic is a CFAR/body-stop order, not an energy sum, so D6.2 does not change the stop rule. A full 33-note re-export is a PR artefact (`tools/reexport_corpus.py`), not a unit test. If the stop still jumps after that re-export, open a follow-up issue with the per-note stop diagnostics (`harmonic_body_stop_order`, `accepted_slots_above_body_stop`, `included_above_body_stop_count`).
+Pre-fix `harmonic_body_stop_order` on trombone *ff* jumped across adjacent notes (32 at C3, 80 at A♯2, 85 at F♯2). That diagnostic is a CFAR/body-stop order, not an energy sum.
+
+Four-note re-export after D6.2 (`fft_policy=fixed`, 8192/1024):
+
+| Note | harmonic_body_stop_order | validated_above_stop |
+|------|-------------------------:|---------------------:|
+| G3 | 71 | 0 |
+| G♯3 | 52 | 0 |
+| B4 | 20 | 0 |
+| C5 | 21 | 1 |
+
+The stop does **not** stabilise. Follow-up: per-note stop diagnostics (`harmonic_body_stop_order`, `accepted_slots_above_body_stop`, `included_above_body_stop_count`).
+
+## D6.6 — Four-note trombone *ff* after the fix
+
+`fft_policy=fixed` (all 8192/1024) vs `adaptive_tier` (G3 8192, G♯3/B4 4096, C5 2048).
+
+| Note | EWSD fixed | EWSD adaptive | D_H fixed | D_H adaptive |
+|------|----------:|--------------:|----------:|-------------:|
+| G3 | 91.46 | 91.46 | 2.973 | 2.973 |
+| G♯3 | 79.51 | 63.88 | 2.874 | 2.926 |
+| B4 | 24.26 | 18.46 | 2.650 | 2.652 |
+| C5 | 22.59 | 13.09 | 2.630 | 2.653 |
+
+Within **fixed**, G3→G♯3 EWSD steps 13 % but EPD also steps 12 % (musical, not a window artefact). B4→C5 EWSD steps 6.9 %. `compare_runs` boundary guard passes. Fixed vs adaptive still disagrees on EWSD / `core_H` / D_S at 4096 and 2048 (`pair_fail`); D_H agrees within 2 %. Use `fft_policy=fixed` for cross-note comparison. Full 33-note artefact is the same command on `_Sustains_Stable`.
