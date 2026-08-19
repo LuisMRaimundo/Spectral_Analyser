@@ -1488,7 +1488,7 @@ DEFAULT_ROLLOFF_COMPENSATED_DENSITY_WEIGHT_FUNCTION: str = "logarithmic"
 
 # --- Canonical harmonic "fatness" (version-5 core, adapted to v6 pipeline) ---
 # Same numerical path as ``apply_density_metric`` with default flags used from ProcAudio / SuperAudioAnalyzer.
-CANONICAL_DENSITY_FORMULA_VERSION: str = "v5_apply_density_metric_adapted_v6_1"
+CANONICAL_DENSITY_FORMULA_VERSION: str = "v5_apply_density_metric_adapted_v6_2_psd"
 CANONICAL_DENSITY_SOURCE_FORMULA: str = (
     "canonical_density_v5_adapted = apply_density_metric("
     "linear_harmonic_amplitudes, weight_function, normalize=False, remove_noise=False, "

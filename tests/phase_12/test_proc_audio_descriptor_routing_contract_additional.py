@@ -310,7 +310,7 @@ def test_export_row_analysis_parameter_profile_id_is_deterministic() -> None:
     )
     first = _main_row(ap)["analysis_parameter_profile_id"]
     second = _main_row(ap)["analysis_parameter_profile_id"]
-    assert first == second == "wf=log|dst=-40.0|ceil=5000.0"
+    assert first == second == "wf=log|dst=-40.0|ceil=5000.0|fft=fixed"
 
 
 def test_export_row_includes_density_metric_contract_metadata() -> None:

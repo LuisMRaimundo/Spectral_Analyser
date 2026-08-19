@@ -73,6 +73,13 @@ Provenance (Phase E): `analysis_version` is package metadata + `git describe --a
 | `subbass_membership` | `subbass_member` or `lf_diagnostic_not_member` on the Sub-bass sheet |
 | `expected_false_harmonic_slots` | `harmonic_slot_expected_count × CFAR_PFA` (budget, not a count) |
 | `accepted_slots_above_body_stop` | Included slots above the body stop; must be 0 after gating |
+| `included_above_body_stop_count` | Same invariant as `accepted_slots_above_body_stop` (must be 0) |
+| `validated_harmonics_above_body_stop_count` | CFAR-validated (or include-true) then excluded by the body stop; **not** included |
+| `energy_basis` | `psd_per_hz` after D6; pre-fix per-bin workbooks are not comparable |
+| `window_enbw_hz` | Window equivalent noise bandwidth (Hz) |
+| `peak_footprint_bins` | ENBW in bins used for peak energy and residual exclusion |
+| `residual_region_hz_total` | Hz remaining after main-lobe footprint exclusion |
+| `fft_policy` | `fixed` (default, comparable) or `adaptive_tier` |
 | `harmonic_acceptance_suspect` | Accepted count exceeds body-stop order + expected false slots |
 | `cfar_marginal_count` | Rows with `0 ≤ cfar_margin_db < HARMONIC_MIN_CFAR_MARGIN_DB` |
 

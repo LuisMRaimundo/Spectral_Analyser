@@ -73,6 +73,7 @@ from constants import (
     BODY_DENSITY_MAX_HZ,
     DENSITY_NOISE_GATE_ENABLED,
     DENSITY_NOISE_GATE_POLICY,
+    ENERGY_BASIS_PSD_PER_HZ,
     FULL_SPECTRUM_MAX_HZ,
     HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
     INHARMONICITY_B_ENABLE_THRESHOLD,
@@ -397,6 +398,7 @@ def compute_acoustic_density_descriptors(
     density_frequency_ceiling_hz: Optional[float] = None,
     full_spectrum_max_hz: float = FULL_SPECTRUM_MAX_HZ,
     sr_hz: float = 44100.0,
+    window_type: str = "hann",
     n_fft: int = 4096,
 ) -> dict[str, Any]:
     """
@@ -464,6 +466,10 @@ def compute_acoustic_density_descriptors(
         "residual_energy_ratio": 0.0,
         "subbass_energy_ratio": 0.0,
         "harmonic_energy_ratio": 0.0,
+        "energy_basis": ENERGY_BASIS_PSD_PER_HZ,
+        "window_enbw_hz": float("nan"),
+        "peak_footprint_bins": float("nan"),
+        "residual_region_hz_total": 0.0,
         "spectral_entropy": 0.0,
         "effective_partial_density": 0.0,
         "body_weighted_effective_density": 0.0,
@@ -699,14 +705,67 @@ def compute_acoustic_density_descriptors(
         float(detected_count / expected_count) if expected_count > 0 else 0.0
     )
 
+    from spectral_energy import (
+        bin_width_hz,
+        energy_provenance,
+        exclude_peak_footprints,
+        integrate_psd,
+        is_rfft_grid,
+        peak_psd_energy,
+        residual_region_hz_total,
+        window_enbw_hz,
+    )
+
+    _df_hz = bin_width_hz(float(sr_hz), int(n_fft))
+    _enbw_hz = window_enbw_hz(str(window_type or "hann"), float(sr_hz), int(n_fft))
+    _foot_hz = float(_enbw_hz) if np.isfinite(float(_enbw_hz)) else float(_df_hz)
+    _win_e = str(window_type or "hann")
+    # One main-lobe peak per accepted harmonic order (ENBW footprint), not
+    # every bin inside the cents window — those extra bins scale with n_fft.
+    harmonic_peak_bins = np.zeros(harmonic_peak_mask.shape, dtype=bool)
+    if np.any(harmonic_peak_mask):
+        for _order in np.unique(nearest_order[harmonic_peak_mask]):
+            _sel = harmonic_peak_mask & (nearest_order == _order)
+            _idx = np.where(_sel)[0]
+            if _idx.size:
+                harmonic_peak_bins[_idx[int(np.argmax(power_sig[_idx]))]] = True
+    harmonic_freqs = freq_sig[harmonic_peak_bins]
+    residual_mask = residual_mask & exclude_peak_footprints(
+        freq_sig, harmonic_freqs, _foot_hz
+    )
+    residual_mask = residual_mask & ~subbass_mask
+
     harmonic_power = power_sig[harmonic_peak_mask]
     residual_power = power_sig[residual_mask]
     subbass_power = power_sig[subbass_mask]
-    total_power = float(np.sum(power_sig))
-
-    h_energy = float(np.sum(harmonic_power))
-    r_energy = float(np.sum(residual_power))
-    s_energy = float(np.sum(subbass_power))
+    _grid = is_rfft_grid(freq, float(sr_hz), int(n_fft))
+    if _grid:
+        h_energy = 0.0
+        for _p in power_sig[harmonic_peak_bins]:
+            h_energy += peak_psd_energy(
+                float(_p), _enbw_hz, window=_win_e, n_fft=int(n_fft)
+            )
+        r_energy = integrate_psd(
+            residual_power, _df_hz, sr_hz=float(sr_hz), n_fft=int(n_fft), window=_win_e
+        )
+        s_energy = integrate_psd(
+            subbass_power, _df_hz, sr_hz=float(sr_hz), n_fft=int(n_fft), window=_win_e
+        )
+    else:
+        # Sparse peak table: rows are already peaks, not periodogram bins.
+        h_energy = float(np.sum(power_sig[harmonic_peak_bins])) if np.any(harmonic_peak_bins) else 0.0
+        r_energy = float(np.sum(residual_power)) if residual_power.size else 0.0
+        s_energy = float(np.sum(subbass_power)) if subbass_power.size else 0.0
+    total_power = float(h_energy + r_energy + s_energy)
+    _prov = energy_provenance(
+        sr_hz=float(sr_hz), n_fft=int(n_fft), window=str(window_type or "hann")
+    )
+    out["energy_basis"] = _prov["energy_basis"]
+    out["window_enbw_hz"] = _prov["window_enbw_hz"]
+    out["peak_footprint_bins"] = _prov["peak_footprint_bins"]
+    out["residual_region_hz_total"] = residual_region_hz_total(
+        freq_sig, residual_mask, _df_hz
+    )
 
     if total_power > 0.0:
         out["harmonic_energy_ratio"] = h_energy / total_power
@@ -890,9 +949,15 @@ def compute_acoustic_density_descriptors(
             salient_inharmonic_bin_count = int(np.count_nonzero(_vals > 0.0))
             inharmonic_density = float(np.sum(_vals))
 
-    # Subbass component: one contribution per salient subbass particle.
-    subbass_freq = freq_sig[subbass_mask]
-    subbass_pow = power_sig[subbass_mask]
+    # Subbass component: local-maxima particles only (not every FFT bin).
+    _sb_peak = np.zeros(freq_sig.size, dtype=bool)
+    if freq_sig.size >= 3:
+        _sb_peak[1:-1] = (power_sig[1:-1] > power_sig[:-2]) & (power_sig[1:-1] >= power_sig[2:])
+    elif freq_sig.size == 1:
+        _sb_peak[0] = True
+    subbass_particle_mask = subbass_mask & _sb_peak
+    subbass_freq = freq_sig[subbass_particle_mask]
+    subbass_pow = power_sig[subbass_particle_mask]
     subbass_in_band = subbass_freq <= d_ceiling_hz + EPS
     subbass_pow = subbass_pow[subbass_in_band]
     subbass_sal = _salience_from_power(subbass_pow)
@@ -922,21 +987,42 @@ def compute_acoustic_density_descriptors(
 
     body_ceiling_hz = float(max(BODY_DENSITY_MAX_HZ, 1.0))
     full_ceiling_hz = float(max(full_spectrum_max_hz, body_ceiling_hz))
-    body_harmonic_band = harmonic_orders * float(f0_hz) <= body_ceiling_hz + EPS
-    body_harmonic_energy = float(np.sum(harmonic_pow[body_harmonic_band])) if harmonic_pow.size > 0 else 0.0
-    body_inharmonic_band = inharmonic_freq <= body_ceiling_hz + EPS
-    body_inharmonic_energy = float(np.sum(inharmonic_pow[body_inharmonic_band])) if inharmonic_pow.size > 0 else 0.0
-    body_subbass_energy = float(np.sum(subbass_pow)) if subbass_pow.size > 0 else 0.0
+    body_h_mask = harmonic_peak_bins & (freq_sig <= body_ceiling_hz + EPS)
+    body_i_pow = inharmonic_pow[inharmonic_freq <= body_ceiling_hz + EPS] if inharmonic_freq.size else np.asarray([], dtype=float)
+    if _grid:
+        body_harmonic_energy = 0.0
+        for _p in power_sig[body_h_mask]:
+            body_harmonic_energy += peak_psd_energy(
+                float(_p), _enbw_hz, window=_win_e, n_fft=int(n_fft)
+            )
+        body_inharmonic_energy = integrate_psd(
+            body_i_pow, _df_hz, sr_hz=float(sr_hz), n_fft=int(n_fft), window=_win_e
+        )
+        body_subbass_energy = integrate_psd(
+            subbass_pow, _df_hz, sr_hz=float(sr_hz), n_fft=int(n_fft), window=_win_e
+        )
+    else:
+        body_harmonic_energy = float(np.sum(power_sig[body_h_mask])) if np.any(body_h_mask) else 0.0
+        body_inharmonic_energy = float(np.sum(body_i_pow)) if getattr(body_i_pow, "size", 0) else 0.0
+        body_subbass_energy = float(np.sum(subbass_pow)) if subbass_pow.size else 0.0
     out["harmonic_body_energy_sum_body_ceiling"] = body_harmonic_energy
     out["inharmonic_body_energy_sum_body_ceiling"] = body_inharmonic_energy
     out["subbass_rumble_energy_sum"] = body_subbass_energy
 
-    harmonic_freq_all = nearest_order[harmonic_peak_mask] * float(f0_hz)
-    harmonic_pow_all = power_sig[harmonic_peak_mask]
-    full_harmonic_band = harmonic_freq_all <= full_ceiling_hz + EPS
-    full_harmonic_energy = float(np.sum(harmonic_pow_all[full_harmonic_band])) if harmonic_pow_all.size > 0 else 0.0
-    full_inharmonic_band = inharmonic_freq <= full_ceiling_hz + EPS
-    full_inharmonic_energy = float(np.sum(inharmonic_pow[full_inharmonic_band])) if inharmonic_pow.size > 0 else 0.0
+    full_h_mask = harmonic_peak_bins & (freq_sig <= full_ceiling_hz + EPS)
+    full_i_pow = inharmonic_pow[inharmonic_freq <= full_ceiling_hz + EPS] if inharmonic_freq.size else np.asarray([], dtype=float)
+    if _grid:
+        full_harmonic_energy = 0.0
+        for _p in power_sig[full_h_mask]:
+            full_harmonic_energy += peak_psd_energy(
+                float(_p), _enbw_hz, window=_win_e, n_fft=int(n_fft)
+            )
+        full_inharmonic_energy = integrate_psd(
+            full_i_pow, _df_hz, sr_hz=float(sr_hz), n_fft=int(n_fft), window=_win_e
+        )
+    else:
+        full_harmonic_energy = float(np.sum(power_sig[full_h_mask])) if np.any(full_h_mask) else 0.0
+        full_inharmonic_energy = float(np.sum(full_i_pow)) if getattr(full_i_pow, "size", 0) else 0.0
     out["harmonic_full_spectrum_energy_sum_20khz"] = full_harmonic_energy
     out["inharmonic_full_spectrum_energy_sum_20khz"] = full_inharmonic_energy
 

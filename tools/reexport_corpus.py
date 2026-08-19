@@ -25,9 +25,16 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from constants import DENSITY_WEIGHT_FUNCTION_DEFAULT, REEXPORT_REL_DELTA_FLAG_PCT
+from constants import (
+    DENSITY_WEIGHT_FUNCTION_DEFAULT,
+    FFT_POLICY_DEFAULT,
+    FIXED_HOP_LENGTH_DEFAULT,
+    FIXED_N_FFT_DEFAULT,
+    REEXPORT_REL_DELTA_FLAG_PCT,
+)
 from run_manifest import (
     STAGE3_SCORE_COLUMN,
+    discover_corpus_audio,
     looks_like_stage1_root,
     parse_stages,
 )
@@ -369,6 +376,9 @@ def run_reexport(
     figures: bool = False,
     weight_function: str = DENSITY_WEIGHT_FUNCTION_DEFAULT,
     audio_files: Optional[Sequence[Path]] = None,
+    fft_policy: str = FFT_POLICY_DEFAULT,
+    fixed_n_fft: int = FIXED_N_FFT_DEFAULT,
+    fixed_hop_length: int = FIXED_HOP_LENGTH_DEFAULT,
 ) -> Dict[str, Any]:
     """Run selected stages and return the orchestrator result dict."""
     from pipeline_orchestrator_integrated import RobustOrchestrator
@@ -385,6 +395,9 @@ def run_reexport(
         weight_function=weight_function,
         stage1_search_root=None if 1 in stages else stage1_root,
         figures=figures,
+        fft_policy=str(fft_policy),
+        fixed_n_fft=int(fixed_n_fft),
+        fixed_hop_length=int(fixed_hop_length),
     )
     return orchestrator.run_selected_stages(list(stages), figures=figures)
 
@@ -395,6 +408,27 @@ def _build_parser() -> argparse.ArgumentParser:
             "Re-export Stage 2/3 from existing Stage 1 workbooks and diff "
             "EWSD_score_acoustic_balanced against a previous series."
         )
+    )
+    parser.add_argument(
+        "--corpus",
+        type=str,
+        help="Audio corpus directory (implies Stage 1–3 when --stages omitted).",
+    )
+    parser.add_argument(
+        "--fft-policy",
+        default=FFT_POLICY_DEFAULT,
+        choices=("fixed", "adaptive_tier"),
+        help=f"FFT policy (default: {FFT_POLICY_DEFAULT}).",
+    )
+    parser.add_argument(
+        "--fixed-n-fft",
+        type=int,
+        default=FIXED_N_FFT_DEFAULT,
+    )
+    parser.add_argument(
+        "--fixed-hop-length",
+        type=int,
+        default=FIXED_HOP_LENGTH_DEFAULT,
     )
     parser.add_argument(
         "--stage1-root",
@@ -443,7 +477,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     stages = parse_stages(args.stages)
-    stage1_root = Path(args.stage1_root) if args.stage1_root else out_dir
+    corpus = Path(args.corpus) if getattr(args, "corpus", None) else None
+    audio_files = discover_corpus_audio(corpus) if corpus and corpus.is_dir() else None
+    if corpus is not None and 1 not in stages:
+        stages = parse_stages("1,2,3")
+    stage1_root = Path(args.stage1_root) if args.stage1_root else (corpus or out_dir)
     if not args.skip_run:
         run_reexport(
             stage1_root=stage1_root,
@@ -451,6 +489,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             stages=stages,
             figures=bool(args.figures),
             weight_function=str(args.weight_function),
+            audio_files=audio_files,
+            fft_policy=str(args.fft_policy),
+            fixed_n_fft=int(args.fixed_n_fft),
+            fixed_hop_length=int(args.fixed_hop_length),
         )
     current_path = Path(args.current) if args.current else None
     if current_path is None:

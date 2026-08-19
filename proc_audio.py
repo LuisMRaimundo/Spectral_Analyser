@@ -1959,6 +1959,14 @@ class AudioProcessor:
         self.harmonic_energy_sum: Optional[float] = None
         self.inharmonic_energy_sum: Optional[float] = None
         self.subbass_energy_sum: Optional[float] = None
+        self.energy_basis: str = "psd_per_hz"
+        self.window_enbw_hz: float = float("nan")
+        self.peak_footprint_bins: float = float("nan")
+        self.residual_region_hz_total: float = float("nan")
+        self.bin_width_hz: float = float("nan")
+        self.fft_policy: str = "fixed"
+        self.tier_name: Optional[str] = None
+        self.included_above_body_stop_count: int = 0
         self.total_component_energy: Optional[float] = None
         self.harmonic_energy_ratio: Optional[float] = None
         self.inharmonic_energy_ratio: Optional[float] = None
@@ -4965,6 +4973,9 @@ class AudioProcessor:
         self.accepted_slots_above_body_stop = int(
             _guard.get("accepted_slots_above_body_stop", 0) or 0
         )
+        # D6.5: included-above-stop is 0 after the body-stop filter (CFAR
+        # survivors above the stop stay in accepted_slots / validated-not-included).
+        self.included_above_body_stop_count = 0
         self.harmonic_acceptance_suspect = bool(
             _guard.get("harmonic_acceptance_suspect", False)
         )
@@ -7600,6 +7611,9 @@ class AudioProcessor:
                                 full_spectrum_max_hz=float(
                                     getattr(self, "freq_max", FULL_SPECTRUM_MAX_HZ) or FULL_SPECTRUM_MAX_HZ
                                 ),
+                                sr_hz=float(getattr(self, "sr", 44100.0) or 44100.0),
+                                n_fft=int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT),
+                                window_type=str(getattr(self, "window", DEFAULT_WINDOW) or DEFAULT_WINDOW),
                             )
                             self._acoustic_density_desc = dict(_desc)
                             for _k, _v in _desc.items():
@@ -7952,10 +7966,41 @@ class AudioProcessor:
                 self.effective_partial_density_status = "failed_exception"
                 d_eff = float("nan")
 
-            h_energy = float(np.sum(np.square(harmonic_amps))) if harmonic_amps.size else 0.0
-            ih_energy = float(np.sum(np.square(ih_amps_eff))) if ih_amps_eff.size else 0.0
-            sub_energy = float(max(0.0, gpow_eff))
+            from spectral_energy import (
+                bin_width_hz,
+                energy_provenance,
+                integrate_psd,
+                peak_psd_energy,
+            )
+
+            _sr_e = float(
+                getattr(self, "sr", None)
+                or getattr(self, "sample_rate", 44100.0)
+                or 44100.0
+            )
+            _n_e = int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT)
+            _win_e = str(getattr(self, "window", DEFAULT_WINDOW) or DEFAULT_WINDOW)
+            _prov_e = energy_provenance(
+                sr_hz=_sr_e,
+                n_fft=_n_e,
+                window=_win_e,
+                hop_length=int(getattr(self, "hop_length", 0) or 0),
+            )
+            _df_e = float(_prov_e.get("bin_width_hz") or bin_width_hz(_sr_e, _n_e))
+            _enbw_e = float(_prov_e.get("window_enbw_hz") or _df_e)
+            h_raw = float(np.sum(np.square(harmonic_amps))) if harmonic_amps.size else 0.0
+            ih_raw = float(np.sum(np.square(ih_amps_eff))) if ih_amps_eff.size else 0.0
+            sub_raw = float(max(0.0, gpow_eff))
+            h_energy = peak_psd_energy(h_raw, _enbw_e, window=_win_e, n_fft=_n_e)
+            ih_energy = peak_psd_energy(ih_raw, _enbw_e, window=_win_e, n_fft=_n_e)
+            sub_energy = integrate_psd(
+                [sub_raw], _df_e, sr_hz=_sr_e, n_fft=_n_e, window=_win_e
+            )
             tot_energy = float(h_energy + ih_energy + sub_energy)
+            self.energy_basis = str(_prov_e.get("energy_basis") or "psd_per_hz")
+            self.window_enbw_hz = _enbw_e
+            self.peak_footprint_bins = float(_prov_e.get("peak_footprint_bins") or float("nan"))
+            self.bin_width_hz = _df_e
 
             sum_lin_h = float(np.sum(harmonic_amps)) if harmonic_amps.size else 0.0
             sum_lin_ih = float(np.sum(ih_amps_eff)) if ih_amps_eff.size else 0.0
@@ -8101,11 +8146,32 @@ class AudioProcessor:
                     _af = _af[np.isfinite(_af)]
                     if _af.size > 0:
                         _e_filtered = float(np.sum(_af * _af))
-                _residual_energy = float(
-                    max(0.0, _e_filtered - (h_energy + ih_energy + sub_energy))
+                _residual_raw = float(
+                    max(0.0, _e_filtered - (h_raw + ih_raw + sub_raw))
                 )
-                self.total_filtered_spectral_energy = float(_e_filtered)
-                self.residual_noise_energy_sum = _residual_energy
+                self.total_filtered_spectral_energy = integrate_psd(
+                    [_e_filtered], _df_e, sr_hz=_sr_e, n_fft=_n_e, window=_win_e
+                )
+                self.residual_noise_energy_sum = integrate_psd(
+                    [_residual_raw], _df_e, sr_hz=_sr_e, n_fft=_n_e, window=_win_e
+                )
+                try:
+                    _n_resid = int(
+                        np.count_nonzero(
+                            np.isfinite(
+                                pd.to_numeric(
+                                    self.filtered_list_df["Frequency (Hz)"],
+                                    errors="coerce",
+                                )
+                            )
+                        )
+                    ) if (
+                        isinstance(getattr(self, "filtered_list_df", None), pd.DataFrame)
+                        and "Frequency (Hz)" in self.filtered_list_df.columns
+                    ) else 0
+                    self.residual_region_hz_total = float(_n_resid) * float(_df_e)
+                except Exception:
+                    self.residual_region_hz_total = float("nan")
             except Exception as _e_res:
                 self.logger.debug(
                     "residual_noise_energy_sum computation failed: %s", _e_res
@@ -10940,6 +11006,17 @@ class AudioProcessor:
             "harmonic_energy_sum": metric_float_or_nan(getattr(self, "harmonic_energy_sum", None)),
             "inharmonic_energy_sum": metric_float_or_nan(getattr(self, "inharmonic_energy_sum", None)),
             "subbass_energy_sum": metric_float_or_nan(getattr(self, "subbass_energy_sum", None)),
+            "energy_basis": str(getattr(self, "energy_basis", "psd_per_hz") or "psd_per_hz"),
+            "window_enbw_hz": metric_float_or_nan(getattr(self, "window_enbw_hz", None)),
+            "peak_footprint_bins": metric_float_or_nan(getattr(self, "peak_footprint_bins", None)),
+            "residual_region_hz_total": metric_float_or_nan(
+                getattr(self, "residual_region_hz_total", None)
+            ),
+            "fft_policy": str(getattr(self, "fft_policy", "fixed") or "fixed"),
+            "tier_name": str(getattr(self, "tier_name", getattr(self, "tier", "")) or ""),
+            "included_above_body_stop_count": metric_int_or_nan(
+                getattr(self, "included_above_body_stop_count", 0)
+            ),
             "total_component_energy": metric_float_or_nan(getattr(self, "total_component_energy", None)),
             "harmonic_energy_ratio": metric_float_or_nan(getattr(self, "harmonic_energy_ratio", None)),
             "inharmonic_energy_ratio": metric_float_or_nan(getattr(self, "inharmonic_energy_ratio", None)),
@@ -11189,13 +11266,16 @@ class AudioProcessor:
         _wf_cmp = str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
         _dst_cmp = float(getattr(self, "density_salience_threshold_db", float("nan")))
         _dceil_cmp = float(getattr(self, "density_frequency_ceiling_hz", float("nan")))
-        _is_primary_profile = (_wf_cmp == PRIMARY_COMPARABLE_WEIGHT_FUNCTION)
+        _fft_pol = str(getattr(self, "fft_policy", "fixed") or "fixed").strip().lower()
+        _is_primary_profile = (
+            _wf_cmp == PRIMARY_COMPARABLE_WEIGHT_FUNCTION and _fft_pol == "fixed"
+        )
         main_metrics["analysis_parameter_profile_id"] = (
-            f"wf={_wf_cmp}|dst={_dst_cmp:.1f}|ceil={_dceil_cmp:.1f}"
+            f"wf={_wf_cmp}|dst={_dst_cmp:.1f}|ceil={_dceil_cmp:.1f}|fft={_fft_pol}"
         )
         main_metrics["is_primary_comparable_profile"] = bool(_is_primary_profile)
         main_metrics["primary_comparable_profile_definition"] = (
-            "wf=log|dst=runtime_configured|ceil=runtime_configured"
+            "wf=log|dst=runtime_configured|ceil=runtime_configured|fft=fixed"
         )
         self.analysis_parameter_profile_id = str(main_metrics["analysis_parameter_profile_id"])
         self.is_primary_comparable_profile = bool(main_metrics["is_primary_comparable_profile"])
@@ -12330,6 +12410,9 @@ class AudioProcessor:
                             f0_source=str(getattr(self, "f0_used_for_density_source", "") or ""),
                             acoustic_f0_status=str(getattr(self, "acoustic_f0_status", "") or ""),
                             f0_fit_accepted=bool(getattr(self, "f0_fit_accepted", False)),
+                            sr_hz=float(getattr(self, "sr", 44100.0) or 44100.0),
+                            n_fft=int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT),
+                            window_type=str(getattr(self, "window", DEFAULT_WINDOW) or DEFAULT_WINDOW),
                         )
                         for _dens_key in (
                             "harmonic_density_component",
@@ -12983,6 +13066,13 @@ class AudioProcessor:
                 ("window", _window_str_for_export()),
                 ("window_type", _window_str_for_export()),
                 ("n_fft", int(getattr(self, "n_fft", 4096))),
+                ("hop_length", int(getattr(self, "hop_length", 0) or 0)),
+                ("fft_policy", str(getattr(self, "fft_policy", "fixed") or "fixed")),
+                ("tier_name", str(getattr(self, "tier_name", getattr(self, "tier", "")) or "")),
+                ("energy_basis", str(getattr(self, "energy_basis", "psd_per_hz") or "psd_per_hz")),
+                ("window_enbw_hz", getattr(self, "window_enbw_hz", float("nan"))),
+                ("peak_footprint_bins", getattr(self, "peak_footprint_bins", float("nan"))),
+                ("residual_region_hz_total", getattr(self, "residual_region_hz_total", float("nan"))),
                 ("n_fft_effective", int(_nff_eff)),
                 ("hop_length", int(hl)),
                 ("zero_padding", int(getattr(self, "zero_padding", 1) or 1)),

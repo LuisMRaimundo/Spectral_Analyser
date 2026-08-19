@@ -85,6 +85,10 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "subbass_member_count",
         "floor_rows_rejected_count",
         "subbass_upper_bound_hz",
+        "energy_basis",
+        "window_enbw_hz",
+        "included_above_body_stop_count",
+        "fft_policy",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():

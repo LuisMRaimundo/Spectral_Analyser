@@ -48,6 +48,7 @@ def test_cli_exposes_corpus_out_stages_figures() -> None:
     assert args.stages == "1,2,3"
     assert args.figures is True
     assert args.weight_function == DENSITY_WEIGHT_FUNCTION_DEFAULT
+    assert args.fft_policy == "fixed"
 
 
 def test_discover_corpus_audio_finds_aif_and_wav(tmp_path: Path) -> None:

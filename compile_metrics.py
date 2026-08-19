@@ -83,6 +83,7 @@ from constants import (
     LEGACY_PARTIAL_COUNT_ALIASES_NOTE,
     SUBBASS_POLICY_FOR_EFFECTIVE_DENSITY_DOC,
     DENSITY_WEIGHT_FUNCTION_DEFAULT,
+    FIXED_N_FFT_DEFAULT,
 )
 
 CANONICAL_PIPELINE_ROLE = "canonical_stage2_compilation"
@@ -1817,7 +1818,7 @@ def _add_canonical_and_global_density_columns(
     try:
         from density import CANONICAL_DENSITY_FORMULA_VERSION, CANONICAL_DENSITY_SOURCE_FORMULA
     except Exception:
-        CANONICAL_DENSITY_FORMULA_VERSION = "v5_apply_density_metric_adapted_v6_1"
+        CANONICAL_DENSITY_FORMULA_VERSION = "v5_apply_density_metric_adapted_v6_2_psd"
         CANONICAL_DENSITY_SOURCE_FORMULA = "apply_density_metric(...)"
 
     canon_col = "canonical_density_v5_adapted"
@@ -3306,6 +3307,26 @@ def extract_density_component_sum(
         result["status"] = "no_numeric_values"
         return result
 
+    try:
+        _n_fft_raw = _read_analysis_metadata_scalar(p, "n_fft")
+        _n_fft_used = int(float(_n_fft_raw)) if _n_fft_raw not in (None, "") else int(FIXED_N_FFT_DEFAULT)
+    except (TypeError, ValueError):
+        _n_fft_used = int(FIXED_N_FFT_DEFAULT)
+    if _n_fft_used <= 0:
+        _n_fft_used = int(FIXED_N_FFT_DEFAULT)
+    _qk = "peak_power_sum" if wf == "power" else "peak_amplitude_sum"
+    try:
+        _n_fac = float(
+            n_fft_normalization_factor(
+                _n_fft_used, int(FIXED_N_FFT_DEFAULT), _qk
+            )
+        )
+    except Exception:
+        _n_fac = 1.0
+    if np.isfinite(_n_fac) and _n_fac != 1.0:
+        series = series * _n_fac
+        sum_strategy = f"{sum_strategy};n_fft_norm={_n_fac:.6g}"
+
     mask = np.isfinite(series.to_numpy(dtype=float, copy=False))
     if wf in ("linear", "log"):
         mask = mask & (series.to_numpy(dtype=float, copy=False) >= 0)
@@ -4264,6 +4285,11 @@ def extract_density_components_from_per_note_workbook(
         "f0_validation_mode",
         "n_fft",
         "n_fft_effective",
+        "frequency_min_hz",
+        "frequency_max_hz",
+        "magnitude_min_db",
+        "magnitude_max_db",
+        "fft_policy",
         "nominal_prior_hz",
         "f0_candidate_hz",
         "f0_deviation_cents",
@@ -6528,7 +6554,7 @@ def _corpus_comparability_audit(df: pd.DataFrame) -> Dict[str, Any]:
         "corpus_comparability_policy": (
             "Direct cross-note/cross-instrument comparison of density metrics is "
             "valid only within a single primary-comparable profile "
-            "(wf=log|dst=runtime_configured|ceil=runtime_configured). Use "
+            "(wf=log|dst=runtime_configured|ceil=runtime_configured|fft=fixed). Use "
             "Canonical_Primary_Filtered for inferential statistics."
         ),
     }

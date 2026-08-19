@@ -20,6 +20,12 @@ bump is recorded.
 | D3 | F-020 bound unification | same | f0 ∈ {50, 116.3, 200} → bound {25, 58.15, 80}; all sheets read one function. | **in this PR** |
 | D4 | CI resampling provenance | same | Unit/n/iterations/seed exported; CI values unchanged; wide flag + note. | **in this PR** |
 | D5 | Naming hygiene | same | `hop_duration_s` / `window_duration_s`; one energy pie; energy-ratio bases documented. | **in this PR** |
+| D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
+| D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |
+| D6.3 | D_k n_fft norm | same | Density sums n_fft-normalised to 8192. | **done (PR #76)** |
+| D6.4 | fft_policy fixed default | same | `fft_policy` in profile id; mixed-tier Stage 3 warning. | **done (PR #76)** |
+| D6.5 | Settings parse / above-stop | dictionary | Range strings parse; included-above-stop = 0. | **done (PR #76)** |
+| D6.6 | reexport / compare_runs | `tools/compare_runs.py` | Boundary-step guard. | **done (PR #76)** |
 
 ## Phase A notes
 

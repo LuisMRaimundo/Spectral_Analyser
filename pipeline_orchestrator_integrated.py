@@ -54,7 +54,12 @@ sys.path.insert(0, str(Path(__file__).parent / "audio_analysis"))
 import pandas as pd
 import numpy as np
 import librosa
-from constants import DENSITY_WEIGHT_FUNCTION_DEFAULT
+from constants import (
+    DENSITY_WEIGHT_FUNCTION_DEFAULT,
+    FFT_POLICY_DEFAULT,
+    FIXED_HOP_LENGTH_DEFAULT,
+    FIXED_N_FFT_DEFAULT,
+)
 
 # Tier settings (FFT sizes per fundamental-frequency cluster).
 try:
@@ -152,6 +157,9 @@ class RobustOrchestrator:
         density_ci_enabled: bool = True,
         stage1_search_root: Optional[Path] = None,
         figures: bool = False,
+        fft_policy: str = FFT_POLICY_DEFAULT,
+        fixed_n_fft: int = FIXED_N_FFT_DEFAULT,
+        fixed_hop_length: int = FIXED_HOP_LENGTH_DEFAULT,
     ):
         """Initialise the orchestrator.
 
@@ -195,6 +203,16 @@ class RobustOrchestrator:
             else self.main_analysis_output_dir
         )
         self.figures = bool(figures)
+        pol = str(fft_policy or FFT_POLICY_DEFAULT).strip().lower()
+        self.fft_policy: str = pol if pol in {"fixed", "adaptive_tier"} else str(FFT_POLICY_DEFAULT)
+        try:
+            self.fixed_n_fft = int(fixed_n_fft)
+        except (TypeError, ValueError):
+            self.fixed_n_fft = int(FIXED_N_FFT_DEFAULT)
+        try:
+            self.fixed_hop_length = int(fixed_hop_length)
+        except (TypeError, ValueError):
+            self.fixed_hop_length = int(FIXED_HOP_LENGTH_DEFAULT)
         self.research_excel_path: Optional[Path] = None
 
         self.main_analysis_output_dir.mkdir(parents=True, exist_ok=True)
@@ -323,6 +341,11 @@ class RobustOrchestrator:
                     n_fft = int(tier_settings['n_fft'])
                     zp = int(tier_settings['zp'])
                     hop_length = n_fft // 8
+                    if self.fft_policy == "fixed":
+                        n_fft = int(self.fixed_n_fft)
+                        hop_length = int(self.fixed_hop_length)
+                        zp = 2
+                        tier_name = "fixed"
                     base_tolerance = float(tier_settings.get('tolerance', 5.0))
 
                     tier_max_freq = tier_settings.get('max_freq', 20000)
@@ -352,6 +375,8 @@ class RobustOrchestrator:
                     )
 
                     processor = AudioProcessor()
+                    processor.fft_policy = str(self.fft_policy)
+                    processor.tier_name = str(tier_name)
                     processor.note_source = note_source
                     if note:
                         processor.note = note

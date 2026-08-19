@@ -87,6 +87,21 @@ even when the take is high-SNR. That is expected when the unit is
 `low_independent_frames`. Neither note changes the point estimate or
 the F-047 algebra.
 
+## Resolution dependence
+
+Adaptive-tier Stage 1 (`n_fft` 8192 → 4096 → 2048 at G3/G♯3 and B4/C5)
+computed residual and compartment energies as periodogram bin sums. Halving
+the window changed `core_harmonic_energy_ratio` and D_k while EPD (partials
+only) stayed flat, so EWSD stepped ~28 % at the boundary
+(`docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md`).
+
+After D6, energy is PSD per Hz (`energy_basis = psd_per_hz`). Pre-fix
+adaptive-tier workbooks are **not comparable across tier boundaries**.
+`verify_export.py` marks a workbook `not comparable (per_bin_energy_basis)`
+when `energy_basis` is present and is not `psd_per_hz`. Use
+`fft_policy=fixed` (default 8192/1024) for any corpus intended for
+cross-note comparison.
+
 ## Explicit non-claims
 
 - No assertion that EWSD equals listener "fatness" or "brightness".
