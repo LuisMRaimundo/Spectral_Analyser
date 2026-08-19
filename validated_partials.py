@@ -154,7 +154,9 @@ def is_subbass_compartment_member(
         return False
     if not np.isfinite(freq) or freq <= 0.0 or not np.isfinite(f0) or f0 <= 0.0:
         return False
-    f020 = min(0.5 * f0, 80.0)
+    from subbass_policy import SubBassPolicy
+
+    f020 = float(SubBassPolicy.upper_bound_hz(f0))
     if freq > f020:
         return False
     if str(low_frequency_class or "") == "physical_low_frequency_residual":

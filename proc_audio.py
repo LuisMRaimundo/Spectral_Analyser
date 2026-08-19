@@ -395,8 +395,10 @@ from temporal_persistence import (
     attach_persistence_columns,
     detect_frame_peaks,
     frame_duration_s,
+    hop_duration_s,
     overlap_factor,
     sustain_frame_span,
+    window_duration_s,
 )
 
 # logging base
@@ -419,9 +421,10 @@ DEFAULT_PLOT_DPI: int = 300
 
 # --- Component balance pie charts (visualisation only; linear ΣA vs energy ratios) ---
 COMPONENT_AMPLITUDE_MASS_PIE_FILENAME = "component_amplitude_mass_pie.png"
-COMPONENT_ENERGY_RATIO_PIE_FILENAME = "component_energy_ratio_pie.png"
+COMPONENT_ENERGY_RATIO_PIE_FILENAME = "component_energy_pie.png"
 COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME = "component_energy_pie.png"
 COMPONENT_AMPLITUDE_MASS_PIE_TITLE_PREFIX = "Validated-partial amplitude balance"
+COMPONENT_ENERGY_PIE_TITLE_PREFIX = "Validated-partial energy balance"
 COMPONENT_AMPLITUDE_MASS_PIE_BASIS_FOOTNOTE = (
     "Basis: linear amplitude sums; not power/energy ratios."
 )
@@ -1090,6 +1093,7 @@ from harmonic_high_n_guards import (  # noqa: E402
 from harmonic_peak_validation import (  # noqa: E402
     HARMONIC_CANDIDATE_STATUS_VALUES,
     apply_exclusive_harmonic_assignment,
+    apply_tolerance_continuity_override,
     apply_harmonic_body_stop,
     cfar_peak_detection,
     noise_gated_linear_mass,
@@ -1984,7 +1988,14 @@ class AudioProcessor:
         self.sustain_frame_start: int = 0
         self.sustain_frame_end: Optional[int] = None
         self.sustain_frame_count_independent: Optional[float] = None
+        self.hop_duration_s: Optional[float] = None
+        self.window_duration_s: Optional[float] = None
         self.frame_duration_s: Optional[float] = None
+        self.harmonic_validated_weak_count: int = 0
+        self.harmonic_validated_strict_count: int = 0
+        self.tolerance_continuity_override_count: int = 0
+        self.subbass_bound_formula: str = "min(0.5*f0, 80)"
+        self.subbass_bound_f0_used_hz: float = float("nan")
         self._metrics_ih_amps_eff: np.ndarray = np.asarray([], dtype=float)
         self._metrics_ih_freqs_eff: Optional[np.ndarray] = None
         self.harmonic_partial_count: Optional[int] = None
@@ -2193,7 +2204,13 @@ class AudioProcessor:
             n_fft = int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT)
         except (TypeError, ValueError):
             n_fft = DEFAULT_N_FFT
-        return float(SubBassPolicy.upper_bound_hz(f0_hz=float(f0 or 0.0), sr_hz=sr, n_fft=n_fft))
+        resolved = SubBassPolicy.resolve_f020_bound(float(f0 or 0.0))
+        self.subbass_bound_formula = str(resolved["subbass_bound_formula"])
+        self.subbass_bound_f0_used_hz = float(resolved["subbass_bound_f0_used_hz"])
+        bound = float(resolved["subbass_upper_bound_hz"])
+        if np.isfinite(float(f0 or 0.0)) and float(f0 or 0.0) > 0.0:
+            self.subbass_aggregate_hz = bound
+        return bound
 
     def _finalize_low_frequency_policy_state(self) -> None:
         """
@@ -4827,19 +4844,6 @@ class AudioProcessor:
             _dceil_stop = float(BODY_DENSITY_MAX_HZ)
         candidate_rows = apply_exclusive_harmonic_assignment(candidate_rows)
         try:
-            candidate_rows = apply_cfar_margin_gate(
-                candidate_rows,
-                min_margin_db=float(
-                    getattr(
-                        self,
-                        "harmonic_min_cfar_margin_db",
-                        HARMONIC_MIN_CFAR_MARGIN_DB,
-                    )
-                ),
-            )
-        except Exception as _e_margin:
-            self.logger.warning("CFAR margin gate failed: %s", _e_margin)
-        try:
             self._ensure_sustain_frame_peaks()
             candidate_rows = apply_persistence_gate(
                 candidate_rows,
@@ -4857,6 +4861,27 @@ class AudioProcessor:
             )
         except Exception as _e_persist:
             self.logger.warning("Temporal persistence gate failed: %s", _e_persist)
+        try:
+            candidate_rows, _tol_ov = apply_tolerance_continuity_override(
+                candidate_rows
+            )
+            self.tolerance_continuity_override_count = int(_tol_ov)
+        except Exception as _e_tol:
+            self.tolerance_continuity_override_count = 0
+            self.logger.warning("Tolerance continuity override failed: %s", _e_tol)
+        try:
+            candidate_rows = apply_cfar_margin_gate(
+                candidate_rows,
+                min_margin_db=float(
+                    getattr(
+                        self,
+                        "harmonic_min_cfar_margin_db",
+                        HARMONIC_MIN_CFAR_MARGIN_DB,
+                    )
+                ),
+            )
+        except Exception as _e_margin:
+            self.logger.warning("CFAR margin gate failed: %s", _e_margin)
         try:
             candidate_rows = apply_continuity_rule(
                 candidate_rows,
@@ -4955,6 +4980,12 @@ class AudioProcessor:
             _guard.get("harmonic_acceptance_suspect", False)
         )
         self.cfar_marginal_count = int(_guard.get("cfar_marginal_count", 0) or 0)
+        self.harmonic_validated_weak_count = int(
+            _guard.get("harmonic_validated_weak_count", 0) or 0
+        )
+        self.harmonic_validated_strict_count = int(
+            _guard.get("harmonic_validated_strict_count", 0) or 0
+        )
         _stop_order = _body_stop_meta.get("harmonic_body_stop_order")
         if harmonic_list and _body_stop_meta.get("harmonic_body_stop_triggered"):
             try:
@@ -5278,6 +5309,8 @@ class AudioProcessor:
             self.frame_peak_table = []
             self.sustain_frame_count = 0
             self.sustain_frame_count_independent = 0.0
+            self.hop_duration_s = float("nan")
+            self.window_duration_s = float("nan")
             self.frame_duration_s = float("nan")
             return []
         mag = np.abs(np.asarray(S))
@@ -5285,6 +5318,8 @@ class AudioProcessor:
             self.frame_peak_table = []
             self.sustain_frame_count = 0
             self.sustain_frame_count_independent = 0.0
+            self.hop_duration_s = float("nan")
+            self.window_duration_s = float("nan")
             self.frame_duration_s = float("nan")
             return []
         try:
@@ -5340,7 +5375,13 @@ class AudioProcessor:
         self.sustain_frame_start = int(f0)
         self.sustain_frame_end = int(f1)
         self.sustain_frame_count_independent = float(n_sus) / ov if ov > 0.0 else float(n_sus)
-        self.frame_duration_s = frame_duration_s(hop_length=hop, sr_hz=sr)
+        self.hop_duration_s = hop_duration_s(hop_length=hop, sr_hz=sr)
+        self.frame_duration_s = float(self.hop_duration_s)
+        try:
+            nfft = int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT)
+        except (TypeError, ValueError):
+            nfft = DEFAULT_N_FFT
+        self.window_duration_s = window_duration_s(n_fft=nfft, sr_hz=sr)
         return peaks
 
     def _time_averaged_magnitude_spectrum(
@@ -6121,6 +6162,19 @@ class AudioProcessor:
                 "subbin_offset_bins": float(peak_refinement["subbin_offset_bins"]),
                 "subbin_interpolation_valid": bool(
                     peak_refinement["subbin_interpolation_valid"]
+                ),
+                "frequency_refinement_method": (
+                    "parabolic_log_magnitude"
+                    if bool(peak_refinement.get("subbin_interpolation_valid"))
+                    else "bin_centre"
+                ),
+                "refined_frequency_hz": float(
+                    peak_refinement["interpolated_frequency_hz"]
+                    if bool(peak_refinement.get("subbin_interpolation_valid"))
+                    and np.isfinite(
+                        float(peak_refinement.get("interpolated_frequency_hz", float("nan")))
+                    )
+                    else extracted_freq
                 ),
                 "peak_bin_index": (
                     int(peak_refinement["peak_bin_index"])
@@ -8537,6 +8591,15 @@ class AudioProcessor:
                         "harmonic_validated_count": int(
                             getattr(self, "harmonic_validated_count", 0) or 0
                         ),
+                        "harmonic_validated_weak_count": int(
+                            getattr(self, "harmonic_validated_weak_count", 0) or 0
+                        ),
+                        "harmonic_validated_strict_count": int(
+                            getattr(self, "harmonic_validated_strict_count", 0) or 0
+                        ),
+                        "tolerance_continuity_override_count": int(
+                            getattr(self, "tolerance_continuity_override_count", 0) or 0
+                        ),
                         "expected_false_harmonic_slots": float(
                             getattr(self, "expected_false_harmonic_slots", float("nan"))
                         ),
@@ -8552,7 +8615,13 @@ class AudioProcessor:
                         "inharmonic_confirmed_count": int(
                             getattr(self, "inharmonic_confirmed_count", 0) or 0
                         ),
-                        "harmonic_slot_missing_count": int(_vr.get("harmonic_slot_missing_count", 0) or 0),
+                        "harmonic_slot_missing_count": int(
+                            max(
+                                0,
+                                int(_vr.get("harmonic_slot_expected_count", 0) or 0)
+                                - int(getattr(self, "harmonic_validated_count", 0) or 0),
+                            )
+                        ),
                         "non_harmonic_candidate_count": _spc,
                         "unmatched_spectral_row_count": int(
                             _vr.get("unmatched_spectral_row_count", _spc) or 0
@@ -10359,7 +10428,7 @@ class AudioProcessor:
                 )
                 ax.set_title(
                     self._component_pie_caption(
-                        note, chart="Component energy balance"
+                        note, chart=COMPONENT_ENERGY_PIE_TITLE_PREFIX
                     ),
                     fontsize=11,
                 )
@@ -10374,16 +10443,14 @@ class AudioProcessor:
                     style="italic",
                     color="0.35",
                 )
-                en_path = output_folder / COMPONENT_ENERGY_RATIO_PIE_FILENAME
                 energy_pie_path = output_folder / COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME
-                fig.savefig(en_path, dpi=150, bbox_inches="tight")
                 fig.savefig(energy_pie_path, dpi=150, bbox_inches="tight")
                 plt.close(fig)
-                self.energy_ratio_chart_file = COMPONENT_ENERGY_RATIO_PIE_FILENAME
+                self.energy_ratio_chart_file = COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME
                 self.energy_ratio_chart_status = "saved"
                 self.component_energy_pie_file = COMPONENT_ENERGY_PIE_LEGACY_ALIAS_FILENAME
                 self.component_energy_pie_alias_basis = energy_basis
-                self.logger.info("Component energy pie saved: %s (%s)", energy_pie_path, energy_basis)
+                self.logger.info("Validated-partial energy pie saved: %s (%s)", energy_pie_path, energy_basis)
                 self.logger.info(
                     "Basis: component (peak) energy — harmonic_energy_ratio / "
                     "inharmonic_energy_ratio (peak) / subbass_energy_ratio. Partial-physics "
@@ -10777,6 +10844,20 @@ class AudioProcessor:
             "density_ci_relative_width_pct": metric_float_or_nan(
                 getattr(self, "density_ci_relative_width_pct", None)
             ),
+            **(
+                __import__(
+                    "density_uncertainty", fromlist=["ci_resampling_provenance"]
+                ).ci_resampling_provenance(
+                    unit="partials",
+                    n_resampled=getattr(self, "harmonic_validated_count", float("nan")),
+                    independent_frame_count=getattr(
+                        self, "sustain_frame_count_independent", float("nan")
+                    ),
+                    relative_width_pct=getattr(
+                        self, "density_ci_relative_width_pct", float("nan")
+                    ),
+                )
+            ),
             "note_density_final_ci_low": metric_float_or_nan(
                 getattr(self, "note_density_final_ci_low", None)
             ),
@@ -10844,15 +10925,27 @@ class AudioProcessor:
             "harmonic_validated_count": metric_int_or_nan(
                 getattr(self, "harmonic_validated_count", None)
             ),
+            "harmonic_validated_weak_count": metric_int_or_nan(
+                getattr(self, "harmonic_validated_weak_count", None)
+            ),
+            "harmonic_validated_strict_count": metric_int_or_nan(
+                getattr(self, "harmonic_validated_strict_count", None)
+            ),
+            "tolerance_continuity_override_count": metric_int_or_nan(
+                getattr(self, "tolerance_continuity_override_count", None)
+            ),
             "inharmonic_confirmed_count": metric_int_or_nan(
                 getattr(self, "inharmonic_confirmed_count", None)
             ),
             "subbass_upper_bound_hz": metric_float_or_nan(
-                getattr(
-                    self,
-                    "subbass_upper_bound_hz",
-                    getattr(self, "subbass_aggregate_hz", None),
-                )
+                getattr(self, "subbass_upper_bound_hz", None)
+            ),
+            "subbass_bound_formula": str(
+                getattr(self, "subbass_bound_formula", "min(0.5*f0, 80)")
+                or "min(0.5*f0, 80)"
+            ),
+            "subbass_bound_f0_used_hz": metric_float_or_nan(
+                getattr(self, "subbass_bound_f0_used_hz", None)
             ),
             "subbass_member_count": metric_int_or_nan(
                 getattr(self, "subbass_member_count", None)
@@ -11761,14 +11854,6 @@ class AudioProcessor:
 
             ih_df = _ensure_amp_column(ih_raw.copy()) if ih_raw is not None and not ih_raw.empty else pd.DataFrame()
 
-            _cut_sb = float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz()))
-            # AUDIT FIX (acoustic-physics, Clarinete_mf finding #1) —
-            # apply the same lower-frequency floor that the energy
-            # aggregator uses. Bins below this floor are DC / sub-audible
-            # (room rumble, HVAC, mic DC offset, FFT-leakage from the
-            # DC bin) and have no musical content. Showing them on the
-            # Sub-bass band sheet misleads analysts into thinking the
-            # corresponding ``subbass_energy_sum`` reflects real audio.
             _lo_sb = float(getattr(
                 self, "subbass_aggregate_lower_hz", SUBBASS_AGGREGATE_LOWER_HZ
             ))
@@ -11783,6 +11868,11 @@ class AudioProcessor:
                     )
                 except (TypeError, ValueError):
                     _f0_sb_export = float("nan")
+            _cut_sb = float(
+                SubBassPolicy.resolve_f020_bound(_f0_sb_export)["subbass_upper_bound_hz"]
+            )
+            self.subbass_upper_bound_hz = float(_cut_sb)
+            self.subbass_aggregate_hz = float(_cut_sb)
             from validated_partials import low_frequency_diagnostic_upper_hz
 
             _diag_hi_sb = low_frequency_diagnostic_upper_hz(
@@ -12080,7 +12170,15 @@ class AudioProcessor:
                     if _col in ih_df.columns:
                         ih_partials[_col] = ih_df[_col].to_numpy()
             _dc_lo_sb = float(getattr(self, "subbass_aggregate_lower_hz", SUBBASS_AGGREGATE_LOWER_HZ))
-            _phys_hi_sb = float(getattr(self, "subbass_aggregate_hz", self._current_subbass_upper_bound_hz()))
+            _f020 = SubBassPolicy.resolve_f020_bound(
+                _f0_sb_export if np.isfinite(_f0_sb_export) else float(
+                    getattr(self, "f0_final", 0.0) or 0.0
+                )
+            )
+            _phys_hi_sb = float(_f020["subbass_upper_bound_hz"])
+            self.subbass_bound_formula = str(_f020["subbass_bound_formula"])
+            self.subbass_bound_f0_used_hz = float(_f020["subbass_bound_f0_used_hz"])
+            self.subbass_aggregate_hz = float(_phys_hi_sb)
             try:
                 _ad_raw = getattr(self, "adaptive_subfundamental_cutoff_hz", None)
                 _adf = float(_ad_raw) if _ad_raw is not None else float("nan")
@@ -12634,11 +12732,26 @@ class AudioProcessor:
                 _val_row["harmonic_validated_count"] = metric_int_or_nan(
                     getattr(self, "harmonic_validated_count", None)
                 )
+                _val_row["harmonic_validated_weak_count"] = metric_int_or_nan(
+                    getattr(self, "harmonic_validated_weak_count", None)
+                )
+                _val_row["harmonic_validated_strict_count"] = metric_int_or_nan(
+                    getattr(self, "harmonic_validated_strict_count", None)
+                )
+                _val_row["tolerance_continuity_override_count"] = metric_int_or_nan(
+                    getattr(self, "tolerance_continuity_override_count", None)
+                )
                 _val_row["inharmonic_confirmed_count"] = metric_int_or_nan(
                     getattr(self, "inharmonic_confirmed_count", None)
                 )
                 _val_row["subbass_upper_bound_hz"] = metric_float_or_nan(
                     getattr(self, "subbass_upper_bound_hz", None)
+                )
+                _val_row["subbass_bound_formula"] = str(
+                    getattr(self, "subbass_bound_formula", "min(0.5*f0, 80)") or "min(0.5*f0, 80)"
+                )
+                _val_row["subbass_bound_f0_used_hz"] = metric_float_or_nan(
+                    getattr(self, "subbass_bound_f0_used_hz", None)
                 )
                 _val_row["subbass_member_count"] = metric_int_or_nan(
                     getattr(self, "subbass_member_count", None)
@@ -12773,8 +12886,14 @@ class AudioProcessor:
             per_note_row["sustain_frame_count_independent"] = metric_float_or_nan(
                 getattr(self, "sustain_frame_count_independent", None)
             )
+            per_note_row["hop_duration_s"] = metric_float_or_nan(
+                getattr(self, "hop_duration_s", getattr(self, "frame_duration_s", None))
+            )
+            per_note_row["window_duration_s"] = metric_float_or_nan(
+                getattr(self, "window_duration_s", None)
+            )
             per_note_row["frame_duration_s"] = metric_float_or_nan(
-                getattr(self, "frame_duration_s", None)
+                getattr(self, "hop_duration_s", getattr(self, "frame_duration_s", None))
             )
             _pub_df(pd.DataFrame([per_note_row])).to_excel(
                 writer, sheet_name="Per_Note_Processing_Metadata", index=False

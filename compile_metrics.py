@@ -549,6 +549,13 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "ci_basis_frame_count",
     "ci_basis_partial_count",
     "ci_basis_frames_insufficient",
+    "ci_resampling_unit",
+    "ci_n_resampled",
+    "ci_bootstrap_iterations",
+    "ci_block_length_frames",
+    "ci_seed",
+    "ci_width_flag",
+    "ci_width_note",
     "harmonic_density_component",
     "inharmonic_density_component",
     "subbass_density_component",
@@ -4902,6 +4909,39 @@ def _build_density_metrics_sheet_from_per_note_files(
         _inharm_fit_status = _normalize_optional_export_text(
             info.get("inharmonicity_fit_status")
         )
+        _ndf_ci = _note_density_final_bootstrap_ci(
+            fpath,
+            ratio_h=w_Hf,
+            ratio_i=w_If,
+            ratio_s=w_Sf,
+            weight_function=wf,
+        )
+        _epd_ci = _energy_distribution_density(fpath)
+        from density_uncertainty import (  # noqa: PLC0415
+            ci_relative_width_pct,
+            ci_resampling_provenance,
+        )
+        from constants import DENSITY_CI_N_BOOT, DENSITY_CI_SEED  # noqa: PLC0415
+
+        _w_ndf = float(_ndf_ci.get("note_density_final_rel_uncertainty", float("nan")))
+        if np.isfinite(_w_ndf) and abs(_w_ndf) <= 2.0:
+            _w_ndf = float(_w_ndf * 100.0)
+        _w_epd = ci_relative_width_pct(
+            float(_epd_ci.get("note_effective_component_density", float("nan"))),
+            float(_epd_ci.get("note_effective_component_density_ci_low", float("nan"))),
+            float(_epd_ci.get("note_effective_component_density_ci_high", float("nan"))),
+        )
+        _ci_width = _w_ndf if np.isfinite(_w_ndf) else _w_epd
+        if np.isfinite(_w_epd) and (not np.isfinite(_ci_width) or _w_epd > _ci_width):
+            _ci_width = _w_epd
+        _ci_prov = ci_resampling_provenance(
+            unit="partials",
+            n_resampled=_epd_ci.get("ci_basis_partial_count", float("nan")),
+            n_boot=int(DENSITY_CI_N_BOOT),
+            seed=int(DENSITY_CI_SEED),
+            independent_frame_count=_epd_ci.get("ci_basis_frame_count", float("nan")),
+            relative_width_pct=_ci_width,
+        )
         row = {
             "Note": note,
             "sample_id": compute_sample_id(
@@ -4930,13 +4970,7 @@ def _build_density_metrics_sheet_from_per_note_files(
             #   Per-note non-parametric bootstrap CI for note_density_final,
             #   resampling per-partial contributions (ratios fixed). NaN when
             #   the per-note workbook cannot be read. See density_uncertainty.py.
-            **_note_density_final_bootstrap_ci(
-                fpath,
-                ratio_h=w_Hf,
-                ratio_i=w_If,
-                ratio_s=w_Sf,
-                weight_function=wf,
-            ),
+            **_ndf_ci,
             # === PER-COMPONENT WEIGHTED CONTRIBUTIONS ====================
             #   D_x * w_x; sum to density_metric_raw.
             "weighted_harmonic_density_contribution": wh_c,
@@ -4980,7 +5014,8 @@ def _build_density_metrics_sheet_from_per_note_files(
             # (unlike the count/register-dominated note_density_final): more
             # harmonics carrying considerable energy => denser. Computed from the
             # validated harmonic peaks. Restores the historical "fatness" goal.
-            **_energy_distribution_density(fpath),
+            **_epd_ci,
+            **_ci_prov,
             "normalized_harmonic_richness_body_ceiling": _f(
                 info.get("normalized_harmonic_richness_body_ceiling")
             ),

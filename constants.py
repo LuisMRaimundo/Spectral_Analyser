@@ -296,6 +296,15 @@ INHARMONIC_MIN_PROMINENCE_DB: Final[float] = 6.0
 # persistence to 1.0 (not yet measured) so CFAR / leakage / stretch
 # remain the active gates.
 PARTIAL_PERSISTENCE_MIN_FRACTION: Final[float] = 0.7
+# Strong-persistence override for a detected but weak CFAR margin, and
+# for an isolated spacing-cap miss inside a continuous accepted run.
+PARTIAL_PERSISTENCE_STRONG_FRACTION: Final[float] = 0.9
+# Isolated rejected_by_tolerance slots may re-enter when both neighbours
+# are included and |dev| is still below this multiple of the cap.
+TOLERANCE_CONTINUITY_OVERRIDE_FACTOR: Final[float] = 1.25
+# When the CI resamples partials and N exceeds this, a wide interval is
+# attributed to high_partial_correlation (diagnostic note only).
+CI_WIDTH_PARTIAL_CORRELATION_N: Final[int] = 30
 # Per-frame peak must sit this many dB above that frame's median magnitude
 # before it counts as "present" for persistence. Matches the 6 dB
 # inharmonic prominence default so floor ripple does not persist.
@@ -562,6 +571,9 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "INHARMONICITY_FIT_CENTS_WINDOW",
         "INHARMONICITY_FIT_ORDER_CAP",
         "PARTIAL_PERSISTENCE_MIN_FRACTION",
+        "PARTIAL_PERSISTENCE_STRONG_FRACTION",
+        "TOLERANCE_CONTINUITY_OVERRIDE_FACTOR",
+        "CI_WIDTH_PARTIAL_CORRELATION_N",
         "KAISER_DEFAULT_BETA",
         "MAIN_LOBE_THRESHOLD_DB",
         "MASKING_ABSOLUTE_THRESHOLD_DB",

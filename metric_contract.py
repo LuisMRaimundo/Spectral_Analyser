@@ -285,9 +285,69 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         amplitude_basis="not used",
         power_basis="not used",
         normalization_scope="per note",
-        physical_interpretation="Number of validated harmonic partials.",
+        physical_interpretation=(
+            "Number of validated harmonic partials, including "
+            "validated_weak (weak-margin persistence override)."
+        ),
         not_valid_for="Equating with harmonic_slot_candidate_count.",
         ontology_family="partial_count_descriptor",
+    )
+    harmonic_validated_weak_count = MetricDefinition(
+        name="harmonic_validated_weak_count",
+        formula="count(candidate_status = validated_weak ∧ include_for_density)",
+        input_domain="validated_partials_only",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Detected harmonics admitted by persistence ≥ 0.9 despite a "
+            "CFAR margin below 3 dB."
+        ),
+        not_valid_for="Treating as a different fatness formula.",
+        ontology_family="validation_status",
+    )
+    harmonic_validated_strict_count = MetricDefinition(
+        name="harmonic_validated_strict_count",
+        formula="harmonic_validated_count − harmonic_validated_weak_count",
+        input_domain="validated_partials_only",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Pre-override include_for_density count (margin ≥ 3 dB, or "
+            "tolerance-continuity includes)."
+        ),
+        not_valid_for="Equating with harmonic_validated_count after D1.",
+        ontology_family="validation_status",
+    )
+    tolerance_continuity_override_count = MetricDefinition(
+        name="tolerance_continuity_override_count",
+        formula="count(tolerance_limb = spacing_cap_continuity)",
+        input_domain="harmonic slots after exclusive assignment",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Isolated rejected_by_tolerance slots re-included because both "
+            "neighbours are validated and |dev| < 1.25 × cap."
+        ),
+        not_valid_for="Changing F-051 exclusive assignment of shared bins.",
+        ontology_family="validation_status",
+    )
+    ci_resampling_unit = MetricDefinition(
+        name="ci_resampling_unit",
+        formula="partials | frames | frames_blocked",
+        input_domain="bootstrap configuration (estimator unchanged)",
+        unit_or_scale="category",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation="What the accompanying CI resamples.",
+        not_valid_for="Treating as a change to F-047 algebra.",
+        ontology_family="uncertainty",
     )
     subbass_member_count = MetricDefinition(
         name="subbass_member_count",
@@ -405,6 +465,10 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ci_basis_partial_count.name: ci_basis_partial_count,
         harmonic_slot_candidate_count.name: harmonic_slot_candidate_count,
         harmonic_validated_count.name: harmonic_validated_count,
+        harmonic_validated_weak_count.name: harmonic_validated_weak_count,
+        harmonic_validated_strict_count.name: harmonic_validated_strict_count,
+        tolerance_continuity_override_count.name: tolerance_continuity_override_count,
+        ci_resampling_unit.name: ci_resampling_unit,
         subbass_member_count.name: subbass_member_count,
         floor_rows_rejected_count.name: floor_rows_rejected_count,
         subbass_upper_bound_hz.name: subbass_upper_bound_hz,

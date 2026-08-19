@@ -36,6 +36,7 @@ import numpy as np
 
 from constants import (
     CI_BASIS_INDEPENDENT_FRAME_MIN,
+    CI_WIDTH_PARTIAL_CORRELATION_N,
     DENSITY_CI_DEFAULT_ON,
     DENSITY_CI_N_BOOT,
     DENSITY_CI_SEED,
@@ -52,6 +53,7 @@ __all__ = [
     "build_uncertainty_summary",
     "ci_basis_counts",
     "ci_relative_width_pct",
+    "ci_resampling_provenance",
     "evaluate_density_fragility",
     "nfft_sensitivity",
     "window_perturbation_spread_pct",
@@ -370,6 +372,61 @@ def bootstrap_effective_component_density(
         "n_boot": int(n_boot),
         "ci_mass": float(ci),
         "ci_basis_partial_count": int(amps.size),
+    }
+
+
+def ci_resampling_provenance(
+    *,
+    unit: str = "partials",
+    n_resampled: float = float("nan"),
+    n_boot: int = DENSITY_CI_N_BOOT,
+    seed: int = DENSITY_CI_SEED,
+    independent_frame_count: float = float("nan"),
+    relative_width_pct: float = float("nan"),
+    block_length_frames: float = float("nan"),
+    rel_flag_pct: float = UNCERTAINTY_REL_FLAG_PCT,
+    partial_correlation_n: int = CI_WIDTH_PARTIAL_CORRELATION_N,
+) -> Dict[str, Any]:
+    """Diagnostic CI provenance. Does not change the estimator."""
+    try:
+        n = float(n_resampled)
+    except (TypeError, ValueError):
+        n = float("nan")
+    try:
+        frames = float(independent_frame_count)
+    except (TypeError, ValueError):
+        frames = float("nan")
+    try:
+        width = float(relative_width_pct)
+    except (TypeError, ValueError):
+        width = float("nan")
+    try:
+        block = float(block_length_frames)
+    except (TypeError, ValueError):
+        block = float("nan")
+    notes: list[str] = []
+    if np.isfinite(frames) and frames < float(CI_BASIS_INDEPENDENT_FRAME_MIN):
+        notes.append("low_independent_frames")
+    token = str(unit or "partials").strip().lower() or "partials"
+    try:
+        n_corr = int(partial_correlation_n)
+    except (TypeError, ValueError):
+        n_corr = int(CI_WIDTH_PARTIAL_CORRELATION_N)
+    if token == "partials" and np.isfinite(n) and n > float(n_corr):
+        notes.append("high_partial_correlation")
+    try:
+        thresh = float(rel_flag_pct)
+    except (TypeError, ValueError):
+        thresh = float(UNCERTAINTY_REL_FLAG_PCT)
+    wide = bool(np.isfinite(width) and width > thresh)
+    return {
+        "ci_resampling_unit": token,
+        "ci_n_resampled": n if np.isfinite(n) else None,
+        "ci_bootstrap_iterations": int(n_boot),
+        "ci_block_length_frames": block if np.isfinite(block) else None,
+        "ci_seed": int(seed),
+        "ci_width_flag": "wide" if wide else "",
+        "ci_width_note": "; ".join(notes) if wide and notes else "",
     }
 
 
