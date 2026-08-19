@@ -1,0 +1,10 @@
+{
+  "settings": "replayed from main workbooks (window=blackmanharris, weight_function=log, salience=-90 dB, trombone n_fft=8192 zp=2)",
+  "max_rel_canonical_density_E2_Ds3": 0.2655746918869066,
+  "max_rel_canonical_density_E2_Ds3_note": "A2",
+  "max_rel_canonical_density_E3_C5": 0.8615130862281414,
+  "max_rel_canonical_density_E3_C5_note": "G3",
+  "max_rel_canonical_density_E3_C5_excluding_G3": 0.20888299999999999,
+  "n_E2_Ds3": 12,
+  "n_E3_C5": 20
+}

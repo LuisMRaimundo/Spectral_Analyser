@@ -145,6 +145,10 @@ class RobustOrchestrator:
         super_analyzer_path: Optional[Path] = None,
         *,
         weight_function: str = "linear",
+        harmonic_tolerance_spacing_cap_fraction: float = 0.30,
+        harmonic_body_stop_enabled: bool = True,
+        harmonic_body_stop_margin_db: float = 3.0,
+        density_ci_enabled: bool = True,
     ):
         """Initialise the orchestrator.
 
@@ -172,6 +176,12 @@ class RobustOrchestrator:
         if wf_norm not in ("linear", "log", "power"):
             wf_norm = "linear"
         self.weight_function: str = wf_norm
+        self.harmonic_tolerance_spacing_cap_fraction = float(
+            harmonic_tolerance_spacing_cap_fraction
+        )
+        self.harmonic_body_stop_enabled = bool(harmonic_body_stop_enabled)
+        self.harmonic_body_stop_margin_db = float(harmonic_body_stop_margin_db)
+        self.density_ci_enabled = bool(density_ci_enabled)
 
         self.main_analysis_output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -406,6 +416,14 @@ class RobustOrchestrator:
                         spectral_masking_enabled=False,
                         results_directory=str(output_dir),
                         compile_per_call=False,
+                        harmonic_tolerance_spacing_cap_fraction=float(
+                            self.harmonic_tolerance_spacing_cap_fraction
+                        ),
+                        harmonic_body_stop_enabled=bool(self.harmonic_body_stop_enabled),
+                        harmonic_body_stop_margin_db=float(
+                            self.harmonic_body_stop_margin_db
+                        ),
+                        density_ci_enabled=bool(self.density_ci_enabled),
                     )
 
                     result: Dict[str, Any] = {
@@ -774,6 +792,44 @@ def main() -> int:
             '(pipeline_orchestrator_gui.py).'
         ),
     )
+    parser.add_argument(
+        '--harmonic-tolerance-spacing-cap-fraction',
+        type=float,
+        default=0.30,
+        help='β: cap per-order harmonic tolerance at β·f0 (default 0.30).',
+    )
+    parser.add_argument(
+        '--harmonic-body-stop',
+        dest='harmonic_body_stop_enabled',
+        action='store_true',
+        default=True,
+        help='Enable harmonic-body noise-floor stop (default on).',
+    )
+    parser.add_argument(
+        '--no-harmonic-body-stop',
+        dest='harmonic_body_stop_enabled',
+        action='store_false',
+        help='Disable harmonic-body noise-floor stop.',
+    )
+    parser.add_argument(
+        '--harmonic-body-stop-margin-db',
+        type=float,
+        default=3.0,
+        help='Margin (dB) for the harmonic-body noise-floor stop (default 3).',
+    )
+    parser.add_argument(
+        '--density-ci',
+        dest='density_ci_enabled',
+        action='store_true',
+        default=True,
+        help='Enable per-note density bootstrap CI / fragility (default on).',
+    )
+    parser.add_argument(
+        '--no-density-ci',
+        dest='density_ci_enabled',
+        action='store_false',
+        help='Disable per-note density bootstrap CI.',
+    )
 
     args = parser.parse_args()
 
@@ -897,6 +953,12 @@ def main() -> int:
             audio_files=audio_files,
             main_analysis_output_dir=Path(args.main_output),
             weight_function=args.weight_function,
+            harmonic_tolerance_spacing_cap_fraction=float(
+                args.harmonic_tolerance_spacing_cap_fraction
+            ),
+            harmonic_body_stop_enabled=bool(args.harmonic_body_stop_enabled),
+            harmonic_body_stop_margin_db=float(args.harmonic_body_stop_margin_db),
+            density_ci_enabled=bool(args.density_ci_enabled),
         )
         results = orchestrator.run_complete_pipeline()
 

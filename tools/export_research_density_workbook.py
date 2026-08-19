@@ -1774,6 +1774,20 @@ def build_spectral_density_metrics(
             "note_density_final_uncertainty_sources": _series_or_nan(
                 merged, "note_density_final_uncertainty_sources"
             ),
+            "density_fragile": _series_or_nan(merged, "density_fragile"),
+            "density_perturbation_spread_pct": _series_or_nan(
+                merged, "density_perturbation_spread_pct"
+            ),
+            "density_effective_ceiling_hz": _series_or_nan(
+                merged, "density_effective_ceiling_hz"
+            ),
+            "harmonic_body_stop_hz": _series_or_nan(merged, "harmonic_body_stop_hz"),
+            "harmonic_body_stop_order": _series_or_nan(merged, "harmonic_body_stop_order"),
+            "validated_harmonics_above_body_stop_count": _series_or_nan(
+                merged, "validated_harmonics_above_body_stop_count"
+            ),
+            "bin_to_f0_ratio": _series_or_nan(merged, "bin_to_f0_ratio"),
+            "low_f0_resolution_warning": _series_or_nan(merged, "low_f0_resolution_warning"),
             "harmonic_density_component": harmonic_density_component,
             "inharmonic_density_component": inharmonic_density_component,
             "subbass_density_component": subbass_density_component,
@@ -2471,6 +2485,15 @@ def build_metadata_rows(
         "zero_padding": zero_padding_value,
         "harmonic_tolerance_strategy": harmonic_tolerance_strategy,
         "harmonic_tolerance": harmonic_tolerance_value,
+        "harmonic_tolerance_policy_version": mget(
+            "harmonic_tolerance_policy_version"
+        ),
+        "harmonic_tolerance_spacing_cap_fraction": mget(
+            "harmonic_tolerance_spacing_cap_fraction"
+        ),
+        "harmonic_body_stop_enabled": mget("harmonic_body_stop_enabled"),
+        "harmonic_body_stop_margin_db": mget("harmonic_body_stop_margin_db"),
+        "density_ci_enabled": mget("density_ci_enabled"),
         "frequency_min_hz": frequency_min_meta,
         "frequency_max_hz": frequency_max_meta,
         "magnitude_min_db": magnitude_min_meta,
@@ -3754,6 +3777,14 @@ def build_workbook(
         "note_density_final_ci_high",
         "note_density_final_rel_uncertainty",
         "note_density_final_uncertainty_sources",
+        "density_fragile",
+        "density_perturbation_spread_pct",
+        "density_effective_ceiling_hz",
+        "harmonic_body_stop_hz",
+        "harmonic_body_stop_order",
+        "validated_harmonics_above_body_stop_count",
+        "bin_to_f0_ratio",
+        "low_f0_resolution_warning",
         "EWSD_score_total",
         "EWSD_score_acoustic_balanced",
         "EWSD_score_total_ci_low",

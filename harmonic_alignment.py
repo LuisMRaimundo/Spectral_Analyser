@@ -30,8 +30,11 @@ from constants import (
     HARMONIC_ALIGNMENT_GOOD_MAX_MEAN_ABS_CENTS,
     HARMONIC_ALIGNMENT_GOOD_MAX_WEIGHTED_MEAN_ABS_CENTS,
     HARMONIC_ALIGNMENT_GOOD_MIN_ORDER_MATCH_RATIO,
+    HARMONIC_MATCH_TOLERANCE_CENTS,
+    HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
     HARMONIC_VALIDATION_MAX_HARMONICS,
 )
+from harmonic_peak_validation import compute_spacing_capped_tolerance_hz
 
 
 def _linear_amp_and_energy(row: pd.Series, df: pd.DataFrame) -> Tuple[float, float]:
@@ -74,6 +77,19 @@ def _adaptive_tolerance_cents(expected_hz: float, sample_rate: Optional[float], 
     return float(max(18.0, 2.0 * bw_cents))
 
 
+def _bin_spacing_hz(sample_rate: Optional[float], n_fft: Optional[int]) -> float:
+    if (
+        sample_rate is None
+        or n_fft is None
+        or not math.isfinite(float(sample_rate))
+        or not math.isfinite(float(n_fft))
+        or float(sample_rate) <= 0
+        or float(n_fft) <= 0
+    ):
+        return 0.0
+    return float(sample_rate) / float(n_fft)
+
+
 def _tolerance_for_order(
     n: int,
     f0: float,
@@ -82,9 +98,50 @@ def _tolerance_for_order(
     n_fft: Optional[int],
     tolerance_cents: Optional[float],
 ) -> float:
-    if tolerance_cents is not None:
-        return float(tolerance_cents)
-    return _adaptive_tolerance_cents(f0 * float(n), sample_rate, n_fft)
+    """Return the spacing-capped per-order tolerance in cents."""
+    base = (
+        float(tolerance_cents)
+        if tolerance_cents is not None
+        else _adaptive_tolerance_cents(f0 * float(n), sample_rate, n_fft)
+    )
+    if not math.isfinite(base) or base < 0.0:
+        base = float(HARMONIC_MATCH_TOLERANCE_CENTS)
+    bin_hz = _bin_spacing_hz(sample_rate, n_fft)
+    tol_hz, _limb = compute_spacing_capped_tolerance_hz(
+        int(n),
+        float(f0),
+        bin_spacing_hz=bin_hz,
+        harmonic_tolerance_cents=base,
+        spacing_cap_fraction=HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+    )
+    expected = float(n) * float(f0)
+    if not math.isfinite(tol_hz) or expected <= 0.0:
+        return float(base)
+    # Linear inverse keeps the uncapped limb identical to the pre-v2 cents gate.
+    return float(1200.0 * tol_hz / expected)
+
+
+def _tolerance_limb_for_order(
+    n: int,
+    f0: float,
+    *,
+    sample_rate: Optional[float],
+    n_fft: Optional[int],
+    tolerance_cents: Optional[float],
+) -> str:
+    base = (
+        float(tolerance_cents)
+        if tolerance_cents is not None
+        else _adaptive_tolerance_cents(f0 * float(n), sample_rate, n_fft)
+    )
+    _tol_hz, limb = compute_spacing_capped_tolerance_hz(
+        int(n),
+        float(f0),
+        bin_spacing_hz=_bin_spacing_hz(sample_rate, n_fft),
+        harmonic_tolerance_cents=base,
+        spacing_cap_fraction=HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+    )
+    return str(limb)
 
 
 def _in_any_harmonic_window(
@@ -282,6 +339,9 @@ def compute_harmonic_alignment_metrics(
             "energy": float(best["energy"]),
             "tolerance_cents": float(
                 _tolerance_for_order(n, f0, sample_rate=sample_rate, n_fft=n_fft, tolerance_cents=tolerance_cents)
+            ),
+            "tolerance_limb": _tolerance_limb_for_order(
+                n, f0, sample_rate=sample_rate, n_fft=n_fft, tolerance_cents=tolerance_cents
             ),
         }
 

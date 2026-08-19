@@ -31,6 +31,26 @@ import math
 from constants import (
     BODY_DENSITY_MAX_HZ,
     FULL_SPECTRUM_MAX_HZ,
+    HARMONIC_BODY_STOP_CONSECUTIVE,
+    HARMONIC_BODY_STOP_ENABLED,
+    HARMONIC_BODY_STOP_MARGIN_DB,
+    HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER,
+    HARMONIC_MATCH_TOLERANCE_CENTS,
+    HARMONIC_TOLERANCE_POLICY_VERSION,
+    HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+    INHARMONICITY_B_ENABLE_THRESHOLD,
+    INHARMONICITY_FIT_CENTS_WINDOW,
+    INHARMONICITY_FIT_ORDER_CAP,
+    DENSITY_CI_DEFAULT_ON,
+    DENSITY_CI_N_BOOT,
+    DENSITY_CI_SEED,
+    DENSITY_NOISE_GATE_ENABLED,
+    DENSITY_NOISE_GATE_POLICY,
+    DENSITY_WINDOW_PERTURBATION_MS,
+    F0_REFIT_DISCREPANCY_CENTS,
+    F0_REFIT_LOW_ORDER_MAX,
+    F0_REFIT_PROMINENCE_MIN_DB,
+    F0_REFIT_SNR_MIN_DB,
     ROBUST_SALIENT_INHARMONIC_PEAK_PICKING_ENABLED,
     DEFAULT_N_FFT, DEFAULT_HOP_LENGTH, DEFAULT_WINDOW,
     ENERGY_CONSERVATION_TOLERANCE,
@@ -347,9 +367,11 @@ from peak_component_counts import classify_peaks_harmonic_inharmonic_subbass_fro
 from energy_accounting import describe_component_energy_balance
 from data_integrity import metric_float_or_nan, metric_int_or_nan
 from acoustic_density_core import (
+    _local_maxima_peak_centers,
     canonical_f0_triplet,
     compute_acoustic_density_descriptors,
 )
+from inharmonicity_model import fit_inharmonicity_coefficient
 from mir_descriptors import compute_mir_descriptors_from_spectrum
 from temporal_segmentation import segment_attack_sustain_release
 
@@ -1036,7 +1058,12 @@ def _parabolic_peak(y, x):
 # ============================================================================
 from harmonic_peak_validation import (  # noqa: E402
     HARMONIC_CANDIDATE_STATUS_VALUES,
+    apply_harmonic_body_stop,
     cfar_peak_detection,
+    noise_gated_linear_mass,
+    refine_f0_from_low_order_peaks,
+    compute_spacing_capped_tolerance_hz,
+    evaluate_low_f0_resolution_guard,
     _classify_harmonic_candidate,
     _harmonic_inclusion_audit_exclusion_reason,
     _infer_bin_spacing_from_freqs,
@@ -2712,6 +2739,11 @@ class AudioProcessor:
         subbass_density_weight: float = 0.25,
         density_salience_threshold_db: Optional[float] = None,
         density_frequency_ceiling_hz: Optional[float] = None,
+        harmonic_tolerance_spacing_cap_fraction: Optional[float] = None,
+        harmonic_body_stop_enabled: Optional[bool] = None,
+        harmonic_body_stop_margin_db: Optional[float] = None,
+        density_ci_enabled: Optional[bool] = None,
+        density_ci_n_boot: Optional[int] = None,
         spectral_masking_enabled: bool = False,  # NEW: Control spectral masking (default: OFF for physical model)
         spectral_magnitude_smoothing_enabled: bool = DEFAULT_STFT_MAGNITUDE_SMOOTHING_ENABLED,
         parallel_processing: bool = False,
@@ -2798,6 +2830,46 @@ class AudioProcessor:
             if density_frequency_ceiling_hz is not None
             else float(min(float(self.freq_max), float(BODY_DENSITY_MAX_HZ)))
         )
+        try:
+            _beta = (
+                float(harmonic_tolerance_spacing_cap_fraction)
+                if harmonic_tolerance_spacing_cap_fraction is not None
+                else float(HARMONIC_TOLERANCE_SPACING_CAP_FRACTION)
+            )
+        except (TypeError, ValueError):
+            _beta = float(HARMONIC_TOLERANCE_SPACING_CAP_FRACTION)
+        if not np.isfinite(_beta) or _beta <= 0.0:
+            _beta = float(HARMONIC_TOLERANCE_SPACING_CAP_FRACTION)
+        self.harmonic_tolerance_spacing_cap_fraction = float(_beta)
+        self.harmonic_body_stop_enabled = (
+            bool(HARMONIC_BODY_STOP_ENABLED)
+            if harmonic_body_stop_enabled is None
+            else bool(harmonic_body_stop_enabled)
+        )
+        self.density_noise_gate_enabled = bool(DENSITY_NOISE_GATE_ENABLED)
+        try:
+            _margin = (
+                float(harmonic_body_stop_margin_db)
+                if harmonic_body_stop_margin_db is not None
+                else float(HARMONIC_BODY_STOP_MARGIN_DB)
+            )
+        except (TypeError, ValueError):
+            _margin = float(HARMONIC_BODY_STOP_MARGIN_DB)
+        if not np.isfinite(_margin) or _margin < 0.0:
+            _margin = float(HARMONIC_BODY_STOP_MARGIN_DB)
+        self.harmonic_body_stop_margin_db = float(_margin)
+        self.density_ci_enabled = (
+            bool(DENSITY_CI_DEFAULT_ON) if density_ci_enabled is None else bool(density_ci_enabled)
+        )
+        try:
+            _nboot = (
+                int(density_ci_n_boot)
+                if density_ci_n_boot is not None
+                else int(DENSITY_CI_N_BOOT)
+            )
+        except (TypeError, ValueError):
+            _nboot = int(DENSITY_CI_N_BOOT)
+        self.density_ci_n_boot = int(max(1, _nboot))
         self.logger.info(
             "Resolved density parameters: salience_threshold_db=%.2f "
             "(input=%s), frequency_ceiling_hz=%.1f (input=%s), "
@@ -3034,7 +3106,30 @@ class AudioProcessor:
                 self._edge_correction_applied_logged = False  # Reset logging flag for each file
 
                 # 3. Execute Analysis (FFT)
+                self.note = note
+                try:
+                    _f0_guard = float(self.calculate_fundamental_frequency(note))
+                except Exception:
+                    _f0_guard = float("nan")
+                self._apply_low_f0_resolution_guard(
+                    f0_hz=_f0_guard,
+                    sustain_seconds=(
+                        float(len(y)) / float(sr)
+                        if sr and float(sr) > 0.0
+                        else float("nan")
+                    ),
+                )
                 self.fft_analysis(zero_padding=zero_padding)
+                try:
+                    _sr_r = float(getattr(self, "sr", 0.0) or 0.0)
+                    _nfft_r = int(getattr(self, "n_fft", 0) or 0)
+                    _f0_r = float(self.calculate_fundamental_frequency(note))
+                    if _sr_r > 0.0 and _nfft_r > 0 and np.isfinite(_f0_r) and _f0_r > 0.0:
+                        self.bin_to_f0_ratio = float((_sr_r / float(_nfft_r)) / _f0_r)
+                        if self.bin_to_f0_ratio > 0.125:
+                            self.low_f0_resolution_warning = True
+                except Exception:
+                    pass
 
                 # 4. Generate list of partials
                 self.generate_complete_list()
@@ -3647,11 +3742,373 @@ class AudioProcessor:
         self.debug_counts_status = "not_computed"
         self.model_weight_status = "not_computed"
         self.model_weight_fallback_applied = False
+        self.harmonic_body_stop_hz = float("nan")
+        self.harmonic_body_stop_order = float("nan")
+        self.density_effective_ceiling_hz = float("nan")
+        self.validated_harmonics_above_body_stop_count = 0
+        self.low_f0_resolution_warning = False
+        self.bin_to_f0_ratio = float("nan")
+        self.density_fragile = False
+        self.density_perturbation_spread_pct = float("nan")
+        self.density_ci_relative_width_pct = float("nan")
+        self.note_density_final_ci_low = float("nan")
+        self.note_density_final_ci_high = float("nan")
 
         for model_name in self.dissonance_values:
             self.dissonance_values[model_name] = None
             self.dissonance_curves[model_name] = None
             self.dissonance_scales[model_name] = None
+
+    def _peak_center_freqs_for_inharmonicity_fit(self) -> np.ndarray:
+        """Local-maximum peak centres for the stiff-string fit.
+
+        The filtered/complete tables are often one row per FFT bin. Feeding
+        that cloud to ``fit_inharmonicity_coefficient`` snaps each order to
+        the lobe flank nearest ``n·f0`` and forces ``B ≈ 0``. Peak centres
+        keep the stretch that the spacing cap must be centred on.
+        """
+        df = getattr(self, "complete_list_df", None)
+        if df is None or getattr(df, "empty", True) or "Frequency (Hz)" not in getattr(df, "columns", []):
+            df = getattr(self, "filtered_list_df", None)
+        if df is None or getattr(df, "empty", True) or "Frequency (Hz)" not in getattr(df, "columns", []):
+            return np.asarray([], dtype=float)
+        try:
+            freq = pd.to_numeric(df["Frequency (Hz)"], errors="coerce").to_numpy(dtype=float)
+        except Exception:
+            return np.asarray([], dtype=float)
+        power = None
+        try:
+            if "Power" in df.columns:
+                power = pd.to_numeric(df["Power"], errors="coerce").to_numpy(dtype=float)
+            elif "Amplitude" in df.columns:
+                amp = pd.to_numeric(df["Amplitude"], errors="coerce").to_numpy(dtype=float)
+                power = np.square(np.maximum(amp, 0.0))
+            elif "Magnitude (dB)" in df.columns:
+                mag = pd.to_numeric(df["Magnitude (dB)"], errors="coerce").to_numpy(dtype=float)
+                power = np.power(10.0, mag / 10.0)
+        except Exception:
+            power = None
+        ok = np.isfinite(freq) & (freq > 0.0)
+        if power is not None:
+            ok = ok & np.isfinite(power)
+        freq = freq[ok]
+        if freq.size < 3:
+            return freq
+        if power is None:
+            return freq
+        power = power[ok]
+        pmax = float(np.max(power))
+        thresh = pmax * (10.0 ** (-60.0 / 10.0)) if np.isfinite(pmax) and pmax > 0.0 else 0.0
+        centers = _local_maxima_peak_centers(freq, power, thresh)
+        return centers if centers.size >= 3 else freq
+
+    def _estimate_comb_inharmonicity_B(self, f0_hz: float) -> float:
+        """Recover B so the search comb can sit on the Inharmonicity_Fit prediction.
+
+        Returns 0.0 when the fit is missing, rejected, or below the enable
+        threshold. The spacing cap is then centred on the ideal ``n·f0``.
+        """
+        try:
+            f0 = float(f0_hz)
+        except (TypeError, ValueError):
+            return 0.0
+        if not np.isfinite(f0) or f0 <= 0.0:
+            return 0.0
+        freqs = self._peak_center_freqs_for_inharmonicity_fit()
+        if freqs.size < 3:
+            return 0.0
+        # Restrict to low orders. A first-pass B=0 match of H20+ on a
+        # strongly stretched series wraps those peaks onto neighbouring
+        # integers and the joint (f0, B) fit collapses to B = 0.
+        _fit_cap = 16
+        freqs = freqs[freqs <= (float(_fit_cap) * float(f0) * 1.25)]
+        if freqs.size < 3:
+            return 0.0
+        try:
+            fit = fit_inharmonicity_coefficient(
+                candidate_freqs_hz=freqs,
+                f0_hz=float(f0),
+                order_cap=int(_fit_cap),
+                cents_window=float(INHARMONICITY_FIT_CENTS_WINDOW),
+            )
+        except Exception:
+            return 0.0
+        if str(fit.get("fit_status", "") or "") != "ok":
+            return 0.0
+        try:
+            b_hat = float(fit.get("inharmonicity_coefficient_B", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+        if not np.isfinite(b_hat) or b_hat <= float(INHARMONICITY_B_ENABLE_THRESHOLD):
+            return 0.0
+        self._harmonic_comb_B = float(b_hat)
+        self._inharmonicity_fit_for_comb = fit
+        return float(b_hat)
+
+    def _comb_expected_freqs(self, f0_hz: float, n_max: int) -> list:
+        """Expected frequencies for orders 1..n_max (stretched when B is on)."""
+        b_hat = self._estimate_comb_inharmonicity_B(float(f0_hz))
+        # When the H1–H8 refit has enough peaks, that B (including 0) is
+        # the second-pass centre. Otherwise a global peak-centre B can
+        # invent stretch on a harmonic instrument and reject real mid-orders.
+        if bool(getattr(self, "_low_order_refit_ready", False)):
+            try:
+                b_lo = float(getattr(self, "_low_order_B_refit", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                b_lo = 0.0
+            b_hat = (
+                float(b_lo)
+                if np.isfinite(b_lo) and b_lo > float(INHARMONICITY_B_ENABLE_THRESHOLD)
+                else 0.0
+            )
+        # Stretch around the caller-supplied f0. Iterative low-order refit
+        # is the only authorised f0 relocation before the capped match.
+        return [self._expected_harmonic_hz(n, float(f0_hz), b_hat) for n in range(1, int(n_max) + 1)]
+
+    @staticmethod
+    def _expected_harmonic_hz(n: int, f0_hz: float, B: float = 0.0) -> float:
+        """Expected frequency for order ``n``: stretched prediction when B is on."""
+        try:
+            order = float(n)
+            f0 = float(f0_hz)
+            b_hat = float(B)
+        except (TypeError, ValueError):
+            return float("nan")
+        if not np.isfinite(order) or order <= 0.0 or not np.isfinite(f0) or f0 <= 0.0:
+            return float("nan")
+        if np.isfinite(b_hat) and b_hat > float(INHARMONICITY_B_ENABLE_THRESHOLD):
+            return float(order * f0 * np.sqrt(1.0 + b_hat * order * order))
+        return float(order * f0)
+
+    def _spacing_capped_tol_hz(
+        self,
+        n: int,
+        f0_hz: float,
+        *,
+        bin_spacing_hz: float,
+        fallback_hz: float,
+        use_adaptive_tolerance: bool,
+    ) -> Tuple[float, str]:
+        """Per-order search half-width under the v2 spacing-capped cents policy."""
+        if not bool(use_adaptive_tolerance):
+            try:
+                fixed = float(fallback_hz)
+            except (TypeError, ValueError):
+                fixed = float("nan")
+            try:
+                f0 = float(f0_hz)
+            except (TypeError, ValueError):
+                f0 = float("nan")
+            beta = float(
+                getattr(
+                    self,
+                    "harmonic_tolerance_spacing_cap_fraction",
+                    HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+                )
+                or HARMONIC_TOLERANCE_SPACING_CAP_FRACTION
+            )
+            cap = beta * f0 if np.isfinite(f0) and f0 > 0.0 else float("inf")
+            raw = fixed if np.isfinite(fixed) and fixed > 0.0 else cap
+            raw = min(raw, cap) if np.isfinite(cap) else raw
+            bin_hz = float(bin_spacing_hz) if np.isfinite(bin_spacing_hz) and bin_spacing_hz > 0.0 else 0.0
+            if bin_hz > 0.0 and (not np.isfinite(raw) or raw < bin_hz):
+                return float(bin_hz), "bin_floor"
+            if np.isfinite(cap) and np.isfinite(raw) and raw >= cap and cap < (fixed if np.isfinite(fixed) else cap + 1.0):
+                return float(cap), "spacing_cap"
+            return float(raw), "cents"
+        return compute_spacing_capped_tolerance_hz(
+            int(n),
+            float(f0_hz),
+            bin_spacing_hz=float(bin_spacing_hz) if np.isfinite(bin_spacing_hz) else 0.0,
+            harmonic_tolerance_cents=float(HARMONIC_MATCH_TOLERANCE_CENTS),
+            spacing_cap_fraction=float(
+                getattr(
+                    self,
+                    "harmonic_tolerance_spacing_cap_fraction",
+                    HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+                )
+                or HARMONIC_TOLERANCE_SPACING_CAP_FRACTION
+            ),
+        )
+
+    def _apply_low_f0_resolution_guard(
+        self,
+        *,
+        f0_hz: float,
+        sustain_seconds: float,
+    ) -> None:
+        """Escalate ``n_fft`` when bin spacing exceeds f0/8, if the sustain allows."""
+        try:
+            sr = float(getattr(self, "sr", 0.0) or 0.0)
+            nfft = int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT)
+        except (TypeError, ValueError):
+            self.low_f0_resolution_warning = True
+            self.bin_to_f0_ratio = float("nan")
+            return
+        zp = int(getattr(self, "zero_padding", 1) or 1)
+        bin_hz = (sr / float(nfft * max(zp, 1))) if sr > 0.0 and nfft > 0 else float("nan")
+        guard = evaluate_low_f0_resolution_guard(
+            f0_hz=f0_hz,
+            bin_spacing_hz=bin_hz,
+            n_fft=nfft,
+            sample_rate_hz=sr,
+            sustain_seconds=sustain_seconds,
+        )
+        if bool(guard.get("n_fft_escalated")) and int(guard.get("n_fft", nfft)) > nfft:
+            self.n_fft = int(guard["n_fft"])
+            if getattr(self, "hop_length", None) is None:
+                self.hop_length = max(1, int(self.n_fft) // 4)
+            self.logger.info(
+                "Low-f0 resolution guard escalated n_fft %d -> %d (bin/f0=%.4f)",
+                nfft,
+                int(self.n_fft),
+                float(guard.get("bin_to_f0_ratio", float("nan"))),
+            )
+        self.bin_to_f0_ratio = float(guard.get("bin_to_f0_ratio", float("nan")))
+        self.low_f0_resolution_warning = bool(guard.get("low_f0_resolution_warning", False))
+
+    def _included_harmonic_amplitude_sum(self, cand_df: Optional[pd.DataFrame]) -> float:
+        if cand_df is None or cand_df.empty or "include_for_density" not in cand_df.columns:
+            return 0.0
+        inc = cand_df.loc[cand_df["include_for_density"].astype(bool)]
+        amp = pd.to_numeric(inc.get("Amplitude_raw"), errors="coerce")
+        if not bool(getattr(self, "density_noise_gate_enabled", DENSITY_NOISE_GATE_ENABLED)):
+            return float(np.nansum(amp.to_numpy(dtype=float)))
+        snr = pd.to_numeric(inc.get("snr_db"), errors="coerce") if "snr_db" in inc.columns else None
+        total = 0.0
+        for i, a in enumerate(amp.to_numpy(dtype=float)):
+            s = float(snr.iloc[i]) if snr is not None and i < len(snr) else float("nan")
+            total += noise_gated_linear_mass(a, snr_db=s)
+        return float(total)
+
+    def _finalize_density_uncertainty_flags(self, cand_df: pd.DataFrame) -> None:
+        """Per-note bootstrap CI, ±10 ms window perturbation, and fragility flag."""
+        from density_uncertainty import (
+            bootstrap_density_ci,
+            ci_relative_width_pct,
+            evaluate_density_fragility,
+            window_perturbation_spread_pct,
+        )
+
+        amps: list[float] = []
+        if (
+            cand_df is not None
+            and not cand_df.empty
+            and "include_for_density" in cand_df.columns
+            and "Amplitude_raw" in cand_df.columns
+        ):
+            raw = pd.to_numeric(
+                cand_df.loc[cand_df["include_for_density"].astype(bool), "Amplitude_raw"],
+                errors="coerce",
+            )
+            amps = [float(v) for v in raw.to_numpy(dtype=float) if np.isfinite(v) and v > 0.0]
+        ci_low = float("nan")
+        ci_high = float("nan")
+        point = float(sum(amps))
+        if bool(getattr(self, "density_ci_enabled", DENSITY_CI_DEFAULT_ON)) and len(amps) >= 2:
+            try:
+                ci = bootstrap_density_ci(
+                    {"H": (amps, 1.0)},
+                    n_boot=int(getattr(self, "density_ci_n_boot", DENSITY_CI_N_BOOT) or DENSITY_CI_N_BOOT),
+                    seed=int(DENSITY_CI_SEED),
+                )
+                ci_low = float(ci.get("ci_low", float("nan")))
+                ci_high = float(ci.get("ci_high", float("nan")))
+                point = float(ci.get("point_estimate", point))
+            except Exception:
+                pass
+        self.note_density_final_ci_low = ci_low
+        self.note_density_final_ci_high = ci_high
+
+        center = self._included_harmonic_amplitude_sum(cand_df)
+        shifted = [center]
+        db_s = getattr(self, "db_S", None)
+        freqs = getattr(self, "freqs", None)
+        hop = getattr(self, "hop_length", None)
+        sr = getattr(self, "sr", None)
+        try:
+            dt_ms = float(DENSITY_WINDOW_PERTURBATION_MS)
+        except (TypeError, ValueError):
+            dt_ms = 10.0
+        if (
+            db_s is not None
+            and freqs is not None
+            and hop is not None
+            and sr is not None
+            and np.asarray(db_s).ndim == 2
+            and float(sr) > 0.0
+            and int(hop) > 0
+        ):
+            lin = np.power(10.0, np.asarray(db_s, dtype=float) / 20.0)
+            n_frames = int(lin.shape[1])
+            shift = int(round((dt_ms / 1000.0) * float(sr) / float(hop)))
+            shift = max(1, shift)
+            f0 = float(getattr(self, "f0_final", getattr(self, "f0_initial", float("nan"))))
+            freq_max = float(getattr(self, "freq_max", 20000.0) or 20000.0)
+            tolerance = float(getattr(self, "tolerance", 5.0) or 5.0)
+            use_adaptive = bool(getattr(self, "use_adaptive_tolerance", True))
+            bin_hz = float(getattr(self, "sr", 0.0) or 0.0) / float(
+                max(int(getattr(self, "n_fft", 1) or 1), 1)
+            )
+            # Equal-length windows: centre is cropped by ``shift`` on both
+            # sides so ±10 ms does not compare a full-file mean to a
+            # truncated mean (that bias inflated spread on short sustains).
+            if n_frames > 2 * shift:
+                slices = (
+                    lin[:, shift : n_frames - shift],
+                    lin[:, : n_frames - 2 * shift],
+                    lin[:, 2 * shift :],
+                )
+            else:
+                slices = (lin,)
+            shifted = []
+            for sl in slices:
+                if sl.size == 0:
+                    continue
+                mag = np.mean(sl, axis=1)
+                try:
+                    rows = self._rebuild_harmonic_candidate_rows(
+                        f0_hz=f0 if np.isfinite(f0) and f0 > 0.0 else float("nan"),
+                        freq_max=freq_max,
+                        tolerance=tolerance,
+                        use_adaptive_tolerance=use_adaptive,
+                        bin_spacing=bin_hz,
+                        has_sub_bin_interpolation=True,
+                        complete_magnitudes=mag,
+                        complete_freqs=np.asarray(freqs, dtype=float),
+                    )
+                    rows, _meta = apply_harmonic_body_stop(
+                        rows,
+                        f0_hz=f0,
+                        enabled=bool(getattr(self, "harmonic_body_stop_enabled", True)),
+                        margin_db=float(getattr(self, "harmonic_body_stop_margin_db", HARMONIC_BODY_STOP_MARGIN_DB)),
+                        consecutive=int(HARMONIC_BODY_STOP_CONSECUTIVE),
+                        density_frequency_ceiling_hz=float(
+                            getattr(self, "density_frequency_ceiling_hz", 20000.0) or 20000.0
+                        ),
+                        complete_magnitudes=mag,
+                        complete_freqs=np.asarray(freqs, dtype=float),
+                    )
+                    _s = self._included_harmonic_amplitude_sum(pd.DataFrame(rows))
+                    if np.isfinite(_s) and _s > 0.0:
+                        shifted.append(_s)
+                except Exception:
+                    continue
+            if shifted:
+                center = float(shifted[0])
+        spread = window_perturbation_spread_pct(shifted, center=center)
+        # Stage-1 H-only amplitude-sum CI is biased for 1/n series (H1
+        # dominance). Fragility here is the window-perturbation check;
+        # compile-time ``note_density_final`` CI is OR-ed later.
+        flags = evaluate_density_fragility(
+            point_estimate=point,
+            ci_low=float("nan"),
+            ci_high=float("nan"),
+            perturbation_spread_pct=spread,
+        )
+        self.density_perturbation_spread_pct = float(flags.get("density_perturbation_spread_pct", float("nan")))
+        self.density_ci_relative_width_pct = float(ci_relative_width_pct(point, ci_low, ci_high))
+        self.density_fragile = bool(flags.get("density_fragile", False))
 
     # ----------------- gerar lista de harmÃ³nicos -----------------
     def _generate_harmonic_list(
@@ -3753,8 +4210,91 @@ class AudioProcessor:
 
         harmonic_list = []
         candidate_rows: list = []
+        self.f0_fit_discrepancy_cents = float("nan")
+        self.f0_refit_applied = False
+        self.f0_refit_hz = float("nan")
+        self._low_order_B_refit = 0.0
+        self._low_order_refit_ready = False
+        # First pass: H1–H8 with the cents limb only. Keep strong peaks and
+        # amplitude-weighted-LS refit f0. Apply when |refit − joint| > 15 c.
+        _joint_f0 = float("nan")
+        try:
+            _ = self._estimate_comb_inharmonicity_B(float(f0))
+            _jfit = getattr(self, "_inharmonicity_fit_for_comb", None) or {}
+            _joint_f0 = float(_jfit.get("inharmonicity_fit_f0_hz", float("nan")))
+        except Exception:
+            _joint_f0 = float("nan")
+        if not np.isfinite(_joint_f0) or _joint_f0 <= 0.0:
+            _joint_f0 = float(f0)
+        _lo_orders: list[float] = []
+        _lo_freqs: list[float] = []
+        _lo_amps: list[float] = []
+        for _n in range(1, int(F0_REFIT_LOW_ORDER_MAX) + 1):
+            _ef = float(_n) * float(f0)
+            _tol_cents = float(_ef) * float(HARMONIC_MATCH_TOLERANCE_CENTS) / 1200.0
+            _row = self._build_harmonic_candidate_row(
+                hnum=int(_n),
+                expected_freq_hz=float(_ef),
+                tol_hz=float(_tol_cents),
+                complete_magnitudes=complete_magnitudes,
+                complete_freqs=complete_freqs,
+                f0_hz=float(f0),
+                bin_spacing_hz=float(bin_spacing) if bin_spacing else float("nan"),
+                tolerance_limb="cents",
+            )
+            try:
+                _snr = float(_row.get("snr_db", float("nan")))
+                _prom = float(_row.get("prominence_db", float("nan")))
+                _fr = float(_row.get("Frequency (Hz)", float("nan")))
+                _amp = float(_row.get("Amplitude_raw", _row.get("Amplitude", float("nan"))))
+            except (TypeError, ValueError):
+                continue
+            if (
+                np.isfinite(_snr)
+                and _snr >= float(F0_REFIT_SNR_MIN_DB)
+                and np.isfinite(_prom)
+                and _prom >= float(F0_REFIT_PROMINENCE_MIN_DB)
+                and np.isfinite(_fr)
+                and _fr > 0.0
+                and np.isfinite(_amp)
+                and _amp > 0.0
+            ):
+                _lo_orders.append(float(_n))
+                _lo_freqs.append(float(_fr))
+                _lo_amps.append(float(_amp))
+        _refit = refine_f0_from_low_order_peaks(
+            _lo_orders,
+            _lo_freqs,
+            _lo_amps,
+            f0_joint_hz=float(_joint_f0),
+            f0_seed_hz=float(f0),
+            discrepancy_cents=float(F0_REFIT_DISCREPANCY_CENTS),
+        )
+        self.f0_fit_discrepancy_cents = float(_refit.get("f0_fit_discrepancy_cents", float("nan")))
+        self.f0_refit_hz = float(_refit.get("f0_refit_hz", float("nan")))
+        self.f0_refit_applied = bool(_refit.get("f0_refit_applied", False))
+        try:
+            _b_lo = float(_refit.get("B_refit", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            _b_lo = 0.0
+        self._low_order_B_refit = (
+            float(_b_lo)
+            if np.isfinite(_b_lo) and _b_lo > float(INHARMONICITY_B_ENABLE_THRESHOLD)
+            else 0.0
+        )
+        self._low_order_refit_ready = int(_refit.get("n_peaks_used", 0) or 0) >= 3
+        if self.f0_refit_applied and np.isfinite(self.f0_refit_hz) and self.f0_refit_hz > 0.0:
+            self.logger.info(
+                "Low-order f0 refit applied: joint=%.4f Hz -> refit=%.4f Hz "
+                "(discrepancy=%.2f cents, n=%d).",
+                float(_joint_f0),
+                float(self.f0_refit_hz),
+                float(self.f0_fit_discrepancy_cents),
+                int(_refit.get("n_peaks_used", 0)),
+            )
+            f0 = float(self.f0_refit_hz)
         max_harm = int(freq_max / f0) + 1
-        expected = [f0 * n for n in range(1, max_harm + 1)]
+        expected = self._comb_expected_freqs(float(f0), max_harm)
         # AUDIT NOTE — this is the count of *expected* harmonic ORDERS up to
         # freq_max (an upper bound). Acceptance requires a validated local
         # peak inside the tolerance window (see `_is_local_peak_valid`); the
@@ -3794,19 +4334,16 @@ class AudioProcessor:
         # 4. The closest frequency minimizes the error: |f_detected - f_expected| which is the mathematical criterion
         
         last_tol_hz: float = float(tolerance) if tolerance else 0.0
+        last_tol_limb: str = "cents"
         for hnum, ef in enumerate(expected, 1):
-            # Tolerance based on bin spacing
-            if bin_spacing and has_sub_bin_interpolation:
-                # With sub-bin interpolation: 0.5 bin tolerance
-                # Without: 1.0 bin tolerance
-                tolerance_bins = 0.5 if has_sub_bin_interpolation else 1.0
-                tol_hz_from_bin = bin_spacing * tolerance_bins
-                # Adaptive tolerance (2% or bin-based, use the more restrictive)
-                tol_hz_adaptive = ef * 0.02 if use_adaptive_tolerance else tolerance
-                tol_hz = max(tol_hz_from_bin, tol_hz_adaptive)
-            else:
-                # Fallback: adaptive tolerance only
-                tol_hz = max(tolerance, ef * 0.02) if use_adaptive_tolerance else tolerance
+            _bin_for_tol = float(bin_spacing) if bin_spacing else float(_validation_bin_hz)
+            tol_hz, last_tol_limb = self._spacing_capped_tol_hz(
+                int(hnum),
+                float(f0),
+                bin_spacing_hz=_bin_for_tol,
+                fallback_hz=float(tolerance) if tolerance else 0.0,
+                use_adaptive_tolerance=bool(use_adaptive_tolerance),
+            )
             last_tol_hz = float(tol_hz)
             # ------------------------------------------------------------
             # CANDIDATE PATH — populate harmonic_spectrum_candidates with
@@ -3824,6 +4361,7 @@ class AudioProcessor:
                     complete_freqs=complete_freqs,
                     f0_hz=_validation_f0_hz,
                     bin_spacing_hz=_validation_bin_hz,
+                    tolerance_limb=str(last_tol_limb),
                 )
             )
             
@@ -4092,6 +4630,17 @@ class AudioProcessor:
             else:
                 fit_rej = str(fit_rej or "nominal_guided_validation_rejected")
 
+        if bool(getattr(self, "f0_refit_applied", False)):
+            try:
+                _ref = float(getattr(self, "f0_refit_hz", float("nan")))
+            except (TypeError, ValueError):
+                _ref = float("nan")
+            if np.isfinite(_ref) and _ref > 0.0:
+                accept_f0 = True
+                f0_est = float(_ref)
+                f0_acceptance_mode = "low_order_refit"
+                fit_rej = None
+
         self.f0_robust_fit_quality = float(fit_quality)
 
         _fq_pass: Optional[float] = (
@@ -4200,6 +4749,45 @@ class AudioProcessor:
                 complete_freqs=complete_freqs,
             )
 
+        try:
+            _dceil_stop = float(
+                getattr(self, "density_frequency_ceiling_hz", BODY_DENSITY_MAX_HZ)
+                or BODY_DENSITY_MAX_HZ
+            )
+        except (TypeError, ValueError):
+            _dceil_stop = float(BODY_DENSITY_MAX_HZ)
+        candidate_rows, _body_stop_meta = apply_harmonic_body_stop(
+            candidate_rows,
+            f0_hz=float(_f0_for_candidates if np.isfinite(_f0_for_candidates) else f0),
+            enabled=bool(getattr(self, "harmonic_body_stop_enabled", HARMONIC_BODY_STOP_ENABLED)),
+            margin_db=float(
+                getattr(self, "harmonic_body_stop_margin_db", HARMONIC_BODY_STOP_MARGIN_DB)
+            ),
+            consecutive=int(HARMONIC_BODY_STOP_CONSECUTIVE),
+            density_frequency_ceiling_hz=_dceil_stop,
+            complete_magnitudes=complete_magnitudes,
+            complete_freqs=complete_freqs,
+        )
+        self.harmonic_body_stop_hz = float(_body_stop_meta.get("harmonic_body_stop_hz", _dceil_stop))
+        self.harmonic_body_stop_order = _body_stop_meta.get("harmonic_body_stop_order", float("nan"))
+        # Body stop is a validation cut only; density uses the global ceiling.
+        self.density_effective_ceiling_hz = float(_dceil_stop)
+        self.validated_harmonics_above_body_stop_count = int(
+            _body_stop_meta.get("validated_harmonics_above_body_stop_count", 0) or 0
+        )
+        _stop_order = _body_stop_meta.get("harmonic_body_stop_order")
+        if harmonic_list and _body_stop_meta.get("harmonic_body_stop_triggered"):
+            try:
+                _stop_n = int(_stop_order)
+            except (TypeError, ValueError):
+                _stop_n = None
+            if _stop_n is not None:
+                harmonic_list = [
+                    row
+                    for row in harmonic_list
+                    if int(row.get("Harmonic Number", 0) or 0) <= _stop_n
+                ]
+
         self.harmonic_list_df = pd.DataFrame(harmonic_list).reset_index(drop=True) if harmonic_list else pd.DataFrame()
 
         # Materialise the harmonic_spectrum_candidates_df and surface the
@@ -4225,6 +4813,7 @@ class AudioProcessor:
                 _fq_h = pd.to_numeric(cand_df["Frequency (Hz)"], errors="coerce")
                 cand_df.loc[_fq_h < _cut_h, "include_for_density"] = False
         self.harmonic_spectrum_candidates_df = cand_df
+        self._finalize_density_uncertainty_flags(cand_df)
         candidate_n = int(len(cand_df))
         self.harmonic_candidate_count_20khz = int(candidate_n)
         try:
@@ -4240,10 +4829,7 @@ class AudioProcessor:
             density_included_n = int(cand_df["include_for_density"].astype(bool).sum())
             self.strict_harmonic_count = int(density_included_n)
             strict_n = int(density_included_n)
-            amp_for_density = pd.to_numeric(
-                cand_df.loc[cand_df["include_for_density"].astype(bool), "Amplitude_raw"], errors="coerce"
-            )
-            harm_amp_sum = float(np.nansum(amp_for_density.to_numpy(dtype=float)))
+            harm_amp_sum = self._included_harmonic_amplitude_sum(cand_df)
         else:
             density_included_n = 0
             strict_n = 0
@@ -4747,14 +5333,14 @@ class AudioProcessor:
 
         max_harm = int(float(freq_max) / float(f0_hz)) + 1
         rows: list = []
-        for hnum, ef in enumerate((float(f0_hz) * n for n in range(1, max_harm + 1)), 1):
-            if bin_spacing and has_sub_bin_interpolation:
-                tolerance_bins = 0.5 if has_sub_bin_interpolation else 1.0
-                tol_hz_from_bin = float(bin_spacing) * tolerance_bins
-                tol_hz_adaptive = ef * 0.02 if use_adaptive_tolerance else tolerance
-                tol_hz = max(tol_hz_from_bin, tol_hz_adaptive)
-            else:
-                tol_hz = max(tolerance, ef * 0.02) if use_adaptive_tolerance else tolerance
+        for hnum, ef in enumerate(self._comb_expected_freqs(float(f0_hz), max_harm), 1):
+            tol_hz, tol_limb = self._spacing_capped_tol_hz(
+                int(hnum),
+                float(f0_hz),
+                bin_spacing_hz=_bin_hz,
+                fallback_hz=float(tolerance) if tolerance else 0.0,
+                use_adaptive_tolerance=bool(use_adaptive_tolerance),
+            )
             rows.append(
                 self._build_harmonic_candidate_row(
                     hnum=int(hnum),
@@ -4764,6 +5350,7 @@ class AudioProcessor:
                     complete_freqs=complete_freqs,
                     f0_hz=float(f0_hz),
                     bin_spacing_hz=_bin_hz,
+                    tolerance_limb=str(tol_limb),
                 )
             )
         return rows
@@ -4781,6 +5368,7 @@ class AudioProcessor:
         complete_freqs: Optional[np.ndarray],
         f0_hz: Optional[float] = None,
         bin_spacing_hz: Optional[float] = None,
+        tolerance_limb: str = "cents",
     ) -> Dict[str, Any]:
         """Build one ``harmonic_spectrum_candidates`` row for harmonic order
         ``hnum`` (expected frequency = ``expected_freq_hz``).
@@ -4825,6 +5413,8 @@ class AudioProcessor:
             "local_peak_valid": False,
             "candidate_status": "missing_window",
             "include_for_density": False,
+            "tolerance_limb": str(tolerance_limb or "cents"),
+            "above_harmonic_body_stop": False,
             "Magnitude (dB)": nan,
             "Note": getattr(self, "note", None),
         }
@@ -5010,6 +5600,9 @@ class AudioProcessor:
         _rel_ratio = 0.01 if int(hnum) <= 10 else 0.025
         _rel_floor_hz = _rel_ratio * float(expected_freq_hz)
         _max_dev_hz_gate = max(_abs_floor_hz, _rel_floor_hz)
+        # Never allow the deviation gate to exceed the spacing-capped search window.
+        if np.isfinite(float(tol_hz)) and float(tol_hz) > 0.0:
+            _max_dev_hz_gate = min(float(_max_dev_hz_gate), float(tol_hz))
         _freq_deviation_abs = abs(float(extracted_freq) - float(expected_freq_hz))
         if _freq_deviation_abs > _max_dev_hz_gate:
             status = "off_frequency"
@@ -5054,6 +5647,8 @@ class AudioProcessor:
                 "local_peak_valid": bool(local_peak_valid),
                 "candidate_status": str(status),
                 "include_for_density": bool(include),
+                "tolerance_limb": str(tolerance_limb or "cents"),
+                "above_harmonic_body_stop": False,
                 "Magnitude (dB)": float(
                     peak_refinement.get(
                         "peak_magnitude_db",
@@ -6690,6 +7285,22 @@ class AudioProcessor:
                             )
                         ih_amps_eff = np.nan_to_num(ih_amps_eff, nan=0.0, posinf=0.0, neginf=0.0)
                         ih_amps_eff = np.maximum(ih_amps_eff, 0.0)
+                        if (
+                            bool(getattr(self, "density_noise_gate_enabled", DENSITY_NOISE_GATE_ENABLED))
+                            and "snr_db" in ih_df_eff.columns
+                            and ih_amps_eff.size
+                        ):
+                            _snr_ih = pd.to_numeric(ih_df_eff["snr_db"], errors="coerce").to_numpy(dtype=float)
+                            ih_amps_eff = np.asarray(
+                                [
+                                    noise_gated_linear_mass(
+                                        float(a),
+                                        snr_db=float(_snr_ih[i]) if i < _snr_ih.size else float("nan"),
+                                    )
+                                    for i, a in enumerate(ih_amps_eff)
+                                ],
+                                dtype=float,
+                            )
                         if "Frequency (Hz)" in ih_df_eff.columns:
                             ih_freqs_eff = pd.to_numeric(
                                 ih_df_eff["Frequency (Hz)"], errors="coerce"
@@ -8627,7 +9238,19 @@ class AudioProcessor:
                     .fillna(0.0)
                     .to_numpy(dtype=float)
                 )
-                h_sum = float(np.nansum(vals))
+                if bool(getattr(self, "density_noise_gate_enabled", DENSITY_NOISE_GATE_ENABLED)) and "snr_db" in cand.columns:
+                    _snr_h = pd.to_numeric(cand.loc[inc, "snr_db"], errors="coerce").to_numpy(dtype=float)
+                    h_sum = float(
+                        sum(
+                            noise_gated_linear_mass(
+                                float(a),
+                                snr_db=float(_snr_h[i]) if i < _snr_h.size else float("nan"),
+                            )
+                            for i, a in enumerate(vals)
+                        )
+                    )
+                else:
+                    h_sum = float(np.nansum(vals))
         elif isinstance(getattr(self, "harmonic_list_df", None), pd.DataFrame) and not self.harmonic_list_df.empty:
             hl = _ensure_amp_column(self.harmonic_list_df.copy())
             if "Amplitude" in hl.columns:
@@ -9336,6 +9959,37 @@ class AudioProcessor:
             "density_frequency_ceiling_hz": metric_float_or_nan(
                 getattr(self, "density_frequency_ceiling_hz", None)
             ),
+            "density_effective_ceiling_hz": metric_float_or_nan(
+                getattr(self, "density_effective_ceiling_hz", None)
+            ),
+            "harmonic_body_stop_hz": metric_float_or_nan(
+                getattr(self, "harmonic_body_stop_hz", None)
+            ),
+            "harmonic_body_stop_order": metric_float_or_nan(
+                getattr(self, "harmonic_body_stop_order", None)
+            ),
+            "validated_harmonics_above_body_stop_count": metric_int_or_nan(
+                getattr(self, "validated_harmonics_above_body_stop_count", None)
+            ),
+            "bin_to_f0_ratio": metric_float_or_nan(
+                getattr(self, "bin_to_f0_ratio", None)
+            ),
+            "low_f0_resolution_warning": bool(
+                getattr(self, "low_f0_resolution_warning", False)
+            ),
+            "density_fragile": bool(getattr(self, "density_fragile", False)),
+            "density_perturbation_spread_pct": metric_float_or_nan(
+                getattr(self, "density_perturbation_spread_pct", None)
+            ),
+            "density_ci_relative_width_pct": metric_float_or_nan(
+                getattr(self, "density_ci_relative_width_pct", None)
+            ),
+            "note_density_final_ci_low": metric_float_or_nan(
+                getattr(self, "note_density_final_ci_low", None)
+            ),
+            "note_density_final_ci_high": metric_float_or_nan(
+                getattr(self, "note_density_final_ci_high", None)
+            ),
             "body_density_frequency_ceiling_hz": metric_float_or_nan(
                 min(
                     float(getattr(self, "density_frequency_ceiling_hz", BODY_DENSITY_MAX_HZ))
@@ -9540,6 +10194,11 @@ class AudioProcessor:
             float(_f0_used_hz) if np.isfinite(float(_f0_used_hz)) else metric_float_or_nan(None)
         )
         main_metrics["f0_used_for_density_source"] = str(_f0_used_src)
+        main_metrics["f0_fit_discrepancy_cents"] = metric_float_or_nan(
+            getattr(self, "f0_fit_discrepancy_cents", None)
+        )
+        main_metrics["f0_refit_applied"] = bool(getattr(self, "f0_refit_applied", False))
+        main_metrics["f0_refit_hz"] = metric_float_or_nan(getattr(self, "f0_refit_hz", None))
         main_metrics["f0_used_for_harmonic_validation_hz"] = (
             metric_float_or_nan(getattr(self, "f0_used_for_harmonic_validation_hz", _f0_used_hz))
         )
@@ -9957,6 +10616,7 @@ class AudioProcessor:
                     "local_peak_valid",
                     "candidate_status",
                     "include_for_density",
+                    "tolerance_limb",
                     "Note",
                 ]
                 cols = [c for c in preferred_cols if c in harmonic_sheet_df.columns]
@@ -10049,6 +10709,9 @@ class AudioProcessor:
                         local_peak_valid=_local_peak_val,
                         snr_db=_snr_val,
                         prominence_db=_prom_val,
+                        above_harmonic_body_stop=bool(
+                            _arow.get("above_harmonic_body_stop", False)
+                        ),
                     )
                     try:
                         _in_strict = int(_hnum) in _audit_strict_hnums
@@ -10078,8 +10741,12 @@ class AudioProcessor:
                             "included_in_strict_peaks": _in_strict,
                             "included_in_body_density_5khz": _included_body,
                             "exclusion_reason": _exclusion,
+                            "tolerance_limb": str(_arow.get("tolerance_limb", "") or ""),
                             "search_ceiling_hz": _search_ceiling_hz,
                             "body_density_ceiling_hz": _body_density_ceiling_hz,
+                            "density_effective_ceiling_hz": getattr(
+                                self, "density_effective_ceiling_hz", float("nan")
+                            ),
                         }
                     )
                 if _audit_rows:
@@ -10102,8 +10769,10 @@ class AudioProcessor:
                         "included_in_strict_peaks",
                         "included_in_body_density_5khz",
                         "exclusion_reason",
+                        "tolerance_limb",
                         "search_ceiling_hz",
                         "body_density_ceiling_hz",
+                        "density_effective_ceiling_hz",
                     ]
                     _pub_df(_audit_df[_audit_cols]).to_excel(
                         writer, sheet_name="Harmonic_Inclusion_Audit", index=False
@@ -11248,6 +11917,53 @@ class AudioProcessor:
                     "upper_bound_for_density_metric_component_integration_not_global_peak_search",
                 ),
                 (
+                    "harmonic_tolerance_policy_version",
+                    HARMONIC_TOLERANCE_POLICY_VERSION,
+                ),
+                (
+                    "harmonic_tolerance_spacing_cap_fraction",
+                    float(
+                        getattr(
+                            self,
+                            "harmonic_tolerance_spacing_cap_fraction",
+                            HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+                        )
+                    ),
+                ),
+                ("density_noise_gate_enabled", bool(getattr(self, "density_noise_gate_enabled", DENSITY_NOISE_GATE_ENABLED))),
+                ("density_noise_gate_policy", str(DENSITY_NOISE_GATE_POLICY)),
+                ("harmonic_body_stop_enabled", bool(getattr(self, "harmonic_body_stop_enabled", True))),
+                (
+                    "harmonic_body_stop_margin_db",
+                    float(getattr(self, "harmonic_body_stop_margin_db", HARMONIC_BODY_STOP_MARGIN_DB)),
+                ),
+                ("harmonic_body_stop_consecutive", int(HARMONIC_BODY_STOP_CONSECUTIVE)),
+                (
+                    "harmonic_body_stop_plateau_slope_db_per_order",
+                    float(HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER),
+                ),
+                ("harmonic_body_stop_hz", getattr(self, "harmonic_body_stop_hz", float("nan"))),
+                ("harmonic_body_stop_order", getattr(self, "harmonic_body_stop_order", float("nan"))),
+                (
+                    "density_effective_ceiling_hz",
+                    getattr(self, "density_effective_ceiling_hz", float("nan")),
+                ),
+                (
+                    "validated_harmonics_above_body_stop_count",
+                    int(getattr(self, "validated_harmonics_above_body_stop_count", 0) or 0),
+                ),
+                ("density_ci_enabled", bool(getattr(self, "density_ci_enabled", True))),
+                ("density_ci_n_boot", int(getattr(self, "density_ci_n_boot", DENSITY_CI_N_BOOT))),
+                ("density_ci_seed", int(DENSITY_CI_SEED)),
+                ("density_window_perturbation_ms", float(DENSITY_WINDOW_PERTURBATION_MS)),
+                ("density_fragile", bool(getattr(self, "density_fragile", False))),
+                (
+                    "density_perturbation_spread_pct",
+                    getattr(self, "density_perturbation_spread_pct", float("nan")),
+                ),
+                ("low_f0_resolution_warning", bool(getattr(self, "low_f0_resolution_warning", False))),
+                ("bin_to_f0_ratio", getattr(self, "bin_to_f0_ratio", float("nan"))),
+                (
                     "frequency_range_vs_density_ceiling_note",
                     "frequency_min_hz/frequency_max_hz define global analysis domain; "
                     "density_frequency_ceiling_hz defines density metric integration ceiling.",
@@ -11645,6 +12361,9 @@ class AudioProcessor:
                 ("f0_prior_hz", _meta_atom(getattr(self, "f0_prior_hz", None))),
                 ("f0_final_source", _meta_atom(getattr(self, "f0_final_source", None))),
                 ("f0_used_for_density_hz", _meta_atom(getattr(self, "f0_used_for_density_hz", None))),
+                ("f0_fit_discrepancy_cents", _meta_atom(getattr(self, "f0_fit_discrepancy_cents", None))),
+                ("f0_refit_applied", bool(getattr(self, "f0_refit_applied", False))),
+                ("f0_refit_hz", _meta_atom(getattr(self, "f0_refit_hz", None))),
                 (
                     "f0_used_for_density_source",
                     _meta_atom(getattr(self, "f0_used_for_density_source", None)),

@@ -25,12 +25,33 @@ per-bin peak picking / classification.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
+from constants import (
+    HARMONIC_BODY_STOP_CONSECUTIVE,
+    HARMONIC_BODY_STOP_ENABLED,
+    HARMONIC_BODY_STOP_MARGIN_DB,
+    HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER,
+    HARMONIC_MATCH_TOLERANCE_CENTS,
+    HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+    LOW_F0_BIN_TO_F0_MAX_RATIO,
+    SMOOTHING_NOISE_FLOOR_MULTIPLIER,
+    SMOOTHING_NOISE_FLOOR_PERCENTILE,
+)
+
 __all__ = [
     "HARMONIC_CANDIDATE_STATUS_VALUES",
+    "TOLERANCE_LIMB_BIN_FLOOR",
+    "TOLERANCE_LIMB_CENTS",
+    "TOLERANCE_LIMB_SPACING_CAP",
+    "apply_harmonic_body_stop",
+    "compute_spacing_capped_tolerance_hz",
+    "evaluate_low_f0_resolution_guard",
+    "noise_gated_linear_mass",
+    "noise_gated_power",
+    "refine_f0_from_low_order_peaks",
     "_parabolic_interpolation_log_magnitude",
     "_refine_peak_index",
     "_infer_bin_spacing_from_freqs",
@@ -42,6 +63,507 @@ __all__ = [
     "_local_peak_metrics",
     "_classify_harmonic_candidate",
 ]
+
+TOLERANCE_LIMB_CENTS: str = "cents"
+TOLERANCE_LIMB_SPACING_CAP: str = "spacing_cap"
+TOLERANCE_LIMB_BIN_FLOOR: str = "bin_floor"
+
+
+def compute_spacing_capped_tolerance_hz(
+    n: int,
+    f0_hz: float,
+    *,
+    bin_spacing_hz: float = 0.0,
+    harmonic_tolerance_cents: float = HARMONIC_MATCH_TOLERANCE_CENTS,
+    spacing_cap_fraction: float = HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+) -> Tuple[float, str]:
+    """Per-order harmonic search half-width in Hz, with cents / spacing-cap / bin floor.
+
+    ``tol_cents(n) = max(harmonic_tolerance_cents, 1200 * bin / (n * f0))``
+    ``tol_hz(n) = max(bin, min(n * f0 * tol_cents(n) / 1200, β * f0))``
+
+    Returns ``(tol_hz, tolerance_limb)`` with
+    ``tolerance_limb ∈ {cents, spacing_cap, bin_floor}``.
+    """
+    try:
+        order = max(int(n), 1)
+        f0 = float(f0_hz)
+    except (TypeError, ValueError):
+        return float("nan"), TOLERANCE_LIMB_CENTS
+    if not np.isfinite(f0) or f0 <= 0.0:
+        return float("nan"), TOLERANCE_LIMB_CENTS
+    expected_hz = float(order) * f0
+    try:
+        bin_hz = float(bin_spacing_hz)
+    except (TypeError, ValueError):
+        bin_hz = 0.0
+    if not np.isfinite(bin_hz) or bin_hz < 0.0:
+        bin_hz = 0.0
+    try:
+        base_cents = float(harmonic_tolerance_cents)
+    except (TypeError, ValueError):
+        base_cents = float(HARMONIC_MATCH_TOLERANCE_CENTS)
+    if not np.isfinite(base_cents) or base_cents < 0.0:
+        base_cents = float(HARMONIC_MATCH_TOLERANCE_CENTS)
+    bin_cents = (1200.0 * bin_hz / expected_hz) if expected_hz > 0.0 else 0.0
+    tol_cents = max(base_cents, bin_cents)
+    cents_hz = expected_hz * tol_cents / 1200.0
+    try:
+        beta = float(spacing_cap_fraction)
+    except (TypeError, ValueError):
+        beta = float(HARMONIC_TOLERANCE_SPACING_CAP_FRACTION)
+    if not np.isfinite(beta) or beta <= 0.0:
+        beta = float(HARMONIC_TOLERANCE_SPACING_CAP_FRACTION)
+    cap_hz = beta * f0
+    raw = min(cents_hz, cap_hz)
+    if bin_hz > 0.0 and raw < bin_hz:
+        return float(bin_hz), TOLERANCE_LIMB_BIN_FLOOR
+    if cap_hz < cents_hz:
+        return float(cap_hz), TOLERANCE_LIMB_SPACING_CAP
+    return float(cents_hz), TOLERANCE_LIMB_CENTS
+
+
+def evaluate_low_f0_resolution_guard(
+    *,
+    f0_hz: float,
+    bin_spacing_hz: float,
+    n_fft: int,
+    sample_rate_hz: float,
+    sustain_seconds: Optional[float] = None,
+    max_n_fft: int = 65536,
+    max_ratio: float = LOW_F0_BIN_TO_F0_MAX_RATIO,
+) -> Dict[str, Any]:
+    """Escalate ``n_fft`` when ``bin_spacing_hz > f0 / 8`` if the sustain allows.
+
+    Returns the (possibly escalated) ``n_fft``, ``bin_to_f0_ratio``, and
+    ``low_f0_resolution_warning`` when the ratio still exceeds the guard.
+    """
+    out: Dict[str, Any] = {
+        "n_fft": int(n_fft) if int(n_fft) > 0 else 0,
+        "bin_spacing_hz": float(bin_spacing_hz) if np.isfinite(bin_spacing_hz) else float("nan"),
+        "bin_to_f0_ratio": float("nan"),
+        "low_f0_resolution_warning": False,
+        "n_fft_escalated": False,
+    }
+    try:
+        f0 = float(f0_hz)
+        sr = float(sample_rate_hz)
+        nfft = int(n_fft)
+    except (TypeError, ValueError):
+        out["low_f0_resolution_warning"] = True
+        return out
+    if not (np.isfinite(f0) and f0 > 0.0 and np.isfinite(sr) and sr > 0.0 and nfft > 0):
+        out["low_f0_resolution_warning"] = True
+        return out
+    bin_hz = float(bin_spacing_hz) if np.isfinite(float(bin_spacing_hz)) and float(bin_spacing_hz) > 0.0 else sr / float(nfft)
+    ratio = bin_hz / f0
+    out["bin_spacing_hz"] = float(bin_hz)
+    out["bin_to_f0_ratio"] = float(ratio)
+    if ratio <= float(max_ratio):
+        return out
+    needed = int(np.ceil(sr / max(f0 * float(max_ratio), 1e-12)))
+    candidate = 1 << int(np.ceil(np.log2(max(needed, 2))))
+    candidate = int(min(max(candidate, nfft), int(max_n_fft)))
+    sustain_ok = True
+    if sustain_seconds is not None:
+        try:
+            sustain = float(sustain_seconds)
+        except (TypeError, ValueError):
+            sustain = float("nan")
+        if np.isfinite(sustain) and sustain > 0.0 and (candidate / sr) > sustain:
+            sustain_ok = False
+    if sustain_ok and candidate > nfft:
+        nfft = candidate
+        bin_hz = sr / float(nfft)
+        ratio = bin_hz / f0
+        out["n_fft"] = int(nfft)
+        out["bin_spacing_hz"] = float(bin_hz)
+        out["bin_to_f0_ratio"] = float(ratio)
+        out["n_fft_escalated"] = True
+    out["low_f0_resolution_warning"] = bool(ratio > float(max_ratio))
+    return out
+
+
+def _noise_floor_db_at_frequency(
+    *,
+    freq_hz: float,
+    complete_magnitudes: Optional[np.ndarray],
+    complete_freqs: Optional[np.ndarray],
+    fallback_noise_db: float,
+    noise_floor_percentile: float = SMOOTHING_NOISE_FLOOR_PERCENTILE,
+    noise_floor_multiplier: float = SMOOTHING_NOISE_FLOOR_MULTIPLIER,
+    window_bins: int = 50,
+) -> float:
+    if (
+        complete_magnitudes is None
+        or complete_freqs is None
+        or not np.isfinite(float(freq_hz))
+    ):
+        return float(fallback_noise_db)
+    mags = np.asarray(complete_magnitudes, dtype=float)
+    freqs = np.asarray(complete_freqs, dtype=float)
+    if mags.size == 0 or freqs.size == 0 or mags.size != freqs.size:
+        return float(fallback_noise_db)
+    idx = int(np.argmin(np.abs(freqs - float(freq_hz))))
+    lo = max(0, idx - int(window_bins))
+    hi = min(int(mags.size), idx + int(window_bins) + 1)
+    if hi <= lo:
+        return float(fallback_noise_db)
+    nf_mag = float(np.percentile(mags[lo:hi], float(noise_floor_percentile)))
+    nf_mag *= float(noise_floor_multiplier)
+    return float(20.0 * np.log10(max(nf_mag, 1e-10)))
+
+
+def apply_harmonic_body_stop(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    f0_hz: float,
+    enabled: bool = HARMONIC_BODY_STOP_ENABLED,
+    margin_db: float = HARMONIC_BODY_STOP_MARGIN_DB,
+    consecutive: int = HARMONIC_BODY_STOP_CONSECUTIVE,
+    plateau_slope_db_per_order: float = HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER,
+    density_frequency_ceiling_hz: float = 20000.0,
+    complete_magnitudes: Optional[np.ndarray] = None,
+    complete_freqs: Optional[np.ndarray] = None,
+    noise_floor_percentile: float = SMOOTHING_NOISE_FLOOR_PERCENTILE,
+    noise_floor_multiplier: float = SMOOTHING_NOISE_FLOOR_MULTIPLIER,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Exclude validated orders above the harmonic-body noise-floor stop.
+
+    Walks ``n`` upward. The smoothed harmonic envelope is the median of the
+    last five *validated* magnitudes (dB). The smoothed noise floor uses the
+    existing percentile/multiplier estimate at those frequencies. When the
+    envelope has been within ``margin_db`` of the floor for ``consecutive``
+    orders *and* the envelope slope over that window is a plateau
+    (``|slope| <= plateau_slope_db_per_order``), ``harmonic_body_stop_hz``
+    is set at the last accepted order. A decaying tail that sits several
+    dB above the floor does not fire the stop. Missing/non-validated
+    orders after the body has started also count. Orders above the stop
+    are dropped from the validated/density set but kept for the inclusion
+    audit with reason ``above_harmonic_body_stop``.
+    """
+    out_rows = [dict(r) for r in rows]
+    try:
+        f0 = float(f0_hz)
+    except (TypeError, ValueError):
+        f0 = float("nan")
+    try:
+        global_ceiling = float(density_frequency_ceiling_hz)
+    except (TypeError, ValueError):
+        global_ceiling = 20000.0
+    if not np.isfinite(global_ceiling) or global_ceiling <= 0.0:
+        global_ceiling = 20000.0
+    meta: Dict[str, Any] = {
+        "harmonic_body_stop_hz": float(global_ceiling),
+        "harmonic_body_stop_order": float("nan"),
+        "density_effective_ceiling_hz": float(global_ceiling),
+        "validated_harmonics_above_body_stop_count": 0,
+        "harmonic_body_stop_triggered": False,
+    }
+    if not out_rows or not bool(enabled) or not np.isfinite(f0) or f0 <= 0.0:
+        return out_rows, meta
+
+    def _order(row: Mapping[str, Any]) -> int:
+        for key in ("Harmonic Number", "harmonic_number", "n"):
+            if key in row:
+                try:
+                    return int(row[key])
+                except (TypeError, ValueError):
+                    continue
+        return 0
+
+    def _mag_db(row: Mapping[str, Any]) -> float:
+        for key in ("Magnitude (dB)", "magnitude_db", "peak_magnitude_db"):
+            if key in row:
+                try:
+                    v = float(row[key])
+                except (TypeError, ValueError):
+                    continue
+                if np.isfinite(v):
+                    return v
+        try:
+            amp = float(row.get("Amplitude_raw", row.get("Amplitude", float("nan"))))
+        except (TypeError, ValueError):
+            amp = float("nan")
+        if np.isfinite(amp) and amp > 0.0:
+            return float(20.0 * np.log10(amp))
+        return float("nan")
+
+    def _expected_hz(row: Mapping[str, Any], n: int) -> float:
+        try:
+            v = float(row.get("expected_frequency_hz", float("nan")))
+        except (TypeError, ValueError):
+            v = float("nan")
+        if np.isfinite(v) and v > 0.0:
+            return v
+        return float(n) * f0
+
+    def _included(row: Mapping[str, Any]) -> bool:
+        return bool(row.get("include_for_density", False))
+
+    indexed = sorted(enumerate(out_rows), key=lambda item: _order(item[1]))
+    validated_mags: List[float] = []
+    noise_ests: List[float] = []
+    last_good_n: Optional[int] = None
+    seen_validated = False
+    consec = 0
+    stop_n: Optional[int] = None
+    k_env = 5
+    k_stop = max(1, int(consecutive))
+    margin = float(margin_db)
+    try:
+        slope_lim = float(plateau_slope_db_per_order)
+    except (TypeError, ValueError):
+        slope_lim = float(HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER)
+    if not np.isfinite(slope_lim) or slope_lim < 0.0:
+        slope_lim = float(HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER)
+    envelope_history: List[float] = []
+
+    for _, row in indexed:
+        n = _order(row)
+        if n < 1:
+            continue
+        included = _included(row)
+        mag = _mag_db(row)
+        expected = _expected_hz(row, n)
+        fallback_nf = float("nan")
+        try:
+            snr = float(row.get("snr_db", float("nan")))
+        except (TypeError, ValueError):
+            snr = float("nan")
+        if np.isfinite(mag) and np.isfinite(snr):
+            fallback_nf = mag - snr
+        nf = _noise_floor_db_at_frequency(
+            freq_hz=expected,
+            complete_magnitudes=complete_magnitudes,
+            complete_freqs=complete_freqs,
+            fallback_noise_db=fallback_nf,
+            noise_floor_percentile=noise_floor_percentile,
+            noise_floor_multiplier=noise_floor_multiplier,
+        )
+        at_floor = False
+        if included and np.isfinite(mag):
+            seen_validated = True
+            validated_mags.append(mag)
+            if len(validated_mags) > k_env:
+                validated_mags = validated_mags[-k_env:]
+            if np.isfinite(nf):
+                noise_ests.append(nf)
+                if len(noise_ests) > k_env:
+                    noise_ests = noise_ests[-k_env:]
+            envelope = float(np.median(np.asarray(validated_mags, dtype=float)))
+            floor = float(np.median(np.asarray(noise_ests, dtype=float))) if noise_ests else float("-inf")
+            envelope_history.append(envelope)
+            if len(envelope_history) > k_env:
+                envelope_history = envelope_history[-k_env:]
+            if len(envelope_history) >= 2:
+                y = np.asarray(envelope_history, dtype=float)
+                x = np.arange(y.size, dtype=float)
+                slope = float(np.polyfit(x, y, 1)[0])
+            else:
+                slope = 0.0
+            at_floor = bool(np.isfinite(envelope) and np.isfinite(floor) and envelope <= floor + margin)
+            is_plateau = bool(np.isfinite(slope) and abs(slope) <= slope_lim)
+            if at_floor and is_plateau:
+                consec += 1
+            else:
+                consec = 0
+                last_good_n = n
+        elif seen_validated:
+            consec += 1
+            at_floor = True
+        if consec >= k_stop and last_good_n is not None:
+            stop_n = int(last_good_n)
+            break
+
+    if stop_n is None:
+        return out_rows, meta
+
+    stop_hz = float(stop_n) * f0
+    above = 0
+    for row in out_rows:
+        n = _order(row)
+        if n <= stop_n:
+            row["above_harmonic_body_stop"] = False
+            continue
+        if _included(row):
+            above += 1
+        row["include_for_density"] = False
+        row["above_harmonic_body_stop"] = True
+    meta.update(
+        {
+            "harmonic_body_stop_hz": float(stop_hz),
+            "harmonic_body_stop_order": int(stop_n),
+            "density_effective_ceiling_hz": float(global_ceiling),
+            "validated_harmonics_above_body_stop_count": int(above),
+            "harmonic_body_stop_triggered": True,
+        }
+    )
+    return out_rows, meta
+
+
+def noise_gated_linear_mass(
+    amplitude: float,
+    *,
+    snr_db: float = float("nan"),
+    floor_amplitude: float = float("nan"),
+) -> float:
+    """Subtract the noise-floor amplitude and clip at 0.
+
+    Policy ``subtract_floor_clip_0``: if ``snr_db`` is finite,
+    ``floor = amplitude / 10^(snr/20)``; otherwise ``floor_amplitude`` is
+    used. Mass at the floor contributes nothing.
+    """
+    try:
+        amp = float(amplitude)
+    except (TypeError, ValueError):
+        return 0.0
+    if not np.isfinite(amp) or amp <= 0.0:
+        return 0.0
+    floor = float("nan")
+    try:
+        snr = float(snr_db)
+    except (TypeError, ValueError):
+        snr = float("nan")
+    if np.isfinite(snr):
+        floor = amp / float(10.0 ** (snr / 20.0))
+    else:
+        try:
+            floor = float(floor_amplitude)
+        except (TypeError, ValueError):
+            floor = float("nan")
+    if not np.isfinite(floor) or floor < 0.0:
+        return float(amp)
+    return float(max(0.0, amp - floor))
+
+
+def noise_gated_power(
+    power: np.ndarray,
+    freqs: Optional[np.ndarray] = None,
+    *,
+    enabled: bool = True,
+    percentile: float = SMOOTHING_NOISE_FLOOR_PERCENTILE,
+    multiplier: float = SMOOTHING_NOISE_FLOOR_MULTIPLIER,
+    window_bins: int = 48,
+) -> np.ndarray:
+    """Subtract a smoothed local power floor and clip at 0."""
+    p = np.asarray(power, dtype=float).ravel()
+    if p.size == 0 or not bool(enabled):
+        return p
+    try:
+        pct = float(percentile)
+        mult = float(multiplier)
+    except (TypeError, ValueError):
+        pct, mult = 15.0, 1.5
+    if not np.isfinite(pct):
+        pct = 15.0
+    if not np.isfinite(mult) or mult <= 0.0:
+        mult = 1.5
+    win = max(3, int(window_bins))
+    finite = np.isfinite(p) & (p > 0.0)
+    if not np.any(finite):
+        return np.zeros_like(p)
+    work = np.where(finite, p, np.nan)
+    pad = np.pad(work, win, mode="edge")
+    windows = np.lib.stride_tricks.sliding_window_view(pad, 2 * win + 1)
+    with np.errstate(all="ignore"):
+        floor = np.nanpercentile(windows, pct, axis=1) * mult
+    floor = np.where(np.isfinite(floor), floor, 0.0)
+    gated = np.maximum(p - floor, 0.0)
+    gated[~finite] = 0.0
+    return gated
+
+
+def refine_f0_from_low_order_peaks(
+    orders: Sequence[float],
+    freqs_hz: Sequence[float],
+    amplitudes: Sequence[float],
+    *,
+    f0_joint_hz: float,
+    f0_seed_hz: float,
+    discrepancy_cents: float = 15.0,
+) -> Dict[str, Any]:
+    """Amplitude-weighted least-squares f0 (and B) on gated low-order peaks.
+
+    Joint model: ``(f/n)^2 = f0^2 + f0^2 B n^2``. Falls back to the
+    harmonic ``f0 = Σ w n f / Σ w n^2`` when the two-parameter fit is
+    ill-conditioned. ``f0_fit_discrepancy_cents = 1200·log2(f0_refit /
+    f0_joint)``. The refit is applied when the absolute discrepancy
+    exceeds ``discrepancy_cents``.
+    """
+    out: Dict[str, Any] = {
+        "f0_refit_hz": float("nan"),
+        "f0_joint_hz": float("nan"),
+        "f0_fit_discrepancy_cents": float("nan"),
+        "f0_refit_applied": False,
+        "B_refit": 0.0,
+        "n_peaks_used": 0,
+    }
+    try:
+        f0_joint = float(f0_joint_hz)
+    except (TypeError, ValueError):
+        f0_joint = float("nan")
+    try:
+        f0_seed = float(f0_seed_hz)
+    except (TypeError, ValueError):
+        f0_seed = float("nan")
+    if np.isfinite(f0_joint) and f0_joint > 0.0:
+        out["f0_joint_hz"] = float(f0_joint)
+    n_arr = np.asarray(orders, dtype=float).ravel()
+    f_arr = np.asarray(freqs_hz, dtype=float).ravel()
+    a_arr = np.asarray(amplitudes, dtype=float).ravel()
+    n = min(n_arr.size, f_arr.size, a_arr.size)
+    if n == 0:
+        return out
+    n_arr, f_arr, a_arr = n_arr[:n], f_arr[:n], a_arr[:n]
+    ok = (
+        np.isfinite(n_arr)
+        & (n_arr >= 1.0)
+        & np.isfinite(f_arr)
+        & (f_arr > 0.0)
+        & np.isfinite(a_arr)
+        & (a_arr > 0.0)
+    )
+    n_arr, f_arr, a_arr = n_arr[ok], f_arr[ok], a_arr[ok]
+    out["n_peaks_used"] = int(n_arr.size)
+    if n_arr.size < 1:
+        return out
+    w = np.square(a_arr / float(np.max(a_arr)))
+    denom = float(np.sum(w * n_arr * n_arr))
+    if denom <= 1e-18:
+        return out
+    f0_refit = float(np.sum(w * n_arr * f_arr) / denom)
+    b_refit = 0.0
+    y = np.square(f_arr / n_arr)
+    x = np.square(n_arr)
+    sw = float(np.sum(w))
+    swx = float(np.sum(w * x))
+    swy = float(np.sum(w * y))
+    swxx = float(np.sum(w * x * x))
+    swxy = float(np.sum(w * x * y))
+    det = sw * swxx - swx * swx
+    if n_arr.size >= 2 and abs(det) > 1e-18:
+        a_hat = (swxx * swy - swx * swxy) / det
+        c_hat = (sw * swxy - swx * swy) / det
+        if np.isfinite(a_hat) and a_hat > 0.0:
+            f0_joint_ls = float(np.sqrt(a_hat))
+            if np.isfinite(f0_joint_ls) and f0_joint_ls > 0.0:
+                f0_refit = f0_joint_ls
+                if np.isfinite(c_hat):
+                    b_refit = float(max(0.0, c_hat / a_hat))
+    if not np.isfinite(f0_refit) or f0_refit <= 0.0:
+        return out
+    if np.isfinite(f0_seed) and f0_seed > 0.0:
+        if not (0.5 * f0_seed <= f0_refit <= 2.0 * f0_seed):
+            return out
+    out["f0_refit_hz"] = float(f0_refit)
+    out["B_refit"] = float(b_refit)
+    joint = f0_joint if np.isfinite(f0_joint) and f0_joint > 0.0 else f0_seed
+    if np.isfinite(joint) and joint > 0.0:
+        disc = float(1200.0 * np.log2(f0_refit / joint))
+        out["f0_fit_discrepancy_cents"] = disc
+        out["f0_refit_applied"] = bool(abs(disc) > float(discrepancy_cents))
+    return out
 
 
 def _parabolic_interpolation_log_magnitude(
@@ -443,10 +965,13 @@ def _harmonic_inclusion_audit_exclusion_reason(
     local_peak_valid: bool,
     snr_db: Any,
     prominence_db: Any,
+    above_harmonic_body_stop: bool = False,
 ) -> str:
     """Read-only diagnostic label for Harmonic_Inclusion_Audit (export only)."""
     if bool(include_for_density):
         return "included"
+    if bool(above_harmonic_body_stop):
+        return "above_harmonic_body_stop"
     try:
         expected_hz = float(expected_frequency_hz)
     except (TypeError, ValueError):

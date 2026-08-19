@@ -200,10 +200,51 @@ HARMONIC_ALIGNMENT_GOOD_MAX_MEAN_ABS_CENTS: Final[float] = 18.0
 INHARMONICITY_FIT_ORDER_CAP: Final[int] = 40
 INHARMONICITY_FIT_CENTS_WINDOW: Final[float] = 80.0
 INHARMONICITY_B_ENABLE_THRESHOLD: Final[float] = 1e-5
+HARMONIC_TOLERANCE_SPACING_CAP_FRACTION: Final[float] = 0.30  # β
+HARMONIC_TOLERANCE_POLICY_VERSION: Final[str] = "2"
 ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC: Final[str] = (
     "tolerance_cents(n) = max(harmonic_tolerance_cents, 1200 * bin_spacing_hz / (n * f0_hz)); "
-    "enables robust harmonic assignment under finite FFT-bin resolution."
+    "enables robust harmonic assignment under finite FFT-bin resolution. "
+    "Spacing cap (policy v2): tol_hz(n) = max(bin_spacing_hz, "
+    "min(n * f0_hz * tolerance_cents(n) / 1200, "
+    "HARMONIC_TOLERANCE_SPACING_CAP_FRACTION * f0_hz)); "
+    "tolerance_limb ∈ {cents, spacing_cap, bin_floor}. "
+    "The half-width is applied around the Inharmonicity_Fit prediction "
+    "f_n = n * f0 * sqrt(1 + B * n^2) when stretch is enabled, not around "
+    "the ideal comb n * f0. "
+    "The cap prevents the cents window from exceeding a fraction of the "
+    "inter-harmonic spacing at high n, which would otherwise harvest "
+    "noise-floor ripples on low-f0 notes."
 )
+
+# Harmonic-body noise-floor stop (adaptive effective ceiling; global 20 kHz unchanged)
+# Margin 3 dB: a real decaying tail sits 6–10 dB above the floor; C1 harvest sits at 0–3 dB.
+HARMONIC_BODY_STOP_MARGIN_DB: Final[float] = 3.0
+HARMONIC_BODY_STOP_CONSECUTIVE: Final[int] = 5
+# Fire only when the envelope slope over the window is ~0 (plateau), not a decaying tail.
+HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER: Final[float] = 1.0
+HARMONIC_BODY_STOP_ENABLED: Final[bool] = True
+
+# Iterative f0 refinement before the policy-v2 capped match
+F0_REFIT_LOW_ORDER_MAX: Final[int] = 8
+F0_REFIT_SNR_MIN_DB: Final[float] = 20.0
+F0_REFIT_PROMINENCE_MIN_DB: Final[float] = 12.0
+F0_REFIT_DISCREPANCY_CENTS: Final[float] = 15.0
+
+# Density integrals count only mass above the smoothed noise floor
+DENSITY_NOISE_GATE_ENABLED: Final[bool] = True
+DENSITY_NOISE_GATE_POLICY: Final[str] = "subtract_floor_clip_0"
+
+# Density uncertainty / fragility (per-note export; default on)
+DENSITY_CI_DEFAULT_ON: Final[bool] = True
+DENSITY_CI_N_BOOT: Final[int] = 1200
+DENSITY_CI_SEED: Final[int] = 0
+DENSITY_WINDOW_PERTURBATION_MS: Final[float] = 10.0
+DENSITY_FRAGILE_CI_PCT: Final[float] = 10.0
+DENSITY_FRAGILE_PERTURBATION_PCT: Final[float] = 10.0
+
+# Escalate n_fft when bin_spacing_hz > f0 / 8 (low-f0 resolution guard)
+LOW_F0_BIN_TO_F0_MAX_RATIO: Final[float] = 0.125
 
 # Fixed frequency maximum for harmonic detection (comparability)
 FIXED_FREQ_MAX_HZ: Final[float] = 20000.0  # Fixed maximum frequency for summation (Option A: recommended)
@@ -422,7 +463,26 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "HARMONIC_MAX_CHECK",
         "HARMONIC_TOLERANCE_ADAPTIVE_FACTOR",
         "HARMONIC_TOLERANCE_BASE",
+        "HARMONIC_TOLERANCE_POLICY_VERSION",
+        "HARMONIC_TOLERANCE_SPACING_CAP_FRACTION",
         "HARMONIC_VALIDATION_MAX_HARMONICS",
+        "HARMONIC_BODY_STOP_CONSECUTIVE",
+        "HARMONIC_BODY_STOP_ENABLED",
+        "HARMONIC_BODY_STOP_MARGIN_DB",
+        "HARMONIC_BODY_STOP_PLATEAU_SLOPE_DB_PER_ORDER",
+        "F0_REFIT_DISCREPANCY_CENTS",
+        "F0_REFIT_LOW_ORDER_MAX",
+        "F0_REFIT_PROMINENCE_MIN_DB",
+        "F0_REFIT_SNR_MIN_DB",
+        "DENSITY_NOISE_GATE_ENABLED",
+        "DENSITY_NOISE_GATE_POLICY",
+        "DENSITY_CI_DEFAULT_ON",
+        "DENSITY_CI_N_BOOT",
+        "DENSITY_CI_SEED",
+        "DENSITY_FRAGILE_CI_PCT",
+        "DENSITY_FRAGILE_PERTURBATION_PCT",
+        "DENSITY_WINDOW_PERTURBATION_MS",
+        "LOW_F0_BIN_TO_F0_MAX_RATIO",
         "INHARMONICITY_FIT_CENTS_WINDOW",
         "INHARMONICITY_FIT_ORDER_CAP",
         "KAISER_DEFAULT_BETA",

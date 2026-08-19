@@ -1,3 +1,30 @@
+# Low-f₀ harmonic validation — f0 refit and noise-gated density (v4.1.0)
+
+Policy v1 integrated noise-floor mass at *pp*. Policy v2 (spacing cap) plus
+the noise gate correct that: every density integral subtracts the smoothed
+floor and clips at 0 over 0–20 kHz. The body stop remains a validation cut
+and no longer sets `density_effective_ceiling_hz`.
+
+An iterative low-order f0 (and B) refit (H1–H8, cents limb, SNR ≥ 20 dB /
+prominence ≥ 12 dB, amplitude-weighted LS) is applied when it disagrees
+with the joint fit by more than 15 cents, so a drifted centre cannot reject
+real mid-order partials. When that first pass has at least three peaks, its
+B (including 0) is the second-pass stretch; a global peak-centre B is not
+allowed to invent stretch on a harmonic instrument.
+
+# Low-f₀ harmonic validation — spacing-capped tolerance, body stop, fragility (v4.1.0)
+
+Fixes false high-n harmonic validation on low-register notes (IOWA tuba *pp*
+C1 reported 226 “validated” harmonics, most of them the 2–20 kHz noise floor).
+
+- **Spacing-capped tolerance (policy v2):** `tol_hz(n) = max(bin, min(n·f0·tol_cents(n)/1200, β·f0))` with `β = 0.30`. The half-width is centred on the Inharmonicity_Fit prediction `n·f0·√(1+B n²)` when stretch is enabled, not on the ideal comb. Audit column `tolerance_limb ∈ {cents, spacing_cap, bin_floor}`.
+- **Harmonic-body noise-floor stop:** when the validated envelope stays within 3 dB of the noise floor for 5 consecutive orders *and* the envelope slope is a plateau (≤ 1 dB/order), higher orders are excluded from the validated set (`include_for_density`). The stop is a validation cut only: density integrals still run over 0–20 kHz. A decaying tail that sits 6–10 dB above the floor does not fire the stop. `density_effective_ceiling_hz` is the global ceiling.
+- **Fragility flag:** default-on bootstrap CI plus ±10 ms window perturbation; `density_fragile` when CI width or perturbation spread exceeds 10 %. Carried through Stage 3 and the research export.
+- **Low-f₀ resolution guard:** escalate `n_fft` when `bin > f0/8` if the sustain allows; else `low_f0_resolution_warning`.
+- **GUI/CLI:** β, body-stop toggle/margin, and CI on/off next to the density ceiling control.
+- **Tests:** `tests/acoustic_validity/test_low_f0_harmonic_validation.py` and helper-level `tests/phase_12/test_low_f0_harmonic_validation.py`.
+- **Docs:** TECHNICAL_MANUAL §5.2.1; `Analysis_Metadata` carries policy version, β, stop parameters, and CI settings.
+
 # Export schema hygiene — metadata weights, sample_id, dedupe (v4.0.3)
 
 Fixes remaining export/schema bugs identified in the architecture audit after v4.0.2:

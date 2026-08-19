@@ -819,23 +819,53 @@ class RobustOrchestratorApp:
         self.entry_max_freq = ttk.Entry(lf_harmonic, width=12)
         self.entry_max_freq.insert(0, "20000.0")
         self.entry_max_freq.grid(row=1, column=1, sticky="ew")
-        ttk.Label(lf_harmonic, text="Harmonic tolerance (Hz)").grid(row=2, column=0, sticky="w", pady=(8, 0))
+        ttk.Label(lf_harmonic, text="Spacing-cap β (fraction of f0)").grid(
+            row=2, column=0, sticky="w", pady=(8, 0)
+        )
+        self.entry_spacing_cap_beta = ttk.Entry(lf_harmonic, width=12)
+        self.entry_spacing_cap_beta.insert(0, "0.30")
+        self.entry_spacing_cap_beta.grid(row=3, column=0, sticky="ew", padx=(0, 8))
+        _attach_tk_tooltip(
+            self.entry_spacing_cap_beta,
+            "Caps per-order harmonic tolerance at β·f0 so high-n windows cannot "
+            "exceed a fraction of the inter-harmonic spacing.",
+        )
+        self.var_harmonic_body_stop = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            lf_harmonic,
+            text="Harmonic-body noise-floor stop",
+            variable=self.var_harmonic_body_stop,
+        ).grid(row=3, column=1, sticky="w")
+        ttk.Label(lf_harmonic, text="Body-stop margin (dB)").grid(
+            row=4, column=0, sticky="w", pady=(8, 0)
+        )
+        self.entry_body_stop_margin_db = ttk.Entry(lf_harmonic, width=12)
+        self.entry_body_stop_margin_db.insert(0, "3.0")
+        self.entry_body_stop_margin_db.grid(row=5, column=0, sticky="ew", padx=(0, 8))
+        self.var_density_ci = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            lf_harmonic,
+            text="Density CI / fragility (default on)",
+            variable=self.var_density_ci,
+        ).grid(row=5, column=1, sticky="w")
+        ttk.Label(lf_harmonic, text="Harmonic tolerance (Hz)").grid(row=6, column=0, sticky="w", pady=(8, 0))
         self.entry_tolerance = ttk.Entry(lf_harmonic, width=12)
         self.entry_tolerance.insert(0, "5.0")
-        self.entry_tolerance.grid(row=3, column=0, sticky="ew", padx=(0, 8))
+        self.entry_tolerance.grid(row=7, column=0, sticky="ew", padx=(0, 8))
         self.var_adaptive_tolerance = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             lf_harmonic,
             text="Use adaptive tolerance",
             variable=self.var_adaptive_tolerance,
-        ).grid(row=3, column=1, sticky="w")
+        ).grid(row=7, column=1, sticky="w")
         ttk.Label(
             lf_harmonic,
-            text="f0 strategy: acoustic fit when validated; otherwise nominal fallback (reported in outputs).",
+            text="f0 strategy: acoustic fit when validated; otherwise nominal fallback (reported in outputs). "
+            "Per-note table reports density_effective_ceiling_hz and density_fragile.",
             foreground="#444444",
             wraplength=520,
             justify="left",
-        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        ).grid(row=8, column=0, columnspan=2, sticky="w", pady=(6, 0))
 
         lf_secondary = ttk.LabelFrame(tab_advanced, text="Secondary descriptors")
         lf_secondary.pack(fill=tk.X, padx=10, pady=(0, 8))
@@ -1517,6 +1547,10 @@ class RobustOrchestratorApp:
                 'enable_adaptive_path_randomization': False,
                 'density_salience_threshold_db': float(self.entry_min_db.get() or "-90"),
                 'density_frequency_ceiling_hz': float(self.entry_max_freq.get() or "20000"),
+                'harmonic_tolerance_spacing_cap_fraction': float(self.entry_spacing_cap_beta.get() or "0.30"),
+                'harmonic_body_stop_enabled': bool(self.var_harmonic_body_stop.get()),
+                'harmonic_body_stop_margin_db': float(self.entry_body_stop_margin_db.get() or "3.0"),
+                'density_ci_enabled': bool(self.var_density_ci.get()),
                 'compile': self.var_compile.get(),
                 'smart': self.var_smart.get(),
                 'use_tsne': self.var_use_tsne.get(),
@@ -2207,6 +2241,16 @@ class RobustOrchestratorApp:
                             if params.get("density_frequency_ceiling_hz", None) is None
                             else float(params.get("density_frequency_ceiling_hz"))
                         ),
+                        harmonic_tolerance_spacing_cap_fraction=float(
+                            params.get("harmonic_tolerance_spacing_cap_fraction", 0.30)
+                        ),
+                        harmonic_body_stop_enabled=bool(
+                            params.get("harmonic_body_stop_enabled", True)
+                        ),
+                        harmonic_body_stop_margin_db=float(
+                            params.get("harmonic_body_stop_margin_db", 3.0)
+                        ),
+                        density_ci_enabled=bool(params.get("density_ci_enabled", True)),
                         use_tsne=params.get('use_tsne', False),
                         use_umap=params.get('use_umap', False),
                         detect_anomalies=params.get(

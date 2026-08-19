@@ -401,6 +401,15 @@ DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
     "sethares_status",
     "density_salience_threshold_db",
     "density_frequency_ceiling_hz",
+    "density_effective_ceiling_hz",
+    "harmonic_body_stop_hz",
+    "harmonic_body_stop_order",
+    "validated_harmonics_above_body_stop_count",
+    "density_fragile",
+    "density_perturbation_spread_pct",
+    "density_ci_relative_width_pct",
+    "bin_to_f0_ratio",
+    "low_f0_resolution_warning",
     "core_harmonic_energy_ratio",
     "core_residual_energy_ratio",
     "core_subbass_energy_ratio",
@@ -540,6 +549,15 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "density_summation_mode",
     "density_salience_threshold_db",
     "density_frequency_ceiling_hz",
+    "density_effective_ceiling_hz",
+    "harmonic_body_stop_hz",
+    "harmonic_body_stop_order",
+    "validated_harmonics_above_body_stop_count",
+    "density_fragile",
+    "density_perturbation_spread_pct",
+    "density_ci_relative_width_pct",
+    "bin_to_f0_ratio",
+    "low_f0_resolution_warning",
     "body_density_frequency_ceiling_hz",
     "full_spectrum_frequency_ceiling_hz",
     "density_full_spectrum_weighted_sum_20khz",
@@ -3603,6 +3621,15 @@ def extract_density_components_from_per_note_workbook(
                     "richness_weighted_body_density_body_ceiling",
                     "spectral_slope_db_per_harmonic",
                     "density_frequency_ceiling_hz",
+                    "density_effective_ceiling_hz",
+                    "harmonic_body_stop_hz",
+                    "harmonic_body_stop_order",
+                    "validated_harmonics_above_body_stop_count",
+                    "density_fragile",
+                    "density_perturbation_spread_pct",
+                    "density_ci_relative_width_pct",
+                    "bin_to_f0_ratio",
+                    "low_f0_resolution_warning",
                     "body_density_frequency_ceiling_hz",
                     "harmonic_candidate_count_20khz",
                     "validated_harmonic_component_count_body_ceiling",
@@ -4841,6 +4868,17 @@ def _build_density_metrics_sheet_from_per_note_files(
                     info.get("validated_harmonic_component_count_body_ceiling"),
                 )
             ),
+            "density_effective_ceiling_hz": _f(info.get("density_effective_ceiling_hz")),
+            "harmonic_body_stop_hz": _f(info.get("harmonic_body_stop_hz")),
+            "harmonic_body_stop_order": _f(info.get("harmonic_body_stop_order")),
+            "validated_harmonics_above_body_stop_count": _f(
+                info.get("validated_harmonics_above_body_stop_count")
+            ),
+            "density_fragile": bool(info.get("density_fragile", False)),
+            "density_perturbation_spread_pct": _f(info.get("density_perturbation_spread_pct")),
+            "density_ci_relative_width_pct": _f(info.get("density_ci_relative_width_pct")),
+            "bin_to_f0_ratio": _f(info.get("bin_to_f0_ratio")),
+            "low_f0_resolution_warning": bool(info.get("low_f0_resolution_warning", False)),
             "probable_harmonic_component_count_body_ceiling": _f(
                 info.get("probable_harmonic_component_count_body_ceiling")
             ),
@@ -5085,6 +5123,23 @@ def _build_density_metrics_sheet_from_per_note_files(
             row[_phase5_col] = _f(info.get(_phase5_col))
         if str(info.get("density_component_basis")) == "power_sum":
             row["density_metric_power_weighted_raw"] = raw
+        try:
+            from density_uncertainty import evaluate_density_fragility
+
+            _frag = evaluate_density_fragility(
+                point_estimate=float(row.get("note_density_final", raw) or raw),
+                ci_low=float(row.get("note_density_final_ci_low", float("nan"))),
+                ci_high=float(row.get("note_density_final_ci_high", float("nan"))),
+                perturbation_spread_pct=float(
+                    row.get("density_perturbation_spread_pct", float("nan"))
+                ),
+            )
+            row["density_ci_relative_width_pct"] = _frag["density_ci_relative_width_pct"]
+            row["density_fragile"] = bool(
+                bool(row.get("density_fragile", False)) or bool(_frag["density_fragile"])
+            )
+        except Exception:
+            pass
         rows.append(row)
 
     if not rows:

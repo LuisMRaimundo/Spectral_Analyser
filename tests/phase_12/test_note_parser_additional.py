@@ -253,6 +253,18 @@ def test_dynamic_and_ambiguous_tokens_not_parsed_as_notes(text: str) -> None:
     assert parse_note_token(text) is None
 
 
+@pytest.mark.parametrize(
+    "name",
+    ["audio.aif", "audio.aiff", "audio.wav", "audio", "AUDIO.AIF"],
+)
+def test_parse_note_token_refuses_generic_audio_stems(name: str) -> None:
+    """Fixture files must keep the note in the filename; do not invent one."""
+    assert parse_note_token(name) is None
+    note, source = canonical_note_from_filename(name)
+    assert note is None
+    assert source == NOTE_SOURCE_UNKNOWN
+
+
 def test_canonical_note_unknown_for_dynamic_only_filenames() -> None:
     for name in ("pp_sustain.wav", "mf.wav", "ff_ord.wav"):
         note, source = canonical_note_from_filename(name)

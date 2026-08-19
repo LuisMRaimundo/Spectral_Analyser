@@ -263,6 +263,9 @@ def test_extract_note_name_filename_patterns() -> None:
     assert ap.extract_note_name("Viola_C4_mf.wav") == "C4"
     assert ap.extract_note_name(Path("A#3.wav")) == "A#3"
     assert ap.extract_note_name("noname.wav") is None
+    assert ap.extract_note_name("audio.aif") is None
+    assert ap.extract_note_name(Path("audio.wav")) is None
+    assert ap.calculate_fundamental_frequency("audio") == 0.0
 
 
 # ---------------------------------------------------------------------------

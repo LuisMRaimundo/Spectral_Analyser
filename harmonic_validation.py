@@ -14,8 +14,15 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from constants import HARMONIC_VALIDATION_MAX_HARMONICS
+from constants import (
+    HARMONIC_TOLERANCE_POLICY_VERSION,
+    HARMONIC_TOLERANCE_SPACING_CAP_FRACTION,
+    HARMONIC_VALIDATION_MAX_HARMONICS,
+)
 from harmonic_alignment import compute_harmonic_alignment_metrics
+from harmonic_peak_validation import compute_spacing_capped_tolerance_hz
+
+spacing_capped_tolerance_hz = compute_spacing_capped_tolerance_hz
 
 
 def _slot_count_aliases(*, expected: int, matched: int) -> Dict[str, int]:
@@ -46,12 +53,17 @@ def validate_harmonic_series_matched(
 
     ``match_tolerance_cents`` overrides adaptive per-order tolerance when set; ``None`` uses adaptive.
     ``subbass_cutoff_hz`` partitions candidates below cutoff as subbass (optional).
+    Per-order windows use the spacing-capped policy (``HARMONIC_TOLERANCE_POLICY_VERSION``).
     """
     f0 = float(f0_hz)
     out: Dict[str, Any] = {
         "fundamental_freq": f0,
         "validation_backend": "harmonic_order_alignment_cents_v2",
         "external_validation": False,
+        "harmonic_tolerance_policy_version": HARMONIC_TOLERANCE_POLICY_VERSION,
+        "harmonic_tolerance_spacing_cap_fraction": float(
+            HARMONIC_TOLERANCE_SPACING_CAP_FRACTION
+        ),
     }
 
     if peaks_df is None or peaks_df.empty or not math.isfinite(f0) or f0 <= 0:
