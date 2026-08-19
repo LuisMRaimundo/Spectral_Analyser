@@ -55,6 +55,7 @@ from constants import (
     INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE,
     EXPORT_COMPLETE_SPECTRUM_PITCH_NAMES,
     LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ,
+    DENSITY_WEIGHT_FUNCTION_DEFAULT,
     PARTIAL_PERSISTENCE_MIN_FRACTION,
     FRAME_PEAK_MIN_ABOVE_MEDIAN_DB,
     F0_REFIT_DISCREPANCY_CENTS,
@@ -119,7 +120,7 @@ PUBLICATION_OUTPUT_ALLOWED = True
 # time with a clear "regenerate analysis" message.
 # =====================================================================
 ANALYSIS_SCHEMA_VERSION = "single_pass_raw_export_v2"
-PRIMARY_COMPARABLE_WEIGHT_FUNCTION = "log"
+PRIMARY_COMPARABLE_WEIGHT_FUNCTION = DENSITY_WEIGHT_FUNCTION_DEFAULT
 PRIMARY_COMPARABLE_DENSITY_SALIENCE_THRESHOLD_DB = float("nan")
 PRIMARY_COMPARABLE_DENSITY_FREQUENCY_CEILING_HZ = float("nan")
 F0_VALIDATION_MAX_HZ_DEFAULT = float(FULL_SPECTRUM_MAX_HZ)
@@ -1906,7 +1907,7 @@ class AudioProcessor:
         self.n_fft: int = DEFAULT_N_FFT
         self.hop_length: Optional[int] = DEFAULT_HOP_LENGTH
         self.window: str = DEFAULT_WINDOW
-        self.weight_function: str = 'linear'
+        self.weight_function: str = DENSITY_WEIGHT_FUNCTION_DEFAULT
 
         # DissonÃ¢ncia â€“ opÃ§Ãµes
         self.dissonance_enabled: bool = True
@@ -2784,7 +2785,7 @@ class AudioProcessor:
         harmonic_weight: float = 0.95,  # Default: 95% (alinhado com interface)
         inharmonic_weight: float = 0.05,  # Default: 5% (alinhado com interface)
         auto_model_weights_from_analysis: bool = True,  # SINGLE-PASS REFACTOR — default canonical path: derive H/(H+I) and I/(H+I) from the current spectral analysis itself, not from a pre-computed Batch.
-        weight_function: str = "linear",
+        weight_function: str = DENSITY_WEIGHT_FUNCTION_DEFAULT,
         zero_padding: int = 1,
         time_avg: str = "mean",
         density_summation_mode: str = "his_note_adaptive",
@@ -3074,7 +3075,7 @@ class AudioProcessor:
             self.logger.warning(f"Window '{window}' may not be supported. Recommended: {valid_windows}")
         self.window = name
 
-        weight_name = (weight_function or "linear").strip().lower()
+        weight_name = (weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
         _ = get_weight_function(weight_name)  # validate
         self.weight_function = weight_name
 
@@ -5567,7 +5568,7 @@ class AudioProcessor:
 
     @staticmethod
     def _normalize_weight_function_ui_key(weight_function: Optional[str]) -> str:
-        key = str(weight_function or "linear").strip().lower()
+        key = str(weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
         if key == "d2":
             return "linear"
         if key == "d8":
@@ -7559,7 +7560,7 @@ class AudioProcessor:
                         # --- CORREÇÃO: CÁLCULO DINÂMICO DOS PESOS ---
                         # Lê os valores definidos na interface em vez de usar fixos
                         h_weight = float(getattr(self, "harmonic_weight", 0.95))
-                        w_func = str(getattr(self, "weight_function", "linear")).lower()
+                        w_func = str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT)).lower()
 
                         if w_func == "log":
                             # Constant Power / Equal Power (Seno/Cosseno)
@@ -7706,7 +7707,7 @@ class AudioProcessor:
                     famps = None
 
                 if famps is not None and famps.size > 0:
-                    _wf_fd = str(self.weight_function or "linear").strip().lower()
+                    _wf_fd = str(self.weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
                     _freq_fd = None
                     if _wf_fd == "d24" and "Frequency (Hz)" in self.filtered_list_df.columns:
                         _freq_fd = pd.to_numeric(
@@ -8833,7 +8834,7 @@ class AudioProcessor:
         2) Residual ``max(0, filtered_density - harmonic_density)`` (same ``apply_density_metric`` units).
         3) Fallback: density on complete-list rows farther than ~1 STFT bin from any harmonic frequency.
         """
-        wf = str(getattr(self, "weight_function", "linear") or "linear").strip().lower()
+        wf = str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
         ih_amp = np.asarray(getattr(self, "_metrics_ih_amps_eff", []), dtype=float).reshape(-1)
         ih_fr = getattr(self, "_metrics_ih_freqs_eff", None)
 
@@ -9093,7 +9094,7 @@ class AudioProcessor:
 
             # ---- Density Metric (absoluta; restored from older version) ----
             if self.density_metric_value is None:
-                _wf_dm = str(self.weight_function or "linear").strip().lower()
+                _wf_dm = str(self.weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
                 _freq_dm = None
                 if _wf_dm == "d24" and "Frequency (Hz)" in self.harmonic_list_df.columns:
                     _freq_dm = pd.to_numeric(
@@ -9126,7 +9127,7 @@ class AudioProcessor:
                             )
                     if "Amplitude" in self.filtered_list_df.columns:
                         famps_c = self.filtered_list_df["Amplitude"].to_numpy(float)
-                        _wf_fdc = str(self.weight_function or "linear").strip().lower()
+                        _wf_fdc = str(self.weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
                         _freq_fdc = None
                         if _wf_fdc == "d24" and "Frequency (Hz)" in self.filtered_list_df.columns:
                             _freq_fdc = pd.to_numeric(
@@ -9356,7 +9357,7 @@ class AudioProcessor:
         anomaly_contamination: Optional[float] = None,
         harmonic_weight: float = 0.95,
         inharmonic_weight: float = 0.05,
-        weight_function: str = "linear"
+        weight_function: str = DENSITY_WEIGHT_FUNCTION_DEFAULT
     ) -> None:
         try:
             from compile_metrics import compile_density_metrics_with_pca, extract_dynamics_from_path
@@ -10431,7 +10432,7 @@ class AudioProcessor:
             _cd0 = getattr(self, "density_metric_value", None)
         main_metrics: Dict[str, Any] = {
             "Note": note,
-            "weight_function": str(getattr(self, "weight_function", "linear") or "linear"),
+            "weight_function": str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT),
             "canonical_density_v5_adapted": metric_float_or_nan(_cd0),
             "density_per_component": metric_float_or_nan(getattr(self, "density_per_component", None)),
             "discrete_metric_d3": metric_float_or_nan(getattr(self, "discrete_metric_d3", None)),
@@ -11079,7 +11080,7 @@ class AudioProcessor:
         )
 
         # Explicit semantic basis contract for the primary scalar.
-        _wf_key = str(getattr(self, "weight_function", "linear") or "linear")
+        _wf_key = str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT)
         main_metrics["metric_contract_value_name"] = "his_energy_ratio_weighted_log_density"
         main_metrics["metric_contract_formula"] = "D_H*w_H + D_I*w_I + D_S*w_S"
         main_metrics["metric_contract_basis"] = density_metric_basis_label(_wf_key)
@@ -11092,7 +11093,7 @@ class AudioProcessor:
         )
         main_metrics["metric_contract_ontology_family"] = "composite_metric"
         main_metrics.update(metric_contract_export_fields("density_metric_raw"))
-        _wf_cmp = str(getattr(self, "weight_function", "linear") or "linear").strip().lower()
+        _wf_cmp = str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
         _dst_cmp = float(getattr(self, "density_salience_threshold_db", float("nan")))
         _dceil_cmp = float(getattr(self, "density_frequency_ceiling_hz", float("nan")))
         _is_primary_profile = (_wf_cmp == PRIMARY_COMPARABLE_WEIGHT_FUNCTION)
@@ -11246,7 +11247,7 @@ class AudioProcessor:
             _dm = getattr(self, "density_metric_value", None)
         return {
             "Note": note,
-            "weight_function": str(getattr(self, "weight_function", "linear") or "linear"),
+            "weight_function": str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT),
             "Density Metric": metric_float_or_nan(_dm),
             "Spectral Density Metric": metric_float_or_nan(
                 getattr(self, "spectral_density_metric_value", None)
@@ -13785,7 +13786,7 @@ class AudioProcessor:
                     int(getattr(self, "n_fft", 0) or 0),
                     hop_length_param,
                     str(getattr(self, "window", "")),
-                    str(getattr(self, "weight_function", "linear")),
+                    str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT)),
                     f"{_h_lo} - {_h_hi}",
                     f"{_lf_lo} - {_f020_hz}",
                     f"{float(getattr(self, 'db_min', -90.0) or -90.0)} - {float(getattr(self, 'db_max', 0.0) or 0.0)}",

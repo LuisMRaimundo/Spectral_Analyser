@@ -11,6 +11,8 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 - Fletcher, N. H., & Rossing, T. D. (1998). *The physics of musical instruments* (2nd ed.). Springer.
 
 ## Psychoacoustics
+- Fechner, G. T. (1860). *Elemente der Psychophysik*. Breitkopf und Härtel.
+- Stevens, S. S. (1955). The measurement of loudness. *Journal of the Acoustical Society of America, 27*(5), 815–829.
 - Zwicker, E., & Fastl, H. (1990). *Psychoacoustics: Facts and models*. Springer.
 - Moore, B. C. J., & Glasberg, B. R. (1983). Suggested formulae for calculating auditory-filter bandwidths and excitation patterns. *Journal of the Acoustical Society of America, 74*(3), 750–753.
 - Aures, W. (1985). Ein Berechnungsverfahren der Rauhigkeit. *Acustica, 58*(5), 268–281.
@@ -40,6 +42,7 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 | `harmonic_peak_validation.py` (CFAR acceptance) | Rohling (1983) |
 | `density_uncertainty.py` (bootstrap CI / UQ) | Efron & Tibshirani (1993) |
 | `subbass_policy.py` | Zwicker & Fastl (1990) |
+| `constants.py` (`DENSITY_WEIGHT_FUNCTION_DEFAULT`) | Fechner (1860); Stevens (1955); Zwicker & Fastl (1990) |
 | `mir_descriptors.py` | Moore & Glasberg (1983); Aures (1985); Pollard & Jansson (1982); Peeters et al. (2011) |
 | `adaptive_density_engine.py` | Lin (1991); Gelman et al. (2013) |
 | `metric_contract.py` | Hatton (1997); Soergel (2015) |

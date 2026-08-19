@@ -140,7 +140,7 @@ def test_validate_and_store_parameters_rejects_nonpositive_n_fft() -> None:
 def test_normalize_weight_function_ui_key_aliases() -> None:
     assert AudioProcessor._normalize_weight_function_ui_key("d2") == "linear"
     assert AudioProcessor._normalize_weight_function_ui_key("d8") == "d17"
-    assert AudioProcessor._normalize_weight_function_ui_key(None) == "linear"
+    assert AudioProcessor._normalize_weight_function_ui_key(None) == "log"
 
 
 # ---------------------------------------------------------------------------

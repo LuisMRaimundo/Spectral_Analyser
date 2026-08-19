@@ -54,6 +54,7 @@ sys.path.insert(0, str(Path(__file__).parent / "audio_analysis"))
 import pandas as pd
 import numpy as np
 import librosa
+from constants import DENSITY_WEIGHT_FUNCTION_DEFAULT
 
 # Tier settings (FFT sizes per fundamental-frequency cluster).
 try:
@@ -144,7 +145,7 @@ class RobustOrchestrator:
         main_analysis_output_dir: Path,
         super_analyzer_path: Optional[Path] = None,
         *,
-        weight_function: str = "linear",
+        weight_function: str = DENSITY_WEIGHT_FUNCTION_DEFAULT,
         harmonic_tolerance_spacing_cap_fraction: float = 0.30,
         harmonic_body_stop_enabled: bool = True,
         harmonic_body_stop_margin_db: float = 3.0,
@@ -158,8 +159,8 @@ class RobustOrchestrator:
                 and the compiled density metrics workbook.
             super_analyzer_path: Optional path to ``super_audio_analyzer.py``.
                 Accepted for backwards-compatible callers; not used at runtime.
-            weight_function: Stage 2 weighting algorithm — one of
-                ``"linear"`` (default), ``"log"``, or ``"power"``. Passed
+            weight_function: Stage 2 weighting algorithm. Default is
+                ``DENSITY_WEIGHT_FUNCTION_DEFAULT`` (``"log"``). Passed
                 through to ``compile_density_metrics_with_pca`` and
                 surfaced to ``proc_audio`` so each per-note
                 ``Analysis_Metadata`` records which algorithm Stage 1
