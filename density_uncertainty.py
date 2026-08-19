@@ -421,9 +421,9 @@ def ci_resampling_provenance(
     wide = bool(np.isfinite(width) and width > thresh)
     return {
         "ci_resampling_unit": token,
-        "ci_n_resampled": n if np.isfinite(n) else float("nan"),
+        "ci_n_resampled": n if np.isfinite(n) else None,
         "ci_bootstrap_iterations": int(n_boot),
-        "ci_block_length_frames": block,
+        "ci_block_length_frames": block if np.isfinite(block) else None,
         "ci_seed": int(seed),
         "ci_width_flag": "wide" if wide else "",
         "ci_width_note": "; ".join(notes) if wide and notes else "",

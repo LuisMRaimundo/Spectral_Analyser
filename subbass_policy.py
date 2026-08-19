@@ -39,7 +39,7 @@ class SubBassPolicy:
                 "subbass_bound_f0_used_hz": float("nan"),
             }
         return {
-            "subbass_upper_bound_hz": float(min(0.5 * f0, SUBBASS_BOUND_CAP_HZ)),
+            "subbass_upper_bound_hz": float(min(0.5 * f0, 80.0)),
             "subbass_bound_formula": SUBBASS_BOUND_FORMULA,
             "subbass_bound_f0_used_hz": float(f0),
         }
