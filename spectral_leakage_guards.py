@@ -15,8 +15,10 @@ from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
-# Generic STFT main-lobe width order (bins); overridden when callers pass measured width.
-DEFAULT_MAIN_LOBE_WIDTH_BINS = 4.0
+from constants import RESIDUAL_EXCLUSION_FOOTPRINT
+
+# Residual-exclusion diameter (BH-4 ±4 bins). Peak-power still uses ENBW.
+DEFAULT_MAIN_LOBE_WIDTH_BINS = float(RESIDUAL_EXCLUSION_FOOTPRINT)
 
 
 def leakage_halfwidth_hz(

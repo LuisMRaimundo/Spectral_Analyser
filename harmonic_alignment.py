@@ -302,6 +302,24 @@ def compute_harmonic_alignment_metrics(
         else:
             inharmonic.append(p)
 
+    from spectral_leakage_guards import leakage_halfwidth_hz
+
+    _excl_half = float(
+        leakage_halfwidth_hz(sr=sample_rate, n_fft=n_fft)
+    )
+    if _excl_half > 0.0 and n_slots > 0 and inharmonic:
+        _kept_inh: List[Dict[str, Any]] = []
+        for p in inharmonic:
+            f_hz = float(p["f_hz"])
+            _skirt = False
+            for n in range(1, n_slots + 1):
+                if abs(f_hz - (f0 * float(n))) <= _excl_half:
+                    _skirt = True
+                    break
+            if not _skirt:
+                _kept_inh.append(p)
+        inharmonic = _kept_inh
+
     e_sub = float(sum(p["energy"] for p in subbass))
     e_region = float(sum(p["energy"] for p in region))
     e_inh = float(sum(p["energy"] for p in inharmonic))

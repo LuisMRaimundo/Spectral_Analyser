@@ -77,8 +77,12 @@ Provenance (Phase E): `analysis_version` is package metadata + `git describe --a
 | `validated_harmonics_above_body_stop_count` | CFAR-validated (or include-true) then excluded by the body stop; **not** included |
 | `energy_basis` | `psd_per_hz` after D6; pre-fix per-bin workbooks are not comparable |
 | `window_enbw_hz` | Window equivalent noise bandwidth (Hz) |
-| `peak_footprint_bins` | ENBW in bins used for peak energy and residual exclusion |
-| `residual_region_hz_total` | Hz remaining after main-lobe footprint exclusion |
+| `peak_footprint_bins` | ENBW in bins used for the peak-power estimate (alias of `peak_power_footprint_bins`) |
+| `peak_power_footprint_bins` | ENBW in bins used for the peak-power estimate only |
+| `residual_exclusion_footprint_bins` | Main-lobe diameter in bins used to keep skirts out of the residual (BH-4 = 8) |
+| `residual_region_hz_total` | One-sided Hz remaining after exclusion-footprint union |
+| `excluded_region_hz_total` | One-sided Hz removed by the exclusion footprints |
+| `analysis_band_hz` | `f_max − f_min`; invariant: residual + excluded == analysis band |
 | `fft_policy` | `fixed` (default, comparable) or `adaptive_tier` |
 | `harmonic_acceptance_suspect` | Accepted count exceeds body-stop order + expected false slots |
 | `cfar_marginal_count` | Rows with `0 ≤ cfar_margin_db < HARMONIC_MIN_CFAR_MARGIN_DB` |

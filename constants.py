@@ -33,6 +33,9 @@ ENERGY_BASIS_PSD_PER_HZ: Final[str] = "psd_per_hz"
 # Heinzel / Harris ENBW for a Hann window, used only as a documented
 # reference; runtime ENBW is computed from the analysis window samples.
 HANN_ENBW_BINS: Final[float] = 1.5
+# Residual exclusion is the analysis-window main-lobe width, not ENBW.
+# Blackman–Harris 4-term first nulls sit at ±4 bins (Harris, 1978).
+RESIDUAL_EXCLUSION_FOOTPRINT: Final[float] = 8.0
 
 # Zero padding
 DEFAULT_ZERO_PADDING: Final[int] = 1
@@ -509,6 +512,7 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "FIXED_HOP_LENGTH_DEFAULT",
         "ENERGY_BASIS_PSD_PER_HZ",
         "HANN_ENBW_BINS",
+        "RESIDUAL_EXCLUSION_FOOTPRINT",
         "DEFAULT_PLOT_DPI",
         "DEFAULT_ZERO_PADDING",
         "DISSONANCE_PAIRWISE_PARTIAL_CAP",

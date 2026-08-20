@@ -15,11 +15,12 @@ bump is recorded.
 | G | Weight function φ | `tests/phase_20/test_weight_function_phi.py` | Sensitivity report on tuba corpus; README records ρ. | **done (PR #72)** |
 | H | Reproducibility command | `tests/phase_21/test_reproducibility_command.py` | Tuba *pp* re-export + Stage 3 diff vs 19 Aug Análise 3. | **done (PR #73)** |
 | I | Construct validation | `tests/validation/synthetic_corpus/` | Recover N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at SNR 10–40 dB. Perceptual scaffold only (no data collection). | **done (PR #74)** |
-| D1 | Weak-margin persistence override | `tests/phase_23/test_trombone_as2_defect_fixes.py` | H81–H88 `validated_weak` when p=1.0; floor peak margin 1 dB p=0.3 stays `cfar_marginal`; `harmonic_validated_count` includes weak; `accepted_slots_above_body_stop` = 0. | **in this PR** |
-| D2 | Tolerance continuity override | same | Isolated cap miss with both neighbours included re-enters; triple-assignment losers stay `rejected_by_tolerance`. | **in this PR** |
-| D3 | F-020 bound unification | same | f0 ∈ {50, 116.3, 200} → bound {25, 58.15, 80}; all sheets read one function. | **in this PR** |
-| D4 | CI resampling provenance | same | Unit/n/iterations/seed exported; CI values unchanged; wide flag + note. | **in this PR** |
-| D5 | Naming hygiene | same | `hop_duration_s` / `window_duration_s`; one energy pie; energy-ratio bases documented. | **in this PR** |
+| D1 | Weak-margin persistence override | `tests/phase_23/test_trombone_as2_defect_fixes.py` | H81–H88 `validated_weak` when p=1.0; floor peak margin 1 dB p=0.3 stays `cfar_marginal`; `harmonic_validated_count` includes weak; `accepted_slots_above_body_stop` = 0. | **done (PR #75)** |
+| D2 | Tolerance continuity override | same | Isolated cap miss with both neighbours included re-enters; triple-assignment losers stay `rejected_by_tolerance`. | **done (PR #75)** |
+| D3 | F-020 bound unification | same | f0 ∈ {50, 116.3, 200} → bound {25, 58.15, 80}; all sheets read one function. | **done (PR #75)** |
+| D4 | CI resampling provenance | same | Unit/n/iterations/seed exported; CI values unchanged; wide flag + note. | **done (PR #75)** |
+| D5 | Naming hygiene | same | `hop_duration_s` / `window_duration_s`; one energy pie; energy-ratio bases documented. | **done (PR #75)** |
+| WP1 | Residual footprint separation | `tests/phase_25/test_residual_footprint.py` | Single sinusoid residual share < 1 % at 2048–16384. Tone+pink residual within 2 % of GT. Region invariant holds. | **in this PR** |
 | D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
 | D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |
 | D6.3 | D_k n_fft norm | same | Density sums n_fft-normalised to 8192. | **done (PR #76)** |

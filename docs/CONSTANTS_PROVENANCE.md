@@ -11,6 +11,7 @@ Provenance classes:
 - `derived` - algebraically derived from another sourced constant
 - `internal_default` - implementation choice without external authority; documented and tunable
 - `convention` - values fixed by widespread engineering convention
+- `derived_from_window` - geometry taken from the analysis-window main lobe (Harris, 1978)
 
 ## Spectral-analysis and FFT constants
 
@@ -21,6 +22,7 @@ Provenance classes:
 - `FIXED_HOP_LENGTH_DEFAULT` (`1024`) - `internal_default` - Hop for the fixed policy (`n_fft/8` at 8192).
 - `ENERGY_BASIS_PSD_PER_HZ` (`psd_per_hz`) - `convention` - Energy sums are Heinzel PSD integrated over Hz (Harris, 1978; Heinzel et al., 2002).
 - `HANN_ENBW_BINS` (`1.5`) - `primary_source` - Hann equivalent noise bandwidth in bins (Harris, 1978; Heinzel, Rüdiger & Schilling, 2002). Runtime ENBW is computed from the analysis window.
+- `RESIDUAL_EXCLUSION_FOOTPRINT` (`8.0`) - `derived_from_window` - Residual-exclusion diameter in bins for a Blackman–Harris 4-term window (first nulls at ±4; Harris, 1978). Peak-power still uses ENBW. Runtime width follows the analysis window via `residual_exclusion_footprint_bins`.
 - `DEFAULT_PLOT_DPI` (`300`) - `convention` - Publication-grade raster export default.
 - `DEFAULT_ZERO_PADDING` (`1`) - `convention` - No extra zero-padding by default.
 - `MAX_ZERO_PADDING` (`8`) - `convention` - Common upper bound for analysis-only interpolation.
