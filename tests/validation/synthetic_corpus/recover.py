@@ -146,6 +146,13 @@ def recover_construct(spec: ConstructSpec) -> Dict[str, Any]:
         "confirmed_i_true": spec.confirmed_i_true,
         "confirmed_i_hat": len(confirmed_i),
         "fit_status": str(fit.get("fit_status") or ""),
+        "h_amps": h_amps,
+        "i_amps": i_amps,
+        "h_freqs": [
+            float(r.get("Frequency (Hz)", 0.0) or 0.0)
+            for r in harmonics
+            if r.get("include_for_density")
+        ],
     }
 
 

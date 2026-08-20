@@ -1,3 +1,17 @@
+# Measurement-performance evaluation
+
+Recorded how accurately and stably the frozen instrument measures, and
+the quality of the one available v4.2.1 corpus export. Rubric scores
+only; F-042 / F-047 / F-048 / F-049 algebra is unchanged.
+
+- Runner: `tools/run_measurement_evaluation.py` (seed 20260820).
+- Report: `docs/validation/MEASUREMENT_PERFORMANCE_REPORT.md`.
+  A 87.5, B 71.4, C 65.0, D 82.5, composite 76.6 on commit `4799ea0`.
+- Part D used tuba pp `analysis_results_v4.2.1` only. Trombone, flute,
+  and cello v4.2.1 trees were excluded (no manifest). P1 live G3
+  resolution swap remains FAILED (B1).
+- Raw session JSON stays local (`docs/validation/_measurement_eval/`).
+
 # v4.2.1 supersedes v4.2.0 as the freeze reference
 
 Scope of validity unchanged. Tag `v4.2.0` is not moved or deleted.

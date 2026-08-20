@@ -8,7 +8,7 @@ stated margin above the floor, rather than vanishing under an H1-only SNR.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, List, Literal, Sequence
+from typing import Iterable, List, Literal, Optional, Sequence
 
 import numpy as np
 
