@@ -56,3 +56,10 @@
 | F-048 | $\text{EWSD}_k=r_k D_k(N_{\mathrm{eff},k}/N_k)$; $\text{EWSD}=\sum_k \text{EWSD}_k$ | Strict EWSD (Stage 3 anti-concentration density) | `tools/ewsd_core.compute_ewsd` | `EWSD_score_total` |
 | F-049 | $\text{EWSD}^{bal}_k=r_k D_k(N_{\mathrm{eff},k}/N_k)^{\alpha}$, $\alpha=0.5$ | Acoustic-balanced EWSD companion | `tools/ewsd_core.add_acoustic_alignment_columns` | `EWSD_score_acoustic_balanced` |
 | F-050 | Bootstrap CI on resampled H/I/S partials | EWSD uncertainty bands | `tools.ewsd_uncertainty.bootstrap_ewsd_from_compartments` | `EWSD_score_*_ci_*`, `ewsd_uncertainty_sources` |
+
+Sethares sensory dissonance (not an F-042–F-049 density formula):
+`dissonance_models.SetharesDissonance` implements the pairwise kernel
+from Sethares (2005), *Tuning, Timbre, Spectrum, Scale*, 2nd ed.,
+Eqs. 3.8–3.9. Full citation: `REFERENCES.md`. Export column:
+`sethares_dissonance` / `dissonance_partial_count`. Algebra of F-042 /
+F-047 / F-048 / F-049 is unchanged.
