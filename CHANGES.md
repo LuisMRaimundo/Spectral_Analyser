@@ -1,3 +1,11 @@
+# R6 — Runbook re-exports on v4.2.3
+
+Seven corpora (trombone/flute pp-mf-ff, cello ff from
+`D:\CORDAS_3\CELLO`) re-exported at `1db94e1` / tag `v4.2.3`. One
+profile, `verify_corpus` ok. Diff vs pretag + CORDAS predictions +
+dated Part D addendum: `docs/validation/REEXPORT_DIFF_SUMMARY.md`.
+No F-042/047/048/049 change.
+
 # R5 — Planted-amplitude oracle for C1/C2
 
 C1/C2 now use an external EWSD/EPD oracle from planted amplitudes
