@@ -17,6 +17,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 from analysis_provenance import resolve_analysis_provenance
 from constants import DENSITY_WEIGHT_FUNCTION_DEFAULT
+from production_policy import default_parameter_profile_id as _production_profile_id
 
 MANIFEST_SCHEMA_VERSION = "phase21.1"
 MANIFEST_FILENAME = "run_manifest.json"
@@ -130,8 +131,7 @@ def constants_hash() -> str:
 
 
 def default_parameter_profile_id(weight_function: Optional[str] = None) -> str:
-    wf = str(weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
-    return f"wf={wf}|dst=runtime_configured|ceil=runtime_configured|fft=fixed"
+    return _production_profile_id(weight_function)
 
 
 def _input_file_records(paths: Iterable[Union[str, Path]]) -> List[Dict[str, Any]]:

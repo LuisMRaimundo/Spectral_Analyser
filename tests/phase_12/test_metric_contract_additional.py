@@ -93,6 +93,13 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "excluded_region_hz_total",
         "included_above_body_stop_count",
         "fft_policy",
+        "segment_policy",
+        "stable_segment_ewsd",
+        "full_stable_ewsd_ratio",
+        "stable_segment_frames_independent",
+        "stable_segment_unrepresentative",
+        "ewsd_primary_analysis_eligible",
+        "degenerate_partial_set",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():

@@ -84,6 +84,13 @@ Provenance (Phase E): `analysis_version` is package metadata + `git describe --a
 | `excluded_region_hz_total` | One-sided Hz removed by the exclusion footprints |
 | `analysis_band_hz` | `f_max − f_min`; invariant: residual + excluded == analysis band |
 | `fft_policy` | `fixed` (default, comparable) or `adaptive_tier` |
+| `segment_policy` | Always `sustain_primary_stable_diagnostic` (WP3). Primary = sustain cut |
+| `stable_segment_ewsd` | EWSD of the stable sibling. NaN if missing (`nan_not_zero_v1`) |
+| `full_stable_ewsd_ratio` | `full_ewsd / stable_ewsd`. Flagged when > 1.3 |
+| `stable_segment_frames_independent` | Independent-frame count of the stable sibling. NaN if missing |
+| `stable_segment_unrepresentative` | True when EWSD ratio > 1.3 or centroid ratio > 2.0. Flag only |
+| `ewsd_primary_analysis_eligible` | False when independent frames < 8 or `harmonic_validated_count ≤ 2` |
+| `degenerate_partial_set` | True when `harmonic_validated_count ≤ 2`. CI is NaN, never 0.0 |
 | `harmonic_acceptance_suspect` | Accepted count exceeds body-stop order + expected false slots |
 | `cfar_marginal_count` | Rows with `0 ≤ cfar_margin_db < HARMONIC_MIN_CFAR_MARGIN_DB` |
 
@@ -129,7 +136,7 @@ Key interpretation rows:
 
 Exhaustive canonical column set:
 
-`Note`, `source_file_name`, `tier`, `component_harmonic_energy_ratio`, `component_inharmonic_energy_ratio`, `component_subbass_energy_ratio`, `component_total_inharmonic_energy_ratio`, `model_harmonic_weight`, `model_inharmonic_weight`, `effective_partial_count`, `effective_partial_density`, `canonical_density_v5_adapted`, `canonical_density`, `density_normalized_global`, `density_per_component`, `rolloff_compensated_harmonic_density`, `harmonic_effective_power_density`, `harmonic_inharmonic_ratio`, `spectral_entropy`, `harmonic_completeness`, `f0_final_hz`, `acoustic_f0_status`, `f0_epistemic_status`, `valid_for_primary_statistics`, `density_confidence`, `qc_status`, `is_primary_comparable_profile`, `analysis_parameter_profile_id`, `primary_comparable_profile_definition`, `adaptive_subfundamental_cutoff_hz`, `subfundamental_margin_percent`, `percentage_subfundamental_cutoff_hz`, `leakage_guard_cutoff_hz`, `min_floor_hz`, `max_fraction_of_f0`, `effective_subfundamental_margin_percent`, `subfundamental_guard_valid`, `subfundamental_guard_policy`, `low_frequency_policy_version`, `adaptive_subfundamental_cutoff_source`, `physical_low_frequency_lower_hz`, `physical_low_frequency_upper_hz`, `subfundamental_cutoff_selection_rule`, `subfundamental_cutoff_selected_by`.
+`Note`, `source_file_name`, `tier`, `component_harmonic_energy_ratio`, `component_inharmonic_energy_ratio`, `component_subbass_energy_ratio`, `component_total_inharmonic_energy_ratio`, `model_harmonic_weight`, `model_inharmonic_weight`, `effective_partial_count`, `effective_partial_density`, `canonical_density_v5_adapted`, `canonical_density`, `density_normalized_global`, `density_per_component`, `rolloff_compensated_harmonic_density`, `harmonic_effective_power_density`, `harmonic_inharmonic_ratio`, `spectral_entropy`, `harmonic_completeness`, `f0_final_hz`, `acoustic_f0_status`, `f0_epistemic_status`, `valid_for_primary_statistics`, `density_confidence`, `qc_status`, `is_primary_comparable_profile`, `analysis_parameter_profile_id`, `primary_comparable_profile_definition`, `segment_policy`, `stable_segment_ewsd`, `full_stable_ewsd_ratio`, `stable_segment_frames_independent`, `stable_segment_unrepresentative`, `ewsd_primary_analysis_eligible`, `degenerate_partial_set`, `adaptive_subfundamental_cutoff_hz`, `subfundamental_margin_percent`, `percentage_subfundamental_cutoff_hz`, `leakage_guard_cutoff_hz`, `min_floor_hz`, `max_fraction_of_f0`, `effective_subfundamental_margin_percent`, `subfundamental_guard_valid`, `subfundamental_guard_policy`, `low_frequency_policy_version`, `adaptive_subfundamental_cutoff_source`, `physical_low_frequency_lower_hz`, `physical_low_frequency_upper_hz`, `subfundamental_cutoff_selection_rule`, `subfundamental_cutoff_selected_by`.
 
 ## 1.3 `Legacy_Aliases` and strict aliases
 

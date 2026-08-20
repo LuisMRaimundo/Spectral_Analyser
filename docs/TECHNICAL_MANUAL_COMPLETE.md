@@ -1163,7 +1163,7 @@ Comparability-critical controls (primary comparable profile):
 - `density_frequency_ceiling_hz` = runtime-configured (no hardcoded value)
 
 Per current policy the primary comparable profile is
-`wf=log|dst=runtime_configured|ceil=runtime_configured|fft=fixed`
+`wf=log|dst=runtime_configured|ceil=runtime_configured|fft=fixed|seg=sustain_primary_stable_diagnostic|elig=1`
 (`primary_comparable_profile_definition`). Runs on other profiles are flagged
 `EXPLORATORY` and must not be compared directly against primary-profile runs.
 

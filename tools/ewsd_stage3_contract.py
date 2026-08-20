@@ -9,6 +9,7 @@ from typing import Final, List, Optional, Sequence
 import numpy as np
 import pandas as pd
 
+from production_policy import mixed_profile_ids
 from tools.ewsd_core import SCRIPT_VERSION
 
 STAGE3_STATUS_OK: Final[str] = "ok"
@@ -99,6 +100,11 @@ def build_stage3_diagnostics(
     if "energy_basis" in sd.columns:
         energy_basis = str(sd["energy_basis"].dropna().astype(str).iloc[0]) if not sd["energy_basis"].dropna().empty else ""
 
+    profile_ids = []
+    if "analysis_parameter_profile_id" in sd.columns:
+        profile_ids = mixed_profile_ids(sd["analysis_parameter_profile_id"].tolist())
+    mixed_profiles = len(profile_ids) > 1
+
     rows: list[dict[str, object]] = []
     for _, row in sd.iterrows():
         status = str(row.get("ewsd_merge_status", "")).strip()
@@ -109,6 +115,10 @@ def build_stage3_diagnostics(
             issue = "note_not_in_ewsd_output"
         elif not bool(row.get("ewsd_primary_analysis_eligible", False)):
             issue = "not_primary_analysis_eligible"
+        if mixed_profiles and not issue:
+            issue = (
+                f"mixed analysis_parameter_profile_id ({len(profile_ids)} profiles)"
+            )
         if mixed_tiers and not issue:
             basis_ok = energy_basis == "psd_per_hz"
             issue = (

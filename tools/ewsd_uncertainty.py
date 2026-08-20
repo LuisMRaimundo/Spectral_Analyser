@@ -126,7 +126,8 @@ def bootstrap_ewsd_from_compartments(
         acoustic_balance_alpha=acoustic_balance_alpha,
     )
 
-    if not any(comp.amplitudes.size > 0 for comp in compartments):
+    n_partials = int(sum(int(comp.amplitudes.size) for comp in compartments))
+    if n_partials <= 2 or not any(comp.amplitudes.size > 0 for comp in compartments):
         nan = float("nan")
         return {
             "ewsd_score_total": point_strict,
