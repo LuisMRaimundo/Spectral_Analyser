@@ -34,8 +34,8 @@ until that study is run.
 
 ## One re-export per corpus after the tag
 
-The freeze-ready tag is `v4.2.0`. The runbook
-(`docs/REEXPORT_RUNBOOK.md`) was not executed in WP5/WP6. Each corpus
-still needs **one** Stage 1–3 re-export under that tag, then
-`python -m tools.verify_corpus <out>`. Do not iterate Stage 1 on the
-same corpus after that export unless a new tag is cut.
+The freeze-ready tag is `v4.2.1` (supersedes `v4.2.0`; that tag is
+kept). Each citation corpus still needs **one** Stage 1–3 re-export
+under `v4.2.1`, then `python -m tools.verify_corpus <out>`. Do not
+iterate Stage 1 on the same corpus after that export unless a new tag
+is cut. Pre-tag baselines: `docs/validation/pretag_evidence/`.
