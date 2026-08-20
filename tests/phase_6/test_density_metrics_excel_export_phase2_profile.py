@@ -98,6 +98,7 @@ def test_density_metrics_sheet_uses_phase2_profile_on_export(tmp_path: Path) -> 
         harmonic_weight=0.6,
         inharmonic_weight=0.3,
         subbass_weight=0.1,
+        weight_function="linear",
     )
     assert in_memory is not None
     assert out_xlsx.exists()

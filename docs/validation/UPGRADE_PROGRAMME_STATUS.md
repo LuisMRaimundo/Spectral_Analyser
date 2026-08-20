@@ -21,7 +21,8 @@ bump is recorded.
 | D4 | CI resampling provenance | same | Unit/n/iterations/seed exported; CI values unchanged; wide flag + note. | **done (PR #75); verified WP2** |
 | D5 | Naming hygiene | same | `hop_duration_s` / `window_duration_s`; one energy pie; energy-ratio bases documented. | **done (PR #75); verified WP2** |
 | WP2 | D1–D5 evidence after WP1 | `docs/validation/TROMBONE_AS2_DEFECT_FIX_DIFF.md` | A♯2 validated 92; H74/H79 included; bound 58.15; A2 EPD 3.77, EWSD 16.11, CI present. | **done (PR #78)** |
-| WP3 | Production policy as code | `tests/phase_26/test_production_policy.py` | Defaults `fixed`/8192/1024; profile id has `fft`/`seg`/`elig`; cello G2 stable ineligible and unrepresentative vs full; trombone A♯2 eligible, ratio ≈ 1; degenerate CI is NaN; mixed profile ids raise `stage3_issue`. | **in this PR** |
+| WP3 | Production policy as code | `tests/phase_26/test_production_policy.py` | Defaults `fixed`/8192/1024; profile id has `fft`/`seg`/`elig`; cello G2 stable ineligible and unrepresentative vs full; trombone A♯2 eligible, ratio ≈ 1; degenerate CI is NaN; mixed profile ids raise `stage3_issue`. | **done (PR #79)** |
+| WP4 | CI to green | the previous 8 density failures | Planted peak-table tests opt out of the FFT noise gate; energy gates sum to 1; body sums use `body_freq_max_hz`; phase-2 test uses linear φ; I-sum matches confirmed I. | **in this PR** |
 | WP1 | Residual footprint separation | `tests/phase_25/test_residual_footprint.py` | Single sinusoid residual share < 1 % at 2048–16384. Tone+pink residual within 2 % of GT. Region invariant holds. | **done (PR #77)** |
 | D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
 | D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |

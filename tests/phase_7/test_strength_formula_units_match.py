@@ -26,6 +26,7 @@ def test_strength_terms_are_dimensionless_and_comparable() -> None:
         density_summation_mode="his_note_adaptive",
         body_freq_max_hz=body_ceiling_hz,
         density_frequency_ceiling_hz=body_ceiling_hz,
+        apply_noise_gate=False,
     )
     terms = [
         float(out["component_strength_h"]),

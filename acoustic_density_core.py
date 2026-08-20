@@ -401,6 +401,7 @@ def compute_acoustic_density_descriptors(
     window_type: str = "hann",
     n_fft: int = 4096,
     confirmed_inharmonic_freqs_hz: Optional[Sequence[float]] = None,
+    apply_noise_gate: Optional[bool] = None,
 ) -> dict[str, Any]:
     """
     Compute separated acoustic descriptors from a peak/component table.
@@ -417,7 +418,12 @@ def compute_acoustic_density_descriptors(
     # path resolves sub-bass boundary via SubBassPolicy directly.
     del subbass_upper_ratio
     freq, power = _extract_peak_vectors(peaks_df)
-    if bool(DENSITY_NOISE_GATE_ENABLED) and power.size:
+    _use_noise_gate = (
+        bool(DENSITY_NOISE_GATE_ENABLED)
+        if apply_noise_gate is None
+        else bool(apply_noise_gate)
+    )
+    if _use_noise_gate and power.size:
         power = noise_gated_power(power, freq, enabled=True)
 
     _freq_max_runtime = float(freq_max_hz) if np.isfinite(float(freq_max_hz)) else float(FULL_SPECTRUM_MAX_HZ)
@@ -1017,7 +1023,7 @@ def compute_acoustic_density_descriptors(
     out["inharmonic_density_component"] = float(inharmonic_density)
     out["subbass_density_component"] = float(subbass_density)
 
-    body_ceiling_hz = float(max(BODY_DENSITY_MAX_HZ, 1.0))
+    body_ceiling_hz = float(max(_body_freq_max_hz, 1.0))
     full_ceiling_hz = float(max(full_spectrum_max_hz, body_ceiling_hz))
     body_h_mask = harmonic_peak_bins & (freq_sig <= body_ceiling_hz + EPS)
     body_i_pow = inharmonic_pow[inharmonic_freq <= body_ceiling_hz + EPS] if inharmonic_freq.size else np.asarray([], dtype=float)
@@ -1240,8 +1246,8 @@ def compute_acoustic_density_descriptors(
                 _e_s / _e_total,
             )
         else:
-            # No measurable energy in any band: fall back to ungated structure.
-            _gate_h = _gate_i = _gate_s = 1.0
+            # No measurable energy: keep a valid distribution (never 1+1+1).
+            _gate_h = _gate_i = _gate_s = 1.0 / 3.0
         out["component_strength_energy_gate_h"] = float(_gate_h)
         out["component_strength_energy_gate_i"] = float(_gate_i)
         out["component_strength_energy_gate_s"] = float(_gate_s)

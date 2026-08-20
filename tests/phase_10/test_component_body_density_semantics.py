@@ -83,6 +83,12 @@ def test_inharmonic_component_sum_matches_inharmonic_sheet_candidates(tmp_path: 
     else:
         body_ceiling_hz = float(pd.to_numeric(metrics.get("body_density_frequency_ceiling_hz"), errors="coerce"))
         mask = pd.to_numeric(inharm["Frequency (Hz)"], errors="coerce") <= body_ceiling_hz
+        if "inharmonic_status" in inharm.columns:
+            mask = mask & inharm["inharmonic_status"].astype(str).eq(
+                "confirmed_inharmonic_partial"
+            )
+        elif "include_for_density" in inharm.columns:
+            mask = mask & inharm["include_for_density"].astype(bool)
         expected = pd.to_numeric(inharm.loc[mask, "Power_raw"], errors="coerce").fillna(0.0).sum()
     assert float(metrics["inharmonic_component_energy_sum_body_ceiling"]) == pytest.approx(float(expected), rel=1e-6, abs=1e-9)
 

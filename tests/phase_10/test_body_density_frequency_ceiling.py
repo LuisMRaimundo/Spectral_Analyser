@@ -24,12 +24,14 @@ def test_body_density_ceiling_invariance_and_full_spectrum_sensitivity() -> None
         f0_hz=440.0,
         body_freq_max_hz=body_ceiling_hz,
         density_frequency_ceiling_hz=body_ceiling_hz,
+        apply_noise_gate=False,
     )
     boosted_high = compute_acoustic_density_descriptors(
         _build_peaks(high_scale=6.0),
         f0_hz=440.0,
         body_freq_max_hz=body_ceiling_hz,
         density_frequency_ceiling_hz=body_ceiling_hz,
+        apply_noise_gate=False,
     )
 
     assert np.isclose(
