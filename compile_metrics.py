@@ -4290,6 +4290,13 @@ def extract_density_components_from_per_note_workbook(
         "magnitude_min_db",
         "magnitude_max_db",
         "fft_policy",
+        "segment_policy",
+        "stable_segment_ewsd",
+        "full_stable_ewsd_ratio",
+        "stable_segment_frames_independent",
+        "stable_segment_unrepresentative",
+        "ewsd_primary_analysis_eligible",
+        "degenerate_partial_set",
         "nominal_prior_hz",
         "f0_candidate_hz",
         "f0_deviation_cents",
@@ -6554,7 +6561,8 @@ def _corpus_comparability_audit(df: pd.DataFrame) -> Dict[str, Any]:
         "corpus_comparability_policy": (
             "Direct cross-note/cross-instrument comparison of density metrics is "
             "valid only within a single primary-comparable profile "
-            "(wf=log|dst=runtime_configured|ceil=runtime_configured|fft=fixed). Use "
+            "(wf=log|dst=runtime_configured|ceil=runtime_configured|fft=fixed|"
+            "seg=sustain_primary_stable_diagnostic|elig=1). Use "
             "Canonical_Primary_Filtered for inferential statistics."
         ),
     }

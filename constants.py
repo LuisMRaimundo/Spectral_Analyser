@@ -255,6 +255,16 @@ DENSITY_CI_SEED: Final[int] = 0
 UNCERTAINTY_REL_FLAG_PCT: Final[float] = 25.0
 # Phase D: flag when independent sustain frames are below this count.
 CI_BASIS_INDEPENDENT_FRAME_MIN: Final[int] = 10
+# WP3 production eligibility: independent-frame floor (stricter than the CI flag).
+MIN_INDEPENDENT_FRAMES: Final[int] = 8
+# WP3 representativeness: full/stable EWSD ratio above this flags the stable cut.
+STABLE_REPRESENTATIVENESS_MAX_RATIO: Final[float] = 1.3
+# WP3 representativeness: max(c)/min(c) centroid ratio above this flags the pair.
+STABLE_CENTROID_MAX_RATIO: Final[float] = 2.0
+# WP3 segment policy token carried in analysis_parameter_profile_id.
+SEGMENT_POLICY_DEFAULT: Final[str] = "sustain_primary_stable_diagnostic"
+# WP3 eligibility-policy version token (not the per-note boolean).
+ELIGIBILITY_POLICY_VERSION: Final[str] = "1"
 # Phase E: include F-020 diagnostic LF rows in the amplitude pie (default off).
 INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE: Final[bool] = False
 # Phase F: Complete Spectrum per-bin pitch names (overloads ``Note``). Off by default.
@@ -556,6 +566,11 @@ _PROVENANCE_SOURCED_CONSTANTS: Final[frozenset[str]] = frozenset(
         "DENSITY_NOISE_GATE_ENABLED",
         "DENSITY_NOISE_GATE_POLICY",
         "CI_BASIS_INDEPENDENT_FRAME_MIN",
+        "MIN_INDEPENDENT_FRAMES",
+        "STABLE_REPRESENTATIVENESS_MAX_RATIO",
+        "STABLE_CENTROID_MAX_RATIO",
+        "SEGMENT_POLICY_DEFAULT",
+        "ELIGIBILITY_POLICY_VERSION",
         "INCLUDE_LF_DIAGNOSTIC_IN_AMPLITUDE_PIE",
         "EXPORT_COMPLETE_SPECTRUM_PITCH_NAMES",
         "LOW_FREQUENCY_DIAGNOSTIC_UPPER_HZ",

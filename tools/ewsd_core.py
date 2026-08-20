@@ -26,6 +26,8 @@ from typing import Any, Iterable, Optional, Sequence, Union
 import numpy as np
 import pandas as pd
 
+from constants import MIN_INDEPENDENT_FRAMES
+from production_policy import apply_degenerate_ci_nan, evaluate_eligibility
 from tools.ewsd_pure import (
     ACOUSTIC_BALANCE_ALPHA_DEFAULT as _PURE_ACOUSTIC_BALANCE_ALPHA_DEFAULT,
     CompartmentInputs,
@@ -826,6 +828,8 @@ def add_quality_columns(result: pd.DataFrame) -> pd.DataFrame:
     if n == 0:
         out["row_quality_score_0_100"] = []
         out["primary_analysis_eligible"] = []
+        out["ewsd_primary_analysis_eligible"] = []
+        out["degenerate_partial_set"] = []
         out["row_quality_grade"] = []
         return out
 
@@ -866,10 +870,41 @@ def add_quality_columns(result: pd.DataFrame) -> pd.DataFrame:
     quality -= np.where(weight_safe, 0.0, 15.0)
     quality = quality.clip(lower=0.0, upper=100.0)
 
-    eligible = exact & ratios_ok & score_ok & count_ok & no_warning & note_ok & weight_safe
+    frames = pd.to_numeric(col("sustain_frame_count_independent"), errors="coerce")
+    hcount = pd.to_numeric(col("harmonic_validated_count"), errors="coerce")
+    if not hcount.notna().any():
+        hcount = pd.to_numeric(col("component_count_salient"), errors="coerce")
+    prod_eligible = []
+    degenerate = []
+    for fr, hc in zip(frames.tolist(), hcount.tolist()):
+        gate = evaluate_eligibility(fr, hc, min_independent_frames=MIN_INDEPENDENT_FRAMES)
+        # Missing frame/count columns do not newly fail a row.
+        frames_known = np.isfinite(fr) if fr == fr else False
+        count_known = np.isfinite(hc) if hc == hc else False
+        extra_ok = True
+        deg = False
+        if frames_known and gate["frames_below_min_independent"]:
+            extra_ok = False
+        if count_known and gate["degenerate_partial_set"]:
+            extra_ok = False
+            deg = True
+        prod_eligible.append(extra_ok)
+        degenerate.append(deg)
+    prod_ok = pd.Series(prod_eligible, index=out.index)
+    deg_series = pd.Series(degenerate, index=out.index)
+
+    eligible = exact & ratios_ok & score_ok & count_ok & no_warning & note_ok & weight_safe & prod_ok
     out["HIS_ratio_sum_check"] = ratio_sum
     out["row_quality_score_0_100"] = quality.round(2)
     out["primary_analysis_eligible"] = eligible.astype(bool)
+    out["ewsd_primary_analysis_eligible"] = eligible.astype(bool)
+    out["degenerate_partial_set"] = deg_series.astype(bool)
+    if deg_series.any():
+        for idx in out.index[deg_series.to_numpy()]:
+            patched = apply_degenerate_ci_nan(out.loc[idx].to_dict(), degenerate=True)
+            for key, value in patched.items():
+                if key in out.columns:
+                    out.at[idx, key] = value
     out["row_quality_grade"] = pd.cut(
         quality,
         bins=[-0.1, 59.999, 74.999, 84.999, 92.999, 100.1],
@@ -877,7 +912,9 @@ def add_quality_columns(result: pd.DataFrame) -> pd.DataFrame:
     ).astype(str)
     out["quality_gate_rule"] = (
         "primary=True requires individual_exact + H/I/S sum≈1 + finite EWSD + positive component count "
-        "+ no warning + parsed note + non-aggressive weight function"
+        "+ no warning + parsed note + non-aggressive weight function "
+        "+ sustain_frame_count_independent>=MIN_INDEPENDENT_FRAMES "
+        "+ harmonic_validated_count>2"
     )
     return out
 

@@ -100,6 +100,16 @@ from metric_contract import (
     classify_f0_epistemic_status,
     density_metric_basis_label,
 )
+from production_policy import (
+    apply_degenerate_ci_nan,
+    build_analysis_parameter_profile_id,
+    classify_segment_role,
+    default_parameter_profile_id as production_default_parameter_profile_id,
+    evaluate_eligibility,
+    evaluate_segment_diagnostics,
+    find_segment_sibling,
+    is_primary_comparable_profile as production_is_primary_comparable_profile,
+)
 
 CANONICAL_PIPELINE_ROLE = "canonical_stage1_per_note_analysis"
 PUBLICATION_OUTPUT_ALLOWED = True
@@ -11327,16 +11337,77 @@ class AudioProcessor:
         _dst_cmp = float(getattr(self, "density_salience_threshold_db", float("nan")))
         _dceil_cmp = float(getattr(self, "density_frequency_ceiling_hz", float("nan")))
         _fft_pol = str(getattr(self, "fft_policy", "fixed") or "fixed").strip().lower()
-        _is_primary_profile = (
-            _wf_cmp == PRIMARY_COMPARABLE_WEIGHT_FUNCTION and _fft_pol == "fixed"
+        _elig = evaluate_eligibility(
+            getattr(self, "sustain_frame_count_independent", float("nan")),
+            getattr(self, "harmonic_validated_count", None),
+        )
+        main_metrics["ewsd_primary_analysis_eligible"] = bool(
+            _elig["ewsd_primary_analysis_eligible"]
+        )
+        main_metrics["degenerate_partial_set"] = bool(_elig["degenerate_partial_set"])
+        _src_path = getattr(self, "source_file_path", None) or getattr(
+            self, "source_file_name", None
+        )
+        _folder = getattr(self, "folder_path", None)
+        _lookup = None
+        if _src_path:
+            _lookup = Path(_src_path)
+            if _folder and not _lookup.is_file():
+                _lookup = Path(_folder) / Path(_src_path).name
+        _sibling_metrics = getattr(self, "stable_sibling_metrics", None)
+        if not isinstance(_sibling_metrics, dict):
+            _sibling_metrics = {}
+        _sibling_path = find_segment_sibling(_lookup) if _lookup is not None else None
+        _seg = evaluate_segment_diagnostics(
+            primary_ewsd=getattr(
+                self,
+                "energy_weighted_component_density_diagnostic",
+                getattr(self, "ewsd_score", None),
+            ),
+            primary_centroid_hz=getattr(self, "spectral_centroid_hz", None),
+            primary_frames_independent=getattr(
+                self, "sustain_frame_count_independent", None
+            ),
+            sibling_ewsd=_sibling_metrics.get("ewsd"),
+            sibling_centroid_hz=_sibling_metrics.get("centroid_hz"),
+            sibling_frames_independent=_sibling_metrics.get("frames_independent"),
+            primary_role=classify_segment_role(_lookup),
+            sibling_found=bool(_sibling_metrics) or _sibling_path is not None,
+        )
+        if not _sibling_metrics and _sibling_path is not None:
+            # Sibling audio exists but no second analysis was supplied.
+            # Diagnostics stay NaN (nan_not_zero_v1); do not invent 0.0.
+            _seg = evaluate_segment_diagnostics(sibling_found=False)
+            _seg["stable_sibling_path"] = str(_sibling_path)
+        main_metrics["segment_policy"] = _seg["segment_policy"]
+        main_metrics["stable_segment_ewsd"] = metric_float_or_nan(
+            _seg.get("stable_segment_ewsd")
+        )
+        main_metrics["full_stable_ewsd_ratio"] = metric_float_or_nan(
+            _seg.get("full_stable_ewsd_ratio")
+        )
+        main_metrics["stable_segment_frames_independent"] = metric_float_or_nan(
+            _seg.get("stable_segment_frames_independent")
+        )
+        main_metrics["stable_segment_unrepresentative"] = bool(
+            _seg.get("stable_segment_unrepresentative", False)
+        )
+        _is_primary_profile = production_is_primary_comparable_profile(
+            _wf_cmp, _fft_pol
         )
         main_metrics["analysis_parameter_profile_id"] = (
-            f"wf={_wf_cmp}|dst={_dst_cmp:.1f}|ceil={_dceil_cmp:.1f}|fft={_fft_pol}"
+            build_analysis_parameter_profile_id(
+                _wf_cmp, _dst_cmp, _dceil_cmp, _fft_pol
+            )
         )
         main_metrics["is_primary_comparable_profile"] = bool(_is_primary_profile)
         main_metrics["primary_comparable_profile_definition"] = (
-            "wf=log|dst=runtime_configured|ceil=runtime_configured|fft=fixed"
+            production_default_parameter_profile_id(PRIMARY_COMPARABLE_WEIGHT_FUNCTION)
         )
+        if _elig["degenerate_partial_set"]:
+            main_metrics.update(
+                apply_degenerate_ci_nan(main_metrics, degenerate=True)
+            )
         self.analysis_parameter_profile_id = str(main_metrics["analysis_parameter_profile_id"])
         self.is_primary_comparable_profile = bool(main_metrics["is_primary_comparable_profile"])
         self.primary_comparable_profile_definition = str(

@@ -491,10 +491,104 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         normalization_scope="per run",
         physical_interpretation=(
             "fixed uses one n_fft/hop for every note (default for comparable corpora). "
-            "adaptive_tier follows the f0 tier table."
+            "adaptive_tier follows the f0 tier table and is not primary-comparable."
         ),
         not_valid_for="Mixing adaptive_tier notes across a tier boundary without psd_per_hz.",
         ontology_family="analysis_parameter",
+    )
+    segment_policy = MetricDefinition(
+        name="segment_policy",
+        formula="sustain_primary_stable_diagnostic",
+        input_domain="sustain cut plus optional stable sibling",
+        unit_or_scale="token",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Primary analysis uses the sustain cut. A stable-sustain sibling "
+            "is diagnostic only and never replaces the primary EWSD."
+        ),
+        not_valid_for="Substituting stable-segment EWSD for the primary value.",
+        ontology_family="analysis_parameter",
+    )
+    stable_segment_ewsd = MetricDefinition(
+        name="stable_segment_ewsd",
+        formula="EWSD of the stable-sustain sibling (diagnostic)",
+        input_domain="stable sibling metrics when present",
+        unit_or_scale="EWSD units",
+        amplitude_basis="same as primary EWSD",
+        power_basis="same as primary EWSD",
+        normalization_scope="per note",
+        physical_interpretation="Stable-cut EWSD. NaN when no sibling metrics (nan_not_zero_v1).",
+        not_valid_for="Replacing the primary EWSD or filling missing siblings with 0.",
+        ontology_family="diagnostic",
+    )
+    full_stable_ewsd_ratio = MetricDefinition(
+        name="full_stable_ewsd_ratio",
+        formula="full_ewsd / stable_ewsd",
+        input_domain="paired full and stable EWSD",
+        unit_or_scale="ratio",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Representativeness ratio. Flagged when > STABLE_REPRESENTATIVENESS_MAX_RATIO (1.3)."
+        ),
+        not_valid_for="Rescaling the primary EWSD.",
+        ontology_family="diagnostic",
+    )
+    stable_segment_frames_independent = MetricDefinition(
+        name="stable_segment_frames_independent",
+        formula="stable sustain_frame_count / (n_fft / hop)",
+        input_domain="stable sibling",
+        unit_or_scale="count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation="Independent-frame count of the stable sibling. NaN if missing.",
+        not_valid_for="Treating as the primary sustain_frame_count_independent.",
+        ontology_family="diagnostic",
+    )
+    stable_segment_unrepresentative = MetricDefinition(
+        name="stable_segment_unrepresentative",
+        formula="full_stable_ewsd_ratio > 1.3 OR centroid ratio > 2.0",
+        input_domain="paired full and stable descriptors",
+        unit_or_scale="boolean",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation="Flag only. Does not change any exported value.",
+        not_valid_for="Dropping or rewriting the primary EWSD.",
+        ontology_family="validation_status",
+    )
+    ewsd_primary_analysis_eligible = MetricDefinition(
+        name="ewsd_primary_analysis_eligible",
+        formula=(
+            "existing quality gates AND sustain_frame_count_independent >= 8 "
+            "AND harmonic_validated_count > 2"
+        ),
+        input_domain="Stage 3 quality columns plus WP3 production gates",
+        unit_or_scale="boolean",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation="Thesis-safe EWSD row. False on short or degenerate takes.",
+        not_valid_for="Treating ineligible rows as 0.0 EWSD.",
+        ontology_family="validation_status",
+    )
+    degenerate_partial_set = MetricDefinition(
+        name="degenerate_partial_set",
+        formula="harmonic_validated_count <= 2",
+        input_domain="validated harmonics",
+        unit_or_scale="boolean",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Too few validated harmonics for a CI. Rel_uncertainty is NaN, never 0.0."
+        ),
+        not_valid_for="Reporting a zero-width CI as certainty.",
+        ontology_family="validation_status",
     )
     return {
         density_raw.name: density_raw,
@@ -528,6 +622,13 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         excluded_region_hz_total.name: excluded_region_hz_total,
         included_above_body_stop_count.name: included_above_body_stop_count,
         fft_policy.name: fft_policy,
+        segment_policy.name: segment_policy,
+        stable_segment_ewsd.name: stable_segment_ewsd,
+        full_stable_ewsd_ratio.name: full_stable_ewsd_ratio,
+        stable_segment_frames_independent.name: stable_segment_frames_independent,
+        stable_segment_unrepresentative.name: stable_segment_unrepresentative,
+        ewsd_primary_analysis_eligible.name: ewsd_primary_analysis_eligible,
+        degenerate_partial_set.name: degenerate_partial_set,
     }
 
 

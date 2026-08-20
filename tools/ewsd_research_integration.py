@@ -58,6 +58,7 @@ EWSD_RESEARCH_SCORE_COLUMNS: tuple[str, ...] = (
 EWSD_RESEARCH_PROVENANCE_COLUMNS: tuple[str, ...] = (
     "ewsd_mode",
     "ewsd_primary_analysis_eligible",
+    "degenerate_partial_set",
     "ewsd_his_ratio_source",
     "ewsd_H_ratio",
     "ewsd_I_ratio",
@@ -311,6 +312,9 @@ def _prepare_ewsd_merge_frame(ewsd: pd.DataFrame) -> pd.DataFrame:
     merge["ewsd_primary_analysis_eligible"] = frame.get(
         "primary_analysis_eligible", pd.Series(False, index=frame.index)
     ).astype(bool)
+    merge["degenerate_partial_set"] = frame.get(
+        "degenerate_partial_set", pd.Series(False, index=frame.index)
+    ).astype(bool)
     merge["ewsd_his_ratio_source"] = frame.get("his_ratio_source", np.nan)
     merge["ewsd_H_ratio"] = pd.to_numeric(frame.get("analysis_ratio_weight_harmonic"), errors="coerce")
     merge["ewsd_I_ratio"] = pd.to_numeric(
@@ -356,6 +360,8 @@ def _init_empty_ewsd_columns(sd: pd.DataFrame, status: str) -> pd.DataFrame:
     for col in EWSD_RESEARCH_ALL_COLUMNS:
         if col not in out.columns:
             if col == "ewsd_primary_analysis_eligible":
+                out[col] = False
+            elif col == "degenerate_partial_set":
                 out[col] = False
             elif col == "ewsd_stage3_version":
                 out[col] = SCRIPT_VERSION
@@ -437,6 +443,10 @@ def merge_ewsd_stage3(
                     out = out.drop(columns=[col])
 
             out = out.merge(ewsd_merge, on="Note", how="left", validate="m:1")
+            if "degenerate_partial_set" in out.columns:
+                out["degenerate_partial_set"] = (
+                    out["degenerate_partial_set"].fillna(False).astype(bool)
+                )
             missing = out["EWSD_score_total"].isna()
             out.loc[missing, "ewsd_merge_status"] = "note_not_in_ewsd_output"
 

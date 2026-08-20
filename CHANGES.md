@@ -1,3 +1,28 @@
+# WP3 — Production policy as code
+
+Comparable-corpus defaults, segment pairing, and eligibility are now
+enforced in `production_policy.py`. F-042 / F-047 / F-048 / F-049
+algebra is unchanged.
+
+- FFT default remains `fft_policy=fixed`, `n_fft=8192`, `hop=1024`
+  (provenance reclassified as `convention`). `adaptive_tier` stays
+  behind an explicit flag and sets `is_primary_comparable_profile=False`.
+- `analysis_parameter_profile_id` carries `fft`, `seg`, and `elig`
+  (`seg=sustain_primary_stable_diagnostic`, `elig=1` is the policy
+  version, not the per-note boolean).
+- Sustain is primary. A `_SustainStable` sibling or ADSR JSON sidecar
+  fills diagnostic columns only (`stable_segment_ewsd`,
+  `full_stable_ewsd_ratio`, `stable_segment_frames_independent`,
+  `stable_segment_unrepresentative`). Missing siblings are NaN
+  (`nan_not_zero_v1`), never 0.0. Values are never substituted.
+- Eligibility: `ewsd_primary_analysis_eligible=False` when
+  `sustain_frame_count_independent < MIN_INDEPENDENT_FRAMES` (8) or
+  `harmonic_validated_count ≤ 2`. Then `degenerate_partial_set=True`
+  and CI `rel_uncertainty` is NaN, never 0.0.
+- Stage 3 emits `stage3_issue` when a compiled workbook mixes
+  `analysis_parameter_profile_id` values.
+- Tests: `tests/phase_26/test_production_policy.py`.
+
 # WP2 — D1–D5 verified on main after WP1
 
 D1–D5 (PR #75) remain on `main`. Post-WP1 (`38cb535`) re-export of trombone

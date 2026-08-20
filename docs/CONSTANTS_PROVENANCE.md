@@ -17,9 +17,14 @@ Provenance classes:
 
 - `DEFAULT_N_FFT` (`4096`) - `convention` - Power-of-two FFT default for efficient radix-2 DFT.
 - `DEFAULT_HOP_LENGTH` (`1024`) - `convention` - Quarter-hop STFT default for Hann analysis workflows.
-- `FFT_POLICY_DEFAULT` (`fixed`) - `internal_default` - Default corpus FFT policy; `adaptive_tier` remains available but is not primary-comparable.
-- `FIXED_N_FFT_DEFAULT` (`8192`) - `internal_default` - Default window for cross-note comparable corpora (`fft_policy=fixed`).
-- `FIXED_HOP_LENGTH_DEFAULT` (`1024`) - `internal_default` - Hop for the fixed policy (`n_fft/8` at 8192).
+- `FFT_POLICY_DEFAULT` (`fixed`) - `convention` - Comparable-corpus FFT policy. One n_fft/hop for every note; `adaptive_tier` remains behind an explicit flag and sets `is_primary_comparable_profile = False`.
+- `FIXED_N_FFT_DEFAULT` (`8192`) - `convention` - Default window for cross-note comparable corpora (`fft_policy=fixed`).
+- `FIXED_HOP_LENGTH_DEFAULT` (`1024`) - `convention` - Hop for the fixed policy (`n_fft/8` at 8192).
+- `MIN_INDEPENDENT_FRAMES` (`8`) - `internal_default` - WP3 eligibility floor. Below this, `ewsd_primary_analysis_eligible` is False.
+- `STABLE_REPRESENTATIVENESS_MAX_RATIO` (`1.3`) - `internal_default` - Flag `stable_segment_unrepresentative` when full/stable EWSD exceeds this ratio.
+- `STABLE_CENTROID_MAX_RATIO` (`2.0`) - `internal_default` - Flag `stable_segment_unrepresentative` when max/min spectral centroid exceeds this ratio.
+- `SEGMENT_POLICY_DEFAULT` (`sustain_primary_stable_diagnostic`) - `internal_default` - Sustain cut is primary; stable sibling is diagnostic only.
+- `ELIGIBILITY_POLICY_VERSION` (`1`) - `internal_default` - Profile-id `elig` token for the WP3 gate (not the per-note boolean).
 - `ENERGY_BASIS_PSD_PER_HZ` (`psd_per_hz`) - `convention` - Energy sums are Heinzel PSD integrated over Hz (Harris, 1978; Heinzel et al., 2002).
 - `HANN_ENBW_BINS` (`1.5`) - `primary_source` - Hann equivalent noise bandwidth in bins (Harris, 1978; Heinzel, Rüdiger & Schilling, 2002). Runtime ENBW is computed from the analysis window.
 - `RESIDUAL_EXCLUSION_FOOTPRINT` (`8.0`) - `derived_from_window` - Residual-exclusion diameter in bins for a Blackman–Harris 4-term window (first nulls at ±4; Harris, 1978). Peak-power still uses ENBW. Runtime width follows the analysis window via `residual_exclusion_footprint_bins`.
