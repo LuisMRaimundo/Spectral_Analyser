@@ -21,6 +21,9 @@ def test_p1_three_documents_cite_the_same_live_fail() -> None:
     assert "**FAIL**" in diagnosis
     assert "FAILED live" in status
     assert "3 % tolerance: **FAIL**" in backlog
+    assert "R1 — Stage-3 B1" in diagnosis
+    assert "v4.2.2" in diagnosis
+    assert "R2–R6" in status
 
 
 def test_sethares_is_in_references() -> None:

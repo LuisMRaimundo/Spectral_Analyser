@@ -143,3 +143,48 @@ swap invariant.
 This dated run is the single source for the backlog and the WP1 status
 row. P5/P6 re-exports are **stopped** until this export-level
 invariance is resolved.
+
+## R1 — Stage-3 B1 on `v4.2.2` (20 August 2026) — **FAIL**
+
+Clean head `64a2282`, annotated tag `v4.2.2` (does not move `v4.2.0` or
+`v4.2.1`). The evaluation B1 cell on `4799ea0` used Stage-1 in-memory
+diagnostic EWSD. This run uses the full Stage 1–3 export and reads only
+`compiled_density_metrics_research.xlsx` / `Spectral_Density_Metrics`.
+
+```bash
+python -m tools.r1_stage3_b1 --out docs/validation/_r1_stage3_b1
+```
+
+`--fft-policy fixed`, hop = n_fft/8, φ=`log`. Raw table:
+`_r1_stage3_b1/r1_stage3_b1.json` (local; not committed).
+
+The dirty tree during the original evaluation (`4799ea0`, later
+`88489ff` / PR #85) was the evaluation runner and report, the
+`Optional` import in `generate.py`, extra recover-dict keys, and
+`.gitignore` for `_measurement_eval/`. None of those files change
+F-042 / F-047 / F-048 / F-049 algebra. This R1 run used tagged
+`64a2282` for the orchestrator; uncommitted files were only the R1
+harness.
+
+| Signal | n_fft / hop | `core_harmonic_energy_ratio` | `EWSD_score_acoustic_balanced` | `effective_partial_density` |
+|--------|-------------|-----------------------------:|-------------------------------:|----------------------------:|
+| G3 (SHA-256 `91dbf93d…d20a`) | 4096 / 512 | 0.7878 | 72.72 | 10.513 |
+| G3 | 8192 / 1024 | 0.9222 | 91.31 | 10.065 |
+| G3 | 16384 / 2048 | 0.9760 | 118.04 | 9.516 |
+| flute A♯4 (`9027c836…d790`) | 4096 / 512 | 0.8388 | 13.71 | 2.861 |
+| flute A♯4 | 8192 / 1024 | 0.9685 | 18.00 | 2.926 |
+| flute A♯4 | 16384 / 2048 | 0.9932 | 23.34 | 2.983 |
+| synthetic A3 8-partial | 4096 / 512 | not on Stage-3 EWSD/EPD columns | — | — |
+| synthetic A3 8-partial | 8192 / 1024 | `core_H` = 1.0 on the sheet; EWSD and `effective_partial_density` columns absent (`Stage3_Diagnostics` EWSD is NaN; `note_effective_component_density` = 1.160) | — | — |
+| synthetic A3 8-partial | 16384 / 2048 | same missing Stage-3 EWSD/EPD columns | — | — |
+
+3 % vs the 8192 reference: **FAIL** on G3 (core_H Δ 14.6 % at 4096;
+EWSD Δ 20.4 % / 29.3 % at 4096 / 16384; EPD Δ 4.5 % / 5.5 %). **FAIL**
+on flute A♯4 (core_H Δ 13.4 % at 4096; EWSD Δ 23.8 % / 29.7 %). Flute
+EPD stays inside 3 %. Synthetic cannot be scored on the required
+Stage-3 columns.
+
+G3 8192/4096 matches the P1 table on `aa24de8` to the reported
+rounding (0.9222 / 0.7878, 91.31 / 72.72). The canonical Stage-3 path
+is **not** resolution-invariant. WP1 is **FAILED** on that path.
+R2–R6 are **stopped**.

@@ -1,3 +1,17 @@
+# R1 — Stage-3 B1 on tag v4.2.2 (FAIL)
+
+Clean tree at `64a2282` tagged `v4.2.2` (`v4.2.0` / `v4.2.1` not
+moved). B1 re-run through Stage 1–3 compiled research output, not
+Stage-1 diagnostic EWSD.
+
+- G3 `core_H` 0.7878 / 0.9222 / 0.9760 and EWSD 72.72 / 91.31 / 118.04
+  at n_fft 4096 / 8192 / 16384 (3 % **FAIL**; matches P1 at 8192/4096).
+- Flute A♯4 fails on EWSD and `core_H`; EPD stays inside 3 %.
+- Synthetic Stage-3 sheet has `core_H` = 1.0 but no EWSD/EPD columns.
+- WP1 remains **FAILED** on the canonical path. R2–R6 stopped.
+- Harness: `tools/r1_stage3_b1.py`. Evidence:
+  `RESOLUTION_DEPENDENCE_DIAGNOSIS.md` § R1.
+
 # Measurement-performance evaluation
 
 Recorded how accurately and stably the frozen instrument measures, and

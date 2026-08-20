@@ -27,13 +27,14 @@ bump is recorded.
 | WP4 | CI to green | the previous 8 density failures | Planted peak-table tests opt out of the FFT noise gate; energy gates sum to 1; body sums use `body_freq_max_hz`; phase-2 test uses linear φ; I-sum matches confirmed I. P2 re-check: [GHA 32357936064](https://github.com/LuisMRaimundo/Spectral_Analyser/actions/runs/32357936064) py3.10 + py3.11 **success** (PR #83). | **done (PR #80)**; P2 re-check green |
 | WP5 | Tag tooling, verify_corpus, runbook, v4.2.0 | `tests/phase_27/test_verify_corpus.py` | CLI keeps `--fft-policy fixed`; `verify_corpus` on a planted run; `docs/REEXPORT_RUNBOOK.md` exists; package 4.2.0; no F-042/047/048/049 golden change. | **done (PR #81); tag v4.2.0** |
 | WP6 | Closure dossier + freeze declaration | `tests/phase_28/test_closure_dossier.py` | Phase I table is the freeze construct record; this page supersedes 1–100 ratings; G2 case study; post-freeze backlog; README freeze. | **done (PR #82, `aa24de8`)** |
-| WP1 | Residual footprint separation | `tests/phase_25/test_residual_footprint.py` | Synthetic sinusoid residual share < 1 % and region invariant still hold. **Live G3 export swap FAILED** P1 20 Aug 2026 (`aa24de8`): `core_H` 0.9222 @8192 vs 0.7878 @4096 (14.6 %). Same run: `RESOLUTION_DEPENDENCE_DIAGNOSIS.md` § P1 and `POST_FREEZE_BACKLOG.md`. | **FAILED live (P1); synthetic still pass (PR #77)** |
+| WP1 | Residual footprint separation | `tests/phase_25/test_residual_footprint.py` | Synthetic sinusoid residual share < 1 % and region invariant still hold. **Live G3 export swap FAILED** P1 20 Aug 2026 (`aa24de8`): `core_H` 0.9222 @8192 vs 0.7878 @4096 (14.6 %). **R1 Stage-3 B1 on `v4.2.2` (`64a2282`) FAILED** the 3 % test on compiled `Spectral_Density_Metrics` (G3 same pair; flute A♯4 EWSD/core_H also fail; synthetic Stage-3 EWSD/EPD columns absent). `RESOLUTION_DEPENDENCE_DIAGNOSIS.md` § R1. | **FAILED live (P1); FAILED on canonical Stage-3 path (R1); synthetic WP1 tests still pass (PR #77)** |
 | P1 | G3 contradiction | `tools/p1_g3_swap.py` | Dated live swap on `aa24de8`. 3 % tolerance FAIL. WP1 live acceptance withdrawn. P5/P6 stopped. | **FAIL (PR #83)** |
 | P2 | CI green on tagged code | `.github/workflows/ci.yml` | Full suite 3.10/3.11; live G3 tests skip when audio is absent. [GHA 32357936064](https://github.com/LuisMRaimundo/Spectral_Analyser/actions/runs/32357936064) both jobs **success** (~17 min, not cancelled). | **done (PR #83)** |
 | P3 | Post-rating doc fixes | `REFERENCES.md`, this page, `TROMBONE_AS2_DEFECT_FIX_DIFF.md` | Sethares 2005; WP6 cell; A♯2 residual columns (post-fix only). | **done (PR #83)** |
 | P4 | Tag `v4.2.1` | `verify_export.py`, `tools/verify_corpus.py` | Package 4.2.1; `v4.2.1` supersedes `v4.2.0` (tag kept). Cut on `main` after this PR merges. P1 live fail is on the record. | **in this PR; tag after merge** |
 | P5 | Archive pretag evidence | `docs/validation/pretag_evidence/` | Six trombone/flute research workbooks (`6b0e51a`) + CORDAS trio. G2 pair, cello five-column, 26-note segmentation sheet **not found**. Findings: `PRETAG_FINDINGS_SUMMARY.md`. | **done (this PR); three artefacts missing** |
-| P6 | Runbook re-exports | `docs/REEXPORT_RUNBOOK.md` | Per-corpus Stage 1–3 + `verify_corpus` + diff vs pretag. User overrode the P1-fail stop. | **pending tag `v4.2.1`** |
+| P6 | Runbook re-exports | `docs/REEXPORT_RUNBOOK.md` | Per-corpus Stage 1–3 + `verify_corpus` + diff vs pretag. User overrode the P1-fail stop. | **pending; R1 FAIL stops R6** |
+| R1 | Stage-3 B1 on `v4.2.2` | `tools/r1_stage3_b1.py` | Clean tag `v4.2.2`=`64a2282`. Compiled Stage-3 values within 3 % across n_fft ∈ {4096,8192,16384} on synth + G3 + flute. | **FAIL (this PR). R2–R6 stopped.** |
 | D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
 | D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |
 | D6.3 | D_k n_fft norm | same | Density sums n_fft-normalised to 8192. | **done (PR #76)** |
@@ -149,7 +150,8 @@ This table is the freeze acceptance record. It supersedes the archival
   1.75 independent frames on the stable cut.
 - Out of scope: `docs/POST_FREEZE_BACKLOG.md` (includes local trombone
   G3 `core_H` n_fft sensitivity).
-- Instrument tag: **`v4.2.1` supersedes `v4.2.0`** (scope unchanged;
-  `v4.2.0` kept). P1 live G3 export swap is still **FAILED**
-  (`aa24de8`, 20 Aug 2026). Pre-tag baselines:
-  `pretag_evidence/`. P6 re-exports follow the tag.
+- Instrument tag: **`v4.2.2`** is the clean head after the
+  measurement-performance evaluation (`64a2282`). `v4.2.1` and
+  `v4.2.0` are kept. R1 Stage-3 B1 is **FAILED**; WP1 is not closed
+  on the canonical path. Pre-tag baselines: `pretag_evidence/`.
+  R2–R6 are stopped.
