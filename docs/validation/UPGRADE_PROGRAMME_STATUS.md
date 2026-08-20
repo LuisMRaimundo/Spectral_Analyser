@@ -36,7 +36,8 @@ bump is recorded.
 | P6 | Runbook re-exports | `docs/REEXPORT_RUNBOOK.md` | Per-corpus Stage 1–3 + `verify_corpus` + diff vs pretag. | **pending R2–R5; R1b lifts the R1 stop** |
 | R1 | Stage-3 B1 on `v4.2.2` | `tools/r1_stage3_b1.py` | Compiled Stage-3 values within 3 % across n_fft. Measured **FAIL** (G3/flute). Re-scoped: that target is out of scope (R1b). | **measured FAIL; acceptance re-scoped (R1b)** |
 | R1b | Census-held G3 + WP1 re-scope | `tools/r1b_census_held.py` | Freeze 8192-validated 71 orders; report held vs native core_H/EWSD; attribute B1. | **done (PR #87)** |
-| R2 | One metric, one value | `tests/phase_30/test_r2_metric_single_source.py` | Stage-1 Metrics EWSD/`core_H` equal Stage-3 at the fixed window (1e-9). Diagnostic density is not EWSD. `metric_single_source` fail-closed. Clean synthetic `core_H` ≥ 0.99. | **done (this PR)** |
+| R2 | One metric, one value | `tests/phase_30/test_r2_metric_single_source.py` | Stage-1 Metrics EWSD/`core_H` equal Stage-3 at the fixed window (1e-9). Diagnostic density is not EWSD. `metric_single_source` fail-closed. Clean synthetic `core_H` ≥ 0.99. | **done (PR #88)** |
+| R3 | Leading-silence (B5) | `tests/phase_30/test_r3_leading_silence.py` | Lead/trail digital silence ≤ 2 s matches the trimmed waveform (0 % tol on the loaded array). ADSR_Segmenter untouched. | **done (this PR)** |
 | D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
 | D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |
 | D6.3 | D_k n_fft norm | same | Density sums n_fft-normalised to 8192. | **done (PR #76)** |

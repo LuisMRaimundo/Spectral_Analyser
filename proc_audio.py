@@ -2112,6 +2112,11 @@ class AudioProcessor:
         self.debug_counts_status: str = "not_computed"
         self.model_weight_status: str = "not_computed"
         self.model_weight_fallback_applied: bool = False
+        self.lead_trim_samples: int = 0
+        self.trail_trim_samples: int = 0
+        self.lead_trim_s: float = 0.0
+        self.trail_trim_s: float = 0.0
+        self.silence_trim_applied: bool = False
 
         self.logger.info("AudioProcessor initialised")
 
@@ -2173,6 +2178,17 @@ class AudioProcessor:
                     self.logger.warning(f"Invalid audio data: {p}")
                     continue
                 y = np.asarray(y, dtype=np.float64)
+                from audio_silence_trim import trim_digital_silence
+
+                y, trim_meta = trim_digital_silence(y, int(sr))
+                self.lead_trim_samples = int(trim_meta["lead_trim_samples"])
+                self.trail_trim_samples = int(trim_meta["trail_trim_samples"])
+                self.lead_trim_s = float(trim_meta["lead_trim_s"])
+                self.trail_trim_s = float(trim_meta["trail_trim_s"])
+                self.silence_trim_applied = bool(trim_meta["silence_trim_applied"])
+                if y.size == 0:
+                    self.logger.warning(f"Audio is empty after trim: {p}")
+                    continue
                 dc_offset_before = float(np.mean(y))
                 y = y - dc_offset_before
                 dc_offset_after = float(np.mean(y))
@@ -11112,6 +11128,11 @@ class AudioProcessor:
             "EWSD_score_acoustic_balanced": metric_float_or_nan(
                 getattr(self, "EWSD_score_acoustic_balanced", None)
             ),
+            "lead_trim_samples": metric_int_or_nan(getattr(self, "lead_trim_samples", 0)),
+            "trail_trim_samples": metric_int_or_nan(getattr(self, "trail_trim_samples", 0)),
+            "lead_trim_s": metric_float_or_nan(getattr(self, "lead_trim_s", 0.0)),
+            "trail_trim_s": metric_float_or_nan(getattr(self, "trail_trim_s", 0.0)),
+            "silence_trim_applied": bool(getattr(self, "silence_trim_applied", False)),
             "linear_sum_amplitude_harmonic": metric_float_or_nan(
                 getattr(self, "linear_sum_amplitude_harmonic", None)
             ),

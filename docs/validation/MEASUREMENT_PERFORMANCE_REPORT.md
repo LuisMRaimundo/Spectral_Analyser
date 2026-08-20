@@ -168,3 +168,11 @@ The original B1 cell (cross-n_fft 3 % on live G3, score 71.4 Part B)
 is unchanged; that target remains the R1 measured FAIL and is out of
 scope under R1b. Evidence: `tests/phase_30/test_r2_metric_single_source.py`,
 `docs/validation/METRIC_SINGLE_SOURCE.md`.
+
+## Addendum — 20 August 2026 (R3; scores not rewritten)
+
+**B5: PASS (post-R3).** Leading or trailing digital silence of 0 / 0.5 /
+2 s is trimmed on load so the analysis array matches the unpadded take.
+The original B5 FAIL (prepend → 0 validated harmonics / EWSD NaN) is
+unchanged in the scored table. Mechanism: silent head at file start;
+guard is `audio_silence_trim.trim_digital_silence`, not ADSR_Segmenter.
