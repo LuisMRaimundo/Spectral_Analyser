@@ -26,6 +26,7 @@ docs/validation/_d61_raw/
 docs/validation/_d66_*/
 docs/validation/_wp2_*/
 docs/validation/_p1_g3_swap/
+docs/validation/_measurement_eval/
 
 # Pytest and coverage
 .pytest_cache/
