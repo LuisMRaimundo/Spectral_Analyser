@@ -1509,11 +1509,23 @@ def build_spectral_density_metrics(
         component_inharmonic_energy_ratio = _comp_i / _comp_sum.replace(0.0, np.nan)
         component_subbass_energy_ratio = _comp_s / _comp_sum.replace(0.0, np.nan)
 
-    core_harmonic_energy_ratio = _series_or_nan(merged, "harmonic_energy_ratio")
-    core_residual_energy_ratio = _series_or_nan(merged, "residual_energy_ratio")
+    core_harmonic_energy_ratio = _series_or_nan(merged, "component_harmonic_energy_ratio")
+    if core_harmonic_energy_ratio.isna().all():
+        core_harmonic_energy_ratio = _series_or_nan(merged, "core_harmonic_energy_ratio")
+    if core_harmonic_energy_ratio.isna().all():
+        core_harmonic_energy_ratio = _series_or_nan(merged, "harmonic_energy_ratio")
+    core_residual_energy_ratio = _series_or_nan(merged, "component_inharmonic_energy_ratio")
+    if core_residual_energy_ratio.isna().all():
+        core_residual_energy_ratio = _series_or_nan(merged, "core_residual_energy_ratio")
+    if core_residual_energy_ratio.isna().all():
+        core_residual_energy_ratio = _series_or_nan(merged, "residual_energy_ratio")
     if core_residual_energy_ratio.isna().all():
         core_residual_energy_ratio = _series_or_nan(merged, "component_residual_noise_energy_ratio")
-    core_subbass_energy_ratio = _series_or_nan(merged, "subbass_energy_ratio")
+    core_subbass_energy_ratio = _series_or_nan(merged, "component_subbass_energy_ratio")
+    if core_subbass_energy_ratio.isna().all():
+        core_subbass_energy_ratio = _series_or_nan(merged, "core_subbass_energy_ratio")
+    if core_subbass_energy_ratio.isna().all():
+        core_subbass_energy_ratio = _series_or_nan(merged, "subbass_energy_ratio")
     if core_residual_energy_ratio.isna().all():
         h_core = pd.to_numeric(core_harmonic_energy_ratio, errors="coerce")
         s_core = pd.to_numeric(core_subbass_energy_ratio, errors="coerce")

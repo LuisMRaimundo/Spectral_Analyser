@@ -1,3 +1,11 @@
+# R2 — One metric, one value at the fixed window
+
+Stage-1 Metrics `core_harmonic_energy_ratio` is the component ΣA²
+partition. Stage-1 `EWSD_score_acoustic_balanced` is stamped from the
+same `compute_ewsd` path Stage-3 uses. The diagnostic density column
+is not EWSD. `metric_single_source` is fail-closed in `data_integrity`
+and `verify_export`. Path table: `docs/validation/METRIC_SINGLE_SOURCE.md`.
+
 # R1b — Census-held G3 and WP1 re-scope
 
 Freeze the 8192-validated 71 harmonic orders and recompute G3

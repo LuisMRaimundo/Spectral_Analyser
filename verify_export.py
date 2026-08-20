@@ -19,6 +19,7 @@ from analysis_policy import EXPORT_SCHEMA_VERSION
 from analysis_provenance import resolve_analysis_provenance
 from data_integrity import (
     validate_header_contract_consistency,
+    validate_metric_single_source,
     validate_unique_peak_bin_assignment,
 )
 
@@ -233,12 +234,26 @@ def inspect_workbook_invariants(path: Path) -> Dict[str, Any]:
         if not harm.empty
         else {"ok": True, "failures": "", "duplicated_bins": []}
     )
-    ok = bool(header_inv.get("ok", True) and peak_inv.get("ok", True))
+    metrics_map: Dict[str, Any] = {}
+    if "Metrics" in sheets:
+        metrics_map = _kv_sheet(path, "Metrics")
+    stage3_map: Dict[str, Any] = {}
+    if "Spectral_Density_Metrics" in sheets:
+        sd = _read_sheet(path, "Spectral_Density_Metrics")
+        if not sd.empty:
+            stage3_map = {str(c): sd.iloc[0][c] for c in sd.columns}
+    single = validate_metric_single_source(metrics_map, stage3=stage3_map)
+    ok = bool(
+        header_inv.get("ok", True)
+        and peak_inv.get("ok", True)
+        and single.get("ok", True)
+    )
     failures = [
         x
         for x in (
             header_inv.get("failures"),
             peak_inv.get("failures"),
+            single.get("failures"),
         )
         if x
     ]
@@ -246,6 +261,7 @@ def inspect_workbook_invariants(path: Path) -> Dict[str, Any]:
         "ok": ok,
         "header_contract": header_inv,
         "peak_bin_assignment": peak_inv,
+        "metric_single_source": single,
         "failures": "; ".join(str(f) for f in failures),
     }
 

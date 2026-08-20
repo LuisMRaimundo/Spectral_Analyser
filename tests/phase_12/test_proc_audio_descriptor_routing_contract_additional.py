@@ -130,6 +130,9 @@ def test_export_row_his_energy_ratios_remain_distinct_from_component_aliases() -
     assert row["component_harmonic_energy_ratio"] == pytest.approx(0.99)
     assert row["component_inharmonic_energy_ratio"] == pytest.approx(0.01)
     assert row["component_subbass_energy_ratio"] == pytest.approx(0.0)
+    assert row["core_harmonic_energy_ratio"] == pytest.approx(0.99)
+    assert row["core_residual_energy_ratio"] == pytest.approx(0.01)
+    assert row["core_subbass_energy_ratio"] == pytest.approx(0.0)
 
 
 def test_component_energy_ratio_triple_preserves_his_order_and_uses_primary() -> None:
