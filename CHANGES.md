@@ -13,7 +13,9 @@ export swap failed the 3 % `core_H` tolerance.
 - P3: Sethares (2005) added to `REFERENCES.md` and the formula index;
   WP6 cell marked merged (`aa24de8`); A♯2 residual columns on the
   WP2 diff (post-fix only; pre historical).
-- P2: CI on this PR; live G3 tests remain skip-if-missing-audio.
+- P2: GHA [32357936064](https://github.com/LuisMRaimundo/Spectral_Analyser/actions/runs/32357936064)
+  py3.10 + py3.11 success (~17 min, not cancelled). Live G3 tests
+  remain skip-if-missing-audio.
 
 # WP6 — Closure dossier and freeze declaration
 
