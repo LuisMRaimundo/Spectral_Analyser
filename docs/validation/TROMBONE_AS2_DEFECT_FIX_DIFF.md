@@ -26,6 +26,19 @@ f0 used = 116.300 Hz.
 | `EWSD_score_acoustic_balanced` | — | not re-run | **87.41** |
 | CI unit / n | not exported | `partials` / 89 | `partials` / 168 (Stage 2) |
 | `accepted_slots_above_body_stop` | 0 | 0 | **0** |
+| `core_harmonic_energy_ratio` | historical — not regenerated | historical — not regenerated | **0.9041** |
+| `core_residual_energy_ratio` | historical — not regenerated | historical — not regenerated | **0.0959** |
+
+Post-WP1 residual columns are from
+`_wp2_raw/trombone_as2_ff/stage1/A#2/spectral_analysis.xlsx` `Metrics`
+(`38cb535` export; same take as the census row). Pre-D1 and mid-D1–D5
+values were not stored and are **not regenerated**. Discrete-peak pie
+`component_harmonic_energy_ratio` on that workbook is 1.000; the
+**core** residual (~9.6 %) is the PSD leftover after main-lobe
+exclusion of the 92 validated partials. That is the assessable
+“*ff* brass residual” figure for this take. It is a single-window
+(8192/1024) number; P1 shows the same column still moves with n_fft
+on G3.
 
 Acceptance: `harmonic_validated_count ≥ 86` (92). `subbass_upper_bound_hz =
 58.15` on Metrics, Validation_Metrics, and Analysis_Metadata.

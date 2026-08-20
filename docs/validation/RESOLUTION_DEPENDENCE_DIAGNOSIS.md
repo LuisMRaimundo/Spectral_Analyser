@@ -88,3 +88,58 @@ G3 core_H steps 0.24 % when the window halves; G♯3 steps 0.65 %. The
 step no longer follows the window. Residual share is < 1.1 % (was
 5–25 % and monotone in bin width). `residual_region_hz_total` is
 ≤ 19 980 Hz (was 36 364 Hz on a 20 kHz band).
+
+## P1 — Live G3 swap on `aa24de8` (20 August 2026) — **FAIL**
+
+Re-run from audio on the post-WP6 tree (`aa24de8`, `git describe`
+`v4.2.0-2-gaa24de8`). Command (runbook flags):
+
+```bash
+python -m tools.p1_g3_swap --out docs/validation/_p1_g3_swap
+```
+
+which invokes `run_orchestrator.py` Stage 1–3 with `--fft-policy fixed`,
+`window` default, φ=`log`, twice:
+
+| Window | n_fft / hop |
+|--------|-------------|
+| production | 8192 / 1024 |
+| swap | 4096 / 512 |
+
+Audio: `D:\METAIS\TROMBONE\IOWA_Trombone - Test\TenorTrombone\IOWA_Trombone_ff\_Sustains_Stable\IOWA_Trb.T_ff.G3_SustainStable.aif`  
+SHA-256: `91dbf93da5082954145669c2cf7819bbcdc1eb0bf94a08bd982331c42ca9d20a`  
+Profile id (both runs): `wf=log|dst=-90.0|ceil=20000.0|fft=fixed|seg=sustain_primary_stable_diagnostic|elig=1`  
+Manifest: `_p1_g3_swap/g3_8192/run_manifest.json` and `g3_4096/run_manifest.json`.  
+Raw table: `_p1_g3_swap/p1_g3_swap.json` (local; not committed).
+
+| n_fft / hop | `core_harmonic_energy_ratio` | `core_residual_energy_ratio` | `harmonic_density_sum` | `EWSD_score_acoustic_balanced` |
+|-------------|-----------------------------:|-----------------------------:|-----------------------:|-------------------------------:|
+| 8192 / 1024 | 0.9222 | 0.0778 | 2.973 | 91.31 |
+| 4096 / 512 | 0.7878 | 0.2122 | 2.971 | 72.72 |
+
+`core_H` relative Δ = **14.6 %**. 3 % tolerance: **FAIL**.
+
+`harmonic_density_sum` is stable (2.973 vs 2.971). The jump is in the
+**exported energy partition** (`core_*_energy_ratio`) and in EWSD
+(91.31 → 72.72), the same window-following pattern as D6.1.1
+(91.64 → 71.13 on `5b1a1c7`).
+
+The WP1 table immediately above (0.9969 vs 0.9993, residual &lt; 1.1 %)
+is **stale relative to the compiled/research export**. That table is
+consistent with a descriptor-level *region* / synthetic extraction
+(`tests/phase_25` sinusoid residual &lt; 1 % still holds). It is **not**
+the live Stage 1–3 `core_harmonic_energy_ratio` on this G3 take under
+`aa24de8`. The backlog entry that the live 3 % test is red is the
+correct description of the **export** path.
+
+**Hypothesis.** WP1 separated residual *exclusion width* (main-lobe vs
+ENBW) and closed the Hz-region invariant. Live *energy* in
+`core_residual_energy_ratio` still grows when the hop/window halves
+(more independent residual bins above the floor). Synthetic planted
+peaks do not exercise that path. Production policy (`fft_policy=fixed`
+at 8192/1024) avoids mixing the two windows; it does not make the
+swap invariant.
+
+This dated run is the single source for the backlog and the WP1 status
+row. P5/P6 re-exports are **stopped** until this export-level
+invariance is resolved.

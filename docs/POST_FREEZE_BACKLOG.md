@@ -6,17 +6,24 @@ the closure programme was WP1–WP6 only.
 
 ## Local trombone G3 `core_H` n_fft sensitivity
 
-`tests/phase_25/test_residual_footprint.py` live G3 / G♯3 checks
-(`test_g3_core_h_ratio_within_three_percent_across_n_fft`,
-`test_g3_gs3_core_h_does_not_follow_the_window`) still fail on the
-author machine: `core_H` at n_fft=4096 vs 8192 differs by about 20 %
-(WP1 measured 0.9909 vs 0.9961 on a related pair; the 3 % live
-tolerance is tighter than the remaining window step).
+**Confirmed P1, 20 August 2026, commit `aa24de8`.** Same dated run as
+`RESOLUTION_DEPENDENCE_DIAGNOSIS.md` § P1. Live Stage 1–3 G3 swap
+(`IOWA_Trb.T_ff.G3_SustainStable.aif`, SHA-256 `91dbf93d…d20a`,
+profile `wf=log|dst=-90.0|ceil=20000.0|fft=fixed|seg=sustain_primary_stable_diagnostic|elig=1`):
 
-CI machines skip these tests because
-`D:\METAIS\TROMBONE\...\IOWA_Trb.T_ff.G3_SustainStable.aif` is absent.
-They are **not** a WP4 CI failure. Production policy is `fft_policy=fixed`
-at 8192 / 1024, so freeze-comparable corpora do not mix those windows.
+| n_fft / hop | `core_harmonic_energy_ratio` | `core_residual_energy_ratio` | EWSD |
+|-------------|-----------------------------:|-----------------------------:|-----:|
+| 8192 / 1024 | 0.9222 | 0.0778 | 91.31 |
+| 4096 / 512 | 0.7878 | 0.2122 | 72.72 |
+
+`core_H` relative Δ = 14.6 %. 3 % tolerance: **FAIL**. The WP1 diagnosis
+table (0.9969 vs 0.9993) does **not** describe this export. Synthetic
+WP1 tests (`tests/phase_25`, no live audio) still pass. CI skips the
+live G3 tests when the AIF is absent; that skip is not a WP4 failure.
+
+Production policy (`fft_policy=fixed` at 8192/1024) avoids mixing the
+windows. It does not make the swap invariant. P5/P6 are blocked until
+this is resolved.
 
 ## Listener study still scaffold
 

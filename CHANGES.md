@@ -1,3 +1,20 @@
+# Post-rating remediation
+
+P1–P3 only. F-042 / F-047 / F-048 / F-049 algebra is unchanged.
+P5/P6 re-exports and the `v4.2.1` retag are **stopped**: the live G3
+export swap failed the 3 % `core_H` tolerance.
+
+- P1 (20 Aug 2026, `aa24de8`): G3 Stage 1–3 at 8192/1024 vs 4096/512.
+  `core_harmonic_energy_ratio` 0.9222 vs 0.7878 (Δ 14.6 %). EWSD
+  91.31 vs 72.72. Same dated run in
+  `RESOLUTION_DEPENDENCE_DIAGNOSIS.md` § P1,
+  `POST_FREEZE_BACKLOG.md`, and the WP1 status row (**FAILED live**).
+  Synthetic WP1 tests still pass. Reproducer: `tools/p1_g3_swap.py`.
+- P3: Sethares (2005) added to `REFERENCES.md` and the formula index;
+  WP6 cell marked merged (`aa24de8`); A♯2 residual columns on the
+  WP2 diff (post-fix only; pre historical).
+- P2: CI on this PR; live G3 tests remain skip-if-missing-audio.
+
 # WP6 — Closure dossier and freeze declaration
 
 The upgrade programme is closed. F-042 / F-047 / F-048 / F-049 algebra

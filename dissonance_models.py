@@ -379,6 +379,9 @@ class DissonanceModel(ABC):
 class SetharesDissonance(DissonanceModel):
     """Sethares (TTSS, 2nd ed., 2005) robust implementation.
 
+    Bibliographic entry: Sethares (2005) in ``REFERENCES.md``.
+    Formula-index pointer: ``docs/METRIC_FORMULA_INDEX.md`` (Sethares note).
+
     Elementar (dois parciais):
         d(f1,f2,a1,a2) = min(a1,a2) * gain * (exp(-b1*y) - exp(-b2*y))
         y = s(f1) * (f2 - f1)
