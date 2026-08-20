@@ -8,10 +8,19 @@ Spectral_Analyser is a spectral-analysis pipeline developed in support of doctor
 
 ## Status
 
-- **Version**: 4.2.0.
+- **Version**: 4.2.0 (git tag `v4.2.0`).
 - **Python**: >=3.10,<3.12.
-- **Development status**: Beta.
+- **Development status**: Frozen at v4.2.0 (20 August 2026).
 - **License**: Proprietary — see `LICENSE` at the repository root.
+
+> **Freeze.** The closure programme (WP1–WP6) is complete. F-042 / F-047 /
+> F-048 / F-049 algebra is unchanged. Acceptance is the measurable table in
+> [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md),
+> not a 1–100 rating. After **one** Stage 1–3 re-export per corpus
+> ([`docs/REEXPORT_RUNBOOK.md`](docs/REEXPORT_RUNBOOK.md) +
+> `python -m tools.verify_corpus <out>`), do not iterate Stage 1 on that
+> corpus. Defects outside WP1–WP6 go to
+> [`docs/POST_FREEZE_BACKLOG.md`](docs/POST_FREEZE_BACKLOG.md).
 
 ## What this software does
 
@@ -144,8 +153,10 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | [`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`](docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) | Pipeline + **§3–4** f0/harmonics + **§11** version map |
 | [`docs/GUI_OPTION_REFERENCE.md`](docs/GUI_OPTION_REFERENCE.md) | GUI controls; **§A1** β / body-stop / CI; **§A5** export weight naming |
 | [`CHANGES.md`](CHANGES.md) | Versioned change log |
-| [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md) | Post-`70525e3` upgrade programme (Phases A–I) |
-| [`docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`](docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md) | Planted N / B / EPD / confirmed-I recovery (Phase I) |
+| [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md) | Freeze acceptance (A–I, D1–D6, WP1–WP6); supersedes 1–100 ratings |
+| [`docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`](docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md) | Planted N / B / EPD / confirmed-I recovery (Phase I / WP6) |
+| [`docs/validation/SEGMENTATION_CASE_STUDY_G2.md`](docs/validation/SEGMENTATION_CASE_STUDY_G2.md) | Cello G2 full vs stable (primary vs diagnostic) |
+| [`docs/POST_FREEZE_BACKLOG.md`](docs/POST_FREEZE_BACKLOG.md) | Out-of-scope defects after v4.2.0 |
 | [`docs/validation/PERCEPTUAL_PROTOCOL.md`](docs/validation/PERCEPTUAL_PROTOCOL.md) | Listener-study scaffold (no data collection) |
 
 **Re-export:** workbooks on disk keep old Stage 1 harmonic identity until **re-analysed with v4.1.0** (Stage 1 + 2 + 3), including exclusive peak-to-slot assignment and validated-partial gating (`spectral_analysis_schema_2026_08`). Export-schema-only refresh from v4.0.3 still needs Stage 2 + 3.

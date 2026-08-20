@@ -34,3 +34,7 @@ audio export). They are not required for the table above.
 
 Listener judgements are out of scope. See
 `docs/validation/PERCEPTUAL_PROTOCOL.md`.
+
+This table is the Phase I / WP6 freeze evidence for construct recovery.
+It is not a 1–100 rating. Programme status:
+`docs/validation/UPGRADE_PROGRAMME_STATUS.md`.
