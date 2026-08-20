@@ -39,6 +39,23 @@ def test_trim_recovers_tone(pad_s: float, side: str) -> None:
         assert meta[key] == pytest.approx(pad_s, abs=1.0 / sr)
 
 
+def test_single_leading_zero_crossing_is_kept() -> None:
+    sr = 44100
+    y = np.sin(2.0 * np.pi * 440.0 * np.arange(sr) / sr)
+    assert y[0] == 0.0
+    got, meta = trim_digital_silence(y, sr)
+    assert got.size == y.size
+    assert meta["silence_trim_applied"] is False
+
+
+def test_all_silent_array_is_kept() -> None:
+    sr = 44100
+    y = np.zeros(sr, dtype=np.float64)
+    got, meta = trim_digital_silence(y, sr)
+    assert got.size == y.size
+    assert meta["silence_trim_applied"] is False
+
+
 def test_load_audio_files_trims_lead_and_trail(tmp_path: Path) -> None:
     sr = 44100
     y0 = _tone(sr)

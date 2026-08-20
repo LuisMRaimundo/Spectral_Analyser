@@ -2187,7 +2187,7 @@ class AudioProcessor:
                 self.trail_trim_s = float(trim_meta["trail_trim_s"])
                 self.silence_trim_applied = bool(trim_meta["silence_trim_applied"])
                 if y.size == 0:
-                    self.logger.warning(f"Audio is digital silence after trim: {p}")
+                    self.logger.warning(f"Audio is empty after trim: {p}")
                     continue
                 dc_offset_before = float(np.mean(y))
                 y = y - dc_offset_before
