@@ -1,4 +1,4 @@
-"""WP5 — verify_corpus, freeze runbook, package 4.2.0."""
+"""WP5 / P4 — verify_corpus, freeze runbook, package 4.2.1."""
 
 from __future__ import annotations
 
@@ -67,10 +67,10 @@ def _good_run(tmp_path: Path) -> Path:
     return out
 
 
-def test_package_version_is_4_2_0() -> None:
+def test_package_version_is_4_2_1() -> None:
     pkg, source = resolve_package_version()
     assert source.startswith("pyproject.toml")
-    assert pkg == "4.2.0"
+    assert pkg == "4.2.1"
 
 
 def test_cli_still_defaults_to_fft_policy_fixed() -> None:
@@ -203,7 +203,9 @@ def test_runbook_documents_exact_commands() -> None:
     assert "python -m tools.verify_corpus" in runbook
     assert "python -m tools.reexport_corpus" in runbook
     assert "run_manifest.json" in runbook
-    assert "Do **not** run these commands as part of WP5" in runbook
+    assert "v4.2.1" in runbook
+    assert "pretag_evidence" in runbook
+    assert "analysis_results_v4.2.1" in runbook
     readme = Path("README.md").read_text(encoding="utf-8")
     assert "REEXPORT_RUNBOOK.md" in readme
     assert "verify_corpus" in readme

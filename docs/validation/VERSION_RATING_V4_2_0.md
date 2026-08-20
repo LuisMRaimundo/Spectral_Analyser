@@ -408,6 +408,14 @@ P1 live G3 swap on `aa24de8` **failed** the 3 % `core_H` tolerance
 P3 cleared two documentation gaps only: Sethares (2005) is in
 `REFERENCES.md`; A♯2 post-fix `core_residual_energy_ratio` = 0.0959
 is in `TROMBONE_AS2_DEFECT_FIX_DIFF.md` (pre column historical).
-Re-scoring, if wanted, is a separate exercise.
+
+P4/P5 (same day, user override of the P1-fail stop): package **4.2.1**;
+`v4.2.1` is the freeze reference (`v4.2.0` kept). Pre-tag trombone
+32/32 and flute 36/37 + 22/38 are now **assessable** from
+`docs/validation/pretag_evidence/` and `PRETAG_FINDINGS_SUMMARY.md`,
+still **non-citable**. G2 pair, cello five-column sheet, and the
+26-note segmentation comparison were not placed. P6 re-exports and
+re-scoring, if wanted, remain separate exercises. The acoustics cap
+from the live G3 fail is **not** cleared.
 
 This rating is superseded by `UPGRADE_PROGRAMME_STATUS.md` for all engineering claims; the pass/fail table there is authoritative.

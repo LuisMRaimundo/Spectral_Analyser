@@ -31,9 +31,9 @@ bump is recorded.
 | P1 | G3 contradiction | `tools/p1_g3_swap.py` | Dated live swap on `aa24de8`. 3 % tolerance FAIL. WP1 live acceptance withdrawn. P5/P6 stopped. | **FAIL (PR #83)** |
 | P2 | CI green on tagged code | `.github/workflows/ci.yml` | Full suite 3.10/3.11; live G3 tests skip when audio is absent. [GHA 32357936064](https://github.com/LuisMRaimundo/Spectral_Analyser/actions/runs/32357936064) both jobs **success** (~17 min, not cancelled). | **done (PR #83)** |
 | P3 | Post-rating doc fixes | `REFERENCES.md`, this page, `TROMBONE_AS2_DEFECT_FIX_DIFF.md` | Sethares 2005; WP6 cell; A♯2 residual columns (post-fix only). | **done (PR #83)** |
-| P4 | Tag `v4.2.1` | — | Cut after P1–P3 if P1 passed. | **STOPPED (P1 FAIL)** |
-| P5 | Archive pretag evidence | `docs/validation/pretag_evidence/` | Non-citable ingest + findings summary. | **STOPPED (P1 FAIL)** |
-| P6 | Runbook re-exports | `docs/REEXPORT_RUNBOOK.md` | Per-corpus Stage 1–3 + `verify_corpus` + diff vs pretag. | **STOPPED (P1 FAIL)** |
+| P4 | Tag `v4.2.1` | `verify_export.py`, `tools/verify_corpus.py` | Package 4.2.1; `v4.2.1` supersedes `v4.2.0` (tag kept). Cut on `main` after this PR merges. P1 live fail is on the record. | **in this PR; tag after merge** |
+| P5 | Archive pretag evidence | `docs/validation/pretag_evidence/` | Six trombone/flute research workbooks (`6b0e51a`) + CORDAS trio. G2 pair, cello five-column, 26-note segmentation sheet **not found**. Findings: `PRETAG_FINDINGS_SUMMARY.md`. | **done (this PR); three artefacts missing** |
+| P6 | Runbook re-exports | `docs/REEXPORT_RUNBOOK.md` | Per-corpus Stage 1–3 + `verify_corpus` + diff vs pretag. User overrode the P1-fail stop. | **pending tag `v4.2.1`** |
 | D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
 | D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |
 | D6.3 | D_k n_fft norm | same | Density sums n_fft-normalised to 8192. | **done (PR #76)** |
@@ -149,7 +149,7 @@ This table is the freeze acceptance record. It supersedes the archival
   1.75 independent frames on the stable cut.
 - Out of scope: `docs/POST_FREEZE_BACKLOG.md` (includes local trombone
   G3 `core_H` n_fft sensitivity).
-- Instrument tag: **v4.2.0**. `v4.2.1` was **not** cut: P1 live G3
-  export swap failed the 3 % `core_H` tolerance (20 Aug 2026,
-  `aa24de8`). P5/P6 re-exports are stopped. Same dated run:
-  `RESOLUTION_DEPENDENCE_DIAGNOSIS.md` § P1.
+- Instrument tag: **`v4.2.1` supersedes `v4.2.0`** (scope unchanged;
+  `v4.2.0` kept). P1 live G3 export swap is still **FAILED**
+  (`aa24de8`, 20 Aug 2026). Pre-tag baselines:
+  `pretag_evidence/`. P6 re-exports follow the tag.

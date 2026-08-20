@@ -4,23 +4,30 @@ Spectral_Analyser is a spectral-analysis pipeline developed in support of doctor
 
 > **Documentation status.** The implementation / mathematical manual, formula
 > index, export schema, and pipeline semantics documents listed in the map below
-> are present in this repository and stamped to package **v4.2.0**.
+> are present in this repository and stamped to package **v4.2.1**.
 
 ## Status
 
-- **Version**: 4.2.0 (git tag `v4.2.0`).
+- **Version**: 4.2.1 (git tag `v4.2.1` supersedes `v4.2.0` as the freeze
+  reference; scope of validity unchanged. Tag `v4.2.0` is kept).
 - **Python**: >=3.10,<3.12.
-- **Development status**: Frozen at v4.2.0 (20 August 2026).
+- **Development status**: Frozen at v4.2.1 (20 August 2026).
 - **License**: Proprietary — see `LICENSE` at the repository root.
 
-> **Freeze.** The closure programme (WP1–WP6) is complete. F-042 / F-047 /
-> F-048 / F-049 algebra is unchanged. Acceptance is the measurable table in
+> **Freeze.** Acceptance is the measurable table in
 > [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md),
-> not a 1–100 rating. After **one** Stage 1–3 re-export per corpus
+> not a 1–100 rating. F-042 / F-047 / F-048 / F-049 algebra is unchanged.
+> v4.2.1 supersedes v4.2.0 as the freeze reference; do not delete
+> `v4.2.0`. Pre-tag workbooks in
+> [`docs/validation/pretag_evidence/`](docs/validation/pretag_evidence/)
+> are **non-citable** baselines. Citation corpora to re-export once
+> under this tag (P6, not yet run): tuba *pp*; trombone *pp/mf/ff*;
+> flute *pp/mf/ff*; cello *ff*; remaining CORDAS corpora in the runbook.
+> After **one** Stage 1–3 re-export per corpus
 > ([`docs/REEXPORT_RUNBOOK.md`](docs/REEXPORT_RUNBOOK.md) +
 > `python -m tools.verify_corpus <out>`), do not iterate Stage 1 on that
-> corpus. Defects outside WP1–WP6 go to
-> [`docs/POST_FREEZE_BACKLOG.md`](docs/POST_FREEZE_BACKLOG.md).
+> corpus. Live G3 `core_H` swap remains **FAILED**
+> (`POST_FREEZE_BACKLOG.md`). Other defects go there too.
 
 ## What this software does
 
@@ -140,7 +147,7 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 
 Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
 
-## Documentation map (v4.2.0)
+## Documentation map (v4.2.1)
 
 | Document | Role |
 |----------|------|
@@ -156,7 +163,9 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md) | Freeze acceptance (A–I, D1–D6, WP1–WP6); supersedes 1–100 ratings |
 | [`docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`](docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md) | Planted N / B / EPD / confirmed-I recovery (Phase I / WP6) |
 | [`docs/validation/SEGMENTATION_CASE_STUDY_G2.md`](docs/validation/SEGMENTATION_CASE_STUDY_G2.md) | Cello G2 full vs stable (primary vs diagnostic) |
-| [`docs/POST_FREEZE_BACKLOG.md`](docs/POST_FREEZE_BACKLOG.md) | Out-of-scope defects after v4.2.0 |
+| [`docs/POST_FREEZE_BACKLOG.md`](docs/POST_FREEZE_BACKLOG.md) | Out-of-scope defects after the freeze (includes live G3 `core_H`) |
+| [`docs/validation/pretag_evidence/README.md`](docs/validation/pretag_evidence/README.md) | Pre-tag artefacts (`6b0e51a` / `ec0a99a`); **non-citable** |
+| [`docs/validation/PRETAG_FINDINGS_SUMMARY.md`](docs/validation/PRETAG_FINDINGS_SUMMARY.md) | Musicology rows extracted from those artefacts |
 | [`docs/validation/PERCEPTUAL_PROTOCOL.md`](docs/validation/PERCEPTUAL_PROTOCOL.md) | Listener-study scaffold (no data collection) |
 
 **Re-export:** workbooks on disk keep old Stage 1 harmonic identity until **re-analysed with v4.1.0** (Stage 1 + 2 + 3), including exclusive peak-to-slot assignment and validated-partial gating (`spectral_analysis_schema_2026_08`). Export-schema-only refresh from v4.0.3 still needs Stage 2 + 3.

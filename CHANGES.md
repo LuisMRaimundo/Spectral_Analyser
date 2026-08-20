@@ -1,3 +1,11 @@
+# v4.2.1 supersedes v4.2.0 as the freeze reference
+
+Scope of validity unchanged. Tag `v4.2.0` is not moved or deleted.
+Package version is **4.2.1**. Pre-tag workbooks are archived under
+`docs/validation/pretag_evidence/` (non-citable). P1 live G3 `core_H`
+swap remains FAILED. P6 runbook re-exports are the next step after
+this tag is cut on `main`.
+
 # Post-rating remediation
 
 P1–P3 only. F-042 / F-047 / F-048 / F-049 algebra is unchanged.
