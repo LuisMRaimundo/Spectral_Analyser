@@ -1,3 +1,11 @@
+# R4 — EPD-primary density and estimated_snr_db
+
+EPD (`note_effective_component_density`) is the primary noise-robust
+density; EWSD is the energy-weighted complement (B7). Stage-1/3 export
+`estimated_snr_db` (power-weighted mean of validated-harmonic peak-vs-floor
+`snr_db`). Dictionary + `metric_contract`. Pretag trombone/flute
+dynamic-ordering annotated as partly SNR-mediated.
+
 # R3 — Leading/trailing digital-silence trim
 
 Files with ≤ 2 s of leading or trailing digital zeros now match the

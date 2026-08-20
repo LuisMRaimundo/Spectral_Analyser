@@ -7,8 +7,8 @@ Scope: **acoustic/objective checks only** — no perceptual or listener-validati
 | Construct | Column | Acoustic meaning |
 |-----------|--------|------------------|
 | Weighted spectral density | `note_density_final` | H/I/S weighted partial sums |
-| Effective partial count ("fatness") | `note_effective_component_density` | Pooled participation ratio on energy |
-| Comparative weighted density | `EWSD_score_acoustic_balanced` | Density × moderated anti-concentration penalty |
+| Effective partial count ("fatness") | `note_effective_component_density` | **Primary noise-robust density** (F-047). Pooled participation ratio on energy. A4 / B7: EPD stays flat with SNR. |
+| Comparative weighted density | `EWSD_score_acoustic_balanced` | Energy-weighted complement: density × moderated anti-concentration. Rises with spectral cleanliness (B7). |
 
 EWSD strict (`EWSD_score_total`) and balanced companion are **not interchangeable** with `note_density_final`.
 
@@ -131,8 +131,14 @@ From `MEASUREMENT_PERFORMANCE_REPORT.md` (seed 20260820):
 | 35 | 8.0 | 2.1658 | 37.9772 |
 | 40 | 8.0 | 2.1658 | 42.5820 |
 
-N̂ and EPD stay constant; EWSD rises with spectral cleanliness. Report
-SNR beside EWSD for cross-dynamic comparisons.
+### SNR dependence (measured)
+
+The B7 table is the measured SNR conditioner. N̂ and EPD stay constant;
+EWSD is weighted by spectral cleanliness and rises ~8.8 → 42.6 from
+0–40 dB on this 8-partial tone. Cross-dynamic EWSD differences are
+partly SNR-mediated unless `estimated_snr_db` is reported beside the
+score. EPD (`note_effective_component_density`) is the primary
+noise-robust density; EWSD is the energy-weighted complement.
 
 ## Resolution dependence
 

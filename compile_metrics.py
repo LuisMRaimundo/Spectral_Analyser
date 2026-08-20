@@ -415,6 +415,7 @@ DENSITY_METRICS_MAIN_COLUMNS: List[str] = [
     "core_harmonic_energy_ratio",
     "core_residual_energy_ratio",
     "core_subbass_energy_ratio",
+    "estimated_snr_db",
     "harmonic_effective_power_density_normalized",
     "energy_weighted_component_density_diagnostic",
     "effective_components_weighted_diagnostic",

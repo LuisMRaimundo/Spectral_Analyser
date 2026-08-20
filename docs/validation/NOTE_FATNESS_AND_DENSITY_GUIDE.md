@@ -6,10 +6,10 @@ Acoustic constructs only. No perceptual claims.
 
 | Question | Column | Workbook / sheet |
 |----------|--------|------------------|
-| How many effective partials carry energy on this note? | **`note_effective_component_density`** | `compiled_density_metrics.xlsx` → `Density_Metrics`; or `compiled_density_metrics_research.xlsx` → `Spectral_Density_Metrics` |
+| How many effective partials carry energy on this note? | **`note_effective_component_density`** (primary noise-robust density; A4 / B7) | `compiled_density_metrics.xlsx` → `Density_Metrics`; or `compiled_density_metrics_research.xlsx` → `Spectral_Density_Metrics` |
 | Harmonic-only fatness | `harmonic_effective_partial_count` | same sheets |
 | Weighted spectral content (not fatness) | `note_density_final` | same sheets |
-| Cross-instrument comparative density (not fatness) | `EWSD_score_acoustic_balanced` | research workbook only |
+| Cross-instrument comparative density (not fatness) | **`EWSD_score_acoustic_balanced`** (energy-weighted complement; report `estimated_snr_db`) | research workbook `Spectral_Density_Metrics` (and Stage-1 `Metrics`) |
 
 **Formula (F-047):** \(N_{\mathrm{eff}}^{\mathrm{HIS}} = (\sum_i A_i^2)^2 / \sum_i A_i^4\) over pooled harmonic + inharmonic + sub-bass components.
 
