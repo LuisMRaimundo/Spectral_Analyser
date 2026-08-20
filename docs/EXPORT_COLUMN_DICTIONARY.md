@@ -1,6 +1,6 @@
 # Export Column Dictionary
 
-**Package version:** 4.1.0. Export schema repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
+**Package version:** 4.2.0. Export schema repairs: `docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`.
 Normative export rules: `docs/DENSITY_EXPORT_SCHEMA.md` §R.6–R.10. Implementation manual: `docs/TECHNICAL_MANUAL_COMPLETE.md` §5.2.1 and §14.3.
 Export schema version: `spectral_analysis_schema_2026_08`.
 

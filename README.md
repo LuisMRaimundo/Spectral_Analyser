@@ -4,11 +4,11 @@ Spectral_Analyser is a spectral-analysis pipeline developed in support of doctor
 
 > **Documentation status.** The implementation / mathematical manual, formula
 > index, export schema, and pipeline semantics documents listed in the map below
-> are present in this repository and stamped to package **v4.1.0**.
+> are present in this repository and stamped to package **v4.2.0**.
 
 ## Status
 
-- **Version**: 4.1.0.
+- **Version**: 4.2.0.
 - **Python**: >=3.10,<3.12.
 - **Development status**: Beta.
 - **License**: Proprietary — see `LICENSE` at the repository root.
@@ -77,8 +77,17 @@ python run_orchestrator.py --corpus <path> --out <dir> --stages 1,2,3 --figures
 ```
 
 That command writes `run_manifest.json` (commit, versions, constants hash,
-parameter profile id, input file hashes, wall time). To re-export Stage 2/3
-after a code change and diff Stage 3 against a previous series:
+parameter profile id, FFT/segment/eligibility policy, input file hashes,
+wall time). Defaults are `--fft-policy fixed`, `n_fft=8192`, `hop=1024`.
+Exact freeze re-export commands: [`docs/REEXPORT_RUNBOOK.md`](docs/REEXPORT_RUNBOOK.md).
+After a run:
+
+```bash
+python -m tools.verify_corpus <dir>
+```
+
+To re-export Stage 2/3 after a code change and diff Stage 3 against a
+previous series:
 
 ```bash
 python -m tools.reexport_corpus --stage1-root <analysis_results> --out <dir> --figures
@@ -122,10 +131,11 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 
 Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
 
-## Documentation map (v4.1.0)
+## Documentation map (v4.2.0)
 
 | Document | Role |
 |----------|------|
+| [`docs/REEXPORT_RUNBOOK.md`](docs/REEXPORT_RUNBOOK.md) | Exact Stage 1–3 re-export + `verify_corpus` commands for the freeze |
 | [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md) | Full implementation / mathematical manual; **§5.2.1** low-f₀ policy; **§14.3** export schema; **§14.4** Stage 1 audit columns |
 | [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md) | Indexed formulae F-001–F-055 |
 | [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md) | Normative export schema; **§R.6–R.10** |

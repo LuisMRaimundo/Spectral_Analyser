@@ -16,7 +16,14 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 from analysis_provenance import resolve_analysis_provenance
-from constants import DENSITY_WEIGHT_FUNCTION_DEFAULT
+from constants import (
+    DENSITY_WEIGHT_FUNCTION_DEFAULT,
+    ELIGIBILITY_POLICY_VERSION,
+    FFT_POLICY_DEFAULT,
+    FIXED_HOP_LENGTH_DEFAULT,
+    FIXED_N_FFT_DEFAULT,
+    SEGMENT_POLICY_DEFAULT,
+)
 from production_policy import default_parameter_profile_id as _production_profile_id
 
 MANIFEST_SCHEMA_VERSION = "phase21.1"
@@ -166,10 +173,31 @@ def build_run_manifest(
     outputs: Optional[Dict[str, Any]] = None,
     extra: Optional[Dict[str, Any]] = None,
     repo_root: Optional[Path] = None,
+    fft_policy: Optional[str] = None,
+    fixed_n_fft: Optional[int] = None,
+    fixed_hop_length: Optional[int] = None,
+    segment_policy: Optional[str] = None,
+    eligibility_policy: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Assemble the canonical ``run_manifest.json`` payload."""
     provenance = resolve_analysis_provenance(repo_root)
     wf = str(weight_function or DENSITY_WEIGHT_FUNCTION_DEFAULT).strip().lower()
+    pol = str(fft_policy or FFT_POLICY_DEFAULT).strip().lower()
+    if pol not in {"fixed", "adaptive_tier"}:
+        pol = str(FFT_POLICY_DEFAULT)
+    try:
+        n_fft = int(FIXED_N_FFT_DEFAULT if fixed_n_fft is None else fixed_n_fft)
+    except (TypeError, ValueError):
+        n_fft = int(FIXED_N_FFT_DEFAULT)
+    try:
+        hop = int(FIXED_HOP_LENGTH_DEFAULT if fixed_hop_length is None else fixed_hop_length)
+    except (TypeError, ValueError):
+        hop = int(FIXED_HOP_LENGTH_DEFAULT)
+    seg = str(segment_policy or SEGMENT_POLICY_DEFAULT).strip() or SEGMENT_POLICY_DEFAULT
+    elig = (
+        str(eligibility_policy or ELIGIBILITY_POLICY_VERSION).strip()
+        or ELIGIBILITY_POLICY_VERSION
+    )
     payload: Dict[str, Any] = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "created_utc": datetime.now(timezone.utc).isoformat(),
@@ -179,6 +207,11 @@ def build_run_manifest(
         "corpus": str(corpus) if corpus is not None else "",
         "out": str(Path(out_dir)),
         "weight_function": wf,
+        "fft_policy": pol,
+        "fixed_n_fft": n_fft,
+        "fixed_hop_length": hop,
+        "segment_policy": seg,
+        "eligibility_policy": elig,
         "analysis_parameter_profile_id": (
             analysis_parameter_profile_id or default_parameter_profile_id(wf)
         ),

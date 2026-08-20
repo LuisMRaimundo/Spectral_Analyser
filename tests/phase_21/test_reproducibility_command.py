@@ -87,6 +87,11 @@ def test_run_manifest_contains_required_fields(tmp_path: Path) -> None:
         "analysis_version",
         "constants_hash",
         "analysis_parameter_profile_id",
+        "fft_policy",
+        "fixed_n_fft",
+        "fixed_hop_length",
+        "segment_policy",
+        "eligibility_policy",
         "input_files",
         "wall_time_s",
         "export_schema_version",
@@ -94,6 +99,9 @@ def test_run_manifest_contains_required_fields(tmp_path: Path) -> None:
         assert key in loaded
     assert loaded["schema_version"] == MANIFEST_SCHEMA_VERSION
     assert loaded["weight_function"] == "log"
+    assert loaded["fft_policy"] == "fixed"
+    assert loaded["fixed_n_fft"] == 8192
+    assert loaded["fixed_hop_length"] == 1024
     assert loaded["analysis_parameter_profile_id"] == default_parameter_profile_id("log")
     assert loaded["input_files"][0]["sha256"]
     assert loaded["wall_time_s"] == 1.25

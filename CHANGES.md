@@ -1,3 +1,23 @@
+# WP5 — Tag tooling, verify_corpus, runbook, v4.2.0
+
+Freeze-ready tooling after WP1–WP4. F-042 / F-047 / F-048 / F-049
+algebra is unchanged. EWSD golden vectors and the density formula
+version (`v5_apply_density_metric_adapted_v6_2_psd`) were re-checked
+and did not move beyond 1e-9, so no formula-version bump.
+
+- `run_orchestrator.py` and `tools/reexport_corpus.py` already accept
+  `--corpus`, `--fft-policy fixed`, and write `run_manifest.json`.
+  The manifest now also records `fft_policy`, `fixed_n_fft`,
+  `fixed_hop_length`, `segment_policy`, and `eligibility_policy`.
+- `tools/verify_corpus.py` checks a run directory: profile id tokens
+  (`fft` / `seg` / `elig`), fixed 8192/1024, primary-comparable
+  profile, mixed profile ids, and degenerate CI `0.0`. Complements
+  per-workbook `verify_export.py`.
+- `docs/REEXPORT_RUNBOOK.md` lists the exact one-re-export-per-corpus
+  commands. Those commands are not run in this WP.
+- Package version is **4.2.0** (`pyproject.toml`, `CITATION.cff`).
+- Tests: `tests/phase_27/test_verify_corpus.py`.
+
 # WP4 — CI green: sparse-table noise gate and stale density contracts
 
 The eight pre-existing CI failures all touched density/export, so they
