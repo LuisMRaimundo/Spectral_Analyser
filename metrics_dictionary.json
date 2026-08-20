@@ -1,13 +1,14 @@
 {
   "registry_version": "4.1.0_low_f0_harmonic_identity",
-  "package_version": "4.1.0",
+  "package_version": "4.2.0",
   "export_schema_versions": {
     "v4.0.0": "sample_id PK, diagnostic renames, three-density semantics",
     "v4.0.1": "EWSD red data bars on research Spectral_Density_Metrics",
     "v4.0.2": "merge_keys_for_frames, drop_dead_columns, satellite sample_id propagation",
     "v4.0.3": "Metadata Phase-2 H/I/S weights, Diagnostic sample_id fill, post-uniquify dedupe, zero_padding per note",
     "v4.1.0": "spacing-capped harmonic match, f0/B refit, body-stop count cut, noise-gated mass, density_fragile",
-    "v4.1.0_2026_08": "exclusive peak-to-slot assignment, validated_partials_only gating, sample_note_tag/partial_pitch_name, harmonic_validated_count"
+    "v4.1.0_2026_08": "exclusive peak-to-slot assignment, validated_partials_only gating, sample_note_tag/partial_pitch_name, harmonic_validated_count",
+    "v4.2.0": "closure programme WP1–WP5: residual main-lobe footprint, production policy, verify_corpus, freeze-ready tag"
   },
   "registry_semantics": {
     "status_values": {

@@ -850,6 +850,9 @@ class RobustOrchestrator:
                         self._peek_parameter_profile_id()
                         or default_parameter_profile_id(self.weight_function)
                     ),
+                    fft_policy=str(self.fft_policy),
+                    fixed_n_fft=int(self.fixed_n_fft),
+                    fixed_hop_length=int(self.fixed_hop_length),
                     outputs={
                         "compiled_workbook": (
                             str(self.compiled_excel_path)
