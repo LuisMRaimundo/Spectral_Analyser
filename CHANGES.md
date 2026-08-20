@@ -1,3 +1,11 @@
+# R5 — Planted-amplitude oracle for C1/C2
+
+C1/C2 now use an external EWSD/EPD oracle from planted amplitudes
+(`ewsd_pure` / F-047), not the bootstrap point inside its own interval.
+C2 varies independent frame count at fixed partials and SNR. Measured
+C1 coverage is 100 % (over-cover); C2 log-log slope is −0.281. The
+bootstrap was not retuned. Dated addendum; original scores unchanged.
+
 # R4 — EPD-primary density and estimated_snr_db
 
 EPD (`note_effective_component_density`) is the primary noise-robust

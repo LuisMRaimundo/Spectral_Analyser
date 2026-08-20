@@ -42,6 +42,15 @@ EWSD invariance is out of scope. R2–R6 proceed. R2 closes the
 one-metric Stage-1 vs Stage-3 invariant at the *fixed* window
 (`METRIC_SINGLE_SOURCE.md`).
 
+## CI calibration vs planted oracle (R5)
+
+**20 August 2026.** Production partial-resample 95 % CIs over-cover a
+planted 8-partial oracle (EWSD/EPD coverage 100 % at SNR 20 dB, 200
+seeds). Frame-resample widths shrink with independent-frame count but
+the log-log slope is −0.281, not −0.5. Do **not** retune
+`bootstrap_ewsd_from_compartments` on the frozen F-048/F-049 algebra.
+CIs remain indicative (`EWSD_CONSTRUCT_VALIDITY.md`).
+
 ## Listener study still scaffold
 
 `tools/perceptual_pairs.py`, `tools/perceptual_agreement.py`, and

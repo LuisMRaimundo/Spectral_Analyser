@@ -33,12 +33,13 @@ bump is recorded.
 | P3 | Post-rating doc fixes | `REFERENCES.md`, this page, `TROMBONE_AS2_DEFECT_FIX_DIFF.md` | Sethares 2005; WP6 cell; A♯2 residual columns (post-fix only). | **done (PR #83)** |
 | P4 | Tag `v4.2.1` | `verify_export.py`, `tools/verify_corpus.py` | Package 4.2.1; `v4.2.1` supersedes `v4.2.0` (tag kept). Cut on `main` after this PR merges. P1 live fail is on the record. | **in this PR; tag after merge** |
 | P5 | Archive pretag evidence | `docs/validation/pretag_evidence/` | Six trombone/flute research workbooks (`6b0e51a`) + CORDAS trio. G2 pair, cello five-column, 26-note segmentation sheet **not found**. Findings: `PRETAG_FINDINGS_SUMMARY.md`. | **done (this PR); three artefacts missing** |
-| P6 | Runbook re-exports | `docs/REEXPORT_RUNBOOK.md` | Per-corpus Stage 1–3 + `verify_corpus` + diff vs pretag. | **pending R5 then R6; R2–R4 done** |
+| P6 | Runbook re-exports | `docs/REEXPORT_RUNBOOK.md` | Per-corpus Stage 1–3 + `verify_corpus` + diff vs pretag. | **pending R6; R2–R5 done** |
 | R1 | Stage-3 B1 on `v4.2.2` | `tools/r1_stage3_b1.py` | Compiled Stage-3 values within 3 % across n_fft. Measured **FAIL** (G3/flute). Re-scoped: that target is out of scope (R1b). | **measured FAIL; acceptance re-scoped (R1b)** |
 | R1b | Census-held G3 + WP1 re-scope | `tools/r1b_census_held.py` | Freeze 8192-validated 71 orders; report held vs native core_H/EWSD; attribute B1. | **done (PR #87)** |
 | R2 | One metric, one value | `tests/phase_30/test_r2_metric_single_source.py` | Stage-1 Metrics EWSD/`core_H` equal Stage-3 at the fixed window (1e-9). Diagnostic density is not EWSD. `metric_single_source` fail-closed. Clean synthetic `core_H` ≥ 0.99. | **done (PR #88)** |
 | R3 | Leading-silence (B5) | `tests/phase_30/test_r3_leading_silence.py` | Lead/trail digital silence ≤ 2 s matches the trimmed waveform (0 % tol on the loaded array). ADSR_Segmenter untouched. | **done (PR #89)** |
-| R4 | EPD-primary + `estimated_snr_db` | `tests/phase_30/test_r4_estimated_snr.py` | EPD documented as noise-robust primary; EWSD complement; per-note `estimated_snr_db` on Stage 1/3. | **done (this PR)** |
+| R4 | EPD-primary + `estimated_snr_db` | `tests/phase_30/test_r4_estimated_snr.py` | EPD documented as noise-robust primary; EWSD complement; per-note `estimated_snr_db` on Stage 1/3. | **done (PR #90)** |
+| R5 | C1 oracle + C2 frames | `tests/phase_30/test_r5_oracle_ci.py` | Planted-amp oracle; 200-seed coverage; C2 varies independent frames not partials. Coverage outside 90–99 % recorded, bootstrap not retuned. | **done (this PR)** |
 | D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
 | D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |
 | D6.3 | D_k n_fft norm | same | Density sums n_fft-normalised to 8192. | **done (PR #76)** |

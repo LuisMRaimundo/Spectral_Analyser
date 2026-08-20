@@ -78,6 +78,15 @@ not a laboratory measurement-error bar. `ci_resampling_unit` is
 redrawn with replacement). `ci_n_resampled` is that vector’s length;
 `ci_bootstrap_iterations` and `ci_seed` identify the draw.
 
+### CI calibration (measured, R5)
+
+The 95 % interval is **indicative**. Against a planted-amplitude oracle
+(8 partials, −6 dB/oct, SNR 20 dB, seed 20260820, 200 seeds) the
+production partial-resample CI has empirically **100 %** EWSD and EPD
+coverage (outside the 90–99 % band). Frame-resample widths at
+n ∈ {4, 8, 16, 32} shrink (0.1429 → 0.0797) with log-log slope
+**−0.281**, not −0.5. The bootstrap was not retuned.
+
 A long, smooth series with many highly correlated partials can produce a
 **wide** interval (`ci_width_flag = wide` when relative width > 25 %)
 even when the take is high-SNR. That is expected when the unit is
