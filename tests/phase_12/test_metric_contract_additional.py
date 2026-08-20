@@ -87,6 +87,10 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "subbass_upper_bound_hz",
         "energy_basis",
         "window_enbw_hz",
+        "peak_power_footprint_bins",
+        "residual_exclusion_footprint_bins",
+        "residual_region_hz_total",
+        "excluded_region_hz_total",
         "included_above_body_stop_count",
         "fft_policy",
     }

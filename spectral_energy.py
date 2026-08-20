@@ -14,7 +14,7 @@ integrates over Hertz (Heinzel et al., 2002; Harris, 1978).
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -22,6 +22,7 @@ from constants import (
     ENERGY_BASIS_PSD_PER_HZ,
     FIXED_HOP_LENGTH_DEFAULT,
     FIXED_N_FFT_DEFAULT,
+    RESIDUAL_EXCLUSION_FOOTPRINT,
 )
 
 ENERGY_BASIS = ENERGY_BASIS_PSD_PER_HZ
@@ -73,8 +74,41 @@ def window_enbw_hz(
 
 
 def peak_footprint_bins(window: str = "hann", n_fft: int = 4096) -> float:
-    """Main-lobe footprint used for peak energy and residual exclusion."""
+    """ENBW in bins — used only for the peak-power estimate."""
     return float(window_enbw_bins(window, n_fft))
+
+
+def peak_power_footprint_bins(window: str = "hann", n_fft: int = 4096) -> float:
+    """Alias of ``peak_footprint_bins`` (ENBW). Residual exclusion is separate."""
+    return peak_footprint_bins(window, n_fft)
+
+
+def residual_exclusion_footprint_bins(window: str = "hann") -> float:
+    """Main-lobe diameter in bins used to keep skirts out of the residual.
+
+    Blackman–Harris 4-term first nulls sit at ±4 bins
+    (``RESIDUAL_EXCLUSION_FOOTPRINT`` = 8). Other named windows use their
+    first-null diameter. This is *not* ENBW.
+    """
+    name = str(window or "hann").strip().lower().replace("-", "").replace("_", "")
+    if "blackmanharris" in name:
+        return float(RESIDUAL_EXCLUSION_FOOTPRINT)
+    if name in {"hann", "hanning", "hamming"}:
+        return 4.0
+    if name == "blackman":
+        return 6.0
+    return float(RESIDUAL_EXCLUSION_FOOTPRINT)
+
+
+def residual_exclusion_hz(
+    window: str,
+    sr_hz: float,
+    n_fft: int,
+) -> float:
+    df = bin_width_hz(sr_hz, n_fft)
+    if not math.isfinite(df) or df <= 0.0:
+        return float("nan")
+    return float(residual_exclusion_footprint_bins(window) * df)
 
 
 def window_sums(window: str, n_fft: int) -> Tuple[float, float]:
@@ -167,12 +201,101 @@ def peak_psd_energy(
     return float(p * bw)
 
 
+def _union_length_hz(intervals: Sequence[Tuple[float, float]]) -> float:
+    cleaned: List[Tuple[float, float]] = []
+    for lo, hi in intervals:
+        try:
+            a = float(lo)
+            b = float(hi)
+        except (TypeError, ValueError):
+            continue
+        if not (math.isfinite(a) and math.isfinite(b)) or b <= a:
+            continue
+        cleaned.append((a, b))
+    if not cleaned:
+        return 0.0
+    cleaned.sort()
+    total = 0.0
+    cur_lo, cur_hi = cleaned[0]
+    for lo, hi in cleaned[1:]:
+        if lo <= cur_hi:
+            cur_hi = max(cur_hi, hi)
+            continue
+        total += cur_hi - cur_lo
+        cur_lo, cur_hi = lo, hi
+    total += cur_hi - cur_lo
+    return float(total)
+
+
+def analysis_band_regions_hz(
+    freq_min_hz: float,
+    freq_max_hz: float,
+    peak_freqs_hz: Sequence[float],
+    exclusion_hz: float,
+) -> Tuple[float, float, float]:
+    """Return ``(residual, excluded, analysis_band)`` on the one-sided axis.
+
+    Invariant (fail closed): ``residual + excluded == analysis_band``.
+    Overlapping exclusion footprints are merged.
+    """
+    try:
+        f_min = float(freq_min_hz)
+        f_max = float(freq_max_hz)
+        excl = float(exclusion_hz)
+    except (TypeError, ValueError):
+        return 0.0, 0.0, 0.0
+    if not (math.isfinite(f_min) and math.isfinite(f_max)) or f_max <= f_min:
+        return 0.0, 0.0, 0.0
+    band = float(f_max - f_min)
+    if not math.isfinite(excl) or excl <= 0.0:
+        return band, 0.0, band
+    half = 0.5 * excl
+    intervals: List[Tuple[float, float]] = []
+    for raw in peak_freqs_hz:
+        try:
+            f0 = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(f0) or f0 <= 0.0:
+            continue
+        lo = max(f_min, f0 - half)
+        hi = min(f_max, f0 + half)
+        if hi > lo:
+            intervals.append((lo, hi))
+    excluded = _union_length_hz(intervals)
+    if excluded > band:
+        excluded = band
+    residual = band - excluded
+    if residual < 0.0:
+        residual = 0.0
+        excluded = band
+    return float(residual), float(excluded), float(band)
+
+
 def residual_region_hz_total(
     freq_hz: Sequence[float],
     residual_mask: Sequence[bool],
     df_hz: float,
+    *,
+    freq_min_hz: Optional[float] = None,
+    freq_max_hz: Optional[float] = None,
+    peak_freqs_hz: Optional[Sequence[float]] = None,
+    exclusion_hz: Optional[float] = None,
 ) -> float:
-    """Width in Hz of bins that remain after main-lobe exclusion."""
+    """One-sided residual width after exclusion-footprint union."""
+    if (
+        freq_min_hz is not None
+        and freq_max_hz is not None
+        and peak_freqs_hz is not None
+        and exclusion_hz is not None
+    ):
+        residual, _excluded, _band = analysis_band_regions_hz(
+            float(freq_min_hz),
+            float(freq_max_hz),
+            peak_freqs_hz,
+            float(exclusion_hz),
+        )
+        return float(residual)
     try:
         df = float(df_hz)
     except (TypeError, ValueError):
@@ -217,11 +340,14 @@ def energy_provenance(
 ) -> Dict[str, Any]:
     df = bin_width_hz(sr_hz, n_fft)
     enbw = window_enbw_hz(window, sr_hz, n_fft)
-    foot = peak_footprint_bins(window, n_fft)
+    foot = peak_power_footprint_bins(window, n_fft)
+    excl = residual_exclusion_footprint_bins(window)
     return {
         "energy_basis": ENERGY_BASIS,
         "window_enbw_hz": enbw if math.isfinite(enbw) else float("nan"),
         "peak_footprint_bins": foot,
+        "peak_power_footprint_bins": foot,
+        "residual_exclusion_footprint_bins": excl,
         "bin_width_hz": df if math.isfinite(df) else float("nan"),
         "n_fft": int(n_fft) if int(n_fft) > 0 else None,
         "hop_length": int(hop_length) if int(hop_length) > 0 else None,

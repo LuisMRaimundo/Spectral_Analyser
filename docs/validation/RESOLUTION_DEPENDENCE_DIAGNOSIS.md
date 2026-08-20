@@ -66,3 +66,25 @@ The stop does **not** stabilise. Follow-up: per-note stop diagnostics (`harmonic
 | C5 | 22.59 | 13.09 | 2.630 | 2.653 |
 
 Within **fixed**, G3→G♯3 EWSD steps 13 % but EPD also steps 12 % (musical, not a window artefact). B4→C5 EWSD steps 6.9 %. `compare_runs` boundary guard passes. Fixed vs adaptive still disagrees on EWSD / `core_H` / D_S at 4096 and 2048 (`pair_fail`); D_H agrees within 2 %. Use `fft_policy=fixed` for cross-note comparison. Full 33-note artefact is the same command on `_Sustains_Stable`.
+
+## WP1 — Residual exclusion footprint (post-fix)
+
+Peak power still uses ENBW. Residual exclusion uses the window main-lobe
+(`RESIDUAL_EXCLUSION_FOOTPRINT` = 8 bins for Blackman–Harris 4-term).
+One-sided invariant: `residual_region_hz_total + excluded_region_hz_total
+== analysis_band_hz`.
+
+Descriptor-level G3 / G♯3 swap on the same IOWA trombone *ff* takes
+(`window=blackmanharris`, hop = n_fft/8, `freq` 20–20 000 Hz):
+
+| Note | n_fft / hop | core_H_ratio | residual_ratio | residual_hz | excluded_hz |
+|------|-------------|-------------:|---------------:|------------:|------------:|
+| G3 | 8192 / 1024 | 0.9969 | 0.0031 | 15 597 | 4 383 |
+| G3 | 4096 / 512 | 0.9993 | 0.0007 | 11 220 | 8 760 |
+| G♯3 | 4096 / 512 | 0.9963 | 0.0037 | 11 711 | 8 269 |
+| G♯3 | 8192 / 1024 | 0.9898 | 0.0102 | 15 846 | 4 134 |
+
+G3 core_H steps 0.24 % when the window halves; G♯3 steps 0.65 %. The
+step no longer follows the window. Residual share is < 1.1 % (was
+5–25 % and monotone in bin width). `residual_region_hz_total` is
+≤ 19 980 Hz (was 36 364 Hz on a 20 kHz band).

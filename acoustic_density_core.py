@@ -59,7 +59,7 @@ Module changelog
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Final, Mapping, Optional
+from typing import Any, Final, Mapping, Optional, Sequence
 
 import math
 import warnings
@@ -400,6 +400,7 @@ def compute_acoustic_density_descriptors(
     sr_hz: float = 44100.0,
     window_type: str = "hann",
     n_fft: int = 4096,
+    confirmed_inharmonic_freqs_hz: Optional[Sequence[float]] = None,
 ) -> dict[str, Any]:
     """
     Compute separated acoustic descriptors from a peak/component table.
@@ -469,7 +470,11 @@ def compute_acoustic_density_descriptors(
         "energy_basis": ENERGY_BASIS_PSD_PER_HZ,
         "window_enbw_hz": float("nan"),
         "peak_footprint_bins": float("nan"),
+        "peak_power_footprint_bins": float("nan"),
+        "residual_exclusion_footprint_bins": float("nan"),
         "residual_region_hz_total": 0.0,
+        "excluded_region_hz_total": 0.0,
+        "analysis_band_hz": 0.0,
         "spectral_entropy": 0.0,
         "effective_partial_density": 0.0,
         "body_weighted_effective_density": 0.0,
@@ -706,20 +711,23 @@ def compute_acoustic_density_descriptors(
     )
 
     from spectral_energy import (
+        analysis_band_regions_hz,
         bin_width_hz,
         energy_provenance,
         exclude_peak_footprints,
         integrate_psd,
         is_rfft_grid,
         peak_psd_energy,
-        residual_region_hz_total,
+        residual_exclusion_hz,
         window_enbw_hz,
     )
 
     _df_hz = bin_width_hz(float(sr_hz), int(n_fft))
     _enbw_hz = window_enbw_hz(str(window_type or "hann"), float(sr_hz), int(n_fft))
-    _foot_hz = float(_enbw_hz) if np.isfinite(float(_enbw_hz)) else float(_df_hz)
     _win_e = str(window_type or "hann")
+    _excl_hz = residual_exclusion_hz(_win_e, float(sr_hz), int(n_fft))
+    if not np.isfinite(float(_excl_hz)) or float(_excl_hz) <= 0.0:
+        _excl_hz = float(_enbw_hz) if np.isfinite(float(_enbw_hz)) else float(_df_hz)
     # One main-lobe peak per accepted harmonic order (ENBW footprint), not
     # every bin inside the cents window — those extra bins scale with n_fft.
     harmonic_peak_bins = np.zeros(harmonic_peak_mask.shape, dtype=bool)
@@ -730,15 +738,28 @@ def compute_acoustic_density_descriptors(
             if _idx.size:
                 harmonic_peak_bins[_idx[int(np.argmax(power_sig[_idx]))]] = True
     harmonic_freqs = freq_sig[harmonic_peak_bins]
-    residual_mask = residual_mask & exclude_peak_footprints(
-        freq_sig, harmonic_freqs, _foot_hz
-    )
+    _excl_peaks = [float(x) for x in harmonic_freqs.tolist()] if harmonic_freqs.size else []
+    if confirmed_inharmonic_freqs_hz is not None:
+        for _raw_i in confirmed_inharmonic_freqs_hz:
+            try:
+                _fi = float(_raw_i)
+            except (TypeError, ValueError):
+                continue
+            if np.isfinite(_fi) and _fi > 0.0:
+                _excl_peaks.append(_fi)
+    _grid = is_rfft_grid(freq, float(sr_hz), int(n_fft))
+    # Skirt exclusion applies to a dense FFT. A sparse peak table is
+    # already one row per peak; treating neighbours as lobes would
+    # remove real residual particles.
+    if _grid:
+        residual_mask = residual_mask & exclude_peak_footprints(
+            freq_sig, _excl_peaks, float(_excl_hz)
+        )
     residual_mask = residual_mask & ~subbass_mask
 
     harmonic_power = power_sig[harmonic_peak_mask]
     residual_power = power_sig[residual_mask]
     subbass_power = power_sig[subbass_mask]
-    _grid = is_rfft_grid(freq, float(sr_hz), int(n_fft))
     if _grid:
         h_energy = 0.0
         for _p in power_sig[harmonic_peak_bins]:
@@ -763,9 +784,20 @@ def compute_acoustic_density_descriptors(
     out["energy_basis"] = _prov["energy_basis"]
     out["window_enbw_hz"] = _prov["window_enbw_hz"]
     out["peak_footprint_bins"] = _prov["peak_footprint_bins"]
-    out["residual_region_hz_total"] = residual_region_hz_total(
-        freq_sig, residual_mask, _df_hz
+    out["peak_power_footprint_bins"] = _prov["peak_power_footprint_bins"]
+    out["residual_exclusion_footprint_bins"] = _prov["residual_exclusion_footprint_bins"]
+    _resid_hz, _excl_reg_hz, _band_hz = analysis_band_regions_hz(
+        float(freq_min_hz),
+        float(freq_max_hz),
+        _excl_peaks,
+        float(_excl_hz),
     )
+    if abs((_resid_hz + _excl_reg_hz) - _band_hz) > 1e-6:
+        _resid_hz = max(0.0, _band_hz - _excl_reg_hz)
+        _excl_reg_hz = _band_hz - _resid_hz
+    out["residual_region_hz_total"] = float(_resid_hz)
+    out["excluded_region_hz_total"] = float(_excl_reg_hz)
+    out["analysis_band_hz"] = float(_band_hz)
 
     if total_power > 0.0:
         out["harmonic_energy_ratio"] = h_energy / total_power

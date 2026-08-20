@@ -382,6 +382,20 @@ from acoustic_density_core import (
     canonical_f0_triplet,
     compute_acoustic_density_descriptors,
 )
+
+
+def _confirmed_i_freqs(df: Any) -> list:
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        return []
+    col = None
+    for name in ("Frequency (Hz)", "frequency_hz", "f_hz"):
+        if name in df.columns:
+            col = name
+            break
+    if col is None:
+        return []
+    vals = pd.to_numeric(df[col], errors="coerce").to_numpy(dtype=float)
+    return [float(x) for x in vals if np.isfinite(x) and x > 0.0]
 from inharmonicity_model import fit_inharmonicity_coefficient
 from mir_descriptors import compute_mir_descriptors_from_spectrum
 from temporal_segmentation import segment_attack_sustain_release
@@ -1962,7 +1976,11 @@ class AudioProcessor:
         self.energy_basis: str = "psd_per_hz"
         self.window_enbw_hz: float = float("nan")
         self.peak_footprint_bins: float = float("nan")
+        self.peak_power_footprint_bins: float = float("nan")
+        self.residual_exclusion_footprint_bins: float = float("nan")
         self.residual_region_hz_total: float = float("nan")
+        self.excluded_region_hz_total: float = float("nan")
+        self.analysis_band_hz: float = float("nan")
         self.bin_width_hz: float = float("nan")
         self.fft_policy: str = "fixed"
         self.tier_name: Optional[str] = None
@@ -7614,6 +7632,9 @@ class AudioProcessor:
                                 sr_hz=float(getattr(self, "sr", 44100.0) or 44100.0),
                                 n_fft=int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT),
                                 window_type=str(getattr(self, "window", DEFAULT_WINDOW) or DEFAULT_WINDOW),
+                                confirmed_inharmonic_freqs_hz=_confirmed_i_freqs(
+                                    getattr(self, "confirmed_inharmonic_df", None)
+                                ),
                             )
                             self._acoustic_density_desc = dict(_desc)
                             for _k, _v in _desc.items():
@@ -8000,6 +8021,12 @@ class AudioProcessor:
             self.energy_basis = str(_prov_e.get("energy_basis") or "psd_per_hz")
             self.window_enbw_hz = _enbw_e
             self.peak_footprint_bins = float(_prov_e.get("peak_footprint_bins") or float("nan"))
+            self.peak_power_footprint_bins = float(
+                _prov_e.get("peak_power_footprint_bins") or self.peak_footprint_bins
+            )
+            self.residual_exclusion_footprint_bins = float(
+                _prov_e.get("residual_exclusion_footprint_bins") or float("nan")
+            )
             self.bin_width_hz = _df_e
 
             sum_lin_h = float(np.sum(harmonic_amps)) if harmonic_amps.size else 0.0
@@ -8117,6 +8144,16 @@ class AudioProcessor:
                 self.harmonic_energy_ratio = 0.0
                 self.inharmonic_energy_ratio = 0.0
                 self.subbass_energy_ratio = 0.0
+            # WP1: core H/R/S ratios are the PSD descriptors (exclusion
+            # footprint). Discrete H/I/S sums stay on *_energy_sum.
+            _desc_e = getattr(self, "_acoustic_density_desc", None) or {}
+            if _desc_e.get("harmonic_energy_ratio") is not None:
+                self.harmonic_energy_ratio = float(_desc_e["harmonic_energy_ratio"])
+                self.residual_energy_ratio = float(
+                    _desc_e.get("residual_energy_ratio") or 0.0
+                )
+                if _desc_e.get("subbass_energy_ratio") is not None:
+                    self.subbass_energy_ratio = float(_desc_e["subbass_energy_ratio"])
 
             # AUDIT FIX (inharmonic-energy underestimation) — compute the
             # diffuse non-harmonic residual: spectral power that survived
@@ -8156,22 +8193,35 @@ class AudioProcessor:
                     [_residual_raw], _df_e, sr_hz=_sr_e, n_fft=_n_e, window=_win_e
                 )
                 try:
-                    _n_resid = int(
-                        np.count_nonzero(
-                            np.isfinite(
-                                pd.to_numeric(
-                                    self.filtered_list_df["Frequency (Hz)"],
-                                    errors="coerce",
-                                )
+                    from spectral_energy import analysis_band_regions_hz, residual_exclusion_hz
+
+                    _fmin = float(getattr(self, "freq_min", 20.0) or 20.0)
+                    _fmax = float(getattr(self, "freq_max", 20000.0) or 20000.0)
+                    _peaks = []
+                    _h_df = getattr(self, "harmonic_list_df", None)
+                    if isinstance(_h_df, pd.DataFrame) and not _h_df.empty:
+                        _col = "Frequency (Hz)" if "Frequency (Hz)" in _h_df.columns else None
+                        if _col:
+                            _peaks.extend(
+                                float(x)
+                                for x in pd.to_numeric(_h_df[_col], errors="coerce")
+                                if np.isfinite(x) and float(x) > 0.0
                             )
-                        )
-                    ) if (
-                        isinstance(getattr(self, "filtered_list_df", None), pd.DataFrame)
-                        and "Frequency (Hz)" in self.filtered_list_df.columns
-                    ) else 0
-                    self.residual_region_hz_total = float(_n_resid) * float(_df_e)
+                    _peaks.extend(_confirmed_i_freqs(getattr(self, "confirmed_inharmonic_df", None)))
+                    _excl = residual_exclusion_hz(_win_e, _sr_e, _n_e)
+                    _resid, _exreg, _band = analysis_band_regions_hz(
+                        _fmin, _fmax, _peaks, float(_excl)
+                    )
+                    if abs((_resid + _exreg) - _band) > 1e-6:
+                        _resid = max(0.0, _band - _exreg)
+                        _exreg = _band - _resid
+                    self.residual_region_hz_total = float(_resid)
+                    self.excluded_region_hz_total = float(_exreg)
+                    self.analysis_band_hz = float(_band)
                 except Exception:
-                    self.residual_region_hz_total = float("nan")
+                    self.residual_region_hz_total = float(
+                        getattr(self, "residual_region_hz_total", float("nan"))
+                    )
             except Exception as _e_res:
                 self.logger.debug(
                     "residual_noise_energy_sum computation failed: %s", _e_res
@@ -11009,9 +11059,19 @@ class AudioProcessor:
             "energy_basis": str(getattr(self, "energy_basis", "psd_per_hz") or "psd_per_hz"),
             "window_enbw_hz": metric_float_or_nan(getattr(self, "window_enbw_hz", None)),
             "peak_footprint_bins": metric_float_or_nan(getattr(self, "peak_footprint_bins", None)),
+            "peak_power_footprint_bins": metric_float_or_nan(
+                getattr(self, "peak_power_footprint_bins", None)
+            ),
+            "residual_exclusion_footprint_bins": metric_float_or_nan(
+                getattr(self, "residual_exclusion_footprint_bins", None)
+            ),
             "residual_region_hz_total": metric_float_or_nan(
                 getattr(self, "residual_region_hz_total", None)
             ),
+            "excluded_region_hz_total": metric_float_or_nan(
+                getattr(self, "excluded_region_hz_total", None)
+            ),
+            "analysis_band_hz": metric_float_or_nan(getattr(self, "analysis_band_hz", None)),
             "fft_policy": str(getattr(self, "fft_policy", "fixed") or "fixed"),
             "tier_name": str(getattr(self, "tier_name", getattr(self, "tier", "")) or ""),
             "included_above_body_stop_count": metric_int_or_nan(
@@ -13072,7 +13132,11 @@ class AudioProcessor:
                 ("energy_basis", str(getattr(self, "energy_basis", "psd_per_hz") or "psd_per_hz")),
                 ("window_enbw_hz", getattr(self, "window_enbw_hz", float("nan"))),
                 ("peak_footprint_bins", getattr(self, "peak_footprint_bins", float("nan"))),
+                ("peak_power_footprint_bins", getattr(self, "peak_power_footprint_bins", float("nan"))),
+                ("residual_exclusion_footprint_bins", getattr(self, "residual_exclusion_footprint_bins", float("nan"))),
                 ("residual_region_hz_total", getattr(self, "residual_region_hz_total", float("nan"))),
+                ("excluded_region_hz_total", getattr(self, "excluded_region_hz_total", float("nan"))),
+                ("analysis_band_hz", getattr(self, "analysis_band_hz", float("nan"))),
                 ("n_fft_effective", int(_nff_eff)),
                 ("hop_length", int(hl)),
                 ("zero_padding", int(getattr(self, "zero_padding", 1) or 1)),

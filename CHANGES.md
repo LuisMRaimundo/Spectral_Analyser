@@ -1,3 +1,18 @@
+# Residual exclusion uses the window main-lobe, not ENBW
+
+WP1 of the closure programme. F-042 / F-047 / F-048 / F-049 algebra is
+unchanged. Peak-power still uses ENBW; residual exclusion uses
+`RESIDUAL_EXCLUSION_FOOTPRINT` (8 bins for Blackman–Harris 4-term, ±4).
+
+- Two exported footprints: `peak_power_footprint_bins` (ENBW) and
+  `residual_exclusion_footprint_bins` (main-lobe diameter).
+- Residual region = analysis band minus the exclusion union of every
+  validated harmonic and every confirmed inharmonic. Leakage guard and
+  `outside_harmonic_window_candidate_energy_ratio` use the same width.
+- `residual_region_hz_total + excluded_region_hz_total == analysis_band_hz`
+  (fail closed, one-sided).
+- Tests: `tests/phase_25/test_residual_footprint.py`.
+
 # Post-A–I defect fixes: weak-margin persistence override, tolerance continuity override, sub-bass bound unification, CI provenance, naming hygiene
 
 Defects from the IOWA trombone A♯2 *ff* SustainStable review of `5b1a1c7`.

@@ -433,6 +433,54 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Equating with validated_harmonics_above_body_stop_count.",
         ontology_family="validation_status",
     )
+    peak_power_footprint_bins = MetricDefinition(
+        name="peak_power_footprint_bins",
+        formula="ENBW_bins = N Σw² / (Σw)²",
+        input_domain="analysis window samples",
+        unit_or_scale="bins",
+        amplitude_basis="not used",
+        power_basis="equivalent noise bandwidth",
+        normalization_scope="per note",
+        physical_interpretation="ENBW used only for the peak-power estimate. Residual exclusion is residual_exclusion_footprint_bins.",
+        not_valid_for="Using as the residual-exclusion width.",
+        ontology_family="analysis_parameter",
+    )
+    residual_exclusion_footprint_bins = MetricDefinition(
+        name="residual_exclusion_footprint_bins",
+        formula="RESIDUAL_EXCLUSION_FOOTPRINT (BH-4 ±4 bins) or window first-null diameter",
+        input_domain="analysis window type",
+        unit_or_scale="bins",
+        amplitude_basis="not used",
+        power_basis="main-lobe exclusion diameter",
+        normalization_scope="per note",
+        physical_interpretation="Width removed around each validated harmonic (and confirmed I) before residual energy is summed.",
+        not_valid_for="Using as the peak-power ENBW.",
+        ontology_family="analysis_parameter",
+    )
+    residual_region_hz_total = MetricDefinition(
+        name="residual_region_hz_total",
+        formula="analysis_band_hz − excluded_region_hz_total",
+        input_domain="analysis band and exclusion-footprint union",
+        unit_or_scale="Hz",
+        amplitude_basis="not used",
+        power_basis="one-sided Hz",
+        normalization_scope="per note",
+        physical_interpretation="Hz remaining after validated-peak exclusion. Invariant: residual + excluded == analysis_band.",
+        not_valid_for="Treating as a bin count times Δf without the exclusion union.",
+        ontology_family="analysis_parameter",
+    )
+    excluded_region_hz_total = MetricDefinition(
+        name="excluded_region_hz_total",
+        formula="union of residual-exclusion footprints clipped to the analysis band",
+        input_domain="validated harmonic and confirmed-I frequencies",
+        unit_or_scale="Hz",
+        amplitude_basis="not used",
+        power_basis="one-sided Hz",
+        normalization_scope="per note",
+        physical_interpretation="Hz removed from the residual by the exclusion footprints.",
+        not_valid_for="Adding overlapping footprints without a union.",
+        ontology_family="analysis_parameter",
+    )
     fft_policy = MetricDefinition(
         name="fft_policy",
         formula="fixed | adaptive_tier",
@@ -474,6 +522,10 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         subbass_upper_bound_hz.name: subbass_upper_bound_hz,
         energy_basis.name: energy_basis,
         window_enbw_hz.name: window_enbw_hz,
+        peak_power_footprint_bins.name: peak_power_footprint_bins,
+        residual_exclusion_footprint_bins.name: residual_exclusion_footprint_bins,
+        residual_region_hz_total.name: residual_region_hz_total,
+        excluded_region_hz_total.name: excluded_region_hz_total,
         included_above_body_stop_count.name: included_above_body_stop_count,
         fft_policy.name: fft_policy,
     }
