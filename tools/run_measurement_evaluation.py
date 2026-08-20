@@ -45,6 +45,7 @@ from tools.ewsd_uncertainty import (
     bootstrap_ewsd_from_compartments,
     compartment_bootstrap_data_from_arrays,
 )
+from tools.r5_oracle_ci import run_c1, run_c2
 from validated_partials import participation_ratio_from_amplitudes
 
 MASTER_SEED = 20260820
@@ -828,61 +829,10 @@ def part_b(live: bool) -> Dict[str, Any]:
 
 
 def part_c() -> Dict[str, Any]:
-    rng = _rng(900)
-    cover_ewsd = 0
-    cover_epd = 0
-    n = 200
-    widths = []
-    for i in range(n):
-        n_h = int(rng.integers(6, 16))
-        amps = np.asarray(_amps_db_oct(n_h, -6.0), dtype=float)
-        freqs = np.asarray([220.0 * k for k in range(1, n_h + 1)], dtype=float)
-        true_epd = participation_ratio_from_amplitudes(list(amps))
-        h = compartment_bootstrap_data_from_arrays(amps, 1.0, frequencies_hz=freqs)
-        boot = bootstrap_ewsd_from_compartments([h], n_boot=200, seed=MASTER_SEED + i)
-        # analytic EPD coverage: EPD is PR of the same amps — CI is on EWSD.
-        # Build a high-precision EWSD point as truth (same function, no resample).
-        truth = float(boot["ewsd_score_acoustic_balanced"])
-        lo = float(boot["ewsd_score_acoustic_balanced_ci_low"])
-        hi = float(boot["ewsd_score_acoustic_balanced_ci_high"])
-        if np.isfinite(lo) and np.isfinite(hi) and lo <= truth <= hi:
-            cover_ewsd += 1
-        # EPD: participation ratio is deterministic on the planted vector.
-        # Coverage of a degenerate (zero-width) interval is 100 % when hat==true.
-        epd_hat = true_epd
-        if abs(epd_hat - true_epd) <= 1e-12:
-            cover_epd += 1
-        if np.isfinite(lo) and np.isfinite(hi):
-            widths.append(hi - lo)
-
-    cov_e = 100.0 * cover_ewsd / n
-    cov_p = 100.0 * cover_epd / n
-
-    def _c1_score(cov: float) -> int:
-        if 93.0 <= cov <= 97.0:
-            return 100
-        if 90.0 <= cov <= 99.0:
-            return 70
-        return 30
-
-    # C2 width vs n_frames (proxy: n partials)
-    c2 = []
-    c2_pass = True
-    prev_w = None
-    for nf in (4, 8, 16, 32):
-        amps = np.asarray([0.7 ** k for k in range(nf)], dtype=float)
-        freqs = np.asarray([220.0 * (k + 1) for k in range(nf)])
-        h = compartment_bootstrap_data_from_arrays(amps, 1.0, frequencies_hz=freqs)
-        boot = bootstrap_ewsd_from_compartments([h], n_boot=200, seed=MASTER_SEED)
-        w = float(boot["ewsd_score_acoustic_balanced_ci_high"]) - float(
-            boot["ewsd_score_acoustic_balanced_ci_low"]
-        )
-        c2.append({"n_frames": nf, "width": w})
-        if prev_w is not None and np.isfinite(w) and np.isfinite(prev_w):
-            # ~1/√n : width should not grow when n doubles
-            if w > prev_w * 1.05:
-                c2_pass = False
-        prev_w = w
+    c1 = run_c1(n=200, n_boot=200, seed=MASTER_SEED)
+    c2_bundle = run_c2(n_trials=40, n_boot=200, seed=MASTER_SEED)
+    c2 = c2_bundle["rows"]
+    c2_pass = bool(c2_bundle["pass"])
 
     # C3 eligibility
     deg = evaluate_eligibility(16.0, 2)
@@ -923,26 +873,19 @@ def part_c() -> Dict[str, Any]:
     c4_pass = bool(g2.get("stable_segment_unrepresentative")) and not any(clean_flags)
 
     scores = [
-        _c1_score(cov_e),
+        int(c1["score"]),
         100 if c2_pass else 30,
         100 if c3_pass else 30,
         100 if c4_pass else 30,
     ]
     return {
-        "C1": {
-            "ewsd_coverage_pct": cov_e,
-            "epd_coverage_pct": cov_p,
-            "n": n,
-            "score": _c1_score(cov_e),
-            "note": (
-                "EPD coverage is of the analytic PR identity (zero-width). "
-                "EWSD coverage is of the bootstrap point inside its own 95 % CI "
-                "(calibration of the interval around the estimator, not an "
-                "external oracle). Objection: the written tight band assumes "
-                "an independent truth; this session uses the estimator point."
-            ),
+        "C1": c1,
+        "C2": {
+            **c2_bundle,
+            "rows": c2,
+            "pass": c2_pass,
+            "score": 100 if c2_pass else 30,
         },
-        "C2": {"rows": c2, "pass": c2_pass, "score": 100 if c2_pass else 30},
         "C3": {"pass": c3_pass, "score": 100 if c3_pass else 30},
         "C4": {"pass": c4_pass, "score": 100 if c4_pass else 30},
         "score": float(np.mean(scores)),
@@ -1457,11 +1400,14 @@ def write_report(bundle: Dict[str, Any]) -> None:
         "",
         f"- C1 EWSD coverage = {_fmt(c['C1']['ewsd_coverage_pct'], 1)} %; "
         f"EPD coverage = {_fmt(c['C1']['epd_coverage_pct'], 1)} %; "
-        f"score {c['C1']['score']}. {c['C1']['note']}",
+        f"score {c['C1']['score']}. {c['C1'].get('note', '')}",
         f"- C2 width vs n: "
-        + ", ".join(f"n={r['n_frames']} w={_fmt(r['width'])}" for r in c["C2"]["rows"])
-        + f"; pass={_fmt(c['C2']['pass'])}. "
-        "Objection: this construction varies partial count, not independent-frame count; width did not shrink ~1/√n.",
+        + ", ".join(
+            f"n={r['n_frames']} w={_fmt(r['width'])} covE={_fmt(r.get('ewsd_coverage_pct'), 1)}"
+            for r in c["C2"]["rows"]
+        )
+        + f"; slope={_fmt(c['C2'].get('loglog_slope'))}; pass={_fmt(c['C2']['pass'])}. "
+        + str(c["C2"].get("note") or ""),
         f"- C3 eligibility gate: {_fmt(c['C3']['pass'])}.",
         f"- C4 G2-type flag: {_fmt(c['C4']['pass'])}.",
         "",

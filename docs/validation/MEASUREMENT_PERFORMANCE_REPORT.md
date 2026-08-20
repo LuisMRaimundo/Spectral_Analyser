@@ -176,3 +176,22 @@ scope under R1b. Evidence: `tests/phase_30/test_r2_metric_single_source.py`,
 The original B5 FAIL (prepend → 0 validated harmonics / EWSD NaN) is
 unchanged in the scored table. Mechanism: silent head at file start;
 guard is `audio_silence_trim.trim_digital_silence`, not ADSR_Segmenter.
+
+## Addendum — 20 August 2026 (R5; scores not rewritten)
+
+**C1 / C2 re-run against a planted-amplitude oracle** (`ewsd_pure` / F-047;
+seed 20260820; 8 partials, −6 dB/oct, 20 dB SNR). Original Part C cells
+(C1 score 30, C2 FAIL, Part C = 65.0) are unchanged.
+
+- C1: 200 seeds, production partial-resample 95 % CI vs the planted
+  oracle (not the bootstrap point). EWSD coverage = **100.0 %**; EPD
+  coverage = **100.0 %**; score 30 (outside 90–99 %). Oracle EWSD =
+  1.8415. The interval over-covers the external truth.
+- C2: independent noisy frames n ∈ {4, 8, 16, 32} at **fixed** 8
+  partials. Median EWSD widths 0.1429 / 0.1376 / 0.1131 / 0.0797.
+  log(width) vs log(n) slope = **−0.281** (1/√n would be −0.5).
+  Coverage per n: 85.0 / 85.0 / 92.5 / 90.0 %. Construction is now
+  frames, not partial count; the 1/√n claim does not hold. Bootstrap
+  not retuned.
+- Measured limit: CIs are indicative, empirically 100 % C1 coverage.
+  Backlog: `POST_FREEZE_BACKLOG.md`.
