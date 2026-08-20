@@ -576,6 +576,21 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Treating ineligible rows as 0.0 EWSD.",
         ontology_family="validation_status",
     )
+    estimated_snr_db = MetricDefinition(
+        name="estimated_snr_db",
+        formula="power-weighted mean of validated-harmonic snr_db (peak dB − local floor dB)",
+        input_domain="include_for_density harmonic slots; snr_db already on the peak table",
+        unit_or_scale="dB",
+        amplitude_basis="not used",
+        power_basis="Power_raw weights; snr_db is peak vs local floor",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Note-level spectral cleanliness. EWSD rises with this "
+            "conditioner (B7); report it beside EWSD for cross-dynamic work."
+        ),
+        not_valid_for="Substituting for EPD or treating as a laboratory SNR meter.",
+        ontology_family="conditioning",
+    )
     degenerate_partial_set = MetricDefinition(
         name="degenerate_partial_set",
         formula="harmonic_validated_count <= 2",
@@ -629,6 +644,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         stable_segment_unrepresentative.name: stable_segment_unrepresentative,
         ewsd_primary_analysis_eligible.name: ewsd_primary_analysis_eligible,
         degenerate_partial_set.name: degenerate_partial_set,
+        estimated_snr_db.name: estimated_snr_db,
     }
 
 

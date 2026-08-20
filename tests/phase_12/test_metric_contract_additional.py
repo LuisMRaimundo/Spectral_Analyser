@@ -100,6 +100,7 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "stable_segment_unrepresentative",
         "ewsd_primary_analysis_eligible",
         "degenerate_partial_set",
+        "estimated_snr_db",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():

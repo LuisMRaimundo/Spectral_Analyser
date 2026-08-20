@@ -2117,6 +2117,7 @@ class AudioProcessor:
         self.lead_trim_s: float = 0.0
         self.trail_trim_s: float = 0.0
         self.silence_trim_applied: bool = False
+        self.estimated_snr_db: float = float("nan")
 
         self.logger.info("AudioProcessor initialised")
 
@@ -5083,6 +5084,12 @@ class AudioProcessor:
                 _fq_h = pd.to_numeric(cand_df["Frequency (Hz)"], errors="coerce")
                 cand_df.loc[_fq_h < _cut_h, "include_for_density"] = False
         self.harmonic_spectrum_candidates_df = cand_df
+        try:
+            from estimated_snr import estimated_snr_db_from_harmonics
+
+            self.estimated_snr_db = float(estimated_snr_db_from_harmonics(cand_df))
+        except Exception:
+            self.estimated_snr_db = float("nan")
         self._finalize_density_uncertainty_flags(cand_df)
         candidate_n = int(len(cand_df))
         self.harmonic_candidate_count_20khz = int(candidate_n)
@@ -11133,6 +11140,9 @@ class AudioProcessor:
             "lead_trim_s": metric_float_or_nan(getattr(self, "lead_trim_s", 0.0)),
             "trail_trim_s": metric_float_or_nan(getattr(self, "trail_trim_s", 0.0)),
             "silence_trim_applied": bool(getattr(self, "silence_trim_applied", False)),
+            "estimated_snr_db": metric_float_or_nan(
+                getattr(self, "estimated_snr_db", None)
+            ),
             "linear_sum_amplitude_harmonic": metric_float_or_nan(
                 getattr(self, "linear_sum_amplitude_harmonic", None)
             ),

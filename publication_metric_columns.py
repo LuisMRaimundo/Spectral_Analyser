@@ -161,6 +161,7 @@ _MAIN6_METRICS_SHEET: frozenset[str] = frozenset(
         "core_harmonic_energy_ratio",
         "core_residual_energy_ratio",
         "core_subbass_energy_ratio",
+        "estimated_snr_db",
         "residual_log_frequency_occupancy",
         "residual_energy_ratio",
         "harmonic_energy_sum",

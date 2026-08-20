@@ -13,6 +13,7 @@ noted. Non-citable for publication.
 | Source | `pretag_evidence/trombone_{pp,mf,ff}_compiled_density_metrics_research.xlsx` |
 | Commit | `6b0e51a` |
 | Status | pre-tag; to be reproduced under the freeze tag |
+| Annotation (R4) | EWSD ordering is **partially SNR-mediated** (see B7 in `EWSD_CONSTRUCT_VALIDITY.md`). EPD ordering is unaffected. Trombone E2 `effective_partial_density` 6.68 / 9.03 / 13.27 (pp / mf / ff). |
 
 Boundary notes (same workbooks):
 
@@ -30,6 +31,7 @@ Boundary notes (same workbooks):
 | Source | `pretag_evidence/flute_{pp,mf,ff}_compiled_density_metrics_research.xlsx` |
 | Commit | `6b0e51a` |
 | Status | pre-tag; to be reproduced under the freeze tag |
+| Annotation (R4) | EWSD ordering is **partially SNR-mediated** (see B7). EPD ordering is unaffected. |
 
 The single pp miss among the 37 common notes is recorded in the
 workbooks (not dropped). mf and ff do not form a strict ladder; that
