@@ -448,6 +448,17 @@ def merge_ewsd_stage3(
                     out["degenerate_partial_set"].fillna(False).astype(bool)
                 )
             missing = out["EWSD_score_total"].isna()
+            if (
+                int(missing.sum()) == 1
+                and len(out) == 1
+                and len(ewsd_merge) == 1
+            ):
+                only = ewsd_merge.iloc[0]
+                for col in EWSD_RESEARCH_ALL_COLUMNS:
+                    if col in only.index:
+                        out.loc[missing, col] = only[col]
+                out.loc[missing, "ewsd_merge_status"] = "merged_single_note_identity"
+                missing = out["EWSD_score_total"].isna()
             out.loc[missing, "ewsd_merge_status"] = "note_not_in_ewsd_output"
 
             n_merged = int((~missing).sum())

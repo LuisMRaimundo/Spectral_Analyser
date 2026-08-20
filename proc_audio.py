@@ -10569,6 +10569,15 @@ class AudioProcessor:
             with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
                 self._save_spectral_data_to_excel(writer, note, export_output_dir=output_folder)
             self.logger.info(f"Spectral analysis saved to: {excel_path}")
+            try:
+                from tools.canonical_note_metrics import stamp_stage1_ewsd
+
+                stamped = stamp_stage1_ewsd(excel_path)
+                score = stamped.get("EWSD_score_acoustic_balanced")
+                self.EWSD_score_acoustic_balanced = score
+                self.ewsd_stamp_status = stamped.get("ewsd_stamp_status")
+            except Exception as _ewsd_exc:
+                self.logger.warning("Stage-1 EWSD stamp failed: %s", _ewsd_exc)
             legacy_clean = output_folder / "spectral_analysis_clean.xlsx"
             if legacy_clean.is_file():
                 try:
@@ -11091,9 +11100,18 @@ class AudioProcessor:
             "harmonic_energy_ratio": metric_float_or_nan(getattr(self, "harmonic_energy_ratio", None)),
             "inharmonic_energy_ratio": metric_float_or_nan(getattr(self, "inharmonic_energy_ratio", None)),
             "subbass_energy_ratio": metric_float_or_nan(getattr(self, "subbass_energy_ratio", None)),
-            "core_harmonic_energy_ratio": metric_float_or_nan(getattr(self, "harmonic_energy_ratio", None)),
-            "core_residual_energy_ratio": metric_float_or_nan(getattr(self, "residual_energy_ratio", None)),
-            "core_subbass_energy_ratio": metric_float_or_nan(getattr(self, "subbass_energy_ratio", None)),
+            "core_harmonic_energy_ratio": metric_float_or_nan(
+                getattr(self, "component_harmonic_energy_ratio", None)
+            ),
+            "core_residual_energy_ratio": metric_float_or_nan(
+                getattr(self, "component_inharmonic_energy_ratio", None)
+            ),
+            "core_subbass_energy_ratio": metric_float_or_nan(
+                getattr(self, "component_subbass_energy_ratio", None)
+            ),
+            "EWSD_score_acoustic_balanced": metric_float_or_nan(
+                getattr(self, "EWSD_score_acoustic_balanced", None)
+            ),
             "linear_sum_amplitude_harmonic": metric_float_or_nan(
                 getattr(self, "linear_sum_amplitude_harmonic", None)
             ),

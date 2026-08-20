@@ -38,8 +38,9 @@ R1b (20 August 2026): holding the 8192 71-order census, discrete
 core_H is 0.9675 / 0.9910 / 0.9970; held EWSD still follows the
 window (70.65 / 91.69 / 119.44). WP1 acceptance is re-scoped to
 synthetic energy-accounting + fixed-window policy. Cross-resolution
-EWSD invariance is out of scope. R2–R6 proceed. The one-metric
-Stage-1 vs Stage-3 invariant at the *fixed* window remains in force.
+EWSD invariance is out of scope. R2–R6 proceed. R2 closes the
+one-metric Stage-1 vs Stage-3 invariant at the *fixed* window
+(`METRIC_SINGLE_SOURCE.md`).
 
 ## Listener study still scaffold
 

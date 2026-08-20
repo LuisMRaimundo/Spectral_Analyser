@@ -730,3 +730,51 @@ def validate_header_contract_consistency(
         },
     }
 
+
+def validate_metric_single_source(
+    metrics: Optional[Dict[str, Any]] = None,
+    *,
+    stage3: Optional[Dict[str, Any]] = None,
+    atol: float = 1e-9,
+) -> Dict[str, Any]:
+    """Fail closed: one meaning for exported EWSD and core_H.
+
+    Stage-1 ``core_harmonic_energy_ratio`` must equal
+    ``component_harmonic_energy_ratio`` when both are finite.
+    Stage-1 ``EWSD_score_acoustic_balanced`` must equal the Stage-3
+    value when both are finite. The diagnostic density column is a
+    different construct and is not compared to EWSD.
+    """
+
+    def _finite(value: Any) -> Optional[float]:
+        try:
+            x = float(value)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(x):
+            return None
+        return x
+
+    metrics = dict(metrics or {})
+    stage3 = dict(stage3 or {})
+    conflicts: list[str] = []
+    core = _finite(metrics.get("core_harmonic_energy_ratio"))
+    comp = _finite(metrics.get("component_harmonic_energy_ratio"))
+    if core is not None and comp is not None and abs(core - comp) > atol:
+        conflicts.append("core_H!=component_H")
+    s1_ewsd = _finite(metrics.get("EWSD_score_acoustic_balanced"))
+    s3_ewsd = _finite(stage3.get("EWSD_score_acoustic_balanced"))
+    if s1_ewsd is not None and s3_ewsd is not None and abs(s1_ewsd - s3_ewsd) > atol:
+        conflicts.append("stage1_ewsd!=stage3_ewsd")
+    s3_core = _finite(stage3.get("core_harmonic_energy_ratio"))
+    if core is not None and s3_core is not None and abs(core - s3_core) > atol:
+        conflicts.append("stage1_core_H!=stage3_core_H")
+    failures = ""
+    if conflicts:
+        failures = "metric_single_source:" + ";".join(conflicts)
+    return {
+        "ok": not conflicts,
+        "conflicts": conflicts,
+        "failures": failures,
+    }
+

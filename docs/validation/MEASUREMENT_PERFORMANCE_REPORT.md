@@ -157,3 +157,14 @@ runner sha256: 4e4afa2107b0a6db91ce5acdc4b19386fe42010fc455fc73f6c1d7c99759711a
 ```
 
 Raw JSON: `docs/validation/_measurement_eval/results.json` (local; not a publication artefact).
+
+## Addendum — 20 August 2026 (R2; scores not rewritten)
+
+**B1: PASS (post-R2).** Stage-1 Metrics `EWSD_score_acoustic_balanced`
+and `core_harmonic_energy_ratio` equal Stage-3 at the fixed window
+8192/1024 (atol 1e-9) on a 4 s 8-partial A4 tone with `core_H` ≥ 0.99
+(live orchestrator identity in `test_live_synthetic_stage1_equals_stage3_at_fixed_window`).
+The original B1 cell (cross-n_fft 3 % on live G3, score 71.4 Part B)
+is unchanged; that target remains the R1 measured FAIL and is out of
+scope under R1b. Evidence: `tests/phase_30/test_r2_metric_single_source.py`,
+`docs/validation/METRIC_SINGLE_SOURCE.md`.

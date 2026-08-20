@@ -564,18 +564,12 @@ def _stage1_metrics(
                 except (TypeError, ValueError):
                     pass
     if "EWSD_score_acoustic_balanced" not in out:
-        # Stage 1 workbook may not carry Stage 3 EWSD; use in-memory extras.
-        for attr, key in (
-            ("energy_weighted_component_density_diagnostic", "EWSD_score_acoustic_balanced"),
-            ("harmonic_energy_ratio", "harmonic_energy_ratio"),
-            ("effective_partial_density", "effective_partial_density"),
-        ):
-            val = getattr(ap, attr, None)
-            if val is not None and key not in out:
-                try:
-                    out[key] = float(val)
-                except (TypeError, ValueError):
-                    pass
+        val = getattr(ap, "EWSD_score_acoustic_balanced", None)
+        if val is not None:
+            try:
+                out["EWSD_score_acoustic_balanced"] = float(val)
+            except (TypeError, ValueError):
+                pass
     return out
 
 
