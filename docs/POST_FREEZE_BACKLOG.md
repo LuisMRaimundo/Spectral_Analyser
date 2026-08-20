@@ -25,6 +25,15 @@ Production policy (`fft_policy=fixed` at 8192/1024) avoids mixing the
 windows. It does not make the swap invariant. P5/P6 are blocked until
 this is resolved.
 
+**R1, 20 August 2026, tag `v4.2.2` = `64a2282`.** Same G3 file, full
+Stage 1–3, compiled `Spectral_Density_Metrics` only:
+`core_H` 0.7878 / 0.9222 / 0.9760 and EWSD 72.72 / 91.31 / 118.04 at
+n_fft 4096 / 8192 / 16384. 3 % tolerance: **FAIL**. Flute A♯4 fails
+on EWSD and `core_H`. The 1.2 s synthetic tone has `core_H` = 1.0 on
+the Stage-3 sheet but no `EWSD_score_acoustic_balanced` /
+`effective_partial_density` columns (EWSD NaN on `Stage3_Diagnostics`).
+WP1 is **FAILED** on the canonical Stage-3 path. R2–R6 stopped.
+
 ## Listener study still scaffold
 
 `tools/perceptual_pairs.py`, `tools/perceptual_agreement.py`, and
