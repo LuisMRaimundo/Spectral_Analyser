@@ -1,65 +1,70 @@
 # Before / after — trombone A♯2 *ff* and tuba A2 *pp*
 
-Stage 1 re-exports under the D1–D5 defect-fix branch. F-042 / F-047 /
-F-048 / F-049 algebra is unchanged. EWSD is a Stage 3 column; it is not
-recomputed here. The Phase H corpus re-export remains the post-merge
-deliverable.
+D1–D5 landed on `main` in PR #75 (`ec0a99a`). This page is the WP2
+verification after WP1 (`38cb535`): Stage 1–3 re-export with
+`fft_policy=fixed`, `n_fft=8192`, `hop=1024`, `window=blackmanharris`,
+`zero_padding=2`. F-042 / F-047 / F-048 / F-049 algebra is unchanged.
 
-Before values for trombone A♯2 are the `5b1a1c7` review figures. Tuba A2
-before values are the exclusive-gating (`70525e3` / Análise 3) A2 take
-where comparable.
+Local artefacts (not committed): `docs/validation/_wp2_raw/`.
+Command: `python -m tools.wp2_acceptance_export --out docs/validation/_wp2_raw`.
 
 ## Trombone A♯2 *ff* SustainStable
 
 Audio: `IOWA_Trb.T_ff.A#2_SustainStable.aif`  
-After workbook: `analysis_results_d1/A#2/spectral_analysis.xlsx`  
-f0 used = 116.293 Hz.
+After workbook: `_wp2_raw/trombone_as2_ff/stage1/A#2/spectral_analysis.xlsx`  
+f0 used = 116.300 Hz.
 
-| Field | Before (`5b1a1c7`) | After (D1–D5) |
-|-------|-------------------:|--------------:|
-| `harmonic_validated_count` | 78 | **89** |
-| `harmonic_validated_weak_count` | — | **18** |
-| `harmonic_validated_strict_count` | 78 | **71** |
-| `tolerance_continuity_override_count` | — | 0 |
-| `subbass_upper_bound_hz` | 80 | **58.15** |
-| `subbass_bound_formula` | — | `min(0.5*f0, 80)` |
-| `subbass_member_count` | (80 Hz members) | 3 |
-| `effective_partial_density` | (review EPD on 78 H) | 12.87 |
-| `note_density_final` | Stage 2 | not re-run |
-| `EWSD_score_acoustic_balanced` | Stage 3 | not re-run |
-| CI unit / n | not exported | `partials` / 89 |
-| CI width flag / note | 68.8 % wide | `wide` / `high_partial_correlation` |
-| `accepted_slots_above_body_stop` | 0 | 0 |
+| Field | Before (`5b1a1c7`) | After D1–D5 (PR #75) | After WP1 (`38cb535`) |
+|-------|-------------------:|---------------------:|----------------------:|
+| `harmonic_validated_count` | 78 | 89 | **92** |
+| `harmonic_validated_weak_count` | — | 18 | **14** |
+| `harmonic_validated_strict_count` | 78 | 71 | **78** |
+| `tolerance_continuity_override_count` | — | 0 | **0** |
+| `subbass_upper_bound_hz` | 80 | 58.15 | **58.15** |
+| `subbass_bound_formula` | — | `min(0.5*f0, 80)` | `min(0.5*f0, 80)` |
+| `effective_partial_density` | — | 12.87 | **12.47** |
+| `EWSD_score_acoustic_balanced` | — | not re-run | **87.41** |
+| CI unit / n | not exported | `partials` / 89 | `partials` / 168 (Stage 2) |
+| `accepted_slots_above_body_stop` | 0 | 0 | **0** |
 
-H81–H85, H87–H88 are `validated_weak` (persistence ≥ 0.98, margin < 3 dB).
-H86 is `snr_validated` (not CFAR-detected) and stays out. H89 and H93 also
-meet the override. H74 and H79 are included; on this take they enter via
-D1 (`validated_weak`) rather than D2 (they were not `rejected_by_tolerance`
-after the current slot match). D2 still applies when both neighbours are
-validated and the reject is a spacing-cap miss.
+Acceptance: `harmonic_validated_count ≥ 86` (92). `subbass_upper_bound_hz =
+58.15` on Metrics, Validation_Metrics, and Analysis_Metadata.
 
-`subbass_energy_sum` = 0.0451 (F-020 members). Diagnostic rows above 58.15 Hz
-are `lf_diagnostic_not_member`.
+H74 and H79 are **included**. On this take they enter via D1
+(`validated_weak`, `exclusion_reason = included (weak_margin_persistence_override)`,
+persistence = 1.0), not D2. They were not `rejected_by_tolerance` after the
+current slot match, so `tolerance_continuity_override_count` stays 0. D2 still
+applies when both neighbours are validated and the reject is a spacing-cap miss.
 
-One energy pie: `component_energy_pie.png` (Validated-partial energy balance).
-`hop_duration_s` = 0.0232 s; `window_duration_s` = 0.0929 s at sr = 44100,
-n_fft = 4096. `frame_duration_s` is the deprecated hop alias.
+One energy pie: `component_energy_pie.png`. `hop_duration_s` = 0.0232 s;
+`window_duration_s` = 0.1858 s at sr = 44100, n_fft = 8192.
 
 ## Tuba A2 *pp* SustainStable
 
 Audio: `IOWA_Tub.pp.A2_SustainStable.aif`  
-After: `analysis_results_d1_a2/A2/spectral_analysis.xlsx`
+After: `_wp2_raw/tuba_a2_pp/stage1/A2/spectral_analysis.xlsx`
 
-| Field | Before (gated A2) | After (D1–D5) |
-|-------|------------------:|--------------:|
-| `harmonic_validated_count` | 8 (H1–H8; H7/H8 could be `cfar_marginal`) | **7** |
-| `harmonic_validated_weak_count` | — | 1 |
-| `tolerance_continuity_override_count` | — | 0 |
-| `subbass_upper_bound_hz` | 55 (F-020) | **54.997** |
-| `effective_partial_density` | 3.77 | 3.81 |
-| `accepted_slots_above_body_stop` | 0 | 0 |
-| CI unit / n | not exported | `partials` / 7 |
+| Field | Before (gated A2 / `70525e3`) | After D1–D5 | After WP1 (`38cb535`) |
+|-------|------------------------------:|------------:|----------------------:|
+| `harmonic_validated_count` | 8 (H1–H8) | 7 | **8** |
+| `harmonic_validated_weak_count` | — | 1 | **2** |
+| `tolerance_continuity_override_count` | — | 0 | **0** |
+| `subbass_upper_bound_hz` | 55 | 54.997 | **55.02** |
+| `effective_partial_density` | 3.77 | 3.81 | **3.77** |
+| `EWSD_score_acoustic_balanced` | — | not re-run | **16.11** |
+| `accepted_slots_above_body_stop` | 0 | 0 | **0** |
+| CI unit / n / flag | not exported | `partials` / 7 | `partials` / 25 / `wide` |
 
-High-*n* floor remains excluded. The body stop and the 0.7 persistence
-gate still keep the 12 kHz harvest out. D1 adds at most one weak-margin
-body partial; it does not reopen the floor.
+High-*n* floor remains excluded. H74 / H79 on tuba A2 are `snr_validated`
+and not included (persistence 0.50 / 0.62). D1 adds at most weak-margin
+body partials; it does not reopen the 12 kHz harvest.
+
+CI provenance columns present on Stage 2 `Density_Metrics`:
+`ci_resampling_unit`, `ci_n_resampled`, `ci_bootstrap_iterations`,
+`ci_seed`, `ci_width_flag`, `ci_width_note`.
+
+## Unit-test gate
+
+`tests/phase_23/test_trombone_as2_defect_fixes.py` (including
+`test_iowa_trombone_as2_ff_acceptance_if_present` at n_fft=4096) passed on
+`38cb535`.

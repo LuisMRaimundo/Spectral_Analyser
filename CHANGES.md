@@ -1,3 +1,12 @@
+# WP2 — D1–D5 verified on main after WP1
+
+D1–D5 (PR #75) remain on `main`. Post-WP1 (`38cb535`) re-export of trombone
+A♯2 *ff* and tuba A2 *pp* is in `docs/validation/TROMBONE_AS2_DEFECT_FIX_DIFF.md`.
+A♯2: `harmonic_validated_count = 92` (≥ 86), H74/H79 included via D1
+weak-margin override, `subbass_upper_bound_hz = 58.15`. Tuba A2: 8
+validated, EPD 3.77, EWSD 16.11, CI columns present. F-042 / F-047 /
+F-048 / F-049 algebra is unchanged.
+
 # Residual exclusion uses the window main-lobe, not ENBW
 
 WP1 of the closure programme. F-042 / F-047 / F-048 / F-049 algebra is

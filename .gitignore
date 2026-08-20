@@ -24,6 +24,7 @@ dist/
 _fixture_rerun/
 docs/validation/_d61_raw/
 docs/validation/_d66_*/
+docs/validation/_wp2_*/
 
 # Pytest and coverage
 .pytest_cache/
