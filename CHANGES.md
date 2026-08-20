@@ -1,3 +1,22 @@
+# WP4 — CI green: sparse-table noise gate and stale density contracts
+
+The eight pre-existing CI failures all touched density/export, so they
+were fixed rather than quarantined. F-042 / F-047 / F-048 / F-049
+algebra is unchanged.
+
+- `compute_acoustic_density_descriptors(..., apply_noise_gate=False)`
+  lets planted peak-table tests skip the FFT floor subtract. Live Stage 1
+  keeps the default gate. The floor operator on a short peak list treated
+  neighbouring peaks as floor (single-tone EPD → 0; energy gates → 1+1+1).
+- Energy gates with no measurable band energy are `1/3` each (a valid
+  distribution), never `1+1+1`.
+- Body energy sums honour `body_freq_max_hz` (`_body_freq_max_hz`),
+  not the 20 kHz `BODY_DENSITY_MAX_HZ` cap.
+- Phase-2 export test locks `weight_function=linear` so it tests the
+  0.6/0.3/0.1 profile, not default φ=`log`.
+- Inharmonic body-sum test matches confirmed-I rows, not every
+  residual-sheet candidate (Phase A).
+
 # WP3 — Production policy as code
 
 Comparable-corpus defaults, segment pairing, and eligibility are now

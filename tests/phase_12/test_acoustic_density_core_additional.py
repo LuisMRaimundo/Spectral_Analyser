@@ -225,7 +225,10 @@ def test_power_amplitude_and_db_representations_are_equivalent() -> None:
 
 def test_region_energy_ratios_partition_significant_power() -> None:
     out = compute_acoustic_density_descriptors(
-        _three_component_peaks(), f0_hz=110.0, f0_fit_accepted=True
+        _three_component_peaks(),
+        f0_hz=110.0,
+        f0_fit_accepted=True,
+        apply_noise_gate=False,
     )
     assert out["arithmetic_validation_status"] == "passed"
     h = out["harmonic_energy_ratio"]
@@ -253,7 +256,9 @@ def test_region_energy_ratios_partition_significant_power() -> None:
 
 def test_single_partial_has_zero_entropy_and_unit_effective_count() -> None:
     peaks = pd.DataFrame({"frequency_hz": [220.0], "power": [4.0]})
-    out = compute_acoustic_density_descriptors(peaks, f0_hz=220.0, f0_fit_accepted=True)
+    out = compute_acoustic_density_descriptors(
+        peaks, f0_hz=220.0, f0_fit_accepted=True, apply_noise_gate=False
+    )
     assert out["arithmetic_validation_status"] == "passed"
     # Canonical: H(single component) = 0; participation ratio of one = 1.
     assert out["spectral_entropy"] == 0.0
@@ -281,6 +286,7 @@ def test_partials_above_body_ceiling_count_in_full_spectrum_not_body_band() -> N
         f0_fit_accepted=True,
         freq_max_hz=40000.0,
         full_spectrum_max_hz=40000.0,
+        apply_noise_gate=False,
     )
     body_e = float(out["harmonic_body_energy_sum_body_ceiling"])
     full_e = float(out["harmonic_full_spectrum_energy_sum_20khz"])
@@ -324,7 +330,9 @@ def test_duplicate_peaks_on_same_order_count_once_as_harmonic_order() -> None:
     peaks = pd.DataFrame(
         {"frequency_hz": [440.0, 442.0, 880.0], "power": [1.0, 0.8, 0.5]}
     )
-    out = compute_acoustic_density_descriptors(peaks, f0_hz=440.0, f0_fit_accepted=True)
+    out = compute_acoustic_density_descriptors(
+        peaks, f0_hz=440.0, f0_fit_accepted=True, apply_noise_gate=False
+    )
     assert out["detected_harmonic_slot_count"] == 2
     assert out["full_spectrum_harmonic_candidate_count_20khz"] == 2
 
