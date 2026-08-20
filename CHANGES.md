@@ -1,3 +1,10 @@
+# R3 — Leading/trailing digital-silence trim
+
+Files with ≤ 2 s of leading or trailing digital zeros now match the
+trimmed take on load (`audio_silence_trim.py`). ADSR_Segmenter is not
+modified. Eval B5 prepend NaN (0 validated harmonics) was the silent
+head locking analysis to file start.
+
 # R2 — One metric, one value at the fixed window
 
 Stage-1 Metrics `core_harmonic_energy_ratio` is the component ΣA²
