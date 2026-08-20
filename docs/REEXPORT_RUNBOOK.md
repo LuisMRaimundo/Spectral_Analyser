@@ -4,6 +4,8 @@ One full Stage 1–3 re-export per corpus after the freeze-ready tag
 (`v4.2.1` supersedes `v4.2.0` as the reference; do not delete
 `v4.2.0`). Write outputs to `analysis_results_v4.2.1`. Compare against
 `docs/validation/pretag_evidence/` (non-citable).
+The R6 batch (20 August 2026) used tag **`v4.2.3`** and
+`analysis_results_v4.2.3`; see `docs/validation/REEXPORT_DIFF_SUMMARY.md`.
 
 Production policy (WP3): `fft_policy=fixed`, `n_fft=8192`, `hop=1024`,
 `seg=sustain_primary_stable_diagnostic`, `elig=1` (policy version, not

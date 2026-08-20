@@ -195,3 +195,24 @@ seed 20260820; 8 partials, −6 dB/oct, 20 dB SNR). Original Part C cells
   not retuned.
 - Measured limit: CIs are indicative, empirically 100 % C1 coverage.
   Backlog: `POST_FREEZE_BACKLOG.md`.
+
+## Addendum — 20 August 2026 (R6; scores not rewritten)
+
+Seven `v4.2.3` corpora (`1db94e1`, profile
+`wf=log|dst=-90.0|ceil=20000.0|fft=fixed|seg=sustain_primary_stable_diagnostic|elig=1`).
+Original headline composite **76.6** is unchanged. Diffs:
+`docs/validation/REEXPORT_DIFF_SUMMARY.md`.
+
+Part D on the seven new trees: eligibility 100 % (item 1 = 100);
+item 2 FAIL (flute *pp* B5/B6 have EPD > validated H);
+item 3–4 = 30 (one unexplained pitch-mono rise on flute *pp*).
+D = (100 + 30 + 30) / 3 = **53.3**.
+
+Recomputed composite from the re-run cells only
+(B1 post-R2, B5 post-R3, C1, C2, D):
+
+(100 + 100 + 30 + 30 + 53.3) / 5 = **62.7**.
+
+CORDAS unchanged script on the existing 54 CORDAS_2 trees: dynamic
+ε² = 0.00756; Iowa bass ρ = −0.046. EPD sidecar ε² = 0.0132; Iowa bass
+ρ_EPD = −0.013. New cello *ff* ρ(MIDI, EWSD) = −0.579.
