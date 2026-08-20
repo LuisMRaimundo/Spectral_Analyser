@@ -1,6 +1,8 @@
 # Upgrade programme status (post-`70525e3`)
 
-Measurable acceptance, not a 1–100 rating. One git phase / PR per letter.
+Measurable acceptance, not a 1–100 rating. This table is the freeze
+record for Phases A–I, D1–D6, and WP1–WP6; it supersedes
+`VERSION_RATING_IOWA_TUBA.md`. One git phase / PR per letter.
 F-042 / F-047 / F-048 / F-049 algebra is unchanged unless a formula-version
 bump is recorded.
 
@@ -23,7 +25,8 @@ bump is recorded.
 | WP2 | D1–D5 evidence after WP1 | `docs/validation/TROMBONE_AS2_DEFECT_FIX_DIFF.md` | A♯2 validated 92; H74/H79 included; bound 58.15; A2 EPD 3.77, EWSD 16.11, CI present. | **done (PR #78)** |
 | WP3 | Production policy as code | `tests/phase_26/test_production_policy.py` | Defaults `fixed`/8192/1024; profile id has `fft`/`seg`/`elig`; cello G2 stable ineligible and unrepresentative vs full; trombone A♯2 eligible, ratio ≈ 1; degenerate CI is NaN; mixed profile ids raise `stage3_issue`. | **done (PR #79)** |
 | WP4 | CI to green | the previous 8 density failures | Planted peak-table tests opt out of the FFT noise gate; energy gates sum to 1; body sums use `body_freq_max_hz`; phase-2 test uses linear φ; I-sum matches confirmed I. | **done (PR #80)** |
-| WP5 | Tag tooling, verify_corpus, runbook, v4.2.0 | `tests/phase_27/test_verify_corpus.py` | CLI keeps `--fft-policy fixed`; `verify_corpus` on a planted run; `docs/REEXPORT_RUNBOOK.md` exists; package 4.2.0; no F-042/047/048/049 golden change. | **in this PR** |
+| WP5 | Tag tooling, verify_corpus, runbook, v4.2.0 | `tests/phase_27/test_verify_corpus.py` | CLI keeps `--fft-policy fixed`; `verify_corpus` on a planted run; `docs/REEXPORT_RUNBOOK.md` exists; package 4.2.0; no F-042/047/048/049 golden change. | **done (PR #81); tag v4.2.0** |
+| WP6 | Closure dossier + freeze declaration | `tests/phase_28/test_closure_dossier.py` | Phase I table is the freeze construct record; this page supersedes 1–100 ratings; G2 case study; post-freeze backlog; README freeze. | **in this PR** |
 | WP1 | Residual footprint separation | `tests/phase_25/test_residual_footprint.py` | Single sinusoid residual share < 1 % at 2048–16384. Tone+pink residual within 2 % of GT. Region invariant holds. | **done (PR #77)** |
 | D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
 | D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |
@@ -127,3 +130,18 @@ scaffold only (`tools/perceptual_pairs.py`,
 `tools/perceptual_agreement.py`,
 `docs/validation/PERCEPTUAL_PROTOCOL.md`). EWSD is acoustic until that
 study is run.
+
+## Closure (WP6)
+
+This table is the freeze acceptance record. It supersedes the archival
+1–100 scorecard in `VERSION_RATING_IOWA_TUBA.md` (deprecated).
+
+- Construct recovery: `CONSTRUCT_VALIDATION_SYNTHETIC.md` (all 12
+  conditions meet N ±1, B ±10 %, EPD ±10 %, confirmed-I exact).
+- Segmentation: `SEGMENTATION_CASE_STUDY_G2.md` — cello G2 full vs
+  stable is 43 vs 16 harmonics, 551 vs 140 Hz, EWSD 50.2 vs 12.3,
+  1.75 independent frames on the stable cut.
+- Out of scope: `docs/POST_FREEZE_BACKLOG.md` (includes local trombone
+  G3 `core_H` n_fft sensitivity).
+- Instrument tag: **v4.2.0**. One re-export per corpus after the tag
+  (`docs/REEXPORT_RUNBOOK.md`), then freeze.

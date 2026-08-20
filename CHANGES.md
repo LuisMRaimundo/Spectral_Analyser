@@ -1,3 +1,23 @@
+# WP6 — Closure dossier and freeze declaration
+
+The upgrade programme is closed. F-042 / F-047 / F-048 / F-049 algebra
+is unchanged. Tag `v4.2.0` marks the freeze-ready instrument (WP1–WP5).
+
+- `docs/validation/UPGRADE_PROGRAMME_STATUS.md` is the acceptance
+  record for A–I / D1–D6 / WP1–WP6 and supersedes the 1–100 scorecard.
+- `docs/validation/VERSION_RATING_IOWA_TUBA.md` is archived as
+  **DEPRECATED**.
+- Phase I synthetic recovery remains
+  `docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`.
+- `docs/validation/SEGMENTATION_CASE_STUDY_G2.md` records cello G2
+  full vs stable (43 vs 16 harmonics, 551 vs 140 Hz, EWSD 50.2 vs
+  12.3, 1.75 frames).
+- `docs/POST_FREEZE_BACKLOG.md` files the local trombone G3 `core_H`
+  n_fft sensitivity and the un-run listener study.
+- README Status is **Frozen at v4.2.0**. One re-export per corpus
+  after the tag; no further Stage 1 iteration on a frozen corpus.
+- Tests: `tests/phase_28/test_closure_dossier.py`.
+
 # WP5 — Tag tooling, verify_corpus, runbook, v4.2.0
 
 Freeze-ready tooling after WP1–WP4. F-042 / F-047 / F-048 / F-049
