@@ -1,3 +1,16 @@
+# R1b — Census-held G3 and WP1 re-scope
+
+Freeze the 8192-validated 71 harmonic orders and recompute G3
+core_H / EWSD at 4096 and 16384 (`tools/r1b_census_held.py`).
+
+- Held Power_raw core_H 0.9675 / 0.9910 / 0.9970 (inside 3 %).
+- Held EWSD 70.65 / 91.69 / 119.44 tracks native Stage-3 EWSD.
+- B1 failure is partition / n_fft-scaled density, not census dropout.
+- WP1 acceptance: synthetic energy-accounting + `fft_policy=fixed`.
+  Cross-resolution EWSD invariance is out of scope.
+- 0.24 % table is descriptor `harmonic_energy_ratio`, not Stage-3 core_H.
+- Synthetic Stage-3 EWSD NaN is `ci_basis_frame_count` 2.56 < 8.
+
 # R1 — Stage-3 B1 on tag v4.2.2 (FAIL)
 
 Clean tree at `64a2282` tagged `v4.2.2` (`v4.2.0` / `v4.2.1` not

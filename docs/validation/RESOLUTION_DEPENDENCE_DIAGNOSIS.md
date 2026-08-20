@@ -75,19 +75,27 @@ One-sided invariant: `residual_region_hz_total + excluded_region_hz_total
 == analysis_band_hz`.
 
 Descriptor-level G3 / G♯3 swap on the same IOWA trombone *ff* takes
-(`window=blackmanharris`, hop = n_fft/8, `freq` 20–20 000 Hz):
+(`window=blackmanharris`, hop = n_fft/8, `freq` 20–20 000 Hz).
+**Artefact (corrected R1b):** this table is `compute_acoustic_density_descriptors`
+/ `analysis_band_regions_hz` on a peak-table extraction (`tests/phase_25`
+family), **not** compiled Stage-3 `core_harmonic_energy_ratio`. The
+0.9969 / 0.9993 pair (0.24 % step) is that descriptor
+`harmonic_energy_ratio`. It must not be read as the export. R1 Stage-3
+G3 `core_H` is 0.9222 @8192 vs 0.7878 @4096 (14.6 %). Census-held
+discrete Power_raw on the same files is 0.9910 / 0.9675 (see § R1b).
 
-| Note | n_fft / hop | core_H_ratio | residual_ratio | residual_hz | excluded_hz |
-|------|-------------|-------------:|---------------:|------------:|------------:|
+| Note | n_fft / hop | descriptor `harmonic_energy_ratio` | residual_ratio | residual_hz | excluded_hz |
+|------|-------------|-----------------------------------:|---------------:|------------:|------------:|
 | G3 | 8192 / 1024 | 0.9969 | 0.0031 | 15 597 | 4 383 |
 | G3 | 4096 / 512 | 0.9993 | 0.0007 | 11 220 | 8 760 |
 | G♯3 | 4096 / 512 | 0.9963 | 0.0037 | 11 711 | 8 269 |
 | G♯3 | 8192 / 1024 | 0.9898 | 0.0102 | 15 846 | 4 134 |
 
-G3 core_H steps 0.24 % when the window halves; G♯3 steps 0.65 %. The
-step no longer follows the window. Residual share is < 1.1 % (was
-5–25 % and monotone in bin width). `residual_region_hz_total` is
-≤ 19 980 Hz (was 36 364 Hz on a 20 kHz band).
+Descriptor G3 steps 0.24 % when the window halves; G♯3 steps 0.65 %.
+That descriptor residual share is < 1.1 % (was 5–25 % and monotone in
+bin width). `residual_region_hz_total` is ≤ 19 980 Hz (was 36 364 Hz
+on a 20 kHz band). The Hz-region invariant is what WP1 closed. It is
+**not** Stage-3 energy-partition invariance.
 
 ## P1 — Live G3 swap on `aa24de8` (20 August 2026) — **FAIL**
 
@@ -186,5 +194,61 @@ Stage-3 columns.
 
 G3 8192/4096 matches the P1 table on `aa24de8` to the reported
 rounding (0.9222 / 0.7878, 91.31 / 72.72). The canonical Stage-3 path
-is **not** resolution-invariant. WP1 is **FAILED** on that path.
-R2–R6 are **stopped**.
+is **not** resolution-invariant across n_fft. R1b re-scopes that
+result: detection is resolution-dependent in principle; WP1 acceptance
+is energy-accounting invariance at a declared window plus
+`fft_policy=fixed`.
+
+**Synthetic Stage-3 NaN.** The 1.2 s tone has
+`ci_basis_frame_count = 2.5625` and `ci_basis_frames_insufficient =
+True` (`MIN_INDEPENDENT_FRAMES = 8`). `ewsd_merge_status =
+note_not_in_ewsd_output`; `EWSD_score_acoustic_balanced` is NaN on
+`Stage3_Diagnostics`. That is the eligibility / frame-count gate, not
+a missing formula.
+
+## R1b — Census-held G3 (20 August 2026)
+
+Frozen list: the 71 `include_for_density` harmonic *orders* from the
+R1 `g3_8192` Stage-1 workbook. At 4096 and 16384 the same orders are
+taken from that window's Harmonic Spectrum (slots exist; 4096 marks
+68–71 `include_for_density=False`). I/S energy is the native
+Inharmonic + Sub-bass `Power_raw` at that window. EWSD_held is
+`compute_ewsd` with those H rows and HIS weights from the held
+partition. Native columns are R1 Stage-3 compiled values.
+
+```bash
+python -m tools.r1b_census_held
+```
+
+Raw: `docs/validation/_r1_stage3_b1/r1b_census_held.json` (local).
+
+| n_fft / hop | N_validated native | held N | held core_H (Power_raw) | native Stage-3 core_H | held EWSD | native Stage-3 EWSD |
+|-------------|-------------------:|-------:|------------------------:|----------------------:|----------:|--------------------:|
+| 4096 / 512 | 67 | 71 | 0.9675 | 0.7878 | 70.65 | 72.72 |
+| 8192 / 1024 | 71 | 71 | 0.9910 | 0.9222 | 91.69 | 91.31 |
+| 16384 / 2048 | 73 | 71 | 0.9970 | 0.9760 | 119.44 | 118.04 |
+
+Relative Δ vs 8192:
+
+| Quantity | 4096 | 16384 |
+|----------|-----:|------:|
+| Native Stage-3 core_H | 14.57 % | 5.83 % |
+| Held Power_raw core_H | 2.37 % | 0.60 % |
+| Native Stage-3 EWSD | 20.36 % | 29.27 % |
+| Held EWSD | 22.94 % | 30.27 % |
+
+**Attribution.** Native validated counts are 67 / 71 / 73. The four
+orders present only at 8192 (68–71) have `Power_raw` ≈ 0.11 against
+E_H ≈ 45 067 at 8192 (~2×10⁻⁴ % of E_H) — not a 14 % core_H effect.
+
+| Failure piece | 4096 vs 8192 | 16384 vs 8192 | Verdict |
+|---------------|-------------:|--------------:|---------|
+| Census-dependence (held Power_raw core_H Δ) | 2.37 % | 0.60 % | inside 3 %; **not** the B1 fail |
+| Partition residue (native Stage-3 core_H Δ) | 14.57 % | 5.83 % | **this is the core_H B1 fail** |
+| Stage-3 minus held core_H (absolute) | 0.7878 − 0.9675 = −0.180 | 0.9760 − 0.9970 = −0.021 | residual / floor-bin share grows as the window shortens |
+| Census-dependence (EWSD: held vs native) | 70.65 ≈ 72.72 | 119.44 ≈ 118.04 | ~0; census does not move EWSD |
+| n_fft-scaled density (held EWSD Δ) | 22.94 % | 30.27 % | **this is the entire EWSD B1 fail** |
+
+Cross-resolution EWSD invariance is not achievable once detection and
+bin gain depend on the analysis window. Comparability is the declared
+window (`fft_policy=fixed` 8192/1024).
