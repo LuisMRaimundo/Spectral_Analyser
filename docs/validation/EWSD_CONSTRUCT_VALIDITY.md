@@ -87,6 +87,53 @@ even when the take is high-SNR. That is expected when the unit is
 `low_independent_frames`. Neither note changes the point estimate or
 the F-047 algebra.
 
+## Declared analysis window
+
+EWSD and the harmonic **census** that enters it are defined at the
+declared Stage-1 window (`n_fft`, hop, `fft_policy`). Changing the
+window changes which orders validate and the PSD residual floor.
+Cross-resolution EWSD equality is not a construct requirement.
+Comparability uses one declared window (`fft_policy=fixed`, default
+8192/1024). See `RESOLUTION_DEPENDENCE_DIAGNOSIS.md` § R1b.
+
+## Measured conditioning properties
+
+Two measured conditioners sit beside each other. Neither is a defect
+in the F-048/F-049 algebra.
+
+### B1 — analysis window (live G3, Stage-3 compiled)
+
+From `MEASUREMENT_PERFORMANCE_REPORT.md` / R1 on `v4.2.2` (`64a2282`):
+
+| n_fft / hop | core_H | EWSD | EPD |
+|-------------|-------:|-----:|----:|
+| 4096 / 512 | 0.7878 | 72.72 | 10.513 |
+| 8192 / 1024 | 0.9222 | 91.31 | 10.065 |
+| 16384 / 2048 | 0.9760 | 118.04 | 9.516 |
+
+R1b: the same 71 8192-validated orders give held core_H 0.9675 / 0.9910
+/ 0.9970 and held EWSD 70.65 / 91.69 / 119.44. EWSD still follows the
+window after the census is frozen.
+
+### B7 — SNR (synthetic 8-partial tone, Phase I recover)
+
+From `MEASUREMENT_PERFORMANCE_REPORT.md` (seed 20260820):
+
+| SNR dB | N hat | EPD hat | EWSD hat |
+|-------:|------:|--------:|---------:|
+| 0 | 8.0 | 2.1658 | 8.7668 |
+| 5 | 8.0 | 2.1658 | 12.0906 |
+| 10 | 8.0 | 2.1658 | 15.8897 |
+| 15 | 8.0 | 2.1658 | 20.0237 |
+| 20 | 8.0 | 2.1658 | 24.3714 |
+| 25 | 8.0 | 2.1658 | 28.8461 |
+| 30 | 8.0 | 2.1658 | 33.3924 |
+| 35 | 8.0 | 2.1658 | 37.9772 |
+| 40 | 8.0 | 2.1658 | 42.5820 |
+
+N̂ and EPD stay constant; EWSD rises with spectral cleanliness. Report
+SNR beside EWSD for cross-dynamic comparisons.
+
 ## Resolution dependence
 
 Adaptive-tier Stage 1 (`n_fft` 8192 → 4096 → 2048 at G3/G♯3 and B4/C5)

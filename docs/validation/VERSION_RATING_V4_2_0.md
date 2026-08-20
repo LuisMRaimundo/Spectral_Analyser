@@ -419,3 +419,12 @@ re-scoring, if wanted, remain separate exercises. The acoustics cap
 from the live G3 fail is **not** cleared.
 
 This rating is superseded by `UPGRADE_PROGRAMME_STATUS.md` for all engineering claims; the pass/fail table there is authoritative.
+
+## Addendum — 20 August 2026 (R1b; scores not rewritten)
+
+The Dimension 2 evidence line “G3 `core_H` 0.9969 vs 0.9993 (0.24 %)”
+is **descriptor** `harmonic_energy_ratio` from
+`compute_acoustic_density_descriptors` / the WP1 table in
+`RESOLUTION_DEPENDENCE_DIAGNOSIS.md` § WP1, not compiled Stage-3
+`core_harmonic_energy_ratio`. Stage-3 G3 is 0.9222 @8192 vs 0.7878
+@4096. Scores above are unchanged.
