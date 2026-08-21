@@ -1,4 +1,4 @@
-"""WP5 / P4 — verify_corpus, freeze runbook, package 4.2.1."""
+"""WP5 / P4 — verify_corpus, freeze runbook, package 4.2.3."""
 
 from __future__ import annotations
 
@@ -67,10 +67,10 @@ def _good_run(tmp_path: Path) -> Path:
     return out
 
 
-def test_package_version_is_4_2_1() -> None:
+def test_package_version_is_4_2_3() -> None:
     pkg, source = resolve_package_version()
     assert source.startswith("pyproject.toml")
-    assert pkg == "4.2.1"
+    assert pkg == "4.2.3"
 
 
 def test_cli_still_defaults_to_fft_policy_fixed() -> None:
