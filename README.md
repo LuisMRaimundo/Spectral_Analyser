@@ -152,6 +152,8 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | Document | Role |
 |----------|------|
 | [`docs/REEXPORT_RUNBOOK.md`](docs/REEXPORT_RUNBOOK.md) | Exact Stage 1–3 re-export + `verify_corpus` commands for the freeze |
+| [`docs/validation/REEXPORT_DIFF_SUMMARY.md`](docs/validation/REEXPORT_DIFF_SUMMARY.md) | R6 seven-corpus diffs vs pretag (`v4.2.3`) |
+| [`docs/validation/R6B_ADDENDUM.md`](docs/validation/R6B_ADDENDUM.md) | R6b B5/B6 audit, Iowa-bass / cello re-exports, D-updated composite |
 | [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md) | Full implementation / mathematical manual; **§5.2.1** low-f₀ policy; **§14.3** export schema; **§14.4** Stage 1 audit columns |
 | [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md) | Indexed formulae F-001–F-055 |
 | [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md) | Normative export schema; **§R.6–R.10** |

@@ -1,3 +1,13 @@
+# R6b — Audit, discriminating re-exports, composite correction
+
+Addendum `docs/validation/R6B_ADDENDUM.md`. Flute *pp* B5/B6 F-047
+hand-matches; verdict (a) (diagnostic S + unconfirmed I at the *pp*
+ceiling). Iowa bass + cello *pp*/*mf* re-exported under the R6
+profile; halt |ΔEWSD| treated as an explained generation shift (EPD
+flat). New-code Iowa bass EPD–MIDI stays flat; EWSD pooled +0.20 is
+G-string composition. Composite: headline 76.6 unchanged; D-updated
+72.225. No analysis-module or CORDAS-script edit.
+
 # R6 — Runbook re-exports on v4.2.3
 
 Seven corpora (trombone/flute pp-mf-ff, cello ff from
