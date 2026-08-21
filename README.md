@@ -177,8 +177,9 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | Musical question | Primary column | Stage |
 |------------------|----------------|-------|
 | How many effective partials carry energy (“fatness”)? | **`note_effective_component_density`** (primary noise-robust density; A4 / B7) | 2 / research |
+| How even is that energy (Hill $q=1$)? | **`note_balanced_component_density`** (F-056; stricter pool than F-047) | 2 / research |
 | How much GUI-weighted H/I/S content? | **`note_density_final`** | 2 / research |
-| Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI (energy-weighted complement; report `estimated_snr_db`) | 3 (research) |
+| Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI — **diagnostic only; level-dependent; not for cross-note comparison** (report `estimated_snr_db`) | 3 (research) |
 
 Default φ is `log`. On the IOWA tuba *pp* SustainStable corpus (37 notes, `analysis_results_4`), EWSD ordering is **not** φ-invariant across all amplitude-family φ (minimum pairwise Spearman ρ = 0.075). Among compressive φ (`linear`, `log`, `sqrt`, `cbrt`) ρ ≥ 0.948. Full table: [`docs/validation/EWSD_SENSITIVITY_PHI.md`](docs/validation/EWSD_SENSITIVITY_PHI.md).
 

@@ -1907,6 +1907,12 @@ def build_spectral_density_metrics(
             "note_effective_component_density_rel_uncertainty": _series_or_nan(
                 merged, "note_effective_component_density_rel_uncertainty"
             ),
+            "note_balanced_component_density": _series_or_nan(
+                merged, "note_balanced_component_density"
+            ),
+            "note_balanced_component_density_pool_count": _series_or_nan(
+                merged, "note_balanced_component_density_pool_count"
+            ),
             "ci_basis_frame_count": _series_or_nan(merged, "ci_basis_frame_count"),
             "ci_basis_partial_count": _series_or_nan(merged, "ci_basis_partial_count"),
             "ci_basis_frames_insufficient": _series_or_nan(
@@ -2074,6 +2080,8 @@ def build_spectral_density_metrics(
         "density_weighted_sum",
         "Total sum",
         "note_effective_component_density",
+        "note_balanced_component_density",
+        "note_balanced_component_density_pool_count",
         "effective_partial_density",
         "body_weighted_effective_density",
         "low_mid_energy_ratio",
@@ -2364,6 +2372,9 @@ def build_charts_data(sd: pd.DataFrame) -> pd.DataFrame:
         "harmonic_occupancy_ratio",
         "residual_log_frequency_occupancy",
         "note_effective_component_density",
+        "note_balanced_component_density_pool_count",
+        "note_balanced_component_density",
+        "EWSD_score_acoustic_balanced",
         "effective_partial_density",
         "spectral_body_thickness_index_norm_for_chart",
         "body_weighted_effective_density_norm_for_chart",
@@ -3145,6 +3156,12 @@ def _write_data_sheet(
     metric_cols: Tuple[str, ...],
 ) -> None:
     df = _sanitize_dataframe_columns(df)
+    try:
+        from tools.balanced_density import place_balanced_density_left_of_ewsd
+
+        df = place_balanced_density_left_of_ewsd(df)
+    except Exception:
+        pass
     ws = wb.create_sheet(title)
     for row in dataframe_to_rows(df, index=False, header=True):
         ws.append(row)
@@ -3755,6 +3772,8 @@ def build_workbook(
         "final_note_density_salience_weighted_norm_for_chart",
         "note_density_final",
         "EWSD_score_total",
+        "note_balanced_component_density_pool_count",
+        "note_balanced_component_density",
         "EWSD_score_acoustic_balanced",
         "ewsd_primary_analysis_eligible",
         "harmonic_density_component",
@@ -3999,6 +4018,8 @@ def build_workbook(
         "bin_to_f0_ratio",
         "low_f0_resolution_warning",
         "EWSD_score_total",
+        "note_balanced_component_density_pool_count",
+        "note_balanced_component_density",
         "EWSD_score_acoustic_balanced",
         "EWSD_score_total_ci_low",
         "EWSD_score_total_ci_high",

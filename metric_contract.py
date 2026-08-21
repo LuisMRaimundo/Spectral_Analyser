@@ -605,6 +605,72 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Reporting a zero-width CI as certainty.",
         ontology_family="validation_status",
     )
+    note_balanced_component_density = MetricDefinition(
+        name="note_balanced_component_density",
+        formula=(
+            "F-056 provenance: defined. "
+            "P_i = A_i ** 2; p_i = P_i / sum(P)  # skip components with P_i == 0; "
+            "D1 = exp( - sum(p_i * ln(p_i)) ). "
+            "Empty pool or sum(P) == 0 -> NaN; single component -> D1 = 1.0. "
+            "Pool: validated harmonic components (include_for_density == True) "
+            "UNION confirmed inharmonic components "
+            "UNION sub-bass components whose membership/interpretation status marks them "
+            "as partials. EXCLUDE any row whose Acoustic_Interpretation_Status equals "
+            "\"diagnostic_low_frequency_residual_not_partial\" and any unconfirmed row. "
+            "(Note: this pool is stricter than the F-047 pool. Do not change F-047.)"
+        ),
+        input_domain=(
+            "stricter H+I+S pool than F-047: include_for_density harmonics, "
+            "confirmed inharmonics, sub-bass partials; exclude diagnostic residual "
+            "and unconfirmed rows"
+        ),
+        unit_or_scale="Hill number q=1 (effective component count)",
+        amplitude_basis="Amplitude_raw (linear); no dB conversion",
+        power_basis="P_i = Amplitude_raw^2 (energy shares)",
+        normalization_scope="per-note energy shares of the F-056 pool",
+        physical_interpretation=(
+            "Exponential of Shannon entropy of component energy shares "
+            "(Hill q=1). Scale-invariant; 1 <= D1 <= pool count when defined."
+        ),
+        not_valid_for=(
+            "Empty pool (NaN, never 0.0); unconfirmed or "
+            "diagnostic_low_frequency_residual_not_partial rows; substituting for F-047."
+        ),
+        ontology_family="partial_count_descriptor",
+    )
+    note_balanced_component_density_pool_count = MetricDefinition(
+        name="note_balanced_component_density_pool_count",
+        formula="count of F-056 pool rows after the stricter filter (integer)",
+        input_domain="same F-056 pool as note_balanced_component_density",
+        unit_or_scale="count (integer)",
+        amplitude_basis="not used (census of admitted rows)",
+        power_basis="not used",
+        normalization_scope="per note",
+        physical_interpretation="Number of components admitted to the F-056 pool.",
+        not_valid_for="Equating with the F-047 HIS census or with D1 itself.",
+        ontology_family="partial_count_descriptor",
+    )
+    ewsd_score_acoustic_balanced = MetricDefinition(
+        name="EWSD_score_acoustic_balanced",
+        formula=(
+            "F-049: sum_k r_k D_k (N_eff,k / N_k)^alpha, alpha=0.5. "
+            "diagnostic only; level-dependent; not for cross-note comparison"
+        ),
+        input_domain="Stage 3 H/I/S compartments (computation unchanged)",
+        unit_or_scale="EWSD units",
+        amplitude_basis="same as F-049 / tools.ewsd_core (unchanged)",
+        power_basis="same as F-049 (unchanged)",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Acoustic-balanced EWSD companion. "
+            "diagnostic only; level-dependent; not for cross-note comparison."
+        ),
+        not_valid_for=(
+            "Cross-note comparison or treating as a primary density. "
+            "Do not change its computation."
+        ),
+        ontology_family="legacy_only",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -645,6 +711,9 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ewsd_primary_analysis_eligible.name: ewsd_primary_analysis_eligible,
         degenerate_partial_set.name: degenerate_partial_set,
         estimated_snr_db.name: estimated_snr_db,
+        note_balanced_component_density.name: note_balanced_component_density,
+        note_balanced_component_density_pool_count.name: note_balanced_component_density_pool_count,
+        ewsd_score_acoustic_balanced.name: ewsd_score_acoustic_balanced,
     }
 
 

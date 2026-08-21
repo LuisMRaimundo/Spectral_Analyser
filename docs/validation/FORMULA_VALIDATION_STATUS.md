@@ -123,10 +123,20 @@ The status of each formula is one of:
 ## F-049 — Acoustic-balanced EWSD companion (Stage 3, EWSD-R v18.1)
 
 - **Canonical form**: `EWSD_score_acoustic_balanced = sum_k r_k D_k (N_eff,k / N_k)^alpha`, default `alpha = 0.5`.
+- **Deprecation**: diagnostic only; level-dependent; not for cross-note comparison. Computation unchanged.
 - **Module**: `tools/ewsd_pure.py` (`compute_acoustic_balanced_score`), `tools/ewsd_core.py` (`add_acoustic_alignment_columns`).
 - **Reference**: see `docs/METRIC_FORMULA_INDEX.md` F-049.
-- **Test**: same suite as F7.
+- **Test**: same suite as F-048.
 - **Status**: validated (golden vectors + corpus compartment reconstruction).
+
+## F-056 — Balanced component density (Hill q=1)
+
+- **Canonical form**: `P_i = A_i ** 2`; `p_i = P_i / sum(P)` (skip `P_i == 0`); `D1 = exp( - sum(p_i * ln(p_i)) )`. Empty pool or `sum(P) == 0` → NaN; single component → `D1 = 1.0`.
+- **Pool** (stricter than F-047; F-047 unchanged): validated harmonic components (`include_for_density == True`) UNION confirmed inharmonic components UNION sub-bass components whose membership/interpretation status marks them as partials. EXCLUDE any row whose `Acoustic_Interpretation_Status` equals `diagnostic_low_frequency_residual_not_partial` and any unconfirmed row.
+- **Provenance**: `defined`.
+- **Module**: `tools/balanced_density.py` (`balanced_component_density`); compile wiring in `compile_metrics._energy_distribution_density`.
+- **Test**: `tests/phase_31/test_balanced_component_density.py`, `tests/formula_validation/test_balanced_component_density_canonical.py`.
+- **Status**: canonicalised_and_tested.
 
 ## F-050 — EWSD bootstrap uncertainty (Stage 3, Tier B)
 

@@ -101,6 +101,9 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "ewsd_primary_analysis_eligible",
         "degenerate_partial_set",
         "estimated_snr_db",
+        "note_balanced_component_density",
+        "note_balanced_component_density_pool_count",
+        "EWSD_score_acoustic_balanced",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():

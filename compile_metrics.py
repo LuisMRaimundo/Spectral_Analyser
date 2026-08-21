@@ -547,6 +547,8 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
     "note_effective_component_density_ci_low",
     "note_effective_component_density_ci_high",
     "note_effective_component_density_rel_uncertainty",
+    "note_balanced_component_density",
+    "note_balanced_component_density_pool_count",
     "ci_basis_frame_count",
     "ci_basis_partial_count",
     "ci_basis_frames_insufficient",
@@ -4481,6 +4483,9 @@ def _energy_distribution_density(workbook_path: Union[str, Path]) -> Dict[str, f
         far less register-bound than ``note_density_final``, and **aggregates for
         chords**: the same formula over the pooled partials of several notes
         gives the chord's effective component count (coincident partials fuse).
+      * ``note_balanced_component_density`` — Hill q=1 (F-056) on a
+        stricter pool than F-047 (confirmed I; exclude unconfirmed and
+        diagnostic residual rows). F-047 algebra is unchanged.
       * ``harmonic_effective_partial_count`` — participation ratio over the
         harmonic peaks only.
       * ``harmonic_energy_above_fundamental_ratio`` — fraction of harmonic
@@ -4496,6 +4501,8 @@ def _energy_distribution_density(workbook_path: Union[str, Path]) -> Dict[str, f
         "note_effective_component_density_ci_low": nan,
         "note_effective_component_density_ci_high": nan,
         "note_effective_component_density_rel_uncertainty": nan,
+        "note_balanced_component_density": nan,
+        "note_balanced_component_density_pool_count": 0,
         "harmonic_effective_partial_count": nan,
         "harmonic_energy_above_fundamental_ratio": nan,
         "harmonic_energy_centroid_order": nan,
@@ -4596,6 +4603,30 @@ def _energy_distribution_density(workbook_path: Union[str, Path]) -> Dict[str, f
                 out.update(basis)
             except Exception:
                 out["ci_basis_partial_count"] = float(allc.size)
+        # F-056 balanced component density: same workbooks as F-047, stricter pool.
+        try:
+            from tools.balanced_density import balanced_density_from_component_tables
+
+            i_df = (
+                pd.read_excel(xls, sheet_name="Inharmonic Spectrum")
+                if "Inharmonic Spectrum" in xls.sheet_names
+                else pd.DataFrame()
+            )
+            s_df = (
+                pd.read_excel(xls, sheet_name="Sub-bass band")
+                if "Sub-bass band" in xls.sheet_names
+                else pd.DataFrame()
+            )
+            d1, d1_n = balanced_density_from_component_tables(
+                harmonic_df=hs,
+                inharmonic_df=i_df,
+                subbass_df=s_df,
+            )
+            out["note_balanced_component_density"] = d1
+            out["note_balanced_component_density_pool_count"] = int(d1_n)
+        except Exception:
+            out["note_balanced_component_density"] = nan
+            out["note_balanced_component_density_pool_count"] = 0
         return out
     except Exception:
         return fail
