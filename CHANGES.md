@@ -1,3 +1,12 @@
+# v4.3.0 — Balanced component density (F-056)
+
+Hill $q=1$ `note_balanced_component_density` on a pool stricter than
+F-047 (confirmed I; exclude
+`diagnostic_low_frequency_residual_not_partial` and unconfirmed rows).
+Exported immediately left of `EWSD_score_acoustic_balanced`. F-049 is
+diagnostic only; level-dependent; not for cross-note comparison.
+F-042 / F-047 / F-048 / F-049 algebra is unchanged.
+
 # R6b — Audit, discriminating re-exports, composite correction
 
 Addendum `docs/validation/R6B_ADDENDUM.md`. Flute *pp* B5/B6 F-047

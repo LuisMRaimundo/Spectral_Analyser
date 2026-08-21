@@ -98,6 +98,25 @@ Emitted on `Density_Metrics` and research `Spectral_Density_Metrics`.
   are below 10.
 - **Practical guide:** `docs/validation/NOTE_FATNESS_AND_DENSITY_GUIDE.md`.
 
+### 2.3b `note_balanced_component_density` (balanced component density — F-056)
+
+Emitted on `Density_Metrics` and research `Spectral_Density_Metrics` /
+`Charts_Data` (immediately to the left of `EWSD_score_acoustic_balanced`
+where that column is present). Provenance: **defined**.
+
+- **Definition:** Hill number $q=1$: $P_i=A_i^2$, $p_i=P_i/\sum P$
+  (skip $P_i=0$), $D_1=\exp(-\sum p_i\ln p_i)$. Empty pool or
+  $\sum P=0$ → NaN (never 0.0); one component → $1$.
+- **Pool (stricter than F-047; F-047 unchanged):** validated harmonic
+  components (`include_for_density == True`) UNION confirmed inharmonic
+  components UNION sub-bass components whose membership/interpretation
+  status marks them as partials. EXCLUDE any row whose
+  `Acoustic_Interpretation_Status` equals
+  `diagnostic_low_frequency_residual_not_partial` and any unconfirmed row.
+- **Companion:** `note_balanced_component_density_pool_count`.
+- **Source:** `tools.balanced_density.balanced_component_density`; compile
+  path `compile_metrics._energy_distribution_density`.
+
 ## 2b. Per-note `Harmonic_Inclusion_Audit` sheet (in each `spectral_analysis.xlsx`)
 
 Read-only diagnostic sheet written per note by
