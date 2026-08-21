@@ -216,3 +216,10 @@ Recomputed composite from the re-run cells only
 CORDAS unchanged script on the existing 54 CORDAS_2 trees: dynamic
 ε² = 0.00756; Iowa bass ρ = −0.046. EPD sidecar ε² = 0.0132; Iowa bass
 ρ_EPD = −0.013. New cello *ff* ρ(MIDI, EWSD) = −0.579.
+
+## Addendum — 21 August 2026 (R6b; scores not rewritten)
+
+The R6 (100+30+30)/3 D and 62.7 composite above are withdrawn.
+Correct structure and arithmetic:
+[`R6B_ADDENDUM.md`](R6B_ADDENDUM.md) WP3. Headline **76.6** unchanged.
+Addendum, D recomputed over v4.2.3 corpora: **72.225**.

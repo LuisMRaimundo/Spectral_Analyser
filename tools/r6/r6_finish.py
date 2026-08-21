@@ -11,12 +11,12 @@ from typing import Any, Dict, List
 import numpy as np
 import pandas as pd
 
-_REPO = Path(__file__).resolve().parents[1]
+_REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from tools.compare_runs import load_metrics_frame
-from tools.r6_pretag_halt import PRETAG_FOR, compare_corpus
+from tools.r6.r6_pretag_halt import PRETAG_FOR, compare_corpus
 from tools.run_measurement_evaluation import _note_rank, _score_part_d
 
 OUT = _REPO / "docs" / "validation" / "_r6_reexport"

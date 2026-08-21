@@ -1,5 +1,8 @@
 # Re-export diff summary (`v4.2.3`)
 
+R6b addendum (B5/B6 audit, discriminating re-exports, composite
+correction): [`R6B_ADDENDUM.md`](R6B_ADDENDUM.md).
+
 Batch: 20 August 2026, 18:07–19:47 UTC. Code commit **`1db94e1`**
 (`v4.2.3`). Production profile
 `wf=log|dst=-90.0|ceil=20000.0|fft=fixed|seg=sustain_primary_stable_diagnostic|elig=1`

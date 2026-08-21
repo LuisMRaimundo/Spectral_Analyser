@@ -40,7 +40,8 @@ bump is recorded.
 | R3 | Leading-silence (B5) | `tests/phase_30/test_r3_leading_silence.py` | Lead/trail digital silence ≤ 2 s matches the trimmed waveform (0 % tol on the loaded array). ADSR_Segmenter untouched. | **done (PR #89)** |
 | R4 | EPD-primary + `estimated_snr_db` | `tests/phase_30/test_r4_estimated_snr.py` | EPD documented as noise-robust primary; EWSD complement; per-note `estimated_snr_db` on Stage 1/3. | **done (PR #90)** |
 | R5 | C1 oracle + C2 frames | `tests/phase_30/test_r5_oracle_ci.py` | Planted-amp oracle; 200-seed coverage; C2 varies independent frames not partials. Coverage outside 90–99 % recorded, bootstrap not retuned. | **done (PR #91)** |
-| R6 | Runbook re-exports | `docs/validation/REEXPORT_DIFF_SUMMARY.md` | Seven corpora at `v4.2.3`; one commit/profile; CORDAS script unchanged. | **done (this PR)** |
+| R6 | Runbook re-exports | `docs/validation/REEXPORT_DIFF_SUMMARY.md` | Seven corpora at `v4.2.3`; one commit/profile; CORDAS script unchanged. | **done (PR #92)** |
+| R6b | Audit + discriminating re-exports | `docs/validation/R6B_ADDENDUM.md` | B5/B6 census; Iowa bass + cello *pp*/*mf*; D recomputed; no analysis-code edit. | **done (this PR)** |
 | D6.1 | Resolution diagnosis | `docs/validation/RESOLUTION_DEPENDENCE_DIAGNOSIS.md` | G3/G♯3 swap: EWSD step follows the window. | **done (PR #76)** |
 | D6.2 | PSD energy bases | `tests/phase_24/test_resolution_invariance.py` | Synthetic tone+pink energy ratios within 2 % across n_fft. | **done (PR #76)** |
 | D6.3 | D_k n_fft norm | same | Density sums n_fft-normalised to 8192. | **done (PR #76)** |
@@ -161,4 +162,5 @@ This table is the freeze acceptance record. It supersedes the archival
   `v4.2.0` are kept. P1 remains **FAILED live**. R1 Stage-3 B1 remains
   a measured FAIL; WP1 acceptance is the R1b re-scope (synthetic
   energy-accounting + fixed-window policy). Pre-tag baselines:
-  `pretag_evidence/`. R2–R6 done (`v4.2.3`).
+  `pretag_evidence/`. R2–R6 done (`v4.2.3`). R6b addendum:
+  `R6B_ADDENDUM.md`.
