@@ -48,6 +48,8 @@ REQUIRED_IN_BOTH = frozenset(
         "F-066",
         "F-067",
         "F-068",
+        "F-069",
+        "F-070",
     }
 )
 

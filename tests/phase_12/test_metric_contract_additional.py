@@ -139,6 +139,10 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "inharmonicity_coefficient_B",
         "pure_observation_w_*",
         "*_density_weight",
+        "spectral_body_thickness_index",
+        "{harmonic,inharmonic,subbass}_energy_ratio",
+        "core_{harmonic,residual,subbass}_energy_ratio",
+        "total_component_energy",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():

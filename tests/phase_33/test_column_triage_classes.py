@@ -25,14 +25,11 @@ def test_triage_branch_counts_sum_to_202() -> None:
     assert classes["provenance"] == 16
     assert classes["deprecated"] == 21
     assert classes["diagnostic"] == 13 + 79
-    assert classes["metric"] == 66 + 7
+    assert classes["metric"] == 73
 
 
-def test_decision_pending_still_metric_with_col_stamp() -> None:
-    for name in TRIAGE_DECISION_PENDING:
-        fid, _ver = column_stamp(name)
-        assert classify_export_column(name, fid) == "metric"
-        assert fid.startswith("COL:")
+def test_decision_pending_is_closed() -> None:
+    assert TRIAGE_DECISION_PENDING == frozenset()
 
 
 def test_remaining_metric_col_stamps_are_only_decision_pending() -> None:
@@ -42,7 +39,7 @@ def test_remaining_metric_col_stamps_are_only_decision_pending() -> None:
         if classify_export_column(name, column_stamp(name)[0]) == "metric"
         and column_stamp(name)[0].startswith("COL:")
     ]
-    assert set(leftover) == set(TRIAGE_DECISION_PENDING)
+    assert leftover == []
 
 
 def test_citable_residue_has_real_f_ids() -> None:
@@ -60,6 +57,9 @@ def test_citable_residue_has_real_f_ids() -> None:
         "inharmonicity_coefficient_B",
         "pure_observation_w_h",
         "harmonic_density_weight",
+        "spectral_body_thickness_index",
+        "harmonic_energy_ratio",
+        "core_residual_energy_ratio",
     ):
         fid, _ver = column_stamp(name)
         assert fid.startswith("F-"), name

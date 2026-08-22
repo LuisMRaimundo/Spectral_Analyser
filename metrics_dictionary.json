@@ -755,17 +755,17 @@
     },
     "harmonic_energy_ratio": {
       "class": "metric",
-      "formula_id": "COL:harmonic_energy_ratio",
+      "formula_id": "F-069",
       "formula_version": "4.5.0"
     },
     "inharmonic_energy_ratio": {
       "class": "metric",
-      "formula_id": "COL:inharmonic_energy_ratio",
+      "formula_id": "F-069",
       "formula_version": "4.5.0"
     },
     "subbass_energy_ratio": {
       "class": "metric",
-      "formula_id": "COL:subbass_energy_ratio",
+      "formula_id": "F-069",
       "formula_version": "4.5.0"
     },
     "linear_sum_amplitude_harmonic": {
@@ -925,7 +925,7 @@
     },
     "spectral_body_thickness_index": {
       "class": "metric",
-      "formula_id": "COL:spectral_body_thickness_index",
+      "formula_id": "F-041",
       "formula_version": "4.5.0"
     },
     "salient_harmonic_order_count_up_to_body_ceiling": {
@@ -1175,17 +1175,17 @@
     },
     "core_harmonic_energy_ratio": {
       "class": "metric",
-      "formula_id": "COL:core_harmonic_energy_ratio",
+      "formula_id": "F-070",
       "formula_version": "4.5.0"
     },
     "core_residual_energy_ratio": {
       "class": "metric",
-      "formula_id": "COL:core_residual_energy_ratio",
+      "formula_id": "F-070",
       "formula_version": "4.5.0"
     },
     "core_subbass_energy_ratio": {
       "class": "metric",
-      "formula_id": "COL:core_subbass_energy_ratio",
+      "formula_id": "F-070",
       "formula_version": "4.5.0"
     },
     "estimated_snr_db": {

@@ -1,59 +1,50 @@
-# Column triage decisions (author eyes)
+# Column triage decisions
 
 Residue of the four-branch rule on the 202 class-`metric` `COL:` columns.
-Nothing here was assigned an F-id or reclassified by guess.
+Closed 2026-08-22 on `cleanup/repo-hygiene`.
 
 ## Contents
 
-1. [spectral_body_thickness_index](#1-spectral_body_thickness_index)
-2. [Energy-ratio triples: plain vs core](#2-energy-ratio-triples-plain-vs-core)
-3. [Soma_A_linear_total vs total_component_energy](#3-soma_a_linear_total-vs-total_component_energy)
+1. [spectral_body_thickness_index](#1-spectral_body_thickness_index) — closed
+2. [Energy-ratio triples: plain vs core](#2-energy-ratio-triples-plain-vs-core) — closed
+3. [Soma_A_linear_total vs total_component_energy](#3-soma_a_linear_total-vs-total_component_energy) — closed
 
 ---
 
 ## 1. `spectral_body_thickness_index`
 
-| Candidate | Why it almost fits | What is missing |
-|-----------|--------------------|-----------------|
-| (c) metric / F-041 | `METRIC_FORMULA_INDEX.md` already records F-041 as `0.45 z(BWED) + 0.25 z(LMER) + 0.20 z(HBDN) + 0.10 z(RBCC)` | The four-branch rule sends a bespoke z-scored composite to this document instead of treating F-041 as automatically citable. |
-| (d) diagnostic | It is an editorial blend of four other columns, two of which are themselves deprecated or pending | Whether the index remains a headline metric or becomes a chart-only diagnostic is an author call. |
-
-Left as class `metric` with stamp `COL:spectral_body_thickness_index`. F-041 is not restamped here.
+**Resolution (2026-08-22):** class stays `metric`. Stamped **F-041**. Contract
+carries: "Z-scored composite; corpus-relative — a note's value changes with
+corpus composition. Not valid in any cross-corpus table or comparison."
 
 ---
 
 ## 2. Energy-ratio triples: plain vs core
 
-Columns: `harmonic_energy_ratio`, `inharmonic_energy_ratio`, `subbass_energy_ratio`,
-`core_harmonic_energy_ratio`, `core_residual_energy_ratio`, `core_subbass_energy_ratio`.
+**Resolution (2026-08-22):** the triples are **distinct**. Each gets its own
+family F-id. Denominators as read in code:
 
-| Candidate | Why it almost fits | What is missing |
-|-----------|--------------------|-----------------|
-| (c) / F-018 | F-018 already defines `component_*_energy_ratio` as `r_k = E_k / (E_H+E_I+E_S)` | The 202-list triples are **not** those `component_*` columns. Phase-12 tests show `harmonic_energy_ratio` and `component_harmonic_energy_ratio` can differ on the same row. |
-| one family id | `tools/ewsd_core.py` lists both triples as distinct `AUTO_RATIO_PRIORITY` sources | The two triples are not the same compartments: core is H / **residual** / S; plain is H / **inharmonic** / S. |
-| fallback identity | `compile_metrics._prepare_df_for_density_export` copies `harmonic_energy_ratio` → `core_harmonic_energy_ratio` (and residual/subbass) **only when the core column is absent** | That is a compile-time fill, not a documented identity of the live Stage-1 values. |
+| Triple | F-id | What the code writes | Denominator |
+|--------|------|----------------------|-------------|
+| `{harmonic,inharmonic,subbass}_energy_ratio` | **F-069** | After discrete H/I/S peak-PSD shares of `tot_energy`, WP1 overwrites H and S from `acoustic_density_core` PSD descriptors (`h_energy` / `s_energy` over `h+r+s`). I remains the discrete inharmonic peak-PSD share of `tot_energy` (`H+I+S` peak energies) unless later overwritten. | Mixed: H and S use PSD region total `h+r+s`; I uses discrete `tot_energy = h_energy+ih_energy+sub_energy` |
+| `core_{harmonic,residual,subbass}_energy_ratio` | **F-070** | Export aliases of `component_{harmonic,inharmonic,subbass}_energy_ratio` (`proc_audio` Metrics row). Residual = the inharmonic *component* share, not the acoustic-core residual descriptor. | Single-pass `Hn+In+Sn` (`component_energy_denominator = "H+I+S"`, quantity `power_sum_amplitude_squared`) |
 
-No single denominator is documented for both triples together. Left as class `metric` with `COL:` stamps.
+Compile-time fill (`core_*` copied from plain/residual only when core is
+absent) is not an identity of live Stage-1 values. Neither triple is F-018
+(`component_*` as defined; F-070 *exports* those component shares under the
+`core_*` names).
 
 ---
 
 ## 3. `Soma_A_linear_total` vs `total_component_energy`
 
-`compile_metrics._prepare_df_for_density_export` copies
+**Resolution (2026-08-22):**
 
-- `linear_sum_amplitude_harmonic` → `Soma_A_linear_harmonicos`
-- `linear_sum_amplitude_inharmonic_partial` → `Soma_A_linear_inarmonicos`
-- `linear_sum_amplitude_subbass_band` → `Soma_A_linear_subbass`
-
-and sets `Soma_A_linear_total` to the sum of those three with **NaN treated as 0**.
-
-The Task-0 research fixture (`cleanup_after_3.xlsx`) does not export the Soma
-or `linear_sum_amplitude_*` columns (they live on compiled `Density_Metrics`).
-Identity is therefore taken from the compile path, which is an assignment, not
-an independent computation: H/I/S Soma cells are copies of the English twins;
-`Soma_A_linear_total` is their NaN→0 sum. That sum is **not**
-`total_component_energy` (linear amplitude vs energy).
-
-The four `Soma_A_linear_*` columns are therefore classed `deprecated` as
-Portuguese-named duplicates of the English linear-amplitude twins / their NaN→0
-sum. `total_component_energy` stays class `diagnostic` (branch d). No rename.
+- The four `Soma_A_linear_*` columns remain `deprecated` as Portuguese-named
+  copies of `linear_sum_amplitude_*` / their NaN→0 sum. No rename.
+- `total_component_energy` is class `diagnostic`. Contract and dictionary
+  carry: "MISNOMER: computes an amplitude sum (NaN coerced to 0), not energy.
+  Do not use as E in any calculation; spectral_mass and ACD derive energy
+  independently."
+- Open item (CHANGES.md): rename at next major version; replace NaN→0
+  coercion with NaN propagation at the same time. Computation unchanged now.

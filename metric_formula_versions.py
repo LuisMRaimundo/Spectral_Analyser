@@ -85,6 +85,13 @@ TRIAGE_REUSED_STAMPS: Dict[str, Tuple[str, str]] = {
     "subbass_density_weight": ("F-068", PACKAGE_FORMULA_VERSION),
     "odd_even_harmonic_energy_ratio": ("F-066", PACKAGE_FORMULA_VERSION),
     "low_mid_energy_ratio": ("F-067", PACKAGE_FORMULA_VERSION),
+    "spectral_body_thickness_index": ("F-041", PACKAGE_FORMULA_VERSION),
+    "harmonic_energy_ratio": ("F-069", PACKAGE_FORMULA_VERSION),
+    "inharmonic_energy_ratio": ("F-069", PACKAGE_FORMULA_VERSION),
+    "subbass_energy_ratio": ("F-069", PACKAGE_FORMULA_VERSION),
+    "core_harmonic_energy_ratio": ("F-070", PACKAGE_FORMULA_VERSION),
+    "core_residual_energy_ratio": ("F-070", PACKAGE_FORMULA_VERSION),
+    "core_subbass_energy_ratio": ("F-070", PACKAGE_FORMULA_VERSION),
 }
 
 SPECTRAL_MASS_VALUE_COLUMNS: Tuple[str, ...] = (
@@ -486,18 +493,8 @@ _TRIAGE_DEPRECATED = frozenset(
         "Soma_A_linear_total",
     }
 )
-# Author-eyes leftover: stay class metric with COL: until Task 4 is resolved.
-TRIAGE_DECISION_PENDING: frozenset = frozenset(
-    {
-        "spectral_body_thickness_index",
-        "harmonic_energy_ratio",
-        "inharmonic_energy_ratio",
-        "subbass_energy_ratio",
-        "core_harmonic_energy_ratio",
-        "core_residual_energy_ratio",
-        "core_subbass_energy_ratio",
-    }
-)
+# Closed 2026-08-22 (see docs/validation/COLUMN_TRIAGE_DECISIONS.md).
+TRIAGE_DECISION_PENDING: frozenset = frozenset()
 _TRIAGE_DIAGNOSTIC_EXACT = frozenset(
     {
         "harmonic_order_count",

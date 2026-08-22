@@ -1165,6 +1165,89 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         formula_version="4.5.0",
         notes="AUTO_RATIO_PRIORITY source for EWSD.",
     )
+    _energy_ratio_denominators = (
+        "F-069 `{harmonic,inharmonic,subbass}_energy_ratio`: after discrete "
+        "H/I/S peak-PSD shares of tot_energy, WP1 overwrites H and S from "
+        "acoustic_density_core (h_energy, s_energy over h+r+s); I remains the "
+        "discrete inharmonic peak-PSD share of tot_energy. "
+        "F-070 `core_{harmonic,residual,subbass}_energy_ratio`: export aliases "
+        "of component_{harmonic,inharmonic,subbass}_energy_ratio; residual = "
+        "inharmonic component share; denominator Hn+In+Sn "
+        "(component_energy_denominator='H+I+S', power_sum_amplitude_squared). "
+        "The triples are not identical."
+    )
+    spectral_body_thickness_index = MetricDefinition(
+        name="spectral_body_thickness_index",
+        formula=(
+            "F-041: 0.45 z(body_weighted_effective_density) + "
+            "0.25 z(low_mid_energy_ratio) + 0.20 z(harmonic_body_density_normalized) + "
+            "0.10 z(residual_body_contribution_capped)"
+        ),
+        input_domain="research-workbook z-scores of the four named columns",
+        unit_or_scale="dimensionless z-scored composite",
+        amplitude_basis="as the four source columns",
+        power_basis="as the four source columns",
+        normalization_scope="corpus z-score (per export batch)",
+        physical_interpretation="Editorial body-thickness index for the research workbook.",
+        not_valid_for=(
+            "Z-scored composite; corpus-relative — a note's value changes with "
+            "corpus composition. Not valid in any cross-corpus table or comparison."
+        ),
+        ontology_family="composite_metric",
+        formula_id="F-041",
+        formula_version="4.5.0",
+        notes=(
+            "Z-scored composite; corpus-relative — a note's value changes with "
+            "corpus composition. Not valid in any cross-corpus table or comparison."
+        ),
+    )
+    plain_energy_ratio_triple = MetricDefinition(
+        name="{harmonic,inharmonic,subbass}_energy_ratio",
+        formula="F-069: see shared denominator note.",
+        input_domain="Stage 1 peak-PSD sums and acoustic-core PSD descriptors",
+        unit_or_scale="dimensionless shares",
+        amplitude_basis="not used (power / PSD)",
+        power_basis="peak PSD and acoustic-core region power",
+        normalization_scope="per note (mixed denominators; see notes)",
+        physical_interpretation="Plain Stage-1 energy-ratio triple (H / I / S names).",
+        not_valid_for="Treating as F-018 or as identical to the core_* triple.",
+        ontology_family="compartment_ratio",
+        formula_id="F-069",
+        formula_version="4.5.0",
+        notes=_energy_ratio_denominators,
+    )
+    core_energy_ratio_triple = MetricDefinition(
+        name="core_{harmonic,residual,subbass}_energy_ratio",
+        formula="F-070: component_* power shares exported under core_* names.",
+        input_domain="single-pass Hn/In/Sn power sums",
+        unit_or_scale="dimensionless shares summing to 1 when defined",
+        amplitude_basis="not used (power_sum_amplitude_squared)",
+        power_basis="Hn+In+Sn",
+        normalization_scope="per note",
+        physical_interpretation="Core H / residual(=I component) / S power shares.",
+        not_valid_for="Treating residual as the acoustic-core residual_energy_ratio descriptor.",
+        ontology_family="compartment_ratio",
+        formula_id="F-070",
+        formula_version="4.5.0",
+        notes=_energy_ratio_denominators,
+    )
+    total_component_energy = MetricDefinition(
+        name="total_component_energy",
+        formula="sum of the three compartment terms with NaN coerced to 0",
+        input_domain="per-note compartment totals",
+        unit_or_scale="same units as the summands",
+        amplitude_basis="see notes (misnomer)",
+        power_basis="see notes (misnomer)",
+        normalization_scope="per note",
+        physical_interpretation="Exported compartment total. Name is a misnomer.",
+        not_valid_for="Using as energy E in any derived calculation.",
+        ontology_family="diagnostic_amplitude_mass",
+        notes=(
+            "MISNOMER: computes an amplitude sum (NaN coerced to 0), not energy. "
+            "Do not use as E in any calculation; spectral_mass and ACD derive "
+            "energy independently."
+        ),
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -1240,6 +1323,10 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         inharmonicity_coefficient_B.name: inharmonicity_coefficient_B,
         pure_observation_w.name: pure_observation_w,
         density_weight_triplet.name: density_weight_triplet,
+        spectral_body_thickness_index.name: spectral_body_thickness_index,
+        plain_energy_ratio_triple.name: plain_energy_ratio_triple,
+        core_energy_ratio_triple.name: core_energy_ratio_triple,
+        total_component_energy.name: total_component_energy,
     }
 
 

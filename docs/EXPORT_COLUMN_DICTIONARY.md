@@ -326,5 +326,20 @@ Class `deprecated`. Values are still computed and exported. Do not use in new an
 | `Soma_A_linear_total` | NaN→0 sum of the three Soma/linear-amplitude twins. Not `total_component_energy`. |
 
 Internal density-machinery columns reclassed `diagnostic` carry the note:
-"internal; superseded for analytical use by F-057/F-061". See
-`docs/validation/COLUMN_TRIAGE_DECISIONS.md` for columns the rule did not place.
+"internal; superseded for analytical use by F-057/F-061". Decision-doc
+closures: `docs/validation/COLUMN_TRIAGE_DECISIONS.md`.
+
+### Energy-ratio triples (F-069 vs F-070)
+
+| Triple | F-id | Denominator as coded |
+|--------|------|----------------------|
+| `{harmonic,inharmonic,subbass}_energy_ratio` | F-069 | H and S: acoustic-core PSD shares of `h+r+s`. I: discrete inharmonic peak-PSD share of `tot_energy = H+I+S`. |
+| `core_{harmonic,residual,subbass}_energy_ratio` | F-070 | `component_*` power shares; residual = inharmonic component share; denominator `Hn+In+Sn`. |
+
+The triples are not identical. Do not cite one for the other.
+
+### `total_component_energy`
+
+MISNOMER: computes an amplitude sum (NaN coerced to 0), not energy. Do not use
+as E in any calculation; spectral_mass and ACD derive energy independently.
+Class `diagnostic`. Rename + NaN propagation deferred to the next major version.
