@@ -190,12 +190,125 @@ def column_stamp(column: str) -> Tuple[str, str]:
     return (f"COL:{column}", PACKAGE_FORMULA_VERSION)
 
 
+SURFACE_CLASSES = ("metric", "diagnostic", "metadata", "provenance", "deprecated")
+
+_DEPRECATED_NAMES = frozenset(
+    {
+        "density_weighted_sum",
+        "density_weighted_sum_cdm_mean",
+        "Combined Density Metric",
+        "Density Metric",
+        "Total Metric",
+        "energy_weighted_component_density_diagnostic",
+        "hutchinson_knopoff_legacy_mean_pair_scaled",
+        "roughness_aures_1985",
+        "note_balanced_component_density",
+        "smoothed_w_h_legacy",
+        "smoothed_w_i_legacy",
+        "smoothed_w_s_legacy",
+        "ewsd_weight_function_d10",
+    }
+)
+_PROVENANCE_NAMES = frozenset(
+    {
+        "package_version",
+        "code_commit",
+        "code_dirty",
+        "analysis_version",
+        "git_commit",
+        "git_describe",
+        "git_status_reason",
+        "ACD_version",
+        "ewsd_stage3_version",
+        "ACD_erb_fraction",
+        "ACD_merge_strategy",
+        "export_schema_version",
+        "density_formula_version",
+        "obs_w_formula_version",
+    }
+)
+_METADATA_NAMES = frozenset(
+    {
+        "Note",
+        "MIDI",
+        "Instrument",
+        "Technique",
+        "Dynamic",
+        "Register",
+        "Pitch_Class",
+        "Octave",
+        "sample_id",
+        "source_file_name",
+        "source_file",
+    }
+)
+
+
+def classify_export_column(name: str, formula_id: str = "") -> str:
+    """Assign ``metric|diagnostic|metadata|provenance|deprecated``."""
+    low = str(name).lower()
+    if name in _DEPRECATED_NAMES or "legacy" in low or low.endswith("_cdm_mean"):
+        return "deprecated"
+    if (
+        name in _PROVENANCE_NAMES
+        or formula_id == "META"
+        or low.endswith("_formula_id")
+        or low.endswith("_formula_version")
+    ):
+        return "provenance"
+    if name in _METADATA_NAMES or low.endswith("_file") or low.endswith("_chart_file"):
+        return "metadata"
+    if any(
+        tok in low
+        for tok in (
+            "_ci_",
+            "rel_uncertainty",
+            "_status",
+            "_flag",
+            "eligible",
+            "warning",
+            "debug_counts",
+            "bootstrap",
+            "pairs_excluded",
+            "uncertainty_sources",
+        )
+    ) or name in {
+        "ACD_score_D2_dominance",
+        "ACD_D2",
+        "ACD_Dinf",
+        "ACD_evenness_D2_over_D0",
+    }:
+        return "diagnostic"
+    return "metric"
+
+
 def build_column_registry() -> Dict[str, Dict[str, str]]:
     registry: Dict[str, Dict[str, str]] = {}
     for col in exported_column_names():
         fid, ver = column_stamp(col)
-        registry[col] = {"formula_id": fid, "formula_version": ver}
+        registry[col] = {
+            "formula_id": fid,
+            "formula_version": ver,
+            "class": classify_export_column(col, fid),
+        }
     return registry
+
+
+def write_column_surface_dictionary(path: Path | None = None) -> Path:
+    """Persist per-column surface class into ``metrics_dictionary.json``."""
+    dest = path or (_ROOT / "metrics_dictionary.json")
+    payload = json.loads(dest.read_text(encoding="utf-8"))
+    registry = build_column_registry()
+    payload["column_surface"] = {
+        name: {
+            "class": row["class"],
+            "formula_id": row["formula_id"],
+            "formula_version": row["formula_version"],
+        }
+        for name, row in registry.items()
+    }
+    dest.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return dest
 
 
 def write_audit_markdown(path: Path | None = None) -> Path:

@@ -149,6 +149,10 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 
 Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
 
+### Which sheet do I read?
+
+Use **`Research_Core`** for citation-grade values (formulas into `Spectral_Density_Metrics`, so the two cannot drift). Use the full sheets (`Spectral_Density_Metrics`, `Stage3_Diagnostics`, `Uncertainty_Summary`, …) when you need diagnostics, CIs, or provenance.
+
 ## Documentation map (v4.6.0)
 
 | Document | Role |

@@ -1,3 +1,21 @@
+# Repository cleanup (numerically invisible)
+
+Three commits on a local copy. No ACD / EWSD / F-061 arithmetic change.
+
+1. Dead weight: `Backup/` untracked (git history is the backup); PyQt
+   `interface.py` moved to `attic/` (Tk is canonical since v4.x);
+   `CHANGES_PHASE_7.md` folded into the Phase 7 section; `RELEASE_NOTES_v51.md`
+   moved to `docs/history/`. `debug_counts.py` stays — imported by
+   `proc_audio` and tests.
+2. Deprecations: expansive weight labels retired from the Tk dropdown
+   (still computed; legacy map unchanged). Dictionary / contract notes mark
+   superseded columns. EWSD left the README hierarchy table; F-061 answers
+   “how much is sounding”.
+3. Every inventoried export column now has class
+   `metric|diagnostic|metadata|provenance|deprecated` in
+   `metrics_dictionary.json`. Research workbooks gain `Research_Core`
+   immediately after `Dashboard`.
+
 # v4.6.0 addendum — F-061 spectral_mass
 
 Derived Stage 3 column. No ACD or EWSD numeric change.

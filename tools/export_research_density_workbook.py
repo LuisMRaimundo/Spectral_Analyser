@@ -167,6 +167,33 @@ RESEARCH_FILL_EWSD_SCORE_TOTAL = PatternFill("solid", fgColor="FFE5CC")
 # Red gradient data bar on EWSD_score_acoustic_balanced (Excel data-bar fill).
 # Blue data bars on spectral_mass reuse the same add_rule path (see F-061).
 EWSD_ACOUSTIC_BALANCED_DATA_BAR_COLOR = "FFC00000"
+RESEARCH_CORE_FONT = Font(name="Arial", size=11)
+RESEARCH_CORE_HEADER_FONT = Font(name="Arial", size=11, bold=True)
+RESEARCH_CORE_COLUMNS: Tuple[str, ...] = (
+    "Note",
+    "MIDI",
+    "f0_used_for_density_hz",
+    "f0_final_source",
+    "ACD_r_harmonic",
+    "ACD_r_inharmonic",
+    "ACD_r_subbass",
+    "ACD_score",
+    "ACD_magnitude_per_component",
+    "ACD_D0",
+    "ACD_D1",
+    "ACD_D0_minus_D1",
+    "spectral_mass",
+    "spectral_mass_count",
+    "EWSD_score_total",
+    "EWSD_score_acoustic_balanced",
+    "EWSD_score_total_ci_low_bca",
+    "EWSD_score_total_ci_high_bca",
+    "ewsd_primary_analysis_eligible",
+    "ACD_status",
+    "ewsd_weight_function_canonical",
+    "package_version",
+    "code_commit",
+)
 RESEARCH_HIGHLIGHT_HEADER_FONT = Font(bold=True, color="1F4E79", size=11)
 
 
@@ -3269,6 +3296,63 @@ def _apply_sdm_conditional(ws, headers: List[str | None]) -> None:
     add_rule("spectral_mass", spectral_mass_data_bar_rule())
 
 
+def _write_research_core_sheet(wb: Workbook, sdm_ws) -> None:
+    """Citation sheet: formulas into Spectral_Density_Metrics so values cannot drift."""
+    if "Spectral_Density_Metrics" not in wb.sheetnames:
+        return
+    sdm = sdm_ws
+    sdm_headers = {
+        sdm.cell(1, c).value: c for c in range(1, sdm.max_column + 1) if sdm.cell(1, c).value
+    }
+    summary_headers: Dict[str, int] = {}
+    if "Stage3_Summary" in wb.sheetnames:
+        sm = wb["Stage3_Summary"]
+        summary_headers = {
+            sm.cell(1, c).value: c
+            for c in range(1, sm.max_column + 1)
+            if sm.cell(1, c).value
+        }
+    insert_at = wb.sheetnames.index("Dashboard") + 1 if "Dashboard" in wb.sheetnames else 1
+    ws = wb.create_sheet("Research_Core", insert_at)
+    last = max(sdm.max_row, 2)
+    for j, name in enumerate(RESEARCH_CORE_COLUMNS, start=1):
+        header = ws.cell(1, j, name)
+        header.font = RESEARCH_CORE_HEADER_FONT
+        src = sdm_headers.get(name)
+        summary_src = summary_headers.get(name)
+        for r in range(2, last + 1):
+            cell = ws.cell(r, j)
+            cell.font = RESEARCH_CORE_FONT
+            if src:
+                letter = get_column_letter(src)
+                cell.value = f"='Spectral_Density_Metrics'!{letter}{r}"
+            elif summary_src:
+                letter = get_column_letter(summary_src)
+                cell.value = f"='Stage3_Summary'!{letter}2"
+    from tools.spectral_mass import spectral_mass_data_bar_rule
+
+    def _add_bar(col_name: str, rule) -> None:
+        try:
+            ci = list(RESEARCH_CORE_COLUMNS).index(col_name) + 1
+        except ValueError:
+            return
+        letter = get_column_letter(ci)
+        ws.conditional_formatting.add(f"{letter}2:{letter}{last}", rule)
+
+    _add_bar(
+        "EWSD_score_acoustic_balanced",
+        DataBarRule(
+            start_type="min",
+            end_type="max",
+            color=EWSD_ACOUSTIC_BALANCED_DATA_BAR_COLOR,
+            showValue=True,
+            minLength=0,
+            maxLength=100,
+        ),
+    )
+    _add_bar("spectral_mass", spectral_mass_data_bar_rule())
+
+
 def _write_dashboard_layout(
     dash,
     source: Path,
@@ -4241,6 +4325,7 @@ def build_workbook(
         _hl.append(("density_weighted_sum_cdm_mean", RESEARCH_FILL_DWS_CDM_MEAN))
     _apply_research_column_highlights(sdm_ws, tuple(_hl))
     _apply_sdm_conditional(sdm_ws, hdrs)
+    _write_research_core_sheet(wb, sdm_ws)
 
     # QC-governed primary statistical table (defaults to acoustically validated rows).
     primary_sd = sd.copy()
