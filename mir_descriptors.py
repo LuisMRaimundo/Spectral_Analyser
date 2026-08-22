@@ -28,7 +28,6 @@ See REFERENCES.md at the repository root for canonical APA-7 entries.
 
 from __future__ import annotations
 
-import warnings
 from typing import Dict, Literal
 
 import numpy as np
@@ -49,7 +48,12 @@ _ROUGHNESS_PARNCUTT_CB_FRACTION = PL_CB_FRACTION
 
 BandwidthBasis = Literal["zwicker_cb", "erb", "legacy_conflated"]
 BANDWIDTH_BASIS_DEFAULT: BandwidthBasis = "zwicker_cb"
-_AURES_ALIAS_WARNED = False
+_ROUGHNESS_AURES_ALIAS_RETIRED = (
+    "roughness_aures_1985 is retired. Use the replacement column "
+    "roughness_parncutt_kernel. Archived roughness_aures_1985 values were "
+    "computed with a mis-specified bandwidth and are not comparable to the "
+    "current kernel. See docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md."
+)
 
 
 def _safe_prob(weights: np.ndarray) -> np.ndarray:
@@ -190,15 +194,8 @@ def _roughness_aures_1985(
     *,
     x_cutoff: float = 20.0,
 ) -> float:
-    """Deprecated alias of ``_roughness_parncutt_kernel`` (one version)."""
-    warnings.warn(
-        "roughness_aures_1985 is a misattribution: the kernel is Parncutt / "
-        "Plomp-Levelt, not Aures (1985). Use roughness_parncutt_kernel. "
-        "Deprecated alias retained for one version.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return _roughness_parncutt_kernel(freq_hz, amp, x_cutoff=x_cutoff)
+    """Retired name. Raises so archived workbooks cannot be compared silently."""
+    raise NotImplementedError(_ROUGHNESS_AURES_ALIAS_RETIRED)
 
 
 def compute_mir_descriptors_from_spectrum(
@@ -278,16 +275,6 @@ def compute_mir_descriptors_from_spectrum(
         r95 = float("nan")
 
     rough = _roughness_parncutt_kernel(freq, amp)
-    global _AURES_ALIAS_WARNED
-    if not _AURES_ALIAS_WARNED:
-        warnings.warn(
-            "roughness_aures_1985 is a deprecated alias of "
-            "roughness_parncutt_kernel (Parncutt / Plomp-Levelt, not Aures "
-            "1985). Retained for one version.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        _AURES_ALIAS_WARNED = True
 
     erb = _erb_rate_hz(freq)
     erb_bins = np.floor(erb).astype(int)
@@ -312,6 +299,6 @@ def compute_mir_descriptors_from_spectrum(
         "spectral_rolloff_hz_85": r85,
         "spectral_rolloff_hz_95": r95,
         "roughness_parncutt_kernel": rough,
-        "roughness_aures_1985": rough,
+        "roughness_aures_1985": float("nan"),
         "erb_weighted_spectral_density": erb_weighted_density,
     }

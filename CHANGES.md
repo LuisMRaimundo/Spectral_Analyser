@@ -1,3 +1,11 @@
+# v4.4.0 addendum — roughness alias retired
+
+`_roughness_aures_1985` now raises `NotImplementedError`. New Stage 1
+exports write NaN in `roughness_aures_1985`. Use
+`roughness_parncutt_kernel`. Archived values used a mis-specified
+bandwidth and are not comparable; the change is not a rescaling.
+See `docs/validation/ROUGHNESS_MIGRATION.md` and export map §11.
+
 # v4.4.0 — Phase 33: roughness Zwicker bandwidth basis
 
 Proposed default `bandwidth_basis="zwicker_cb"` for F-037. Round-3

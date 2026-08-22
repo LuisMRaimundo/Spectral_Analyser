@@ -858,16 +858,20 @@ Project includes dissonance/roughness infrastructure (`dissonance_models.py`, `d
 
 ### Roughness approximation in MIR module
 
-`mir_descriptors.py` computes `roughness_aures_1985` using a pairwise interaction shape:
+`mir_descriptors.py` computes `roughness_parncutt_kernel` (F-037). The
+name `roughness_aures_1985` is retired and raises; new exports write NaN
+in that column. Proposed default:
 
 $$
-x=\frac{|f_i-f_j|}{0.25\min(f_i,f_j)+24.7},\quad
-g(x)=x\,e^{1-x},
+x=\frac{|f_i-f_j|}{0.25\,\mathrm{CB}(f_\mathrm{lo})},\quad
+\mathrm{CB}(f)=25+75\bigl(1+1.4(f/1000)^2\bigr)^{0.69},\quad
+g(x)=x\,e^{1-x}.
 $$
 
-and sums amplitude-product weighted interactions.
-
-Interpretation should be described as implementation-level roughness proxy unless full model assumptions are validated for the use case.
+`bandwidth_basis="erb"` reproduces the round-3 kernel. Author confirmation
+against Plomp & Levelt (1965) is outstanding:
+`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`. Migration of archived
+exports: `docs/validation/ROUGHNESS_MIGRATION.md`.
 
 ---
 

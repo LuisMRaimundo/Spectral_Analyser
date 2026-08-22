@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from mir_descriptors import (
+    _roughness_aures_1985,
     critical_bandwidth_zwicker_hz,
     roughness_parncutt_kernel,
 )
@@ -89,3 +90,8 @@ def test_zwicker_goldens_frozen() -> None:
     for row in payload["two_tone_peaks_hz"]:
         got_df = _two_tone_peak_df(float(row["f0"]), "zwicker_cb")
         assert got_df == pytest.approx(row["df_peak"], abs=1.0)
+
+
+def test_retired_aures_alias_raises() -> None:
+    with pytest.raises(NotImplementedError, match="mis-specified bandwidth"):
+        _roughness_aures_1985(np.array([440.0, 445.0]), np.array([1.0, 1.0]))

@@ -49,6 +49,9 @@ def _assert_all_nan(desc: dict[str, float]) -> None:
 def _assert_all_finite(desc: dict[str, float]) -> None:
     for key, value in desc.items():
         assert isinstance(value, float)
+        if key == "roughness_aures_1985":
+            assert math.isnan(value), key
+            continue
         assert math.isfinite(value), key
 
 
@@ -91,7 +94,7 @@ def test_single_bin_spectrum_has_zero_spread_and_flatness_one() -> None:
     assert desc["spectral_rolloff_hz_85"] == pytest.approx(1000.0)
     assert desc["spectral_rolloff_hz_95"] == pytest.approx(1000.0)
     assert desc["roughness_parncutt_kernel"] == pytest.approx(0.0)
-    assert desc["roughness_aures_1985"] == pytest.approx(0.0)
+    assert math.isnan(desc["roughness_aures_1985"])
     assert math.isnan(desc["tristimulus_1_fundamental"])
 
 
@@ -279,12 +282,9 @@ def test_roughness_is_positive_for_close_partial_pair() -> None:
     assert math.isfinite(val)
 
 
-def test_roughness_aures_alias_warns() -> None:
-    with pytest.warns(DeprecationWarning, match="misattribution"):
-        aliased = _roughness_aures_1985(np.array([440.0, 445.0]), np.array([1.0, 1.0]))
-    assert aliased == pytest.approx(
-        _roughness_parncutt_kernel(np.array([440.0, 445.0]), np.array([1.0, 1.0]))
-    )
+def test_roughness_aures_alias_raises() -> None:
+    with pytest.raises(NotImplementedError, match="roughness_parncutt_kernel"):
+        _roughness_aures_1985(np.array([440.0, 445.0]), np.array([1.0, 1.0]))
 
 
 def test_roughness_peak_near_quarter_erb_at_1khz() -> None:
@@ -350,7 +350,10 @@ def test_compute_mir_descriptors_is_deterministic() -> None:
         frequencies_hz=freqs, amplitudes=amps, f0_hz=220.0
     )
     for key in EXPECTED_KEYS:
-        assert first[key] == pytest.approx(second[key], rel=0.0, abs=0.0)
+        a, b = first[key], second[key]
+        if math.isnan(a) and math.isnan(b):
+            continue
+        assert a == pytest.approx(b, rel=0.0, abs=0.0)
 
 
 def test_centroid_and_rolloff_invariant_to_input_order() -> None:

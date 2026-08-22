@@ -109,6 +109,9 @@ helpers to `export_row_identity.py`:
 | v4.0.3 | Metadata + dedupe | Distinct Phase-2 H/I/S in research `Metadata`; `Diagnostic_Metrics.sample_id` fill; post-uniquify dedupe; numeric `zero_padding` per note |
 | v4.1.0 | Low-f₀ harmonic identity | Spacing-capped match; f0/B refit; body-stop count cut; noise-gated mass; `density_fragile`; `density_effective_ceiling_hz` = global 20 kHz |
 | v4.1.0 + schema `2026_08` | Exclusive assignment / gating | One `peak_bin_index` per slot; F-012 / amplitude / Sethares on validated partials; `sample_note_tag` + `partial_pitch_name`; `harmonic_validated_count` |
+| v4.4.0 (F-037 gen 1) | MIR roughness | `roughness_aures_1985` = `df/(0.25f+24.7)`. Misattributed. Pre-`d615ebe`. |
+| v4.4.0 (F-037 gen 2) | MIR roughness | `roughness_parncutt_kernel` = `df/(0.25·ERB)`. Alias still wrote the same number. `d615ebe`–`c474c64`. |
+| v4.4.0 (F-037 gen 3) | MIR roughness | Proposed Zwicker-CB default. Retired alias raises; new exports write NaN in `roughness_aures_1985`. Not a rescaling — ranks change. See `docs/validation/ROUGHNESS_MIGRATION.md`. Author confirmation of the default is outstanding. |
 
 **Re-export:** v4.0.3 schema refresh requires Stage 2 + Stage 3. v4.1.0 harmonic
 identity and the `2026_08` exclusive-assignment / gating phase require Stage 1 + 2 + 3. See

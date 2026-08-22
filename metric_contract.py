@@ -147,16 +147,19 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
     roughness_aures_1985 = MetricDefinition(
         name="roughness_aures_1985",
         formula=(
-            "Deprecated alias of roughness_parncutt_kernel (F-037), retained "
-            "for one version. The implemented kernel was never Aures (1985)."
+            "Retired name. Calling the function raises NotImplementedError. "
+            "New exports write NaN. Use roughness_parncutt_kernel (F-037). "
+            "Archived values used a mis-specified bandwidth and are not comparable."
         ),
-        input_domain="same as roughness_parncutt_kernel",
-        unit_or_scale="pairwise kernel units",
+        input_domain="retired; see roughness_parncutt_kernel",
+        unit_or_scale="pairwise kernel units (archived only)",
         amplitude_basis="Amplitude_raw (linear)",
         power_basis="not used (amplitude product)",
         normalization_scope="per spectrum",
-        physical_interpretation="Alias of roughness_parncutt_kernel.",
-        not_valid_for="New analyses; use roughness_parncutt_kernel.",
+        physical_interpretation=(
+            "Retired column. Not a live alias of roughness_parncutt_kernel."
+        ),
+        not_valid_for="Any new analysis; archived values are not comparable.",
         ontology_family="sensory_dissonance",
     )
     inharmonic_density_sum = MetricDefinition(
