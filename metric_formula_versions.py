@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
 PACKAGE_FORMULA_VERSION = "4.5.0"
+DISSONANCE_FORMULA_VERSION = "4.6.0"
 
 MIR_VALUE_COLUMNS: Tuple[str, ...] = (
     "spectral_centroid_hz",
@@ -50,6 +51,33 @@ MIR_STAMPS: Dict[str, Tuple[str, str]] = {
     "erb_weighted_spectral_density": ("F-039", PACKAGE_FORMULA_VERSION),
 }
 
+DISSONANCE_VALUE_COLUMNS: Tuple[str, ...] = (
+    "sethares_dissonance",
+    "hutchinson_knopoff_dissonance",
+    "vassilakis_dissonance",
+    "hutchinson_knopoff_legacy_mean_pair_scaled",
+    "selected_dissonance_value",
+    "dissonance_metric_mode",
+)
+
+DISSONANCE_STAMPS: Dict[str, Tuple[str, str]] = {
+    "sethares_dissonance": ("COL:sethares_dissonance", DISSONANCE_FORMULA_VERSION),
+    "hutchinson_knopoff_dissonance": (
+        "COL:hutchinson_knopoff_dissonance",
+        DISSONANCE_FORMULA_VERSION,
+    ),
+    "vassilakis_dissonance": ("COL:vassilakis_dissonance", DISSONANCE_FORMULA_VERSION),
+    "hutchinson_knopoff_legacy_mean_pair_scaled": (
+        "COL:hutchinson_knopoff_legacy_mean_pair_scaled",
+        DISSONANCE_FORMULA_VERSION,
+    ),
+    "selected_dissonance_value": (
+        "COL:selected_dissonance_value",
+        DISSONANCE_FORMULA_VERSION,
+    ),
+    "dissonance_metric_mode": ("COL:dissonance_metric_mode", DISSONANCE_FORMULA_VERSION),
+}
+
 _INDEX_ROW = re.compile(
     r"^\|\s*(F-\d+)\s*\|.*?\| `([^`]+)`\s*\|",
     re.MULTILINE,
@@ -61,6 +89,15 @@ def mir_stamp_fields() -> Dict[str, str]:
     """Companion export fields for every MIR value column."""
     out: Dict[str, str] = {}
     for col, (fid, ver) in MIR_STAMPS.items():
+        out[f"{col}_formula_id"] = fid
+        out[f"{col}_formula_version"] = ver
+    return out
+
+
+def dissonance_stamp_fields() -> Dict[str, str]:
+    """Companion export fields for dissonance value columns."""
+    out: Dict[str, str] = {}
+    for col, (fid, ver) in DISSONANCE_STAMPS.items():
         out[f"{col}_formula_id"] = fid
         out[f"{col}_formula_version"] = ver
     return out
@@ -105,12 +142,19 @@ def exported_column_names() -> List[str]:
             names.append(col)
         names.append(f"{col}_formula_id")
         names.append(f"{col}_formula_version")
+    for col in DISSONANCE_VALUE_COLUMNS:
+        if col not in names:
+            names.append(col)
+        names.append(f"{col}_formula_id")
+        names.append(f"{col}_formula_version")
     return names
 
 
 def column_stamp(column: str) -> Tuple[str, str]:
     if column in MIR_STAMPS:
         return MIR_STAMPS[column]
+    if column in DISSONANCE_STAMPS:
+        return DISSONANCE_STAMPS[column]
     if column.endswith("_formula_id"):
         return ("META", PACKAGE_FORMULA_VERSION)
     if column.endswith("_formula_version"):

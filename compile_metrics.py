@@ -5938,8 +5938,9 @@ def _append_dissonance_excel_sheets(
         preferred = (
             ["Note"]
             + [CANONICAL_VALUE_BY_SLUG[s] for s in MODEL_SLUGS if CANONICAL_VALUE_BY_SLUG[s] in diss_df.columns]
-            + [c for c in ("selected_dissonance_model", "selected_dissonance_value") if c in diss_df.columns]
+            + [c for c in ("selected_dissonance_model", "selected_dissonance_value", "dissonance_metric_mode") if c in diss_df.columns]
             + [c for c in OPTIONAL_EXTRA_FIELDS if c in diss_df.columns]
+            + [c for c in diss_df.columns if c.endswith("_formula_id") or c.endswith("_formula_version")]
             + [c for c in DISSONANCE_AUDIT_COPY_COLUMNS if c in diss_df.columns]
         )
         out_cols = [c for c in preferred if c in diss_df.columns]
@@ -7494,6 +7495,7 @@ TEXT_FIELDS: set[str] = {
     "DM Domain",
     "Density Scale",   # <— novo: 'bark', 'mel', 'hz', etc. é texto
     "selected_dissonance_model",
+    "dissonance_metric_mode",
     "f0_source",
     "harmonic_validation_status",
     "harmonic_alignment_status",
@@ -8254,7 +8256,11 @@ def read_excel_metrics(file_path: Union[str, Path]) -> Dict[str, Optional[float]
                 for column in dm.columns:
                     if column == "Register" or str(column).lower() == "register":
                         continue
-                    if column in TEXT_FIELDS:
+                    if (
+                        column in TEXT_FIELDS
+                        or str(column).endswith("_formula_id")
+                        or str(column).endswith("_formula_version")
+                    ):
                         raw_txt = dm[column].iloc[0]
                         if pd.notna(raw_txt):
                             metrics[str(column)] = str(raw_txt)

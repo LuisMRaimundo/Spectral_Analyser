@@ -29,6 +29,12 @@ OPTIONAL_EXTRA_FIELDS: Tuple[str, ...] = (
     "mean_dissonance_per_pair",
     "dissonance_partial_count",
     "dissonance_pair_count",
+    "hutchinson_knopoff_legacy_mean_pair_scaled",
+)
+
+DISSONANCE_TEXT_FIELDS: Tuple[str, ...] = (
+    "dissonance_metric_mode",
+    "selected_dissonance_model",
 )
 
 # Copied onto ``Dissonance_Metrics`` as audit columns when present on the compiled frame.
@@ -147,6 +153,11 @@ def build_canonical_dissonance_frame(
                     available.add(slug)
                 continue
             clow = cl.lower()
+            if clow == "dissonance_metric_mode" or _norm_key(cl) == "dissonance metric mode":
+                raw_mode = row.get(col)
+                if pd.notna(raw_mode) and str(raw_mode).strip():
+                    out["dissonance_metric_mode"] = str(raw_mode).strip()
+                continue
             matched_extra = False
             for extra in OPTIONAL_EXTRA_FIELDS:
                 if clow == extra.lower() or _norm_key(cl) == _norm_key(extra):

@@ -7,8 +7,8 @@ per-column version. MIR descriptors, including three incompatible
 F-037 kernels, shipped under `package_version=4.4.0` with no
 per-column stamp.
 
-- Exported columns inventoried: **265**
-- Columns that lacked a contracted F-id (first-stamped as `COL:<name>`): **218**
+- Exported columns inventoried: **283**
+- Columns that lacked a contracted F-id (first-stamped as `COL:<name>`): **224**
 - MIR value columns now export `<name>_formula_id` and
   `<name>_formula_version` from `metric_contract` / `MIR_STAMPS`.
 - CI: `tests/phase_33/test_column_formula_versions.py` fails if any
@@ -61,6 +61,9 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `discrete_metric_d17` | `COL:discrete_metric_d17` | `4.5.0` |
 | `discrete_metric_d24` | `COL:discrete_metric_d24` | `4.5.0` |
 | `discrete_metric_d3` | `COL:discrete_metric_d3` | `4.5.0` |
+| `dissonance_metric_mode` | `COL:dissonance_metric_mode` | `4.6.0` |
+| `dissonance_metric_mode_formula_id` | `META` | `4.5.0` |
+| `dissonance_metric_mode_formula_version` | `META` | `4.5.0` |
 | `effective_components_weighted_diagnostic` | `COL:effective_components_weighted_diagnostic` | `4.5.0` |
 | `effective_partial_density` | `COL:effective_partial_density` | `4.5.0` |
 | `energy_weighted_component_density_diagnostic` | `COL:energy_weighted_component_density_diagnostic` | `4.5.0` |
@@ -112,6 +115,12 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `harmonic_slot_coverage_ratio` | `COL:harmonic_slot_coverage_ratio` | `4.5.0` |
 | `harmonic_slot_expected_count` | `COL:harmonic_slot_expected_count` | `4.5.0` |
 | `harmonic_slot_matched_count` | `COL:harmonic_slot_matched_count` | `4.5.0` |
+| `hutchinson_knopoff_dissonance` | `COL:hutchinson_knopoff_dissonance` | `4.6.0` |
+| `hutchinson_knopoff_dissonance_formula_id` | `META` | `4.5.0` |
+| `hutchinson_knopoff_dissonance_formula_version` | `META` | `4.5.0` |
+| `hutchinson_knopoff_legacy_mean_pair_scaled` | `COL:hutchinson_knopoff_legacy_mean_pair_scaled` | `4.6.0` |
+| `hutchinson_knopoff_legacy_mean_pair_scaled_formula_id` | `META` | `4.5.0` |
+| `hutchinson_knopoff_legacy_mean_pair_scaled_formula_version` | `META` | `4.5.0` |
 | `inharmonic_density_component` | `COL:inharmonic_density_component` | `4.5.0` |
 | `inharmonic_density_component_on_attack` | `COL:inharmonic_density_component_on_attack` | `4.5.0` |
 | `inharmonic_density_component_on_release` | `COL:inharmonic_density_component_on_release` | `4.5.0` |
@@ -192,6 +201,12 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `salient_odd_harmonic_count_up_to_body_ceiling` | `COL:salient_odd_harmonic_count_up_to_body_ceiling` | `4.5.0` |
 | `salient_subbass_particle_count` | `COL:salient_subbass_particle_count` | `4.5.0` |
 | `salient_subbass_particle_count_up_to_density_ceiling_hz` | `COL:salient_subbass_particle_count_up_to_density_ceiling_hz` | `4.5.0` |
+| `selected_dissonance_value` | `COL:selected_dissonance_value` | `4.6.0` |
+| `selected_dissonance_value_formula_id` | `META` | `4.5.0` |
+| `selected_dissonance_value_formula_version` | `META` | `4.5.0` |
+| `sethares_dissonance` | `COL:sethares_dissonance` | `4.6.0` |
+| `sethares_dissonance_formula_id` | `META` | `4.5.0` |
+| `sethares_dissonance_formula_version` | `META` | `4.5.0` |
 | `sethares_status` | `COL:sethares_status` | `4.5.0` |
 | `spectral_body_thickness_index` | `COL:spectral_body_thickness_index` | `4.5.0` |
 | `spectral_centroid_hz` | `F-027` | `4.5.0` |
@@ -287,3 +302,6 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `valid_for_primary_statistics` | `COL:valid_for_primary_statistics` | `4.5.0` |
 | `validated_harmonic_component_count_body_ceiling` | `COL:validated_harmonic_component_count_body_ceiling` | `4.5.0` |
 | `validated_harmonics_above_body_stop_count` | `COL:validated_harmonics_above_body_stop_count` | `4.5.0` |
+| `vassilakis_dissonance` | `COL:vassilakis_dissonance` | `4.6.0` |
+| `vassilakis_dissonance_formula_id` | `META` | `4.5.0` |
+| `vassilakis_dissonance_formula_version` | `META` | `4.5.0` |

@@ -1,3 +1,15 @@
+# v4.6.0 — dissonance export repairs
+
+`hutchinson_knopoff_dissonance` is now Hutchinson & Knopoff (1978) eq. (3).
+The previous mean-pair quantity is
+`hutchinson_knopoff_legacy_mean_pair_scaled`. Sethares no longer overrides
+the base signature; default `metric_mode` is `minamp_norm`.
+`dissonance_metric_mode` is exported on every row.
+`analyze_real_timbre(save_directory=None)` no longer crashes. Hygiene:
+lazy HK g-table, symmetric `find_local_minima`, unused imports and dead
+harmonicity flags removed. Tests live in `tests/phase_33/`.
+Migration: `docs/validation/DISSONANCE_MIGRATION.md`.
+
 # v4.5.0 — per-column formula versions
 
 Package version is 4.5.0 so the three F-037 generations that shared

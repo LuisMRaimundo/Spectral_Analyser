@@ -1060,6 +1060,78 @@
     "mir_descriptors_missing_reason": {
       "formula_id": "COL:mir_descriptors_missing_reason",
       "formula_version": "4.5.0"
+    },
+    "sethares_dissonance": {
+      "formula_id": "COL:sethares_dissonance",
+      "formula_version": "4.6.0"
+    },
+    "sethares_dissonance_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "sethares_dissonance_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_dissonance": {
+      "formula_id": "COL:hutchinson_knopoff_dissonance",
+      "formula_version": "4.6.0"
+    },
+    "hutchinson_knopoff_dissonance_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_dissonance_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "vassilakis_dissonance": {
+      "formula_id": "COL:vassilakis_dissonance",
+      "formula_version": "4.6.0"
+    },
+    "vassilakis_dissonance_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "vassilakis_dissonance_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled": {
+      "formula_id": "COL:hutchinson_knopoff_legacy_mean_pair_scaled",
+      "formula_version": "4.6.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "selected_dissonance_value": {
+      "formula_id": "COL:selected_dissonance_value",
+      "formula_version": "4.6.0"
+    },
+    "selected_dissonance_value_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "selected_dissonance_value_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "dissonance_metric_mode": {
+      "formula_id": "COL:dissonance_metric_mode",
+      "formula_version": "4.6.0"
+    },
+    "dissonance_metric_mode_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "dissonance_metric_mode_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
     }
   }
 }

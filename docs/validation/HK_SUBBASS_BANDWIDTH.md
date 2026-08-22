@@ -12,7 +12,9 @@ Zwicker CB below 200 Hz.
 **Default arithmetic is unchanged.** Whether the hybrid should become the
 default is an author decision (CHANGES.md open item).
 
-The four previously noted defects in this file were not touched.
+The four previously noted defects in `dissonance_models.py` are closed in
+package 4.6.0 (`docs/validation/DISSONANCE_MIGRATION.md`). The H&K
+bandwidth default remains `hk1978` (this document's open item).
 
 ## Bandwidth table (20–500 Hz)
 

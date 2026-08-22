@@ -11,12 +11,9 @@ import pandas as pd
 from typing import List, Tuple, Dict, Optional, Any, Literal
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
-import math
 import logging
-from functools import lru_cache
 import os
 from pathlib import Path
-import scipy.signal
 
 from mir_descriptors import critical_bandwidth_zwicker_hz
 
@@ -25,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 # Global constants
 DEFAULT_PLOT_DPI = 300
-CENTS_PER_OCTAVE = 1200
+DEFAULT_DISSONANCE_METRIC_MODE = "minamp_norm"
+DISSONANCE_METRIC_MODES = ("sum", "mean_pair", "mean_pair_scaled", "minamp_norm")
 HK_G_TABLE_PROVENANCE = (
     "Hutchinson & Knopoff (1978), Interface 7(1):1-29, Fig. 1. "
     "Re-digitised with WebPlotDigitizer; calibration parameters "
@@ -66,6 +64,36 @@ def _load_hk_default_g_table() -> list[tuple[float, float]]:
     if table.shape[1] != 2:
         raise ValueError(f"Invalid HK g-table shape: {table.shape}")
     return [(float(y), float(g)) for y, g in table]
+
+def _partials_from_df(
+    df: pd.DataFrame,
+    *,
+    apply_amp_compensation: bool = False,
+    win_length: int | None = None,
+    model: DissonanceModel | None = None,
+) -> List[Tuple[float, float]]:
+    """Linear (frequency, amplitude) pairs used by the metric export."""
+    if df is None or df.empty or "Frequency (Hz)" not in df.columns:
+        return []
+    dfx = df.copy()
+    if "Amplitude" not in dfx.columns:
+        if "Magnitude (dB)" not in dfx.columns:
+            return []
+        dfx["Amplitude"] = 10.0 ** (dfx["Magnitude (dB)"].astype(float) / 20.0)
+    dfx = dfx[(dfx["Frequency (Hz)"] > 0) & (dfx["Amplitude"] > 0)]
+    freqs = dfx["Frequency (Hz)"].to_numpy(dtype=float)
+    amps = dfx["Amplitude"].to_numpy(dtype=float)
+    if apply_amp_compensation:
+        n_win = int(
+            win_length
+            or getattr(model, "win_length", 0)
+            or getattr(model, "n_fft", 0)
+            or 0
+        )
+        if n_win > 0:
+            amps = amps * (2.0 / n_win)
+    return [(float(f), float(a)) for f, a in zip(freqs, amps)]
+
 
 # -----------------------------------------------------------------------------
 # BASE CLASS
@@ -125,16 +153,21 @@ class DissonanceModel(ABC):
         return curve
     
     def find_local_minima(self, curve: Dict[float, float], sensitivity: float = 0.01) -> List[float]:
-        """Find local minima in the curve (consonances)."""
-        if not curve: return []
+        """Find local minima in the curve (consonances).
+
+        ``sensitivity`` is applied to both neighbours so detection is not
+        direction-dependent.
+        """
+        if not curve:
+            return []
         intervals = sorted(list(curve.keys()))
         minima = []
         for i in range(1, len(intervals) - 1):
             interval = intervals[i]
             val = curve[interval]
-            if (val < curve[intervals[i-1]] and 
-                val < curve[intervals[i+1]] and
-                val < curve[intervals[i-1]] - sensitivity):
+            left = curve[intervals[i - 1]]
+            right = curve[intervals[i + 1]]
+            if val + sensitivity < left and val + sensitivity < right:
                 minima.append(interval)
         return minima
 
@@ -305,20 +338,18 @@ class DissonanceModel(ABC):
         self,
         df: pd.DataFrame,
         *,
-        metric_mode: str = "mean_pair_scaled",
+        metric_mode: str | None = None,
         metric_scale: float = 10.0,
-        # compensação opcional para proc_audio antigo (amplitudes ~N/2 inflacionadas)
         apply_amp_compensation: bool = False,
         win_length: int | None = None,
     ) -> float:
-        """
-        Calcula uma métrica Sethares a partir de um DF (freq, amplitude).
+        """Pairwise dissonance scalar from a (frequency, amplitude) frame.
 
         metric_mode:
-          - "sum"              : soma bruta Σ d_ij
-          - "mean_pair"        : média por par Σ d_ij / n_pairs
-          - "mean_pair_scaled" : média por par × metric_scale (legado: ~0–10)
-          - "minamp_norm"      : Σ d_ij / Σ min(a_i,a_j)  (normalização robusta à escala)
+          - "sum"              : raw Σ d_ij
+          - "mean_pair"        : Σ d_ij / n_pairs
+          - "mean_pair_scaled" : mean pair × metric_scale (legacy ~0–10)
+          - "minamp_norm"      : Σ d_ij / Σ min(a_i,a_j)  (default; scale- and n-invariant)
         """
         total, n_pairs, sum_minamp = self._dissonance_total_pairs_and_minamp(
             df,
@@ -328,7 +359,14 @@ class DissonanceModel(ABC):
         if n_pairs <= 0:
             return 0.0
 
-        mode = (metric_mode or "mean_pair_scaled").strip().lower()
+        mode = str(
+            metric_mode
+            if metric_mode is not None
+            else getattr(self, "metric_mode", None)
+            or DEFAULT_DISSONANCE_METRIC_MODE
+        ).strip().lower()
+        if mode not in DISSONANCE_METRIC_MODES:
+            mode = DEFAULT_DISSONANCE_METRIC_MODE
 
         if mode == "sum":
             return float(total)
@@ -339,7 +377,6 @@ class DissonanceModel(ABC):
         if mode == "minamp_norm":
             return float(total / sum_minamp) if sum_minamp > 0 else 0.0
 
-        # Default legacy behavior
         return float((total / n_pairs) * float(metric_scale))
 
 
@@ -412,7 +449,7 @@ class SetharesDissonance(DissonanceModel):
         gain: float = 1.0,
         curve_mode: str = "full",          # 'full' (book) or 'cross' (legacy)
         subtract_intrinsic: bool = False,  # if True, return full - intrinsic terms
-        metric_mode: str = "mean_pair_scaled",  # 'sum'|'mean_pair'|'mean_pair_scaled'|'minamp_norm'
+        metric_mode: str = DEFAULT_DISSONANCE_METRIC_MODE,
         metric_scale: float = 10.0,
     ):
         super().__init__("Sethares-Revised", "Based on Plomp-Levelt curves (Sethares, 2005)")
@@ -501,58 +538,18 @@ class SetharesDissonance(DissonanceModel):
 
         return float(full)
 
-    def calculate_dissonance_metric(self, df: pd.DataFrame) -> float:
-        """Per-note metric (for Excel export).
 
-        Modos:
-          - 'sum'              : Σ d_ij (soma bruta)
-          - 'mean_pair'        : média por par = Σ d_ij / n_pairs
-          - 'mean_pair_scaled' : (Σ d_ij / n_pairs) * metric_scale [module-default compatible]
-          - 'minamp_norm'      : Σ d_ij / Σ min(a_i,a_j) (robust to global amplitude scale)
-        """
-        if df is None or df.empty:
-            return 0.0
+class _LazyDefaultGTable:
+    """Load ``data/hk1978_g_table.csv`` on first use, not at import."""
 
-        if "Frequency (Hz)" not in df.columns or ("Amplitude" not in df.columns and "Magnitude (dB)" not in df.columns):
-            return 0.0
+    def __init__(self) -> None:
+        self._value: list[tuple[float, float]] | None = None
 
-        dfx = df.copy()
-        if "Amplitude" not in dfx.columns:
-            dfx["Amplitude"] = 10 ** (dfx["Magnitude (dB)"] / 20)
+    def __get__(self, obj, objtype=None):
+        if self._value is None:
+            self._value = _load_hk_default_g_table()
+        return self._value
 
-        dfx = dfx[(dfx["Frequency (Hz)"] > 0) & (dfx["Amplitude"] > 0)]
-        freqs = dfx["Frequency (Hz)"].to_numpy(dtype=float)
-        amps = dfx["Amplitude"].to_numpy(dtype=float)
-
-        n = len(freqs)
-        if n < 2:
-            return 0.0
-
-        total = 0.0
-        n_pairs = 0
-        sum_minamp = 0.0
-
-        for i in range(n - 1):
-            for j in range(i + 1, n):
-                a_min = amps[i] if amps[i] < amps[j] else amps[j]
-                sum_minamp += a_min
-                total += self.pure_tones_dissonance(freqs[i], freqs[j], amps[i], amps[j])
-                n_pairs += 1
-
-        if n_pairs <= 0:
-            return 0.0
-
-        if self.metric_mode == "sum":
-            return float(total)
-
-        if self.metric_mode == "mean_pair":
-            return float(total / n_pairs)
-
-        if self.metric_mode == "minamp_norm":
-            return float(total / sum_minamp) if sum_minamp > 0 else 0.0
-
-        # Default module-compatible behavior (≈0–10)
-        return float((total / n_pairs) * self.metric_scale)
 
 class HutchinsonKnopoffDissonance(DissonanceModel):
     """
@@ -563,7 +560,7 @@ class HutchinsonKnopoffDissonance(DissonanceModel):
       curve (Figure 1), so this implementation requires a g_table.
     """
 
-    DEFAULT_G_TABLE = _load_hk_default_g_table()
+    DEFAULT_G_TABLE = _LazyDefaultGTable()
 
     def __init__(
         self,
@@ -669,6 +666,47 @@ class HutchinsonKnopoffDissonance(DissonanceModel):
 
         return num / denom
 
+    def calculate_dissonance_metric(
+        self,
+        df: pd.DataFrame,
+        *,
+        metric_mode: str | None = None,
+        metric_scale: float = 10.0,
+        apply_amp_compensation: bool = False,
+        win_length: int | None = None,
+    ) -> float:
+        """Hutchinson & Knopoff (1978) eq. (3): D = Σ_{i<j} a_i a_j g_ij / Σ a²."""
+        del metric_mode, metric_scale
+        partials = _partials_from_df(
+            df,
+            apply_amp_compensation=apply_amp_compensation,
+            win_length=win_length,
+            model=self,
+        )
+        if len(partials) < 2:
+            return 0.0
+        return float(self.total_dissonance(partials, []))
+
+    def legacy_mean_pair_scaled_dissonance(
+        self,
+        df: pd.DataFrame,
+        *,
+        metric_scale: float = 10.0,
+        apply_amp_compensation: bool = False,
+        win_length: int | None = None,
+    ) -> float:
+        """Pre-4.6.0 export: mean of pair-normalised g terms × metric_scale."""
+        return float(
+            DissonanceModel.calculate_dissonance_metric(
+                self,
+                df,
+                metric_mode="mean_pair_scaled",
+                metric_scale=metric_scale,
+                apply_amp_compensation=apply_amp_compensation,
+                win_length=win_length,
+            )
+        )
+
 
 class VassilakisDissonance(DissonanceModel):
     def __init__(self):
@@ -726,12 +764,13 @@ _MODELS = {
     "vassilakis": VassilakisDissonance,
 }
 
-def get_dissonance_model(name: str, *, allow_harmonicity: bool = True) -> DissonanceModel:
+def get_dissonance_model(name: str) -> DissonanceModel:
     key = name.strip().lower()
-    if key in _MODELS: return _MODELS[key]()
+    if key in _MODELS:
+        return _MODELS[key]()
     raise ValueError(f"Unknown model: {name}")
 
-def list_available_models(*, include_harmonicity: bool = True) -> List[str]:
+def list_available_models() -> List[str]:
     return list(_MODELS.keys())
 
 def calculate_all_dissonance_metrics(df: pd.DataFrame) -> Dict[str, float]:
@@ -844,12 +883,20 @@ def analyze_real_timbre(df: pd.DataFrame,
             path = os.path.join(save_directory, f"{model.name.lower()}_dissonance_curve.png")
             model.visualize_dissonance_curve(curve, scale, title=title, save_file=path)
             
-    if save_directory and len(models) > 1:
-        path = os.path.join(save_directory, "dissonance_comparison.png")
-        compare_dissonance_models(partials, save_file=path, models_to_include=[m.name for m in models])
-        
-        # Save metrics
-        m_df = pd.DataFrame({"Model": list(results["metrics"].keys()), "Dissonance": list(results["metrics"].values())})
+    if save_directory:
+        if len(models) > 1:
+            path = os.path.join(save_directory, "dissonance_comparison.png")
+            compare_dissonance_models(
+                partials,
+                save_file=path,
+                models_to_include=[m.name for m in models],
+            )
+        m_df = pd.DataFrame(
+            {
+                "Model": list(results["metrics"].keys()),
+                "Dissonance": list(results["metrics"].values()),
+            }
+        )
         m_df.to_csv(os.path.join(save_directory, "dissonance_metrics.csv"), index=False)
 
     return results
@@ -860,10 +907,12 @@ __all__ = [
     'SetharesDissonance',
     'HutchinsonKnopoffDissonance',
     'VassilakisDissonance',
+    'DEFAULT_DISSONANCE_METRIC_MODE',
+    'DISSONANCE_METRIC_MODES',
     'HK_G_TABLE_PROVENANCE',
     'get_dissonance_model',
     'list_available_models',
     'compare_dissonance_models',
     'calculate_all_dissonance_metrics',
-    'analyze_real_timbre'
+    'analyze_real_timbre',
 ]

@@ -111,19 +111,25 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
     )
     sethares_dissonance = MetricDefinition(
         name="sethares_dissonance",
-        formula="Sethares pairwise roughness on (frequency, amplitude) pairs",
+        formula=(
+            "Sethares pairwise roughness; default metric_mode=minamp_norm "
+            "(Σ d_ij / Σ min(a_i,a_j)). mean_pair_scaled is retained as an "
+            "opt-in. Shared base implementation with Vassilakis (no Liskov override)."
+        ),
         input_domain="validated_partials_only",
-        unit_or_scale="model units (Sethares)",
+        unit_or_scale="model units (Sethares, minamp_norm)",
         amplitude_basis="Amplitude_raw of include_for_density=True harmonics",
         power_basis="not used",
         normalization_scope="validated harmonic partials only (Fix 2)",
         physical_interpretation=(
             "Dissonance from validated harmonic partials after exclusive "
-            "assignment plus confirmed inharmonic partials. Source note "
-            "states the validated list, not the residual-candidate count."
+            "assignment plus confirmed inharmonic partials. Default is "
+            "invariant to peak count and global amplitude scale."
         ),
         not_valid_for="Retained nonharmonic / floor-candidate lists.",
         ontology_family="sensory_dissonance",
+        formula_id="COL:sethares_dissonance",
+        formula_version="4.6.0",
     )
     roughness_parncutt_kernel = MetricDefinition(
         name="roughness_parncutt_kernel",
