@@ -220,5 +220,5 @@ Provenance classes:
 - `ERB_RATE_SCALE` (`21.4`) - `primary_source` - Moore & Glasberg (1983) ERB-rate E(f) = 21.4 log10(1 + 0.00437 f).
 - `ERB_RATE_COEFF` (`0.00437`) - `primary_source` - Moore & Glasberg (1983).
 - `ENERGY_EPS` (`1e-30`) - `internal_default` - Numerical floor for empty/degenerate energy in Hill shares.
-- `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites. Sensitivity of K-recovery and intra-ERB packing: [`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`](validation/ACD_ERB_FRACTION_SENSITIVITY.md).
+- `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites. Sensitivity is measured on a 40-partial 1/n series (not 8-ERB spacing): [`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`](validation/ACD_ERB_FRACTION_SENSITIVITY.md). The earlier “[0.5, 1.5] usable range” claim is discarded.
 - `MERGE_STRATEGY_DEFAULT` (`fixed_erb_grid`) - `internal_default` - Default ERB merge after the Stage 1 FFT-tier comparison. `fixed_erb_grid` reduced wander from 3.80 % to 2.74 %; neither strategy fell below ~2 %. Decision: [`docs/validation/ACD_MERGE_STRATEGY.md`](validation/ACD_MERGE_STRATEGY.md).

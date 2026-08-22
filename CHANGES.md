@@ -1,3 +1,13 @@
+# v4.4.0 addendum — ACD erb_fraction on a harmonic series
+
+The 8-ERB “usable range at least [0.5, 1.5]” claim is discarded: that
+grid cannot merge at any tested fraction. Re-measured on a 40-partial
+1/n series at 146.83 Hz under `fixed_erb_grid`. `merged_count == 40`
+only at `erb_fraction = 0.25`; D1 stays within 1% of the unmerged 1/n
+value only on `[0.25, 0.5]`. `merged_count` is more sensitive than D1.
+Register dependence (same series, f0 in C2–C6) is reported in
+`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`. Default remains 1.0.
+
 # v4.4.0 addendum — ACD merge stability and D1 headline
 
 Default ERB merge is now `fixed_erb_grid` (order-independent ERB-rate
