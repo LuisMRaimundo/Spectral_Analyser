@@ -1,9 +1,11 @@
 # Spectral_Analyser — Complete Technical Manual
 
-**Package version:** 4.1.0 (`pyproject.toml`).  
-**Export schema:** v4.0.0–v4.1.0 — normative detail in
-[`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) and
-[`docs/DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.10.
+**Package version:** 4.6.0 (`pyproject.toml`).  
+**Export schema:** v4.0.0–v4.6.0 — density-era repairs in
+[`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md)
+and [`docs/DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.10;
+version map in
+[`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`](CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) §11.
 
 ## 0. Scope and epistemic status
 
@@ -856,11 +858,12 @@ Returned value clipped to $[0,1]$.
 
 Project includes dissonance/roughness infrastructure (`dissonance_models.py`, `dissonance_export.py`, `sethares_*` status fields).
 
-### Roughness approximation in MIR module
+### Roughness in the MIR module (F-037)
 
-`mir_descriptors.py` computes `roughness_parncutt_kernel` (F-037). The
-name `roughness_aures_1985` is retired and raises; new exports write NaN
-in that column. Proposed default:
+`mir_descriptors.py` computes `roughness_parncutt_kernel`. The name
+`roughness_aures_1985` is retired and raises; new exports write NaN in
+that column. The **provenance-consistent default** is Zwicker CB
+(Plomp & Levelt 1965 used Zwicker, Flottorp & Stevens 1957, not ERB):
 
 $$
 x=\frac{|f_i-f_j|}{0.25\,\mathrm{CB}(f_\mathrm{lo})},\quad
@@ -868,10 +871,32 @@ x=\frac{|f_i-f_j|}{0.25\,\mathrm{CB}(f_\mathrm{lo})},\quad
 g(x)=x\,e^{1-x}.
 $$
 
-`bandwidth_basis="erb"` reproduces the round-3 kernel. Author confirmation
-against Plomp & Levelt (1965) is outstanding:
-`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`. Migration of archived
-exports: `docs/validation/ROUGHNESS_MIGRATION.md`.
+Pairs whose higher member exceeds `CB_ZWICKER_VALID_MAX_HZ = 15500`
+(Bark-scale ceiling) are dropped; the count is
+`roughness_pairs_excluded_above_validity`. Overlay on P&L Fig. 10 is
+outstanding but **non-blocking**. `bandwidth_basis="erb"` reproduces the
+round-3 kernel. Optional `cutoff_cb=1.2` (H&K-style) is available;
+default remains `None`. Tables:
+`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`. Four F-037 generations
+that shared package 4.4.0:
+`docs/validation/ROUGHNESS_MIGRATION.md`. Bandwidth expressions
+elsewhere: `docs/validation/BANDWIDTH_VALIDITY_AUDIT.md`.
+
+### Dissonance export (v4.6.0)
+
+`hutchinson_knopoff_dissonance` is Hutchinson & Knopoff (1978) eq. (3)
+(`Σ_{i<j} a_i a_j g_{ij} / Σ a^2`). The previous mean-pair quantity is
+`hutchinson_knopoff_legacy_mean_pair_scaled`. Sethares and Vassilakis
+share the base `calculate_dissonance_metric` signature; the default
+`metric_mode` is `minamp_norm` (`Σ d_{ij} / Σ min(a_i,a_j)`), which does
+not fall as detected peak count rises. Every row exports
+`dissonance_metric_mode`. H&K `cbw = 1.72 f^{0.65}` remains the default
+(`low_frequency_basis="hk1978"`). Migration and mode table:
+`docs/validation/DISSONANCE_MIGRATION.md`,
+`docs/validation/DISSONANCE_METRIC_MODE.md`.
+
+From 4.5.0 every compiled / MIR column carries `formula_id` and
+`formula_version` (`docs/validation/COLUMN_VERSIONING_AUDIT.md`).
 
 ---
 

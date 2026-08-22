@@ -1,3 +1,10 @@
+# v4.6.0 addendum — front-door documentation
+
+README, technical manual header / §11, and
+`UPGRADE_PROGRAMME_STATUS.md` now state package 4.6.0 and point at the
+round-4/5 validation notes. The density-era freeze record (`v4.2.1`)
+is unchanged.
+
 # v4.6.0 — dissonance export repairs
 
 `hutchinson_knopoff_dissonance` is now Hutchinson & Knopoff (1978) eq. (3).

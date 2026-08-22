@@ -48,6 +48,9 @@ bump is recorded.
 | D6.4 | fft_policy fixed default | same | `fft_policy` in profile id; mixed-tier Stage 3 warning. | **done (PR #76)** |
 | D6.5 | Settings parse / above-stop | dictionary | Range strings parse; included-above-stop = 0. | **done (PR #76)** |
 | D6.6 | reexport / compare_runs | `tools/compare_runs.py` | Boundary-step guard. | **done (PR #76)** |
+| ACD-3 | ACD D1 headline + merge | `tests/phase_32/` | `ACD_score` is D1-based; F-057–F-060; EWSD Part B repairs. ACD / EWSD numerics frozen thereafter. | **done (PR #96)** |
+| ACD-4 | Zwicker roughness default | `tests/phase_33/test_roughness_bandwidth_basis.py` | F-037 default `bandwidth_basis="zwicker_cb"`; Aures alias retired; optional H&K `zwicker_below_200hz`. | **done (PR #97)** |
+| ACD-5 | Ceiling, versions, dissonance | `tests/phase_33/` | Provenance sign-off; 15.5 kHz CB guard; optional 1.2-CB cutoff; package 4.5.0 column stamps; 4.6.0 H&K eq. (3) + `minamp_norm`. Corpus remount gated. | **done (PR #97)** |
 
 ## Phase A notes
 
@@ -164,3 +167,7 @@ This table is the freeze acceptance record. It supersedes the archival
   energy-accounting + fixed-window policy). Pre-tag baselines:
   `pretag_evidence/`. R2–R6 done (`v4.2.3`). R6b addendum:
   `R6B_ADDENDUM.md`.
+- **Current package on `main` is 4.6.0** (PR #97). That does not
+  reopen the density freeze. ACD / EWSD numerics remain frozen.
+  Open items: H&K `hk1978` default, Parncutt `cutoff_cb=None`, corpus
+  remount (manifest, real-note invariance, 49-note recompute).
