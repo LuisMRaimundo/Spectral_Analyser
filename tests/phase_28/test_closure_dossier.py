@@ -72,7 +72,8 @@ def test_post_freeze_backlog_records_g3_core_h() -> None:
 
 def test_readme_declares_freeze() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
-    assert "Frozen at v4.2.1" in readme
+    assert "4.6.0" in readme
+    assert "freeze reference remains tag `v4.2.1`" in readme
     assert "v4.2.1 supersedes v4.2.0" in readme
     assert "pretag_evidence" in readme
     assert "POST_FREEZE_BACKLOG.md" in readme

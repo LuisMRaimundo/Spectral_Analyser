@@ -4,30 +4,32 @@ Spectral_Analyser is a spectral-analysis pipeline developed in support of doctor
 
 > **Documentation status.** The implementation / mathematical manual, formula
 > index, export schema, and pipeline semantics documents listed in the map below
-> are present in this repository and stamped to package **v4.2.1**.
+> are present in this repository. Current package is **v4.6.0**. The density-era
+> freeze dossier remains the `v4.2.1` record; ACD / roughness / dissonance work
+> since then is in `CHANGES.md` (v4.4.0–v4.6.0) and the validation notes below.
 
 ## Status
 
-- **Version**: 4.2.1 (git tag `v4.2.1` supersedes `v4.2.0` as the freeze
-  reference; scope of validity unchanged. Tag `v4.2.0` is kept).
+- **Version**: 4.6.0 (current `main`; [PR #97](https://github.com/LuisMRaimundo/Spectral_Analyser/pull/97)).
 - **Python**: >=3.10,<3.12.
-- **Development status**: Frozen at v4.2.1 (20 August 2026).
+- **Development status**: Current. Density-era freeze reference remains tag `v4.2.1` (kept; supersedes `v4.2.0`).
 - **License**: Proprietary — see `LICENSE` at the repository root.
 
-> **Freeze.** Acceptance is the measurable table in
+> **Freeze (density era).** Acceptance for Phases A–I / D1–D6 / WP1–WP6 is the
+> measurable table in
 > [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md),
 > not a 1–100 rating. F-042 / F-047 / F-048 / F-049 algebra is unchanged.
-> v4.2.1 supersedes v4.2.0 as the freeze reference; do not delete
+> v4.2.1 supersedes v4.2.0 as that freeze reference; do not delete
 > `v4.2.0`. Pre-tag workbooks in
 > [`docs/validation/pretag_evidence/`](docs/validation/pretag_evidence/)
-> are **non-citable** baselines. Citation corpora to re-export once
-> under this tag (P6, not yet run): tuba *pp*; trombone *pp/mf/ff*;
-> flute *pp/mf/ff*; cello *ff*; remaining CORDAS corpora in the runbook.
-> After **one** Stage 1–3 re-export per corpus
-> ([`docs/REEXPORT_RUNBOOK.md`](docs/REEXPORT_RUNBOOK.md) +
-> `python -m tools.verify_corpus <out>`), do not iterate Stage 1 on that
-> corpus. Live G3 `core_H` swap remains **FAILED**
-> (`POST_FREEZE_BACKLOG.md`). Other defects go there too.
+> are **non-citable** baselines. Live G3 `core_H` swap remains **FAILED**
+> (`POST_FREEZE_BACKLOG.md`).
+>
+> **Since the freeze.** Package 4.4.0–4.6.0 (PRs #96 / #97) added ACD D1
+> headlines, a provenance-signed Zwicker roughness default with a 15.5 kHz
+> Bark-scale ceiling, per-column formula versions, and the 4.6.0 dissonance
+> export repairs. ACD and EWSD numerics stay frozen. Corpus remount
+> (manifest, real-note invariance, 49-note recompute) is still gated.
 
 ## What this software does
 
@@ -147,22 +149,29 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 
 Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
 
-## Documentation map (v4.2.1)
+## Documentation map (v4.6.0)
 
 | Document | Role |
 |----------|------|
 | [`docs/REEXPORT_RUNBOOK.md`](docs/REEXPORT_RUNBOOK.md) | Exact Stage 1–3 re-export + `verify_corpus` commands for the freeze |
 | [`docs/validation/REEXPORT_DIFF_SUMMARY.md`](docs/validation/REEXPORT_DIFF_SUMMARY.md) | R6 seven-corpus diffs vs pretag (`v4.2.3`) |
 | [`docs/validation/R6B_ADDENDUM.md`](docs/validation/R6B_ADDENDUM.md) | R6b B5/B6 audit, Iowa-bass / cello re-exports, D-updated composite |
-| [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md) | Full implementation / mathematical manual; **§5.2.1** low-f₀ policy; **§14.3** export schema; **§14.4** Stage 1 audit columns |
-| [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md) | Indexed formulae F-001–F-055 |
+| [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md) | Full implementation / mathematical manual; **§5.2.1** low-f₀ policy; **§11** roughness / dissonance; **§14.3** export schema; **§14.4** Stage 1 audit columns |
+| [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md) | Indexed formulae F-001–F-060 |
 | [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md) | Normative export schema; **§R.6–R.10** |
 | [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) | Audit repairs v4.0.0–v4.1.0; re-export table |
 | [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md) | Sheet/column inventory + traps table |
-| [`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`](docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) | Pipeline + **§3–4** f0/harmonics + **§11** version map |
+| [`docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md`](docs/CANONICAL_PIPELINE_AND_EXPORT_SEMANTICS.md) | Pipeline + **§3–4** f0/harmonics + **§11** version map (through v4.6.0) |
+| [`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`](docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md) | F-037 Zwicker default, 15.5 kHz ceiling, optional 1.2-CB cutoff |
+| [`docs/validation/ROUGHNESS_MIGRATION.md`](docs/validation/ROUGHNESS_MIGRATION.md) | Four F-037 generations that shared package 4.4.0 |
+| [`docs/validation/BANDWIDTH_VALIDITY_AUDIT.md`](docs/validation/BANDWIDTH_VALIDITY_AUDIT.md) | Every CB / ERB / Bark expression and whether it is guarded |
+| [`docs/validation/HK_SUBBASS_BANDWIDTH.md`](docs/validation/HK_SUBBASS_BANDWIDTH.md) | H&K `1.72 f^0.65` vs Zwicker below 200 Hz (default unchanged) |
+| [`docs/validation/COLUMN_VERSIONING_AUDIT.md`](docs/validation/COLUMN_VERSIONING_AUDIT.md) | Per-column `formula_id` / `formula_version` (from 4.5.0) |
+| [`docs/validation/DISSONANCE_MIGRATION.md`](docs/validation/DISSONANCE_MIGRATION.md) | 4.6.0 H&K eq. (3) and `minamp_norm` default |
+| [`docs/validation/DISSONANCE_METRIC_MODE.md`](docs/validation/DISSONANCE_METRIC_MODE.md) | Four metric modes and peak-count dependence |
 | [`docs/GUI_OPTION_REFERENCE.md`](docs/GUI_OPTION_REFERENCE.md) | GUI controls; **§A1** β / body-stop / CI; **§A5** export weight naming |
 | [`CHANGES.md`](CHANGES.md) | Versioned change log |
-| [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md) | Freeze acceptance (A–I, D1–D6, WP1–WP6); supersedes 1–100 ratings |
+| [`docs/validation/UPGRADE_PROGRAMME_STATUS.md`](docs/validation/UPGRADE_PROGRAMME_STATUS.md) | Freeze acceptance (A–I, D1–D6, WP1–WP6) plus ACD rounds 3–5 |
 | [`docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`](docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md) | Planted N / B / EPD / confirmed-I recovery (Phase I / WP6) |
 | [`docs/validation/SEGMENTATION_CASE_STUDY_G2.md`](docs/validation/SEGMENTATION_CASE_STUDY_G2.md) | Cello G2 full vs stable (primary vs diagnostic) |
 | [`docs/POST_FREEZE_BACKLOG.md`](docs/POST_FREEZE_BACKLOG.md) | Out-of-scope defects after the freeze (includes live G3 `core_H`) |
@@ -206,13 +215,13 @@ Typical full suite: **1264 passed**, 3 skipped, 3 xfailed (2026-06-10). Do **not
 
 ## Scientific governance
 
-Methodological changes to the pipeline are tracked in [`CHANGES.md`](CHANGES.md) with explicit phase markers (phases 1–12 and substeps such as 7.1 / 7.1b at time of writing). Each phase change is accompanied by phase-organised regression tests under `tests/phase_<n>/` (including **`tests/phase_12/`** contract layers). Symbolic-structure tests for the canonical formulae are under [`tests/formula_validation/`](tests/formula_validation/) and documented in [`docs/validation/FORMULA_VALIDATION_STATUS.md`](docs/validation/FORMULA_VALIDATION_STATUS.md).
+Methodological changes to the pipeline are tracked in [`CHANGES.md`](CHANGES.md) with explicit phase markers (phases 1–12 and later ACD / Phase 32–33 entries). Each phase change is accompanied by phase-organised regression tests under `tests/phase_<n>/`. Symbolic-structure tests for the canonical formulae are under [`tests/formula_validation/`](tests/formula_validation/) and documented in [`docs/validation/FORMULA_VALIDATION_STATUS.md`](docs/validation/FORMULA_VALIDATION_STATUS.md).
 
 Principal methodological commitments:
 
 - **FFT-length-aware normalization** (Phase 8). Peak-bin sums are normalized using `peak_amplitude_sum` (`N_ref/N`) or `peak_power_sum` (`(N_ref/N)²`) factors rather than broadband-L2 factors, eliminating the cross-tier discontinuity introduced by FFT-length tier switching. The empirical step discontinuity on a 1 kHz synthetic benchmark is reduced from approximately 29.9 % to approximately 0.87 %. See `CHANGES.md`, Phase 8 entry.
 - **Prior / observation decoupling** (Phase 1). The triplet `pure_observation_w_{h,i,s}` carries the unmixed observation; the prior-smoothed values are retained as `smoothed_w_{h,i,s}_legacy` for backward compatibility only. This is a precondition for any defensible Bayesian update of the corpus-level profile.
-- **Formula versioning** (Phase 7.1). `obs_w_formula_version = "v58_full_spectrum_region_energy_gate"` and `density_formula_version = "v5_apply_density_metric_adapted_v6_2_psd"` are exported on every row, permitting cross-version comparability of compiled workbooks. The density energy gate uses the full-spectrum, total-power-normalised region triple (harmonic-peak / non-harmonic-residual / sub-bass); partial inharmonicity (coefficient B, inharmonic-peak energy) is reported separately and is not part of the density gate.
+- **Formula versioning** (Phase 7.1, extended in v4.5.0). `obs_w_formula_version` and `density_formula_version` remain on every density row. From 4.5.0 every compiled / MIR export column also carries `formula_id` and `formula_version` (`metric_formula_versions.py`; CI rejects a new unstamped column). Three incompatible F-037 kernels had previously shared `package_version=4.4.0`. Dissonance columns that changed in 4.6.0 are stamped `4.6.0`. See [`docs/validation/COLUMN_VERSIONING_AUDIT.md`](docs/validation/COLUMN_VERSIONING_AUDIT.md). The density energy gate uses the full-spectrum, total-power-normalised region triple (harmonic-peak / non-harmonic-residual / sub-bass); partial inharmonicity (coefficient B, inharmonic-peak energy) is reported separately and is not part of the density gate.
 - **Low-f₀ harmonic identity** (v4.1.0, policy v2). Spacing-capped tolerance (`β = 0.30`) around the Inharmonicity_Fit centre; H1–H8 f0/B refit when the joint fit drifts more than 15 cents; harmonic-body stop as a **validation/count** cut; noise-gated mass on core integrals; `density_frequency_ceiling_hz` stays 20 kHz. Each spectral peak is assigned to at most one harmonic slot; F-012 / amplitude pies / Sethares use validated partials only. See TECHNICAL_MANUAL §5.2.1 and §5.4.
 - **Per-metric epistemic contract** (`metric_contract.py`). Every exported density metric carries an explicit record of its formula, input domain, unit/scale, amplitude basis, power basis, normalization scope, physical interpretation, validity boundary, and ontological family.
 - **Per-constant provenance registry** ([`docs/CONSTANTS_PROVENANCE.md`](docs/CONSTANTS_PROVENANCE.md)). Every numeric constant exported by `constants.py` is classified as `primary_source`, `derived`, `convention`, or `internal_default`. Internal defaults are tunable engineering choices documented for auditability rather than concealed.
