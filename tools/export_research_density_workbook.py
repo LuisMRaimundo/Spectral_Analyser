@@ -2923,7 +2923,7 @@ def readme_lines(
             "    Bootstrap 95% uncertainty band for the balanced EWSD (partials + H/I/S ratios resampled).",
             "",
             "ewsd_uncertainty_sources:",
-            "    UQ provenance: partials+ratios, partials, or unavailable.",
+            "    UQ provenance: partial_multiset_sensitivity or unavailable.",
             "",
             "ewsd_primary_analysis_eligible:",
             "    Thesis gate: True only for individual_exact rows with valid H/I/S ratios, finite EWSD,",
@@ -3035,7 +3035,7 @@ def readme_lines(
             "    Bootstrap 95% uncertainty band for the balanced EWSD (partials + H/I/S ratios resampled).",
             "",
             "ewsd_uncertainty_sources:",
-            "    UQ provenance: partials+ratios, partials, or unavailable.",
+            "    UQ provenance: partial_multiset_sensitivity or unavailable.",
             "",
             "ewsd_primary_analysis_eligible:",
             "    Thesis gate: True only for individual_exact rows with valid H/I/S ratios, finite EWSD,",
@@ -3719,6 +3719,29 @@ def build_workbook(
         stage3_status = stage3_result.status
         if stage3_status != "ok":
             warnings.append(f"Stage 3 status: {stage3_status}")
+        from tools.acd_research_integration import merge_acd_stage3
+
+        _acd_ceiling = None
+        if "density_frequency_ceiling_hz" in sd.columns:
+            _ceil = pd.to_numeric(sd["density_frequency_ceiling_hz"], errors="coerce").dropna()
+            if not _ceil.empty:
+                _acd_ceiling = float(_ceil.iloc[0])
+        acd_result = merge_acd_stage3(
+            sd,
+            source,
+            warnings,
+            include_acd=True,
+            fail_closed=False,
+            analysis_root=analysis_root,
+            frequency_ceiling_hz=_acd_ceiling,
+        )
+        sd = acd_result.spectral_density_metrics
+        if acd_result.status != "ok":
+            warnings.append(f"Stage 3 ACD status: {acd_result.status}")
+        if not acd_result.diagnostics_summary.empty and not stage3_summary.empty:
+            for col in acd_result.diagnostics_summary.columns:
+                if col not in stage3_summary.columns:
+                    stage3_summary[col] = acd_result.diagnostics_summary[col].iloc[0]
     required_front_cols = [
         "Technique",
         "metadata_inference_status",
@@ -3774,6 +3797,8 @@ def build_workbook(
         "EWSD_score_total",
         "note_balanced_component_density_pool_count",
         "note_balanced_component_density",
+        "ACD_score",
+        "ACD_magnitude_per_component",
         "EWSD_score_acoustic_balanced",
         "ewsd_primary_analysis_eligible",
         "harmonic_density_component",
@@ -4020,6 +4045,29 @@ def build_workbook(
         "EWSD_score_total",
         "note_balanced_component_density_pool_count",
         "note_balanced_component_density",
+        "ACD_score",
+        "ACD_magnitude_per_component",
+        "ACD_D0",
+        "ACD_D1",
+        "ACD_D2",
+        "ACD_Dinf",
+        "ACD_evenness_D2_over_D0",
+        "ACD_r_harmonic",
+        "ACD_r_inharmonic",
+        "ACD_r_subbass",
+        "ACD_D2_harmonic",
+        "ACD_D2_inharmonic",
+        "ACD_D2_subbass",
+        "ACD_count_raw_harmonic",
+        "ACD_count_raw_inharmonic",
+        "ACD_count_raw_subbass",
+        "ACD_count_merged_harmonic",
+        "ACD_count_merged_inharmonic",
+        "ACD_count_merged_subbass",
+        "ACD_erb_fraction",
+        "ACD_include_for_density_applied",
+        "ACD_status",
+        "ACD_version",
         "EWSD_score_acoustic_balanced",
         "EWSD_score_total_ci_low",
         "EWSD_score_total_ci_high",

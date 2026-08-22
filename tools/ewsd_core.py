@@ -166,6 +166,7 @@ class ComponentSet:
     n_components_raw_harmonic: int = 0
     n_components_raw_nonharmonic_residual: int = 0
     n_components_raw_noise_subbass: int = 0
+    measured_f0_hz: float = math.nan
 
 
 
@@ -554,6 +555,19 @@ def read_individual_workbook(
     meta = read_first_row_as_dict(path, "Metrics") if "Metrics" in sheets else {}
     wf, wf_source = choose_excel_weight_function(meta, requested_weight_function, use_excel_weight_function)
     his = extract_his_weights(meta, ratio_source, manual_h, manual_i, manual_s)
+    measured_f0_hz = math.nan
+    for f0_col in (
+        "inharmonicity_fit_f0_hz",
+        "f0_final_hz",
+        "f0_used_for_density_hz",
+        "f0_hz",
+        "Fundamental Frequency",
+    ):
+        if f0_col in meta:
+            cand = safe_numeric_scalar(meta.get(f0_col))
+            if np.isfinite(cand) and cand > 0.0:
+                measured_f0_hz = float(cand)
+                break
 
     try:
         h = pd.read_excel(path, sheet_name="Harmonic Spectrum")
@@ -563,7 +577,7 @@ def read_individual_workbook(
         return ComponentSet(
             str(path), infer_note_from_filename(path), pd.DataFrame(), wf, basis, "individual_exact", his,
             f"read_error: {exc}; weight_function_source={wf_source}",
-            wf_source, file_sha256(path), 0, 0, 0
+            wf_source, file_sha256(path), 0, 0, 0, measured_f0_hz
         )
 
     h2 = standardise_component_table(h, "harmonic", basis, frequency_ceiling_hz, include_only_for_density=True)
@@ -588,7 +602,7 @@ def read_individual_workbook(
         warning_parts.append(his.warning)
     return ComponentSet(
         str(path), note, components, wf, basis, "individual_exact", his, "; ".join(warning_parts),
-        wf_source, file_sha256(path), raw_h_count, raw_i_count, raw_s_count
+        wf_source, file_sha256(path), raw_h_count, raw_i_count, raw_s_count, measured_f0_hz
     )
 
 
@@ -644,19 +658,19 @@ def _compute_family_metrics(
                 apply_anti_concentration=apply_anti_concentration,
             )
         )
-    except Exception as exc:
+    except (ValueError, TypeError, ZeroDivisionError, FloatingPointError, np.linalg.LinAlgError) as exc:
         return {
             f"count_{family_name}": 0,
-            f"original_sum_metric_{family_name}": 0.0,
+            f"original_sum_metric_{family_name}": math.nan,
             f"analysis_ratio_weight_{family_name}": float(analysis_ratio_weight)
             if np.isfinite(float(analysis_ratio_weight))
             else math.nan,
-            f"ratio_weighted_metric_{family_name}": 0.0,
-            f"weighted_mass_{family_name}": 0.0,
-            f"effective_component_count_{family_name}": 0.0,
-            f"concentration_penalty_{family_name}": 0.0,
-            f"entropy_normalized_{family_name}": 0.0,
-            f"ewsd_score_{family_name}": 0.0,
+            f"ratio_weighted_metric_{family_name}": math.nan,
+            f"weighted_mass_{family_name}": math.nan,
+            f"effective_component_count_{family_name}": math.nan,
+            f"concentration_penalty_{family_name}": math.nan,
+            f"entropy_normalized_{family_name}": math.nan,
+            f"ewsd_score_{family_name}": math.nan,
             f"warning_{family_name}": f"compartment_error:{exc}",
         }
 
@@ -703,18 +717,19 @@ def _empty_row(cset: ComponentSet, reason: str, apply_anti_concentration: bool) 
         "ewsd_score": math.nan,
         "anti_concentration_applied": bool(apply_anti_concentration),
         "warning": reason,
+        "measured_f0_hz": float(cset.measured_f0_hz),
     }
     for fam in ["harmonic", "nonharmonic_residual", "noise_subbass"]:
         rows.update({
             f"count_{fam}": 0,
-            f"original_sum_metric_{fam}": 0.0,
+            f"original_sum_metric_{fam}": math.nan,
             f"analysis_ratio_weight_{fam}": getattr(cset.his_weights, fam if fam != "noise_subbass" else "noise_subbass", math.nan),
-            f"ratio_weighted_metric_{fam}": 0.0,
-            f"weighted_mass_{fam}": 0.0,
-            f"effective_component_count_{fam}": 0.0,
-            f"concentration_penalty_{fam}": 0.0,
-            f"entropy_normalized_{fam}": 0.0,
-            f"ewsd_score_{fam}": 0.0,
+            f"ratio_weighted_metric_{fam}": math.nan,
+            f"weighted_mass_{fam}": math.nan,
+            f"effective_component_count_{fam}": math.nan,
+            f"concentration_penalty_{fam}": math.nan,
+            f"entropy_normalized_{fam}": math.nan,
+            f"ewsd_score_{fam}": math.nan,
             f"ratio_raw_metric_{fam}": math.nan,
             f"ratio_ratio_weighted_metric_{fam}": math.nan,
             f"ratio_ewsd_score_{fam}": math.nan,
@@ -756,6 +771,7 @@ def compute_ewsd(
         "analysis_ratio_weight_noise_subbass": cset.his_weights.noise_subbass,
         "anti_concentration_applied": bool(apply_anti_concentration),
         "warning": "; ".join(x for x in [cset.warning, cset.his_weights.warning] if x),
+        "measured_f0_hz": float(cset.measured_f0_hz),
     }
 
     if canonical_weight_key(cset.weight_function) in AGGRESSIVE_WEIGHT_FUNCTIONS:
@@ -851,7 +867,8 @@ def add_quality_columns(result: pd.DataFrame) -> pd.DataFrame:
     weight_key = col("weight_function_canonical", "").astype(str).str.lower().str.strip()
 
     exact = mode.eq("individual_exact")
-    ratios_ok = np.isfinite(ratio_sum) & (ratio_sum.between(0.999, 1.001))
+    ratio_input = pd.to_numeric(col("his_ratio_input_sum"), errors="coerce")
+    ratios_ok = np.isfinite(ratio_input) & (ratio_input.between(0.999, 1.001))
     score_ok = np.isfinite(score) & (score >= 0)
     count_ok = np.isfinite(count) & (count > 0)
     no_warning = warning.eq("") | warning.eq("nan")
@@ -961,11 +978,21 @@ def add_acoustic_alignment_columns(
     if not np.isfinite(fill_beta) or fill_beta < 0.0:
         fill_beta = BIBLIOGRAPHIC_ALIGNMENT_FILL_EXPONENT_DEFAULT
 
-    # Estimate fundamental from the parsed chromatic/MIDI-like note index.
+    # Prefer a measured f0 when Stage 1 wrote one; else nominal 12-TET A440.
     midi = pd.to_numeric(out.get("Note_midi_sort"), errors="coerce")
-    f0 = 440.0 * np.power(2.0, (midi - 69.0) / 12.0)
-    f0 = pd.Series(f0, index=out.index).where(np.isfinite(f0) & (f0 > 0.0), np.nan)
+    nominal_f0 = 440.0 * np.power(2.0, (midi - 69.0) / 12.0)
+    nominal_f0 = pd.Series(nominal_f0, index=out.index).where(
+        np.isfinite(nominal_f0) & (nominal_f0 > 0.0), np.nan
+    )
+    measured_f0 = pd.to_numeric(out.get("measured_f0_hz"), errors="coerce")
+    if "inharmonicity_fit_f0_hz" in out.columns:
+        measured_f0 = measured_f0.where(np.isfinite(measured_f0) & (measured_f0 > 0.0))
+        alt = pd.to_numeric(out["inharmonicity_fit_f0_hz"], errors="coerce")
+        measured_f0 = measured_f0.fillna(alt)
+    use_measured = np.isfinite(measured_f0) & (measured_f0 > 0.0)
+    f0 = pd.Series(np.where(use_measured, measured_f0, nominal_f0), index=out.index)
     out["ewsd_estimated_f0_hz"] = f0
+    out["ewsd_f0_source"] = np.where(use_measured, "measured", "nominal_12tet_a440")
 
     if frequency_ceiling_hz is not None and np.isfinite(float(frequency_ceiling_hz)) and float(frequency_ceiling_hz) > 0:
         capacity = np.floor(float(frequency_ceiling_hz) / f0)
@@ -991,7 +1018,8 @@ def add_acoustic_alignment_columns(
 
     out["ewsd_acoustic_balance_alpha"] = alpha
     out["ewsd_score_strict_original"] = pd.to_numeric(out.get("ewsd_score"), errors="coerce")
-    out["ewsd_score_acoustic_balanced"] = out[balanced_cols].sum(axis=1, min_count=1)
+    out["ewsd_balanced_families_present"] = out[balanced_cols].notna().sum(axis=1)
+    out["ewsd_score_acoustic_balanced"] = out[balanced_cols].sum(axis=1, min_count=3)
 
     # Capacity-normalized companion: useful to separate timbral density from simple register capacity.
     cap_denom = np.log1p(pd.to_numeric(out["ewsd_capacity_harmonic_slots_to_ceiling"], errors="coerce"))

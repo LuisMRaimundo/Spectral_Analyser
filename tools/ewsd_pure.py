@@ -228,6 +228,9 @@ def compute_compartment_metrics(inputs: CompartmentInputs) -> CompartmentMetrics
     if canonical_weight_key(inputs.weight_function) == "d24":
         strengths = np.where(d24_strength_mask(values, freqs), strengths, 0.0)
 
+    # Scaling every strength by the same r_k cancels in p_i, N_eff, and
+    # concentration_penalty. It is retained only so weighted_mass (sum of
+    # scaled strengths) includes the analysis ratio. Do not remove.
     strengths = strengths * ratio
     n, total, neff, penalty, entropy_norm = participation_stats(strengths)
     ratio_weighted_metric = float(original_metric * ratio)

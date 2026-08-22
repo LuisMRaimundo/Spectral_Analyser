@@ -16,6 +16,17 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 - Stevens, S. S. (1955). The measurement of loudness. *Journal of the Acoustical Society of America, 27*(5), 815–829.
 - Zwicker, E., & Fastl, H. (1990). *Psychoacoustics: Facts and models*. Springer.
 - Moore, B. C. J., & Glasberg, B. R. (1983). Suggested formulae for calculating auditory-filter bandwidths and excitation patterns. *Journal of the Acoustical Society of America, 74*(3), 750–753.
+- Glasberg, B. R., & Moore, B. C. J. (1990). Derivation of auditory filter shapes from notched-noise data. *Hearing Research, 47*(1–2), 103–138.
+- Moore, B. C. J., Glasberg, B. R., & Baer, T. (1997). A model for the prediction of thresholds, loudness, and partial loudness. *Journal of the Audio Engineering Society, 45*(4), 224–240.
+- Zwicker, E., & Fastl, H. (2007). *Psychoacoustics: Facts and models* (3rd ed.). Springer.
+- International Organization for Standardization. (2017a). *Acoustics — Methods for calculating loudness — Part 1: Zwicker method* (ISO 532-1:2017).
+- International Organization for Standardization. (2017b). *Acoustics — Methods for calculating loudness — Part 2: Moore-Glasberg method* (ISO 532-2:2017).
+- Hill, M. O. (1973). Diversity and evenness: A unifying notation and its consequences. *Ecology, 54*(2), 427–432.
+- Jost, L. (2006). Entropy and diversity. *Oikos, 113*(2), 363–375.
+- Hurley, N., & Rickard, S. (2009). Comparing measures of sparsity. *IEEE Transactions on Information Theory, 55*(10), 4723–4741.
+- Parncutt, R. (1989). *Harmony: A psychoacoustical approach*. Springer.
+- Parncutt, R., & Strasburger, H. (1994). Applying psychoacoustics in composition: “Harmonic” progressions of “nonharmonic” sonorities. *Perspectives of New Music, 32*(2), 88–129.
+- Huron, D. (1989). Voice segregation in selected polyphonic keyboard works by Johann Sebastian Bach (Doctoral dissertation). University of Nottingham.
 - Aures, W. (1985). Ein Berechnungsverfahren der Rauhigkeit. *Acustica, 58*(5), 268–281.
 
 ## Timbre and MIR descriptors
@@ -46,6 +57,7 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 | `constants.py` (`DENSITY_WEIGHT_FUNCTION_DEFAULT`) | Fechner (1860); Stevens (1955); Zwicker & Fastl (1990) |
 | `dissonance_models.py` (`SetharesDissonance`) | Sethares (2005) |
 | `mir_descriptors.py` | Moore & Glasberg (1983); Aures (1985); Pollard & Jansson (1982); Peeters et al. (2011) |
+| `tools/spectral_density_hill.py` | Glasberg & Moore (1990); Moore & Glasberg (1983); Hill (1973); Jost (2006); Hurley & Rickard (2009); Moore, Glasberg & Baer (1997); ISO 532-2:2017 |
 | `adaptive_density_engine.py` | Lin (1991); Gelman et al. (2013) |
 | `metric_contract.py` | Hatton (1997); Soergel (2015) |
 | `temporal_segmentation.py` | Peeters et al. (2011) |

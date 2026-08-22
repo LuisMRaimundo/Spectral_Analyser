@@ -117,7 +117,13 @@ def test_research_export_includes_ewsd_stage3_columns(tmp_path: Path) -> None:
     assert pd.notna(row["EWSD_score_acoustic_balanced_ci_high"])
     assert float(row["EWSD_score_acoustic_balanced_ci_low"]) <= float(row["EWSD_score_acoustic_balanced"])
     assert float(row["EWSD_score_acoustic_balanced"]) <= float(row["EWSD_score_acoustic_balanced_ci_high"])
-    assert str(row.get("ewsd_uncertainty_sources", "")).strip() in {"partials+ratios", "partials"}
+    assert str(row.get("ewsd_uncertainty_sources", "")).strip() in {
+        "partial_multiset_sensitivity",
+        "unavailable",
+    }
+    assert "ACD_score" in sdm.columns
+    assert "ACD_magnitude_per_component" in sdm.columns
+    assert pd.notna(row["ACD_score"])
 
 
 def test_research_export_ewsd_acoustic_balanced_has_red_data_bar(tmp_path: Path) -> None:
