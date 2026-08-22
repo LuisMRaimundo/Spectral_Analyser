@@ -6,6 +6,7 @@ default is outstanding.
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -57,6 +58,64 @@ def _corpus_mounted() -> bool:
     return bool(ewsd and Path(ewsd).expanduser().is_dir())
 
 
+_NOTE_TO_SEMITONE = {
+    "C": 0,
+    "C#": 1,
+    "DB": 1,
+    "D": 2,
+    "D#": 3,
+    "EB": 3,
+    "E": 4,
+    "F": 5,
+    "F#": 6,
+    "GB": 6,
+    "G": 7,
+    "G#": 8,
+    "AB": 8,
+    "A": 9,
+    "A#": 10,
+    "BB": 10,
+    "B": 11,
+}
+
+
+def _note_to_f0_hz(name: str) -> float:
+    token = str(name).strip().upper().replace("♯", "#")
+    i = 0
+    while i < len(token) and token[i] in "ABCDEFG#B":
+        i += 1
+        if i < len(token) and token[i] == "#":
+            i += 1
+            break
+    letter = token[:i].replace("B#", "C")
+    octave = int(token[i:])
+    midi = 12 * (octave + 1) + _NOTE_TO_SEMITONE[letter]
+    return 440.0 * (2.0 ** ((midi - 69) / 12.0))
+
+
+def _corpus_register_from_metadata() -> dict:
+    """49-note cello list from committed EWSD reference (audio not required)."""
+    path = (
+        ROOT / "tests" / "phase_11" / "fixtures" / "ewsd_corpus_reference.json"
+    )
+    notes = json.loads(path.read_text(encoding="utf-8"))["notes"]
+    rows = []
+    for item in notes:
+        name = str(item["Note"])
+        f0 = _note_to_f0_hz(name)
+        rows.append({"note": name, "f0": f0})
+    n = len(rows)
+    n_lt_200 = sum(1 for r in rows if r["f0"] < 200.0)
+    n_lt_100 = sum(1 for r in rows if r["f0"] < 100.0)
+    return {
+        "n": n,
+        "n_lt_200": n_lt_200,
+        "n_lt_100": n_lt_100,
+        "low": [r for r in rows if r["f0"] < 200.0],
+        "source": str(path.relative_to(ROOT)).replace("\\", "/"),
+    }
+
+
 def _s_region_fixture() -> list[tuple[float, float]]:
     """Synthetic cello C2 sub-bass cluster (below f0 = 65.4 Hz)."""
     freqs = np.array([32.7, 41.2, 49.0, 55.0, 61.7], dtype=float)
@@ -84,6 +143,7 @@ def generate() -> dict:
         "s_hybrid": d_hy,
         "s_ratio": (d_hy / d_hk) if d_hk else float("nan"),
         "corpus": _corpus_mounted(),
+        "register": _corpus_register_from_metadata(),
     }
 
 
@@ -127,7 +187,36 @@ def write_markdown(payload: dict) -> None:
         f"- Hybrid (Zwicker below 200 Hz): `{payload['s_hybrid']:.6g}`",
         f"- Hybrid / HK: `{payload['s_ratio']:.3f}`",
         "",
-        "## Corpus S-region",
+        "## Corpus register (metadata, audio not required)",
+        "",
+        "49-note cello `ORC_Vlc_arco_mf` C2–C6 from",
+        f"`{payload['register']['source']}`. Audio is unmounted; this is the",
+        "committed note list only. Every note can carry S-region energy",
+        "below 200 Hz. Notes whose **f0** itself sits in the degraded HK",
+        "range are the ones where the defect is first-class:",
+        "",
+        f"- N = {payload['register']['n']}",
+        f"- f0 < 200 Hz (HK fit known to degrade): "
+        f"{payload['register']['n_lt_200']} "
+        f"({100.0 * payload['register']['n_lt_200'] / payload['register']['n']:.0f}%)",
+        f"- f0 < 100 Hz (CB ~ half of measured): "
+        f"{payload['register']['n_lt_100']} "
+        f"({100.0 * payload['register']['n_lt_100'] / payload['register']['n']:.0f}%)",
+        "",
+        "Notes with f0 < 200 Hz:",
+        "",
+        "| Note | f0 (Hz) |",
+        "|---|---:|",
+    ]
+    for row in payload["register"]["low"]:
+        lines.append(f"| {row['note']} | {row['f0']:.2f} |")
+    lines += [
+        "",
+        "Trombone material cited in the runbook (E2–C5) is not in this",
+        "JSON. E2 ≈ 82.4 Hz is inside the same degraded band; C1 tuba",
+        "(≈ 32.7 Hz) is worse. Default remains `hk1978`.",
+        "",
+        "## Corpus S-region (live audio)",
         "",
     ]
     if payload["corpus"]:

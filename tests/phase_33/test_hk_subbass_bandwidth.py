@@ -61,4 +61,6 @@ def test_hk_subbass_doc_exists_and_leaves_default_open() -> None:
     assert "1.72" in text
     assert "zwicker_below_200hz" in text
     assert "Default arithmetic is unchanged" in text.replace("\n", " ")
+    assert "f0 < 200 Hz" in text
+    assert "C2" in text
     assert "author decision" in text.lower()

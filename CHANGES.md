@@ -1,3 +1,15 @@
+# v4.4.0 addendum — bandwidth validity (Zwicker 15.5 kHz ceiling)
+
+Zwicker CB returns NaN above 15.5 kHz. F-037 drops pairs whose higher
+member exceeds that ceiling and exports
+`roughness_pairs_excluded_above_validity`. The f0 = 1000 Hz 20-partial
+row changes (~31.5% of the uncapped total was undefined). Other
+bandwidth expressions are audited in
+`docs/validation/BANDWIDTH_VALIDITY_AUDIT.md`; guards that would change
+ACD / ERB-weighted density / Sethares / default H&K are deferred.
+H&K default remains `hk1978`; cello C2–C6 register from committed
+metadata is in `HK_SUBBASS_BANDWIDTH.md`.
+
 # v4.4.0 addendum — roughness basis signed off on provenance
 
 `zwicker_cb` is the provenance-consistent F-037 default: Plomp & Levelt

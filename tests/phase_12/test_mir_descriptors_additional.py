@@ -36,6 +36,7 @@ EXPECTED_KEYS = (
     "spectral_rolloff_hz_95",
     "roughness_parncutt_kernel",
     "roughness_aures_1985",
+    "roughness_pairs_excluded_above_validity",
     "erb_weighted_spectral_density",
 )
 
@@ -95,6 +96,7 @@ def test_single_bin_spectrum_has_zero_spread_and_flatness_one() -> None:
     assert desc["spectral_rolloff_hz_95"] == pytest.approx(1000.0)
     assert desc["roughness_parncutt_kernel"] == pytest.approx(0.0)
     assert math.isnan(desc["roughness_aures_1985"])
+    assert desc["roughness_pairs_excluded_above_validity"] == pytest.approx(0.0)
     assert math.isnan(desc["tristimulus_1_fundamental"])
 
 

@@ -130,6 +130,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
             "25+75(1+1.4(f/1000)^2)^0.69 (Zwicker & Fastl, 2007). "
             "bandwidth_basis='erb' keeps 0.25*ERB(f)=0.25*(0.108f+24.7). "
             "g(x)=x*exp(1-x) (Parncutt 1989 / Plomp & Levelt 1965). "
+            "Pairs with max(f_i,f_j) > CB_ZWICKER_VALID_MAX_HZ=15500 are excluded. "
             "Default is provenance-consistent (P&L used the Zwicker CB lineage, "
             "not ERB). Fig. 10 overlay is outstanding non-blocking corroboration."
         ),
@@ -162,6 +163,25 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ),
         not_valid_for="Any new analysis; archived values are not comparable.",
         ontology_family="sensory_dissonance",
+    )
+    roughness_pairs_excluded_above_validity = MetricDefinition(
+        name="roughness_pairs_excluded_above_validity",
+        formula=(
+            "Count of unordered pairs (i,j) whose higher frequency exceeds "
+            "CB_ZWICKER_VALID_MAX_HZ = 15500 (Bark-scale ceiling of the "
+            "Zwicker CB fit). Those pairs are omitted from F-037."
+        ),
+        input_domain="peak-picked frequencies (same list as F-037)",
+        unit_or_scale="pair count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per spectrum",
+        physical_interpretation=(
+            "Diagnostic: how much of the pairwise roster sits above the "
+            "defined Zwicker CB range."
+        ),
+        not_valid_for="Treating as a roughness magnitude.",
+        ontology_family="diagnostic_count",
     )
     inharmonic_density_sum = MetricDefinition(
         name="inharmonic_density_sum",
@@ -843,6 +863,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         sethares_dissonance.name: sethares_dissonance,
         roughness_parncutt_kernel.name: roughness_parncutt_kernel,
         roughness_aures_1985.name: roughness_aures_1985,
+        roughness_pairs_excluded_above_validity.name: roughness_pairs_excluded_above_validity,
         inharmonic_density_sum.name: inharmonic_density_sum,
         inharmonic_status.name: inharmonic_status,
         inharmonic_confirmed_count.name: inharmonic_confirmed_count,

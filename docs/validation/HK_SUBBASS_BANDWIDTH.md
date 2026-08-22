@@ -42,7 +42,48 @@ Corpus audio was not used for this row.
 - Hybrid (Zwicker below 200 Hz): `1.01439`
 - Hybrid / HK: `2.115`
 
-## Corpus S-region
+## Corpus register (metadata, audio not required)
+
+49-note cello `ORC_Vlc_arco_mf` C2–C6 from
+`tests/phase_11/fixtures/ewsd_corpus_reference.json`. Audio is unmounted; this is the
+committed note list only. Every note can carry S-region energy
+below 200 Hz. Notes whose **f0** itself sits in the degraded HK
+range are the ones where the defect is first-class:
+
+- N = 49
+- f0 < 200 Hz (HK fit known to degrade): 20 (41%)
+- f0 < 100 Hz (CB ~ half of measured): 8 (16%)
+
+Notes with f0 < 200 Hz:
+
+| Note | f0 (Hz) |
+|---|---:|
+| C2 | 65.41 |
+| C#2 | 69.30 |
+| D2 | 73.42 |
+| D#2 | 77.78 |
+| E2 | 82.41 |
+| F2 | 87.31 |
+| F#2 | 92.50 |
+| G2 | 98.00 |
+| G#2 | 103.83 |
+| A2 | 110.00 |
+| A#2 | 116.54 |
+| B2 | 123.47 |
+| C3 | 130.81 |
+| C#3 | 138.59 |
+| D3 | 146.83 |
+| D#3 | 155.56 |
+| E3 | 164.81 |
+| F3 | 174.61 |
+| F#3 | 185.00 |
+| G3 | 196.00 |
+
+Trombone material cited in the runbook (E2–C5) is not in this
+JSON. E2 ≈ 82.4 Hz is inside the same degraded band; C1 tuba
+(≈ 32.7 Hz) is worse. Default remains `hk1978`.
+
+## Corpus S-region (live audio)
 
 Not reachable (`ACD_REAL_NOTE_AUDIO` unset; default cello path
 absent). No live S-region difference is reported.

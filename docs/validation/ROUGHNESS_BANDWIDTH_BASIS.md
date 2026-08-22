@@ -64,7 +64,9 @@ external validation.
 
 ## Corpus-register impact (20-partial 1/n series)
 
-Total pairwise roughness. Ratios are not a constant scale factor.
+Total pairwise roughness with the 15.5 kHz Zwicker ceiling applied
+(pairs whose higher member exceeds 15500 Hz
+are dropped). Ratios are not a constant scale factor.
 
 | f0 (Hz) | legacy | ERB | Zwicker | ERB/Zwicker | legacy/Zwicker |
 |---:|---:|---:|---:|---:|---:|
@@ -73,7 +75,23 @@ Total pairwise roughness. Ratios are not a constant scale factor.
 | 146.83 | 1.40581 | 0.0475823 | 0.119136 | 0.399 | 11.800 |
 | 220 | 1.28148 | 0.0418422 | 0.0783963 | 0.534 | 16.346 |
 | 440 | 1.15319 | 0.0368722 | 0.089239 | 0.413 | 12.922 |
-| 1000 | 1.08167 | 0.0343723 | 0.131464 | 0.261 | 8.228 |
+| 1000 | 0.948746 | 0.020782 | 0.0899965 | 0.231 | 10.542 |
+
+## Zwicker CB validity ceiling (15.5 kHz)
+
+20-partial 1/n series. `no ceiling` passes `validity_max_hz=None`.
+The default kernel uses `CB_ZWICKER_VALID_MAX_HZ = 15500`. The
+f0 = 1000 Hz row changes: nearly a third of the uncapped total
+came from pairs whose higher member sits above the Bark scale.
+
+| f0 (Hz) | no ceiling | ≤ 15.5 kHz | share above | pairs excluded |
+|---:|---:|---:|---:|---:|
+| 65.4 | 0.6034 | 0.6034 | 0.0% | 0 |
+| 110 | 0.2153 | 0.2153 | 0.0% | 0 |
+| 146.83 | 0.1191 | 0.1191 | 0.0% | 0 |
+| 220 | 0.0784 | 0.0784 | 0.0% | 0 |
+| 440 | 0.0892 | 0.0892 | 0.0% | 0 |
+| 1000 | 0.1315 | 0.0900 | 31.5% | 85 |
 
 ## Two-tone curves
 

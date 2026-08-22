@@ -11551,6 +11551,7 @@ class AudioProcessor:
             "spectral_rolloff_hz_95",
             "roughness_parncutt_kernel",
             "roughness_aures_1985",
+            "roughness_pairs_excluded_above_validity",
             "erb_weighted_spectral_density",
         ]
         main_metrics["log_attack_time_s"] = metric_float_or_nan(

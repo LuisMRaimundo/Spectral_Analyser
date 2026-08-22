@@ -11,10 +11,12 @@ from pathlib import Path
 import numpy as np
 
 from mir_descriptors import (
+    CB_ZWICKER_VALID_MAX_HZ,
     PL_CB_FRACTION,
     critical_bandwidth_zwicker_hz,
     erb_bandwidth_hz,
     roughness_parncutt_kernel,
+    roughness_parncutt_kernel_report,
     _legacy_conflated_bandwidth_hz,
 )
 
@@ -27,7 +29,7 @@ F0_HZ = (65.4, 110.0, 146.83, 220.0, 440.0, 1000.0)
 KERNELS = (
     ("legacy_conflated", "0.25 f + 24.7 (pre-round-3)"),
     ("erb", "0.25 · ERB (round 3)"),
-    ("zwicker_cb", "0.25 · Zwicker CB (proposed default)"),
+    ("zwicker_cb", "0.25 · Zwicker CB (provenance-consistent default)"),
 )
 N_PARTIALS = 20
 SWEEP_POINTS = 400
@@ -143,6 +145,22 @@ def generate() -> dict:
             ser_row[basis] = roughness_parncutt_kernel(
                 freqs, amps, bandwidth_basis=basis
             )
+        freqs, amps = _harmonic_series(f0)
+        capped, n_ex = roughness_parncutt_kernel_report(
+            freqs, amps, bandwidth_basis="zwicker_cb"
+        )
+        uncapped = roughness_parncutt_kernel(
+            freqs,
+            amps,
+            bandwidth_basis="zwicker_cb",
+            validity_max_hz=None,
+        )
+        ser_row["zwicker_uncapped"] = uncapped
+        ser_row["zwicker_capped"] = capped
+        ser_row["n_excluded"] = n_ex
+        ser_row["share_above"] = (
+            (1.0 - capped / uncapped) if uncapped > 0 else 0.0
+        )
         peaks.append(peak_row)
         series.append(ser_row)
 
@@ -234,7 +252,9 @@ def write_markdown(payload: dict) -> None:
         "",
         "## Corpus-register impact (20-partial 1/n series)",
         "",
-        "Total pairwise roughness. Ratios are not a constant scale factor.",
+        "Total pairwise roughness with the 15.5 kHz Zwicker ceiling applied",
+        f"(pairs whose higher member exceeds {CB_ZWICKER_VALID_MAX_HZ:.0f} Hz",
+        "are dropped). Ratios are not a constant scale factor.",
         "",
         "| f0 (Hz) | legacy | ERB | Zwicker | ERB/Zwicker | legacy/Zwicker |",
         "|---:|---:|---:|---:|---:|---:|",
@@ -246,6 +266,26 @@ def write_markdown(payload: dict) -> None:
         lines.append(
             f"| {row['f0']:g} | {L:.6g} | {e:.6g} | {z:.6g} | "
             f"{e / z:.3f} | {L / z:.3f} |"
+        )
+
+    lines += [
+        "",
+        "## Zwicker CB validity ceiling (15.5 kHz)",
+        "",
+        "20-partial 1/n series. `no ceiling` passes `validity_max_hz=None`.",
+        "The default kernel uses `CB_ZWICKER_VALID_MAX_HZ = 15500`. The",
+        "f0 = 1000 Hz row changes: nearly a third of the uncapped total",
+        "came from pairs whose higher member sits above the Bark scale.",
+        "",
+        "| f0 (Hz) | no ceiling | ≤ 15.5 kHz | share above | pairs excluded |",
+        "|---:|---:|---:|---:|---:|",
+    ]
+    for row in payload["series"]:
+        lines.append(
+            f"| {row['f0']:g} | {float(row['zwicker_uncapped']):.4f} | "
+            f"{float(row['zwicker_capped']):.4f} | "
+            f"{100.0 * float(row['share_above']):.1f}% | "
+            f"{int(row['n_excluded'])} |"
         )
 
     lines += [

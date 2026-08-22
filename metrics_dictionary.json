@@ -469,6 +469,13 @@
       "description": "Pairwise spectral roughness, g(x)=x exp(1-x), x=df/(0.25*Zwicker CB). Provenance-consistent default (P&L 1965 used the Zwicker CB lineage, not ERB). bandwidth_basis='erb' keeps the round-3 kernel.",
       "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
     },
+    "roughness_pairs_excluded_above_validity": {
+      "status": "diagnostic",
+      "phase": "phase_33",
+      "citation": "Zwicker & Fastl (2007) Bark-scale ceiling 15.5 kHz",
+      "description": "Count of F-037 pairs whose higher member exceeds CB_ZWICKER_VALID_MAX_HZ. Omitted from the roughness sum.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
     "roughness_aures_1985": {
       "status": "diagnostic",
       "phase": "phase_5",

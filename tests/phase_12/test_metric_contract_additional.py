@@ -69,6 +69,7 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "sethares_dissonance",
         "roughness_parncutt_kernel",
         "roughness_aures_1985",
+        "roughness_pairs_excluded_above_validity",
         "inharmonic_density_sum",
         "inharmonic_status",
         "inharmonic_confirmed_count",

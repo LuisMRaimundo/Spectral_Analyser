@@ -8,9 +8,11 @@ import numpy as np
 import pytest
 
 from mir_descriptors import (
+    CB_ZWICKER_VALID_MAX_HZ,
     _roughness_aures_1985,
     critical_bandwidth_zwicker_hz,
     roughness_parncutt_kernel,
+    roughness_parncutt_kernel_report,
 )
 
 GOLDEN_PATH = Path(__file__).resolve().parent / "golden" / "roughness_zwicker.json"
@@ -62,6 +64,7 @@ def test_validation_doc_signs_off_on_provenance_not_circular_table() -> None:
     assert "PL ref (0.25·Zwicker CB)" not in text
     assert "non-blocking" in text
     assert "Fig. 10" in text
+    assert "Zwicker CB validity ceiling" in text
 
 
 def test_zwicker_kernel_peak_locations() -> None:
@@ -92,6 +95,32 @@ def test_zwicker_goldens_frozen() -> None:
     for row in payload["two_tone_peaks_hz"]:
         got_df = _two_tone_peak_df(float(row["f0"]), "zwicker_cb")
         assert got_df == pytest.approx(row["df_peak"], abs=1.0)
+
+
+def test_zwicker_cb_nan_above_bark_ceiling() -> None:
+    assert CB_ZWICKER_VALID_MAX_HZ == 15500.0
+    at_limit = float(critical_bandwidth_zwicker_hz(np.asarray([15500.0]))[0])
+    above = float(critical_bandwidth_zwicker_hz(np.asarray([15500.1]))[0])
+    at_20k = float(critical_bandwidth_zwicker_hz(np.asarray([20000.0]))[0])
+    assert np.isfinite(at_limit)
+    assert np.isnan(above)
+    assert np.isnan(at_20k)
+
+
+def test_ceiling_changes_1khz_series_not_d3() -> None:
+    d3_f, d3_a = 146.83 * np.arange(1, 21, dtype=float), 1.0 / np.arange(1, 21, dtype=float)
+    d3_capped, d3_ex = roughness_parncutt_kernel_report(d3_f, d3_a)
+    d3_open = roughness_parncutt_kernel(d3_f, d3_a, validity_max_hz=None)
+    assert d3_ex == 0
+    assert d3_capped == pytest.approx(d3_open, rel=0.0, abs=1e-12)
+
+    k_f, k_a = 1000.0 * np.arange(1, 21, dtype=float), 1.0 / np.arange(1, 21, dtype=float)
+    capped, n_ex = roughness_parncutt_kernel_report(k_f, k_a)
+    open_ = roughness_parncutt_kernel(k_f, k_a, validity_max_hz=None)
+    assert n_ex > 0
+    assert capped == pytest.approx(0.0900, abs=5e-4)
+    assert open_ == pytest.approx(0.1315, abs=5e-4)
+    assert (1.0 - capped / open_) == pytest.approx(0.315, abs=0.02)
 
 
 def test_retired_aures_alias_raises() -> None:

@@ -659,6 +659,7 @@ PHASE5_DESCRIPTOR_BASE_COLUMNS: List[str] = [
     "spectral_rolloff_hz_95",
     "roughness_parncutt_kernel",
     "roughness_aures_1985",
+    "roughness_pairs_excluded_above_validity",
     "erb_weighted_spectral_density",
 ]
 PHASE5_SEGMENT_SUFFIXES: Tuple[str, ...] = (
