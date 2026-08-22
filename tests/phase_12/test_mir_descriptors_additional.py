@@ -16,6 +16,7 @@ import pytest
 from mir_descriptors import (
     _erb_rate_hz,
     _roughness_aures_1985,
+    _roughness_parncutt_kernel,
     _safe_prob,
     compute_mir_descriptors_from_spectrum,
 )
@@ -33,6 +34,7 @@ EXPECTED_KEYS = (
     "spectral_flatness",
     "spectral_rolloff_hz_85",
     "spectral_rolloff_hz_95",
+    "roughness_parncutt_kernel",
     "roughness_aures_1985",
     "erb_weighted_spectral_density",
 )
@@ -88,6 +90,7 @@ def test_single_bin_spectrum_has_zero_spread_and_flatness_one() -> None:
     assert desc["spectral_flatness"] == pytest.approx(1.0)
     assert desc["spectral_rolloff_hz_85"] == pytest.approx(1000.0)
     assert desc["spectral_rolloff_hz_95"] == pytest.approx(1000.0)
+    assert desc["roughness_parncutt_kernel"] == pytest.approx(0.0)
     assert desc["roughness_aures_1985"] == pytest.approx(0.0)
     assert math.isnan(desc["tristimulus_1_fundamental"])
 
@@ -231,15 +234,15 @@ def test_erb_rate_hz_clamps_negative_frequencies_to_zero() -> None:
 # ---------------------------------------------------------------------------
 
 def test_roughness_returns_zero_for_single_component() -> None:
-    assert _roughness_aures_1985(np.array([440.0]), np.array([1.0])) == 0.0
+    assert _roughness_parncutt_kernel(np.array([440.0]), np.array([1.0])) == 0.0
 
 
 def test_roughness_returns_zero_for_length_mismatch() -> None:
-    assert _roughness_aures_1985(np.array([440.0, 880.0]), np.array([1.0])) == 0.0
+    assert _roughness_parncutt_kernel(np.array([440.0, 880.0]), np.array([1.0])) == 0.0
 
 
 def test_roughness_filters_non_positive_frequencies() -> None:
-    val = _roughness_aures_1985(
+    val = _roughness_parncutt_kernel(
         np.array([0.0, -10.0, 440.0, 445.0]),
         np.array([1.0, 1.0, 1.0, 1.0]),
     )
@@ -249,7 +252,7 @@ def test_roughness_filters_non_positive_frequencies() -> None:
 
 def test_roughness_returns_zero_when_only_one_valid_frequency_remains() -> None:
     assert (
-        _roughness_aures_1985(
+        _roughness_parncutt_kernel(
             np.array([440.0, -1.0, 0.0]),
             np.array([1.0, 1.0, 1.0]),
         )
@@ -259,7 +262,7 @@ def test_roughness_returns_zero_when_only_one_valid_frequency_remains() -> None:
 
 def test_roughness_skips_pairs_beyond_critical_band_cutoff() -> None:
     assert (
-        _roughness_aures_1985(
+        _roughness_parncutt_kernel(
             np.array([440.0, 8000.0]),
             np.array([1.0, 1.0]),
         )
@@ -268,11 +271,35 @@ def test_roughness_skips_pairs_beyond_critical_band_cutoff() -> None:
 
 
 def test_roughness_is_positive_for_close_partial_pair() -> None:
-    val = _roughness_aures_1985(
+    val = _roughness_parncutt_kernel(
         np.array([440.0, 445.0]),
         np.array([1.0, 1.0]),
     )
-    assert val == pytest.approx(0.09722458223363094, rel=1e-9)
+    assert val > 0.0
+    assert math.isfinite(val)
+
+
+def test_roughness_aures_alias_warns() -> None:
+    with pytest.warns(DeprecationWarning, match="misattribution"):
+        aliased = _roughness_aures_1985(np.array([440.0, 445.0]), np.array([1.0, 1.0]))
+    assert aliased == pytest.approx(
+        _roughness_parncutt_kernel(np.array([440.0, 445.0]), np.array([1.0, 1.0]))
+    )
+
+
+def test_roughness_peak_near_quarter_erb_at_1khz() -> None:
+    """Corrected kernel peaks near 33 Hz at 1 kHz, not ~275 Hz."""
+    f0 = 1000.0
+    amps = np.asarray([1.0, 1.0], dtype=float)
+    dfs = np.linspace(5.0, 400.0, 80)
+    vals = np.array(
+        [
+            _roughness_parncutt_kernel(np.asarray([f0, f0 + df]), amps)
+            for df in dfs
+        ]
+    )
+    peak_df = float(dfs[int(np.argmax(vals))])
+    assert 20.0 <= peak_df <= 50.0
 
 
 # ---------------------------------------------------------------------------

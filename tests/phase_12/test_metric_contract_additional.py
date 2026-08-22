@@ -67,6 +67,8 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "effective_partial_density",
         "linear_sum_amplitude_*",
         "sethares_dissonance",
+        "roughness_parncutt_kernel",
+        "roughness_aures_1985",
         "inharmonic_density_sum",
         "inharmonic_status",
         "inharmonic_confirmed_count",
@@ -107,6 +109,8 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "ACD_score",
         "ACD_magnitude_per_component",
         "ACD_D2",
+        "ACD_score_D2_dominance",
+        "ACD_D0_minus_D1",
         "ACD_count_merged_harmonic",
         "ewsd_weight_function_d10",
     }

@@ -1,3 +1,53 @@
+# v4.4.0 addendum — CI hang-killer and live_audio marker
+
+`pytest-timeout` (300 s) and `@pytest.mark.live_audio` keep local-path
+and Stage 1 sweeps out of the default suite. Formula-ID uniqueness is
+gated on CI. Default `addopts` is `-m "not live_audio"`.
+
+# v4.4.0 addendum — roughness kernel attribution
+
+`mir_descriptors` pairwise roughness is Parncutt / Plomp–Levelt, not
+Aures (1985). Aures is a filterbank temporal-envelope model and is not
+implemented. The denominator `0.25 f + 24.7` conflated Parncutt’s 0.25
+CB normalisation with the Glasberg & Moore ERB slope; the corrected
+form is `x = df / (0.25 * (0.108 f + 24.7))`. At 1 kHz the kernel
+maximum moves from df ≈ 275 Hz to df ≈ 33 Hz. On a 40-partial 1/n
+series at 146.83 Hz the score falls to 5.2% of the old value; on a
+110 Hz harmonic stack (phase-5 fixture) to 0.43%. A 1 kHz pair at
+df = 33 Hz rises 3.45× (kernel now near its maximum). Column renamed
+to `roughness_parncutt_kernel`; `roughness_aures_1985` is a one-version
+deprecated alias. Not imported into `tools/spectral_density_hill.py`.
+The 49-note corpus was not recomputed here.
+
+# v4.4.0 addendum — ACD erb_fraction on a harmonic series
+
+The 8-ERB “usable range at least [0.5, 1.5]” claim is discarded: that
+grid cannot merge at any tested fraction. Re-measured on a 40-partial
+1/n series at 146.83 Hz under `fixed_erb_grid`. `merged_count == 40`
+only at `erb_fraction = 0.25`; D1 stays within 1% of the unmerged 1/n
+value only on `[0.25, 0.5]`. `merged_count` is more sensitive than D1.
+Register dependence (same series, f0 in C2–C6) is reported in
+`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`. Default remains 1.0.
+
+# v4.4.0 addendum — ACD merge stability and D1 headline
+
+Default ERB merge is now `fixed_erb_grid` (order-independent ERB-rate
+bins). On the synthesised D3 Stage 1 tier sweep it cut ACD wander from
+3.80% (`moving_centroid`) to 2.74%. Neither strategy fell below ~2%;
+hard assignment is the remaining limit and a roex-overlap stub is
+documented, not implemented. FFT-tier gate is 4% relative (measured max
+plus 1 pp, rounded up; not above 5%). Decision:
+`docs/validation/ACD_MERGE_STRATEGY.md`.
+
+Headline `ACD_score` is now `sum_k r_k D1_k` (F-057). D2 saturates at
+`(π²/6)²/(π⁴/90) = 2.500` on a 1/n series; a 15× change in partial
+count moves D2 by 29%. Dynamic range over N ∈ [8, 40] and slope ∈
+[0.5, 2.0]: D0 5.0×, D1 15.0×, D2 9.7×. The previous D2-based score is
+`ACD_score_D2_dominance`. `ACD_D0_minus_D1` is a texture descriptor.
+Goldens in `tests/phase_32/golden/acd_golden.json` were regenerated
+because the headline order changed from D2 to D1; well-separated
+K-recovery values themselves are unchanged (D1 == D2 == K).
+
 # v4.4.0 — Phase 13: Auditory Component Density + EWSD diagnostics
 
 ACD (F-057–F-060) is an additive companion. F-048 / F-049 / F-050

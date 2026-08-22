@@ -208,6 +208,7 @@ def test_body_stop_does_not_overwrite_cfar_marginal() -> None:
     assert out[0]["candidate_status"] == CFAR_MARGINAL
 
 
+@pytest.mark.live_audio
 def test_run2_duplicate_notes_pass_invariant_if_present() -> None:
     root = Path(
         r"D:\METAIS\TUBA\Tuba\Tuba_Yowa\IOWA_tuba_pp"
@@ -261,6 +262,7 @@ def test_run2_duplicate_notes_pass_invariant_if_present() -> None:
     assert scanned > 0
 
 
+@pytest.mark.live_audio
 def test_iowa_a2_body_stop_off_h1_h8_if_present(tmp_path: Path) -> None:
     audio = Path(
         r"D:\METAIS\TUBA\Tuba\Tuba_Yowa\IOWA_tuba_pp"

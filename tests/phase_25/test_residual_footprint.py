@@ -236,6 +236,7 @@ def _stage1_core_ratio(audio: Path, n_fft: int, hop: int, dest: Path) -> float:
     return float(getattr(ap, "harmonic_energy_ratio", float("nan")))
 
 
+@pytest.mark.live_audio
 @pytest.mark.skipif(not TROMBONE_G3.is_file(), reason="trombone G3 take not on this machine")
 def test_g3_core_h_ratio_within_three_percent_across_n_fft(tmp_path: Path) -> None:
     ratios = []
@@ -249,6 +250,7 @@ def test_g3_core_h_ratio_within_three_percent_across_n_fft(tmp_path: Path) -> No
         assert abs(r - ref) / max(abs(ref), 1e-9) <= 0.03
 
 
+@pytest.mark.live_audio
 @pytest.mark.skipif(
     not (TROMBONE_G3.is_file() and TROMBONE_GS3.is_file()),
     reason="trombone G3/G#3 takes not on this machine",

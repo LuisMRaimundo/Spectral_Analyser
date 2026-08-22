@@ -34,18 +34,22 @@ from tools.ewsd_core import (
 from tools.ewsd_research_integration import discover_individual_exact_workbooks
 from tools.spectral_density_hill import (
     ERB_FRACTION_DEFAULT,
+    MERGE_STRATEGY_DEFAULT,
     MODULE_REVISION,
+    MergeStrategy,
     compute_density_compartment,
     compute_note_density,
 )
 
 ACD_RESEARCH_SCORE_COLUMNS: tuple[str, ...] = (
     "ACD_score",
+    "ACD_score_D2_dominance",
     "ACD_magnitude_per_component",
     "ACD_D0",
     "ACD_D1",
     "ACD_D2",
     "ACD_Dinf",
+    "ACD_D0_minus_D1",
     "ACD_evenness_D2_over_D0",
 )
 
@@ -69,6 +73,7 @@ ACD_RESEARCH_COUNT_COLUMNS: tuple[str, ...] = (
 
 ACD_RESEARCH_PROVENANCE_COLUMNS: tuple[str, ...] = (
     "ACD_erb_fraction",
+    "ACD_merge_strategy",
     "ACD_include_for_density_applied",
     "ACD_status",
     "ACD_version",
@@ -89,15 +94,24 @@ _FAMILY_SHEETS = (
 )
 
 
-def _empty_acd_row(note: str, reason: str, *, include_for_density: bool, erb_fraction: float) -> dict[str, Any]:
+def _empty_acd_row(
+    note: str,
+    reason: str,
+    *,
+    include_for_density: bool,
+    erb_fraction: float,
+    merge_strategy: str = MERGE_STRATEGY_DEFAULT,
+) -> dict[str, Any]:
     row: dict[str, Any] = {
         "Note": note,
         "ACD_score": np.nan,
+        "ACD_score_D2_dominance": np.nan,
         "ACD_magnitude_per_component": np.nan,
         "ACD_D0": np.nan,
         "ACD_D1": np.nan,
         "ACD_D2": np.nan,
         "ACD_Dinf": np.nan,
+        "ACD_D0_minus_D1": np.nan,
         "ACD_evenness_D2_over_D0": np.nan,
         "ACD_r_harmonic": np.nan,
         "ACD_r_inharmonic": np.nan,
@@ -112,6 +126,7 @@ def _empty_acd_row(note: str, reason: str, *, include_for_density: bool, erb_fra
         "ACD_count_merged_inharmonic": np.nan,
         "ACD_count_merged_subbass": np.nan,
         "ACD_erb_fraction": float(erb_fraction),
+        "ACD_merge_strategy": str(merge_strategy),
         "ACD_include_for_density_applied": bool(include_for_density),
         "ACD_status": reason,
         "ACD_version": MODULE_REVISION,
@@ -128,6 +143,7 @@ def compute_acd_row_from_workbook(
     include_only_for_density: bool = False,
     erb_fraction: float = ERB_FRACTION_DEFAULT,
     merge_within_erb: bool = True,
+    merge_strategy: MergeStrategy = MERGE_STRATEGY_DEFAULT,
 ) -> dict[str, Any]:
     sheets = list_excel_sheets(path)
     if not INDIVIDUAL_SHEETS.issubset(set(sheets)):
@@ -136,6 +152,7 @@ def compute_acd_row_from_workbook(
             "missing_required_sheets",
             include_for_density=include_only_for_density,
             erb_fraction=erb_fraction,
+            merge_strategy=merge_strategy,
         )
     meta = read_first_row_as_dict(path, "Metrics") if "Metrics" in sheets else {}
     note = infer_note_from_filename(path)
@@ -172,6 +189,7 @@ def compute_acd_row_from_workbook(
                 freqs,
                 merge_within_erb=merge_within_erb,
                 erb_fraction=erb_fraction,
+                merge_strategy=merge_strategy,
             )
     except (OSError, ValueError, KeyError, TypeError) as exc:
         row = _empty_acd_row(
@@ -179,23 +197,27 @@ def compute_acd_row_from_workbook(
             f"read_error:{exc}",
             include_for_density=include_only_for_density,
             erb_fraction=erb_fraction,
+            merge_strategy=merge_strategy,
         )
         row["source_sha256"] = file_sha256(path)
         return row
 
-    note_metrics = compute_note_density(compartments, q=2.0)
+    note_metrics = compute_note_density(compartments, q=1.0)
     row = _empty_acd_row(
         note,
         str(note_metrics.get("ACD_status", "empty")),
         include_for_density=include_only_for_density,
         erb_fraction=erb_fraction,
+        merge_strategy=merge_strategy,
     )
     row["ACD_score"] = note_metrics.get("ACD_score", np.nan)
+    row["ACD_score_D2_dominance"] = note_metrics.get("ACD_score_D2_dominance", np.nan)
     row["ACD_magnitude_per_component"] = note_metrics.get("ACD_magnitude_per_component", np.nan)
     row["ACD_D0"] = note_metrics.get("ACD_D0", np.nan)
     row["ACD_D1"] = note_metrics.get("ACD_D1", np.nan)
     row["ACD_D2"] = note_metrics.get("ACD_D2", np.nan)
     row["ACD_Dinf"] = note_metrics.get("ACD_Dinf", np.nan)
+    row["ACD_D0_minus_D1"] = note_metrics.get("ACD_D0_minus_D1", np.nan)
     row["ACD_evenness_D2_over_D0"] = note_metrics.get("ACD_evenness_D2_over_D0", np.nan)
     row["ACD_r_harmonic"] = note_metrics.get("r_harmonic", np.nan)
     row["ACD_r_inharmonic"] = note_metrics.get("r_inharmonic", np.nan)
@@ -221,6 +243,7 @@ def compute_acd_dataframe_from_analysis_root(
     include_only_for_density: bool = False,
     erb_fraction: float = ERB_FRACTION_DEFAULT,
     merge_within_erb: bool = True,
+    merge_strategy: MergeStrategy = MERGE_STRATEGY_DEFAULT,
 ) -> pd.DataFrame:
     workbooks = discover_individual_exact_workbooks(analysis_root)
     rows = [
@@ -231,6 +254,7 @@ def compute_acd_dataframe_from_analysis_root(
             include_only_for_density=include_only_for_density,
             erb_fraction=erb_fraction,
             merge_within_erb=merge_within_erb,
+            merge_strategy=merge_strategy,
         )
         for path in workbooks
     ]
@@ -259,6 +283,8 @@ def _init_empty_acd_columns(sd: pd.DataFrame, status: str) -> pd.DataFrame:
                 out[col] = MODULE_REVISION
             elif col == "ACD_status":
                 out[col] = status
+            elif col == "ACD_merge_strategy":
+                out[col] = MERGE_STRATEGY_DEFAULT
             else:
                 out[col] = np.nan
     out["acd_merge_status"] = status
@@ -275,6 +301,7 @@ def merge_acd_stage3(
     analysis_root: Optional[Path] = None,
     include_only_for_density: bool = False,
     erb_fraction: float = ERB_FRACTION_DEFAULT,
+    merge_strategy: MergeStrategy = MERGE_STRATEGY_DEFAULT,
     frequency_ceiling_hz: Optional[float] = None,
 ) -> AcdStage3MergeResult:
     if not include_acd or sd is None or sd.empty or "Note" not in sd.columns:
@@ -295,6 +322,7 @@ def merge_acd_stage3(
             frequency_ceiling_hz=frequency_ceiling_hz,
             include_only_for_density=include_only_for_density,
             erb_fraction=erb_fraction,
+            merge_strategy=merge_strategy,
         )
     except (OSError, ValueError, KeyError, pd.errors.ParserError) as exc:
         stage_messages.append(f"Stage 3 ACD computation failed: {exc}")

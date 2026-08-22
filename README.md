@@ -33,7 +33,7 @@ Spectral_Analyser is a spectral-analysis pipeline developed in support of doctor
 
 Spectral_Analyser analyses individual note recordings and produces a multi-sheet workbook of spectral, harmonic, inharmonic, sub-bass, and MIR descriptors per note, together with a corpus-level adaptive density profile. The pipeline runs in three stages:
 
-1. **Stage 1 — per-note analysis** (`proc_audio.AudioProcessor`): STFT, peak picking, F0 estimation, harmonic / inharmonic / sub-bass (H/I/S) partitioning, stiff-string inharmonicity fit, sub-bass policy, MIR descriptors (spectral moments, tristimulus, Aures roughness, ERB-weighted density), and optional temporal segmentation. Output: one `spectral_analysis.xlsx` per note.
+1. **Stage 1 — per-note analysis** (`proc_audio.AudioProcessor`): STFT, peak picking, F0 estimation, harmonic / inharmonic / sub-bass (H/I/S) partitioning, stiff-string inharmonicity fit, sub-bass policy, MIR descriptors (spectral moments, tristimulus, Parncutt/Plomp–Levelt roughness, ERB-weighted density), and optional temporal segmentation. Output: one `spectral_analysis.xlsx` per note.
 2. **Stage 2 — compilation** (`compile_metrics.compile_density_metrics_with_pca`): per-note rows aggregated into `compiled_density_metrics.xlsx` with tier-normalized columns, dissonance metrics, PCA scores, and validation summary.
 3. **Stage 3 — research export + EWSD** (`post_compile_research_export` → `tools/export_research_density_workbook`): builds `compiled_density_metrics_research.xlsx` and recomputes **EWSD-R v18.1** from per-note component spectra. Merges EWSD scores with bootstrap CI, provenance fields, **`Stage3_Diagnostics`** (per-note), **`Stage3_Summary`** (run metadata), and fail-closed contract via `tools/ewsd_stage3_contract.py`.
 
@@ -178,7 +178,7 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 |------------------|----------------|-------|
 | How many effective partials carry energy (“fatness”)? | **`note_effective_component_density`** (primary noise-robust density; A4 / B7) | 2 / research |
 | How even is that energy (Hill $q=1$)? | **`note_balanced_component_density`** (F-056; stricter pool than F-047) | 2 / research |
-| How many ERB-merged components, and how large is each? | **`ACD_score`** with **`ACD_magnitude_per_component`** (F-057 / F-058). Neither column is interpretable alone: a scalar cannot distinguish a sparse loud sound from a dense quiet one. | 3 (research) |
+| How many ERB-merged components, and how large is each? | **`ACD_score`** (D1-based) with **`ACD_magnitude_per_component`** (F-057 / F-058). Neither column is interpretable alone: a scalar cannot distinguish a sparse loud sound from a dense quiet one. | 3 (research) |
 | How much GUI-weighted H/I/S content? | **`note_density_final`** | 2 / research |
 | Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI — **diagnostic only; level-dependent; not for cross-note comparison** (report `estimated_snr_db`) | 3 (research) |
 

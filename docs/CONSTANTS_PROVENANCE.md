@@ -75,6 +75,8 @@ Provenance classes:
 - `HARMONIC_DETECTION_THRESHOLD_DB` (`-60.0`) - `convention` - Common peak-picking floor in spectral analysis.
 - `SNR_THRESHOLD_DB` (`6.0`) - `convention` - Standard detectability margin convention.
 - `DISSONANCE_PAIRWISE_PARTIAL_CAP` (`80`) - `convention` - Computational cap convention for pairwise roughness models.
+- `_ROUGHNESS_ERB_SLOPE` (`0.108`) / `_ROUGHNESS_ERB_INTERCEPT_HZ` (`24.7`) - `primary_source` - Glasberg & Moore (1990) ERB used **only** in `mir_descriptors._roughness_parncutt_denom_hz`. Independent of `tools/spectral_density_hill.py`.
+- `_ROUGHNESS_PARNCUTT_CB_FRACTION` (`0.25`) - `primary_source` - Parncutt (1989) normalisation: peak roughness at ~0.25 critical bandwidths, `x = (df / ERB) / 0.25`. The previous denominator `0.25 f + 24.7` substituted this fraction for the ERB slope. At 1 kHz the kernel maximum moves from df ≈ 275 Hz to df ≈ 33 Hz.
 - `HARMONIC_TOLERANCE_BASE` (`0.1`) - `convention` - Baseline tolerance convention for robust harmonic matching.
 - `HARMONIC_TOLERANCE_ADAPTIVE_FACTOR` (`0.1`) - `convention` - Adaptive tolerance scaling convention for robust matching.
 - `HARMONIC_MAX_CHECK` (`100`) - `convention` - Practical harmonic-order cap convention.
@@ -220,4 +222,5 @@ Provenance classes:
 - `ERB_RATE_SCALE` (`21.4`) - `primary_source` - Moore & Glasberg (1983) ERB-rate E(f) = 21.4 log10(1 + 0.00437 f).
 - `ERB_RATE_COEFF` (`0.00437`) - `primary_source` - Moore & Glasberg (1983).
 - `ENERGY_EPS` (`1e-30`) - `internal_default` - Numerical floor for empty/degenerate energy in Hill shares.
-- `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites.
+- `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites. Sensitivity is measured on a 40-partial 1/n series (not 8-ERB spacing): [`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`](validation/ACD_ERB_FRACTION_SENSITIVITY.md). The earlier “[0.5, 1.5] usable range” claim is discarded.
+- `MERGE_STRATEGY_DEFAULT` (`fixed_erb_grid`) - `internal_default` - Default ERB merge after the Stage 1 FFT-tier comparison. `fixed_erb_grid` reduced wander from 3.80 % to 2.74 %; neither strategy fell below ~2 %. Decision: [`docs/validation/ACD_MERGE_STRATEGY.md`](validation/ACD_MERGE_STRATEGY.md).

@@ -462,11 +462,18 @@
       "description": "Frequency below which 95% cumulative spectral power is contained.",
       "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
     },
+    "roughness_parncutt_kernel": {
+      "status": "diagnostic",
+      "phase": "phase_5",
+      "citation": "Parncutt (1989); Plomp & Levelt (1965); Glasberg & Moore (1990)",
+      "description": "Pairwise spectral roughness, g(x)=x exp(1-x), x=(df/ERB)/0.25. Not Aures (1985).",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
     "roughness_aures_1985": {
       "status": "diagnostic",
       "phase": "phase_5",
-      "citation": "Aures (1985)",
-      "description": "Psychoacoustic roughness estimator based on pairwise interaction.",
+      "citation": "Deprecated alias of roughness_parncutt_kernel (one version)",
+      "description": "Misattributed name retained as an alias. The kernel is Parncutt / Plomp-Levelt.",
       "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
     },
     "erb_weighted_spectral_density": {

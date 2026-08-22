@@ -192,6 +192,7 @@ def test_d5_hop_and_window_durations() -> None:
     assert win > hop
 
 
+@pytest.mark.live_audio
 def test_iowa_trombone_as2_ff_acceptance_if_present(tmp_path: Path) -> None:
     audio = Path(
         r"D:\METAIS\TROMBONE\IOWA_Trombone - Test\TenorTrombone"

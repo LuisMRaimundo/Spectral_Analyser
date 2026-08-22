@@ -118,6 +118,7 @@ def test_body_stop_does_not_overwrite_persistence_reason() -> None:
     assert out[0]["candidate_status"] == LOW_TEMPORAL_PERSISTENCE
 
 
+@pytest.mark.live_audio
 def test_iowa_a2_audio_persistence_if_present() -> None:
     audio = Path(
         r"D:\METAIS\TUBA\Tuba\Tuba_Yowa\IOWA_tuba_pp"

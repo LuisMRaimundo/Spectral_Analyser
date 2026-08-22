@@ -45,6 +45,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0,<8.0.0",
+    "pytest-timeout>=2.1.0,<3.0.0",
     "psutil>=5.9.0,<6.0.0",
     "pytest-cov>=3.0.0,<4.0.0",
     "coverage>=6.0.0,<8.0.0",
@@ -116,13 +117,16 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short -m \"not live_audio\""
+# Hang-killer. The fast suite can lower this on the CLI: --timeout=60
+timeout = 300
+timeout_method = "thread"
 # Custom markers. Registering them silences the
 # ``PytestUnknownMarkWarning`` and gives consumers a stable contract for
-# selecting / deselecting test subsets. See ``TESTING.md`` for the full
-# policy and how to run the slow tests on demand.
+# selecting / deselecting test subsets.
 markers = [
     "slow: tests that are computationally expensive or unsuitable for the default fast suite",
+    "live_audio: tests bound to local absolute audio/workbook paths; deselected by default",
 ]
 
 # Coverage scope: production analytical modules only (not tests, GUI, orchestrators,

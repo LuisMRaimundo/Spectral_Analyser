@@ -1,0 +1,62 @@
+{
+  "note_id": "D3",
+  "corpus": "ORC_Vlc_arco_mf _Sustains (49-note cello corpus)",
+  "source": "pipeline_synthesized_d3",
+  "heading_note": "Note `D3` from `ORC_Vlc_arco_mf _Sustains (49-note cello corpus)`. These rows are Stage 1 **measurements** (loaded audio \u2192 production peak picker / FFT tier / Phase 8 `peak_amplitude_sum`), not toy amplitude fixtures. Corpus audio was not mounted; audio is a 0.85 s synthesized D3 (f0 = 146.83 Hz) with two inharmonic partials, run through the production Stage 1 path. Set `ACD_REAL_NOTE_AUDIO` to the corpus D3 take to replace this stand-in. ACD_score in this cache is the historical D2 / moving_centroid measurement; the current default is D1 / fixed_erb_grid. Side-by-side FFT-tier numbers: `docs/validation/ACD_MERGE_STRATEGY.md`.",
+  "tier_tolerance_relative": 0.04,
+  "base": {
+    "ACD_score": 1.9052871276413814,
+    "ACD_magnitude_per_component": 51179.23030911456,
+    "ACD_D2": 1.9052871276413814,
+    "EWSD_score_total": 17.906168751652032,
+    "EWSD_score_acoustic_balanced": 18.083948473482337
+  },
+  "fft_acd_scores": [
+    1.8328526291365073,
+    1.9052871276413814,
+    1.8573396509555407,
+    1.8937462238358969
+  ],
+  "blocks": [
+    {
+      "title": "Gain sweep (audio scaled before Stage 1)",
+      "caption": "Gain is applied to the loaded waveform, then Stage 1 is run at n_fft=8192, db_min=-80.0.",
+      "header": "| gain | ACD_score | ACD_\u0394% | ACD_magnitude_per_component | ACD_mag_\u0394% | ACD_D2 | ACD_D2_\u0394% | EWSD_score_total | EWSD_\u0394% | EWSD_score_acoustic_balanced | EWSD_bal_\u0394% |",
+      "separator": "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+      "rows": [
+        "| 1e-03 | 1.90528712792 | +0.0000 | 51179.2297245 | -0.0000 | 1.90528712792 | +0.0000 | 17.9061687536 | +0.0000 | 18.0839484773 | +0.0000 |",
+        "| 1e-02 | 1.90528712743 | -0.0000 | 51179.2302677 | -0.0000 | 1.90528712743 | -0.0000 | 17.9061688269 | +0.0000 | 18.0839485504 | +0.0000 |",
+        "| 1e-01 | 1.9052871263 | -0.0000 | 51179.2303478 | +0.0000 | 1.9052871263 | -0.0000 | 17.9061687425 | -0.0000 | 18.0839484646 | -0.0000 |",
+        "| 1e+00 | 1.90528712764 | +0.0000 | 51179.2303091 | +0.0000 | 1.90528712764 | +0.0000 | 17.9061687517 | +0.0000 | 18.0839484735 | +0.0000 |",
+        "| 1e+01 | 1.90528712736 | -0.0000 | 51179.2303361 | +0.0000 | 1.90528712736 | -0.0000 | 17.9061688193 | +0.0000 | 18.0839485409 | +0.0000 |",
+        "| 1e+02 | 1.90528712746 | -0.0000 | 51179.2303289 | +0.0000 | 1.90528712746 | -0.0000 | 17.9061687456 | -0.0000 | 18.0839484691 | -0.0000 |",
+        "| 1e+04 | 1.90528712731 | -0.0000 | 51179.2303312 | +0.0000 | 1.90528712731 | -0.0000 | 17.9061687012 | -0.0000 | 18.083948424 | -0.0000 |"
+      ]
+    },
+    {
+      "title": "FFT tier (real Stage 1; unique n_fft selected for C2\u2013C6)",
+      "caption": "Each n_fft is a value `_assign_tier_for_file` actually selects on the 49-note cello range. Bin width, peak census, and Phase 8 `peak_amplitude_sum` vary together. Historical ACD_score here is D2 / moving_centroid. Current gate is 4% relative (winning-strategy max |Δ%| + 1 pp, rounded up; not above 5%). See `ACD_MERGE_STRATEGY.md`.",
+      "header": "| n_fft | ACD_score | ACD_\u0394% | ACD_magnitude_per_component | ACD_mag_\u0394% | ACD_D2 | ACD_D2_\u0394% | EWSD_score_total | EWSD_\u0394% | EWSD_score_acoustic_balanced | EWSD_bal_\u0394% |",
+      "separator": "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+      "rows": [
+        "| 16384 | 1.83285262914 | -3.8018 | 267075.737652 | +421.8440 | 1.83285262914 | -3.8018 | 31.5702076037 | +76.3091 | 31.9893361953 | +76.8935 |",
+        "| 8192 | 1.90528712764 | +0.0000 | 51179.2303091 | +0.0000 | 1.90528712764 | +0.0000 | 17.9061687517 | +0.0000 | 18.0839484735 | +0.0000 |",
+        "| 4096 | 1.85733965096 | -2.5165 | 11789.5897977 | -76.9641 | 1.85733965096 | -2.5165 | 13.5699499185 | -24.2163 | 13.7001953309 | -24.2411 |",
+        "| 2048 | 1.89374622384 | -0.6057 | 2722.83817638 | -94.6798 | 1.89374622384 | -0.6057 | 11.2381393276 | -37.2387 | 11.5203459651 | -36.2952 |"
+      ]
+    },
+    {
+      "title": "Peak-picking threshold (production `db_min` sweep)",
+      "caption": "Stage 1 `db_min` / `density_salience_threshold_db`. Production default is -80.0 dB.",
+      "header": "| db_min | ACD_score | ACD_\u0394% | ACD_magnitude_per_component | ACD_mag_\u0394% | ACD_D2 | ACD_D2_\u0394% | EWSD_score_total | EWSD_\u0394% | EWSD_score_acoustic_balanced | EWSD_bal_\u0394% |",
+      "separator": "|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+      "rows": [
+        "| -20 | 1.90528716394 | +0.0000 | 51179.2298192 | -0.0000 | 1.90528716394 | +0.0000 | 24.4079208885 | +36.3101 | 24.8077177494 | +37.1809 |",
+        "| -40 | 1.90528712764 | +0.0000 | 51179.2303091 | +0.0000 | 1.90528712764 | +0.0000 | 22.2887913831 | +24.4755 | 22.6162257393 | +25.0624 |",
+        "| -60 | 1.90528712764 | +0.0000 | 51179.2303091 | +0.0000 | 1.90528712764 | +0.0000 | 18.2268519849 | +1.7909 | 18.4155821663 | +1.8339 |",
+        "| -80 | 1.90528712764 | +0.0000 | 51179.2303091 | +0.0000 | 1.90528712764 | +0.0000 | 17.9061687517 | +0.0000 | 18.0839484735 | +0.0000 |",
+        "| -100 | 1.90528712764 | +0.0000 | 51179.2303091 | +0.0000 | 1.90528712764 | +0.0000 | 17.7413484823 | -0.9205 | 17.9135000406 | -0.9425 |"
+      ]
+    }
+  ]
+}

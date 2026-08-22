@@ -1,7 +1,7 @@
 """Performance regression guards.
 
 These tests exist because a pure-Python O(n^2) roughness routine
-(``mir_descriptors._roughness_aures_1985``) once silently consumed ~76% of
+(``mir_descriptors._roughness_parncutt_kernel``) once silently consumed ~76% of
 per-note runtime (≈360 s on a cello C2 with n_fft=16384) and shipped to a
 user. CI had no timing assertion, so the regression was invisible. The two
 guards below lock in:
@@ -26,7 +26,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from mir_descriptors import _roughness_aures_1985
+from mir_descriptors import _roughness_parncutt_denom_hz, _roughness_parncutt_kernel
 
 
 def _brute_force_roughness(freq: np.ndarray, amp: np.ndarray) -> float:
@@ -41,7 +41,7 @@ def _brute_force_roughness(freq: np.ndarray, amp: np.ndarray) -> float:
                 continue
             fmin = min(fi, fj)
             df = abs(fi - fj)
-            x = df / max(0.25 * fmin + 24.7, 1e-9)
+            x = df / float(_roughness_parncutt_denom_hz(np.asarray([fmin]))[0])
             s += float(a[i] * a[j] * x * np.exp(1.0 - x))
     return float(max(s, 0.0))
 
@@ -53,7 +53,7 @@ def test_roughness_matches_reference_within_tolerance() -> None:
         f = np.sort(rng.uniform(40.0, 8000.0, n))
         a = rng.uniform(0.0, 1.0, n)
         ref = _brute_force_roughness(f, a)
-        fast = _roughness_aures_1985(f, a)
+        fast = _roughness_parncutt_kernel(f, a)
         rel = abs(fast - ref) / (abs(ref) + 1e-12)
         assert rel < 1e-6, f"n={n}: rel_err={rel:.2e} (ref={ref}, fast={fast})"
 
@@ -69,7 +69,7 @@ def test_roughness_full_spectrum_size_is_fast() -> None:
     f = np.sort(rng.uniform(20.0, 20000.0, 16000))
     a = rng.uniform(0.0, 1.0, 16000)
     t0 = time.perf_counter()
-    val = _roughness_aures_1985(f, a)
+    val = _roughness_parncutt_kernel(f, a)
     elapsed = time.perf_counter() - t0
     assert np.isfinite(val)
     assert elapsed < 5.0, f"roughness on 16k bins took {elapsed:.2f}s (budget 5s)"

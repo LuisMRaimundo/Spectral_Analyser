@@ -51,6 +51,7 @@ def test_committed_corpus_reference_internal_consistency(corpus_reference: dict)
         assert row["primary_analysis_eligible"] is True
 
 
+@pytest.mark.live_audio
 @pytest.mark.skipif(_corpus_root() is None, reason="EWSD corpus analysis folder not available")
 def test_live_corpus_recompute_matches_reference_xlsx(corpus_reference: dict) -> None:
     root = _corpus_root()

@@ -36,5 +36,6 @@ def test_descriptor_ranges_on_synthetic_signal() -> None:
     assert 0.0 <= desc["spectral_flatness"] <= 1.0
     assert desc["spectral_rolloff_hz_85"] >= 0.0
     assert desc["spectral_rolloff_hz_95"] >= desc["spectral_rolloff_hz_85"]
+    assert desc["roughness_parncutt_kernel"] >= 0.0
     assert desc["roughness_aures_1985"] >= 0.0
     assert desc["erb_weighted_spectral_density"] >= 0.0

@@ -27,7 +27,7 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 - Parncutt, R. (1989). *Harmony: A psychoacoustical approach*. Springer.
 - Parncutt, R., & Strasburger, H. (1994). Applying psychoacoustics in composition: “Harmonic” progressions of “nonharmonic” sonorities. *Perspectives of New Music, 32*(2), 88–129.
 - Huron, D. (1989). Voice segregation in selected polyphonic keyboard works by Johann Sebastian Bach (Doctoral dissertation). University of Nottingham.
-- Aures, W. (1985). Ein Berechnungsverfahren der Rauhigkeit. *Acustica, 58*(5), 268–281.
+- Plomp, R., & Levelt, W. J. M. (1965). Tonal consonance and critical bandwidth. *Journal of the Acoustical Society of America, 38*(4), 548–560.
 
 ## Timbre and MIR descriptors
 - Pollard, H. F., & Jansson, E. V. (1982). A tristimulus method for the specification of musical timbre. *Acustica, 51*(3), 162–171.
@@ -56,7 +56,7 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 | `subbass_policy.py` | Zwicker & Fastl (1990) |
 | `constants.py` (`DENSITY_WEIGHT_FUNCTION_DEFAULT`) | Fechner (1860); Stevens (1955); Zwicker & Fastl (1990) |
 | `dissonance_models.py` (`SetharesDissonance`) | Sethares (2005) |
-| `mir_descriptors.py` | Moore & Glasberg (1983); Aures (1985); Pollard & Jansson (1982); Peeters et al. (2011) |
+| `mir_descriptors.py` | Plomp & Levelt (1965); Parncutt (1989); Glasberg & Moore (1990); Pollard & Jansson (1982); Peeters et al. (2011) |
 | `tools/spectral_density_hill.py` | Glasberg & Moore (1990); Moore & Glasberg (1983); Hill (1973); Jost (2006); Hurley & Rickard (2009); Moore, Glasberg & Baer (1997); ISO 532-2:2017 |
 | `adaptive_density_engine.py` | Lin (1991); Gelman et al. (2013) |
 | `metric_contract.py` | Hatton (1997); Soergel (2015) |

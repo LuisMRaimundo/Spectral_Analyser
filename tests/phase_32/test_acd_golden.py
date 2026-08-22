@@ -37,6 +37,7 @@ def test_golden_well_separated_match() -> None:
         comp = compute_density_compartment(amps, freqs)
         assert comp.status == row["status"]
         assert comp.d2 == pytest.approx(row["D2"], abs=1e-12)
+        assert comp.d1 == pytest.approx(row["D1"], abs=1e-12)
         assert comp.d0 == pytest.approx(row["D0"], abs=1e-12)
         assert comp.count_merged == int(row["count_merged"])
 
