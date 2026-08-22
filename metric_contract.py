@@ -133,7 +133,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ),
         not_valid_for="Retained nonharmonic / floor-candidate lists.",
         ontology_family="sensory_dissonance",
-        formula_id="COL:sethares_dissonance",
+        formula_id="F-062",
         formula_version="4.6.0",
     )
     roughness_parncutt_kernel = MetricDefinition(
@@ -156,10 +156,19 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
             "Pairwise spectral roughness. Provenance-consistent default peaks "
             "at ~0.25 Zwicker CB (~40 Hz at 1 kHz). Independent of ACD ERB helpers."
         ),
-        not_valid_for="Citing as Aures (1985); importing into spectral_density_hill.",
+        not_valid_for=(
+            "Computed over the detected peak list, not the full magnitude spectrum; not "
+            "numerically comparable to published full-spectrum values (Peeters et al., 2011 "
+            "divergence documented). Citing as Aures (1985); importing into spectral_density_hill."
+        ),
         ontology_family="sensory_dissonance",
         formula_id="F-037",
         formula_version="4.5.0",
+        notes=(
+            "Computed over the detected peak list, not the full magnitude spectrum; not "
+            "numerically comparable to published full-spectrum values (Peeters et al., 2011 "
+            "divergence documented)."
+        ),
     )
     roughness_aures_1985 = MetricDefinition(
         name="roughness_aures_1985",
@@ -915,6 +924,247 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ontology_family="legacy_only",
         notes="double-corrected; open item in CHANGES.md; not recommended",
     )
+    _peak = (
+        "Computed over the detected peak list, not the full magnitude spectrum; not "
+        "numerically comparable to published full-spectrum values (Peeters et al., 2011 "
+        "divergence documented)."
+    )
+    _rint = (
+        " Harmonic order is assigned by np.rint(f/f0); a peak near a half-integer "
+        "ratio may be attributed to a neighbouring integer order."
+    )
+
+    def _mir_peak(name: str, formula_id: str, formula: str, *, tristimulus: bool = False) -> MetricDefinition:
+        extra = _rint if tristimulus else ""
+        return MetricDefinition(
+            name=name,
+            formula=formula,
+            input_domain="detected peak list of the named ADSR segment (or full sustain if unsuffixed)",
+            unit_or_scale="descriptor units (see formula)",
+            amplitude_basis="peak Amplitude_raw (linear)",
+            power_basis="P_i = Amplitude_raw^2 where the formula uses power",
+            normalization_scope="per peak list (not the full magnitude spectrum)",
+            physical_interpretation=name.replace("_", " "),
+            not_valid_for=_peak + extra,
+            ontology_family="mir_peak_descriptor",
+            formula_id=formula_id,
+            formula_version="4.5.0",
+            notes=_peak + extra,
+        )
+
+    spectral_centroid_hz = _mir_peak(
+        "spectral_centroid_hz", "F-027", "C = sum_i f_i p_i"
+    )
+    spectral_spread_hz = _mir_peak(
+        "spectral_spread_hz", "F-028", "sigma = sqrt(sum_i (f_i-C)^2 p_i)"
+    )
+    spectral_skewness = _mir_peak(
+        "spectral_skewness", "F-029", "sum_i ((f_i-C)/sigma)^3 p_i"
+    )
+    spectral_kurtosis = _mir_peak(
+        "spectral_kurtosis", "F-030", "sum_i ((f_i-C)/sigma)^4 p_i"
+    )
+    spectral_irregularity = _mir_peak(
+        "spectral_irregularity", "F-031", "sum_i |A_{i+1}-A_i| / sum_i A_i"
+    )
+    tristimulus_1_fundamental = _mir_peak(
+        "tristimulus_1_fundamental", "F-032", "T1 = A_1 / sum_i A_i", tristimulus=True
+    )
+    tristimulus_2_low_harmonics_2_to_4 = _mir_peak(
+        "tristimulus_2_low_harmonics_2_to_4",
+        "F-033",
+        "T2 = (A_2+A_3+A_4) / sum_i A_i",
+        tristimulus=True,
+    )
+    tristimulus_3_high_harmonics_5_plus = _mir_peak(
+        "tristimulus_3_high_harmonics_5_plus",
+        "F-034",
+        "T3 = sum_{i>=5} A_i / sum_i A_i",
+        tristimulus=True,
+    )
+    spectral_flatness = _mir_peak(
+        "spectral_flatness",
+        "F-035",
+        "F = exp(mean ln P_i) / mean P_i",
+    )
+    spectral_rolloff_hz_85 = _mir_peak(
+        "spectral_rolloff_hz_85",
+        "F-036",
+        "smallest R such that sum_{f_i<=R} P_i = 0.85 sum P_i",
+    )
+    spectral_rolloff_hz_95 = _mir_peak(
+        "spectral_rolloff_hz_95",
+        "F-036",
+        "smallest R such that sum_{f_i<=R} P_i = 0.95 sum P_i",
+    )
+    erb_weighted_spectral_density = _mir_peak(
+        "erb_weighted_spectral_density",
+        "F-039",
+        "D_ERB = 1 / sum_b q_b^2 (ERB-grouped peak energy shares)",
+    )
+    hutchinson_knopoff_dissonance = MetricDefinition(
+        name="hutchinson_knopoff_dissonance",
+        formula=(
+            "F-063: Hutchinson & Knopoff (1978) eq. (3): "
+            "sum_{i<j} a_i a_j g_ij / sum_k a_k^2. "
+            "See docs/validation/DISSONANCE_MIGRATION.md. "
+            "Depends on dissonance_metric_mode for the exported scalar."
+        ),
+        input_domain="validated harmonic + confirmed inharmonic partials",
+        unit_or_scale="H&K eq. (3) units",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="denominator is sum of a^2",
+        normalization_scope="per note partial set",
+        physical_interpretation="Pairwise sensory dissonance, 1978 eq. (3).",
+        not_valid_for=(
+            "Treating as the pre-4.6.0 mean-pair scaled diagnostic "
+            "(hutchinson_knopoff_legacy_mean_pair_scaled)."
+        ),
+        ontology_family="sensory_dissonance",
+        formula_id="F-063",
+        formula_version="4.6.0",
+    )
+    vassilakis_dissonance = MetricDefinition(
+        name="vassilakis_dissonance",
+        formula=(
+            "F-064: Vassilakis (2001) eq. (6.23) pairwise roughness on the same "
+            "partial set and metric_mode switch as Sethares (F-062). "
+            "Implementation: dissonance_models.VassilakisDissonance."
+        ),
+        input_domain="validated harmonic + confirmed inharmonic partials",
+        unit_or_scale="Vassilakis roughness units",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="not used (amplitude-product roughness)",
+        normalization_scope="per note partial set",
+        physical_interpretation="Vassilakis pairwise roughness (AF-degree + SPL + spectral term).",
+        not_valid_for="Substituting for Sethares (F-062) or Hutchinson–Knopoff (F-063).",
+        ontology_family="sensory_dissonance",
+        formula_id="F-064",
+        formula_version="4.6.0",
+    )
+    selected_dissonance_value = MetricDefinition(
+        name="selected_dissonance_value",
+        formula=(
+            "F-065: pointer metric; equals the model named by dissonance_metric_mode "
+            "(sethares / hutchinson_knopoff / vassilakis)."
+        ),
+        input_domain="same partial set as the selected model",
+        unit_or_scale="units of the selected model",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="as the selected model",
+        normalization_scope="per note",
+        physical_interpretation="Mirrors the live dissonance model named in dissonance_metric_mode.",
+        not_valid_for="Citing without naming dissonance_metric_mode.",
+        ontology_family="sensory_dissonance",
+        formula_id="F-065",
+        formula_version="4.6.0",
+    )
+    spectral_entropy = MetricDefinition(
+        name="spectral_entropy",
+        formula="F-011: H_norm = H / log2(K); H = -sum p_i log2 p_i on the peak-list power shares",
+        input_domain="detected peak list (power shares)",
+        unit_or_scale="normalized Shannon entropy in [0, 1]",
+        amplitude_basis="not used directly",
+        power_basis="p_i from peak power",
+        normalization_scope="per peak list; base 2, divided by log2(K)",
+        physical_interpretation="Normalized spectral entropy of the peak-list power distribution.",
+        not_valid_for="Comparing to un-normalized nats or to full-spectrum entropy.",
+        ontology_family="mir_peak_descriptor",
+        formula_id="F-011",
+        formula_version="4.5.0",
+    )
+    odd_even_harmonic_energy_ratio = MetricDefinition(
+        name="odd_even_harmonic_energy_ratio",
+        formula=(
+            "F-066: (sum power of salient odd harmonic orders) / "
+            "max(sum power of salient even harmonic orders, EPS)"
+        ),
+        input_domain="salient harmonic orders up to the body ceiling",
+        unit_or_scale="dimensionless power ratio",
+        amplitude_basis="not used (power of salient orders)",
+        power_basis="order-max peak power",
+        normalization_scope="per note, salient harmonic orders",
+        physical_interpretation="Odd-to-even salient-harmonic power ratio.",
+        not_valid_for="Treating as a count ratio; empty even set uses EPS, not NaN.",
+        ontology_family="compartment_ratio",
+        formula_id="F-066",
+        formula_version="4.5.0",
+    )
+    low_mid_energy_ratio = MetricDefinition(
+        name="low_mid_energy_ratio",
+        formula=(
+            "F-067: (sum salience of body peaks with f <= low_mid_upper_hz) / "
+            "(sum salience of all body peaks). Default low_mid_upper_hz = 2000 Hz. "
+            "Salience = sqrt(power)."
+        ),
+        input_domain="salient body-band peaks (body_freq_min_hz .. body ceiling)",
+        unit_or_scale="dimensionless salience share",
+        amplitude_basis="sqrt(power) salience",
+        power_basis="body-peak power before the sqrt",
+        normalization_scope="per note body band",
+        physical_interpretation="Share of body salience at or below 2000 Hz (default).",
+        not_valid_for="Citing without the 2000 Hz low_mid_upper_hz default.",
+        ontology_family="compartment_ratio",
+        formula_id="F-067",
+        formula_version="4.5.0",
+    )
+    inharmonicity_coefficient_B = MetricDefinition(
+        name="inharmonicity_coefficient_B",
+        formula=(
+            "F-008: y_n = (f_n / (n f0))^2 - 1 ≈ B n^2 (Fletcher 1962 stiff-string). "
+            "Rename decision remains open (see CHANGES / methods)."
+        ),
+        input_domain="matched harmonic frequencies and orders",
+        unit_or_scale="dimensionless B",
+        amplitude_basis="not used (frequency fit)",
+        power_basis="not used",
+        normalization_scope="per note fit",
+        physical_interpretation="Stiff-string inharmonicity coefficient.",
+        not_valid_for=(
+            "Phenomenological outside the string family — the rename decision "
+            "remains open and is referenced, not resolved."
+        ),
+        ontology_family="inharmonicity",
+        formula_id="F-008",
+        formula_version="4.5.0",
+    )
+    pure_observation_w = MetricDefinition(
+        name="pure_observation_w_*",
+        formula="F-023: o_k = s_k / (s_H+s_I+s_S). AUTO_RATIO_PRIORITY source for EWSD.",
+        input_domain="per-note observational H/I/S strengths",
+        unit_or_scale="dimensionless shares summing to 1",
+        amplitude_basis="as the observational strength definition",
+        power_basis="as the observational strength definition",
+        normalization_scope="per note",
+        physical_interpretation="Pure observation triplet; EWSD AUTO_RATIO_PRIORITY source.",
+        not_valid_for="Substituting for GUI base multipliers or for F-018 component_* ratios.",
+        ontology_family="compartment_ratio",
+        formula_id="F-023",
+        formula_version="4.5.0",
+        notes="AUTO_RATIO_PRIORITY source for EWSD (after density_weight).",
+    )
+    density_weight_triplet = MetricDefinition(
+        name="*_density_weight",
+        formula=(
+            "F-068: per-note H/I/S weights written to harmonic_density_weight, "
+            "inharmonic_density_weight, subbass_density_weight. First "
+            "AUTO_RATIO_PRIORITY source for EWSD r_k."
+        ),
+        input_domain="analysis H/I/S weights (observational or applied)",
+        unit_or_scale="dimensionless weights",
+        amplitude_basis="not a spectrum sum",
+        power_basis="not a spectrum sum",
+        normalization_scope="per note (research main sheet is ratio-derived, not Phase-2)",
+        physical_interpretation="AUTO_RATIO_PRIORITY first-choice source for EWSD r_k.",
+        not_valid_for=(
+            "Confusing with Metadata Phase-2 corpus weights or "
+            "Analysis_Settings_By_Note GUI base multipliers (same header, different meaning)."
+        ),
+        ontology_family="compartment_ratio",
+        formula_id="F-068",
+        formula_version="4.5.0",
+        notes="AUTO_RATIO_PRIORITY source for EWSD.",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -969,6 +1219,27 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         acd_erb_merge.name: acd_erb_merge,
         spectral_mass.name: spectral_mass,
         ewsd_d10_double_penalty.name: ewsd_d10_double_penalty,
+        spectral_centroid_hz.name: spectral_centroid_hz,
+        spectral_spread_hz.name: spectral_spread_hz,
+        spectral_skewness.name: spectral_skewness,
+        spectral_kurtosis.name: spectral_kurtosis,
+        spectral_irregularity.name: spectral_irregularity,
+        tristimulus_1_fundamental.name: tristimulus_1_fundamental,
+        tristimulus_2_low_harmonics_2_to_4.name: tristimulus_2_low_harmonics_2_to_4,
+        tristimulus_3_high_harmonics_5_plus.name: tristimulus_3_high_harmonics_5_plus,
+        spectral_flatness.name: spectral_flatness,
+        spectral_rolloff_hz_85.name: spectral_rolloff_hz_85,
+        spectral_rolloff_hz_95.name: spectral_rolloff_hz_95,
+        erb_weighted_spectral_density.name: erb_weighted_spectral_density,
+        hutchinson_knopoff_dissonance.name: hutchinson_knopoff_dissonance,
+        vassilakis_dissonance.name: vassilakis_dissonance,
+        selected_dissonance_value.name: selected_dissonance_value,
+        spectral_entropy.name: spectral_entropy,
+        odd_even_harmonic_energy_ratio.name: odd_even_harmonic_energy_ratio,
+        low_mid_energy_ratio.name: low_mid_energy_ratio,
+        inharmonicity_coefficient_B.name: inharmonicity_coefficient_B,
+        pure_observation_w.name: pure_observation_w,
+        density_weight_triplet.name: density_weight_triplet,
     }
 
 

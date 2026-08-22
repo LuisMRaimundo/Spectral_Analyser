@@ -62,21 +62,29 @@ DISSONANCE_VALUE_COLUMNS: Tuple[str, ...] = (
 )
 
 DISSONANCE_STAMPS: Dict[str, Tuple[str, str]] = {
-    "sethares_dissonance": ("COL:sethares_dissonance", DISSONANCE_FORMULA_VERSION),
-    "hutchinson_knopoff_dissonance": (
-        "COL:hutchinson_knopoff_dissonance",
-        DISSONANCE_FORMULA_VERSION,
-    ),
-    "vassilakis_dissonance": ("COL:vassilakis_dissonance", DISSONANCE_FORMULA_VERSION),
+    "sethares_dissonance": ("F-062", DISSONANCE_FORMULA_VERSION),
+    "hutchinson_knopoff_dissonance": ("F-063", DISSONANCE_FORMULA_VERSION),
+    "vassilakis_dissonance": ("F-064", DISSONANCE_FORMULA_VERSION),
     "hutchinson_knopoff_legacy_mean_pair_scaled": (
         "COL:hutchinson_knopoff_legacy_mean_pair_scaled",
         DISSONANCE_FORMULA_VERSION,
     ),
-    "selected_dissonance_value": (
-        "COL:selected_dissonance_value",
-        DISSONANCE_FORMULA_VERSION,
-    ),
+    "selected_dissonance_value": ("F-065", DISSONANCE_FORMULA_VERSION),
     "dissonance_metric_mode": ("COL:dissonance_metric_mode", DISSONANCE_FORMULA_VERSION),
+}
+
+# Reused index IDs for citable COL: residue (not new numbers).
+TRIAGE_REUSED_STAMPS: Dict[str, Tuple[str, str]] = {
+    "spectral_entropy": ("F-011", PACKAGE_FORMULA_VERSION),
+    "inharmonicity_coefficient_B": ("F-008", PACKAGE_FORMULA_VERSION),
+    "pure_observation_w_h": ("F-023", PACKAGE_FORMULA_VERSION),
+    "pure_observation_w_i": ("F-023", PACKAGE_FORMULA_VERSION),
+    "pure_observation_w_s": ("F-023", PACKAGE_FORMULA_VERSION),
+    "harmonic_density_weight": ("F-068", PACKAGE_FORMULA_VERSION),
+    "inharmonic_density_weight": ("F-068", PACKAGE_FORMULA_VERSION),
+    "subbass_density_weight": ("F-068", PACKAGE_FORMULA_VERSION),
+    "odd_even_harmonic_energy_ratio": ("F-066", PACKAGE_FORMULA_VERSION),
+    "low_mid_energy_ratio": ("F-067", PACKAGE_FORMULA_VERSION),
 }
 
 SPECTRAL_MASS_VALUE_COLUMNS: Tuple[str, ...] = (
@@ -177,6 +185,15 @@ def column_stamp(column: str) -> Tuple[str, str]:
         return DISSONANCE_STAMPS[column]
     if column in SPECTRAL_MASS_STAMPS:
         return SPECTRAL_MASS_STAMPS[column]
+    if column in TRIAGE_REUSED_STAMPS:
+        return TRIAGE_REUSED_STAMPS[column]
+    base = mir_segment_base(column)
+    if (
+        base != column
+        and base in MIR_STAMPS
+        and not column.startswith("roughness_aures_1985")
+    ):
+        return MIR_STAMPS[base]
     if column.endswith("_formula_id"):
         return ("META", PACKAGE_FORMULA_VERSION)
     if column.endswith("_formula_version"):

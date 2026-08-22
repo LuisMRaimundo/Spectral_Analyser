@@ -3,8 +3,9 @@
 Four-branch rule on the 202 class-`metric` `COL:` residue. No computation
 change and no column rename/removal. Commit 1 reclasses settings, flags,
 retired quantities, and internal machinery; writes
-`docs/validation/COLUMN_TRIAGE_DECISIONS.md`. Commit 2 assigns F-ids and
-contracts to the remaining citable metrics.
+`docs/validation/COLUMN_TRIAGE_DECISIONS.md`. Commit 2 assigns F-062–F-068
+and reuses F-008/F-011/F-023/F-027–F-039 for the remaining citable
+metrics; each new id has a contract and a `METRIC_FORMULA_INDEX` row.
 
 # Repository cleanup (numerically invisible)
 

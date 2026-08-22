@@ -61,9 +61,20 @@
 | F-059 | $D_q=(\sum p_i^q)^{1/(1-q)}$; $D_1=\exp(-\sum p_i\ln p_i)$; $D_\infty=1/\max p_i$; $p_i=A_i^2/\sum A^2$ | Hill profile (energy-weighted over compartments) | `tools.spectral_density_hill.hill_profile` | `ACD_D0`, `ACD_D1`, `ACD_D2`, `ACD_Dinf`, `ACD_evenness_D2_over_D0` |
 | F-060 | Default `fixed_erb_grid`: $\mathrm{bin}=\lfloor E(f)/\varepsilon\rfloor$. Alt. moving centroid: $f_\mathrm{next}-f_\mathrm{centroid}\le \varepsilon\,\mathrm{ERB}(f_\mathrm{centroid})$. $\mathrm{ERB}(f)=0.108f+24.7$ | ERB peak merge; Tier B excitation scaffold | `tools.spectral_density_hill.merge_peaks` | `ACD_count_merged_*`, `ACD_erb_fraction`, `ACD_merge_strategy` |
 | F-061 | $\mathrm{count}=(D_0\cdot\mathrm{ACD})^{0.5}$; $\mathrm{spectral\_mass}=\mathrm{count}\,\lambda^{0.15}$. $\lambda=$ `ACD_magnitude_per_component`. NaN if any input is NaN or `ACD_status` $\ne$ `ok`. | Spectral mass (how much is sounding). Presence-first count × bounded level. **Supersedes any informal use of `EWSD_score_acoustic_balanced` as a mass/fullness proxy.** | `tools.spectral_mass.add_spectral_mass_column` | `spectral_mass`, `spectral_mass_count` |
+| F-062 | Sethares (2005) pairwise roughness; default `metric_mode=minamp_norm` | Sethares sensory dissonance | `dissonance_models.SetharesDissonance` | `sethares_dissonance` |
+| F-063 | Hutchinson & Knopoff (1978) eq. (3): $\sum_{i<j}a_ia_jg_{ij}/\sum a^2$ | Hutchinson–Knopoff index | `dissonance_models` H&K path | `hutchinson_knopoff_dissonance` |
+| F-064 | Vassilakis (2001) eq. (6.23) on the same partial set / `metric_mode` as F-062 | Vassilakis sensory dissonance | `dissonance_models.VassilakisDissonance` | `vassilakis_dissonance` |
+| F-065 | pointer: value of the model named by `dissonance_metric_mode` | Selected dissonance | export selector | `selected_dissonance_value` |
+| F-066 | $(\sum P_{\mathrm{odd,salient}})/\max(\sum P_{\mathrm{even,salient}},\varepsilon)$ | Odd/even salient-harmonic power ratio | `acoustic_density_core` | `odd_even_harmonic_energy_ratio` |
+| F-067 | $(\sum \sqrt{P}$ of body peaks with $f\le 2000\,\mathrm{Hz})/(\sum \sqrt{P}$ of all body peaks); `low_mid_upper_hz=2000` | Low-mid body salience share | `acoustic_density_core` | `low_mid_energy_ratio` |
+| F-068 | per-note H/I/S weights; first `AUTO_RATIO_PRIORITY` source for EWSD $r_k$ | Density-weight triplet | `acoustic_density_core` / `tools.ewsd_core` | `harmonic_density_weight`, `inharmonic_density_weight`, `subbass_density_weight` |
 | F-056 | $P_i=A_i^2$, $p_i=P_i/\sum P$ (skip $P_i=0$), $D_1=\exp(-\sum p_i\ln p_i)$. Empty or $\sum P=0\to$ NaN; one component $\to 1$. Pool: validated harmonic components (`include_for_density == True`) UNION confirmed inharmonic components UNION sub-bass components whose membership/interpretation status marks them as partials. EXCLUDE any row whose `Acoustic_Interpretation_Status` equals `diagnostic_low_frequency_residual_not_partial` and any unconfirmed row. (Note: this pool is stricter than the F-047 pool. Do not change F-047.) | Balanced component density (Hill $q=1$). Provenance: **defined**. | `tools.balanced_density.balanced_component_density` | `note_balanced_component_density`, `note_balanced_component_density_pool_count` |
 
-Sethares sensory dissonance (not an F-042–F-049 density formula):
+Segment convention for F-027–F-039: the `_on_{attack,release,sustain,sustain_segment}`
+suffix is the same formula evaluated on the named ADSR peak list. It is not a
+new formula ID.
+
+Sethares sensory dissonance is F-062:
 `dissonance_models.SetharesDissonance` implements the pairwise kernel
 from Sethares (2005), *Tuning, Timbre, Spectrum, Scale*, 2nd ed.,
 Eqs. 3.8–3.9. Full citation: `REFERENCES.md`. Export column:
