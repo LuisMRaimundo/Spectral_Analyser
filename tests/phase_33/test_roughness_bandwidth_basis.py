@@ -54,12 +54,14 @@ def test_zwicker_cb_matches_formula_at_published_frequencies() -> None:
         assert got == pytest.approx(ZWICKER_PUBLISHED_HZ[f], rel=0.01)
 
 
-def test_validation_doc_does_not_claim_basis_validated() -> None:
+def test_validation_doc_signs_off_on_provenance_not_circular_table() -> None:
     text = DOC_PATH.read_text(encoding="utf-8")
-    assert "Primary-source confirmation is outstanding" in text
-    assert "may change" in text
-    assert "not a validated" in text.lower() or "not author-validated" in text.lower()
-    assert "Do not treat these numbers as a validated basis" in text
+    assert "unit mismatch with the source" in text
+    assert "provenance-consistent" in text
+    assert "identity check (grid resolution)" in text
+    assert "PL ref (0.25·Zwicker CB)" not in text
+    assert "non-blocking" in text
+    assert "Fig. 10" in text
 
 
 def test_zwicker_kernel_peak_locations() -> None:

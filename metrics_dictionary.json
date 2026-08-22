@@ -466,7 +466,7 @@
       "status": "diagnostic",
       "phase": "phase_5",
       "citation": "Parncutt (1989); Plomp & Levelt (1965); Zwicker & Fastl (2007)",
-      "description": "Pairwise spectral roughness, g(x)=x exp(1-x), x=df/(0.25*Zwicker CB). Proposed default, not author-validated. bandwidth_basis='erb' keeps the round-3 kernel.",
+      "description": "Pairwise spectral roughness, g(x)=x exp(1-x), x=df/(0.25*Zwicker CB). Provenance-consistent default (P&L 1965 used the Zwicker CB lineage, not ERB). bandwidth_basis='erb' keeps the round-3 kernel.",
       "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
     },
     "roughness_aures_1985": {

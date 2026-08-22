@@ -136,8 +136,10 @@ def roughness_parncutt_kernel(
     ``bandwidth_basis`` (default ``zwicker_cb``). ``g(x) = x * exp(1 - x)``
     is Parncutt's standard curve for the Plomp–Levelt (1965) data; the
     maximum sits at ``x = 1``. The default bandwidth is Zwicker & Fastl
-    (2007) critical band, not ERB. Primary-source confirmation of this
-    default against published Plomp–Levelt figures is outstanding.
+    (2007) critical band, not ERB. That default is provenance-consistent
+    with Plomp & Levelt (1965), who used the Zwicker, Flottorp & Stevens
+    (1957) critical-band lineage. Overlay on P&L Fig. 10 is outstanding
+    but non-blocking corroboration.
 
     The kernel decays to a negligible value for ``x`` beyond a few units
     (e.g. ``x = 20`` → ``20 * exp(-19) ≈ 1.1e-7``). Pairs whose

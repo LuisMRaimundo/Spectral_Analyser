@@ -163,11 +163,10 @@ def write_markdown(payload: dict) -> None:
     lines = [
         "# Roughness bandwidth basis — author validation artefact",
         "",
-        "**Primary-source confirmation is outstanding.** This document compares",
-        "three kernels so the author can read them against the published",
-        "Plomp & Levelt (1965) dissonance curves. The default",
-        "`bandwidth_basis=\"zwicker_cb\"` **may change** on that reading.",
-        "Do not treat these numbers as a validated basis.",
+        "The default `bandwidth_basis=\"zwicker_cb\"` is signed off on",
+        "**provenance grounds** (see below). Comparison against Plomp &",
+        "Levelt (1965) Fig. 10 is outstanding corroboration and is",
+        "**non-blocking**.",
         "",
         "Kernels:",
         "",
@@ -178,6 +177,21 @@ def write_markdown(payload: dict) -> None:
         "",
         "The ACD ERB helper in `tools/spectral_density_hill.py` is independent",
         "and was not imported here.",
+        "",
+        "## Provenance (the load-bearing argument)",
+        "",
+        "Plomp and Levelt (1965) derived the 25%-of-critical-bandwidth result",
+        "against the critical-band data of Zwicker, Flottorp and Stevens (1957).",
+        "ERB is a different psychophysical construct, measured by a different",
+        "method, and was not published until Glasberg and Moore (1990).",
+        "Applying P&L's 0.25 factor to an ERB denominator is therefore a",
+        "**unit mismatch with the source**, independent of which formula better",
+        "describes the auditory filter. Zwicker & Fastl (2007) is a fit to the",
+        "same lineage P&L used, so `zwicker_cb` is the provenance-consistent",
+        "basis.",
+        "",
+        "This argument is checkable from the papers. Overlaying the two-tone",
+        "curves on P&L Fig. 10 is corroboration, not the basis of the decision.",
         "",
         "## Quarter-bandwidth widths",
         "",
@@ -193,20 +207,27 @@ def write_markdown(payload: dict) -> None:
         "",
         "## Maximum-location table",
         "",
-        "`df` of the two-tone peak (unit amplitudes). Plomp–Levelt reference",
-        "column is **0.25 × Zwicker CB(f0)** — the conventional “~25% of a",
-        "critical band” location on the Zwicker scale. At 1 kHz the published",
-        "Plomp–Levelt maximum is near 30–40 Hz. These columns are for the",
-        "author to compare with the 1965 figures; they are not a validation.",
+        "`df` of the two-tone peak (unit amplitudes). The last column is an",
+        "**identity check**: it is `0.25 × Zwicker CB(f0)` evaluated by the",
+        "same formula as the kernel denominator, not an external Plomp–Levelt",
+        "measurement. Residuals against the swept peak are sweep-grid",
+        "resolution plus the min-frequency convention (peak search uses",
+        f"`np.linspace(0.5, max(2·f0, 400), {SWEEP_POINTS})`, so the step is",
+        f"`(hi − 0.5) / {SWEEP_POINTS - 1}` Hz). The table shows the",
+        "implementation computing what it was told to compute. It is not",
+        "external validation.",
         "",
-        "| f0 (Hz) | legacy `0.25f+24.7` | 0.25·ERB | 0.25·Zwicker | PL ref (0.25·Zwicker CB) |",
-        "|---:|---:|---:|---:|---:|",
+        "| f0 (Hz) | legacy `0.25f+24.7` | 0.25·ERB | 0.25·Zwicker | identity check (grid resolution) | grid step (Hz) |",
+        "|---:|---:|---:|---:|---:|---:|",
     ]
     for row in payload["peaks"]:
+        f0 = float(row["f0"])
+        hi = max(2.0 * f0, 400.0)
+        step = (hi - 0.5) / (SWEEP_POINTS - 1)
         lines.append(
-            f"| {row['f0']:g} | {row['legacy_conflated']:.2f} | "
+            f"| {f0:g} | {row['legacy_conflated']:.2f} | "
             f"{row['erb']:.2f} | {row['zwicker_cb']:.2f} | "
-            f"{row['pl_ref_zwicker_025']:.2f} |"
+            f"{row['pl_ref_zwicker_025']:.2f} | {step:.3f} |"
         )
 
     lines += [
@@ -285,9 +306,9 @@ def write_markdown(payload: dict) -> None:
     lines += [
         "## Outstanding judgement",
         "",
-        "The default may change after the author compares the figures with",
-        "Plomp & Levelt (1965). Until then, treat `zwicker_cb` as a proposed",
-        "default, not a validated one.",
+        "The bandwidth basis is signed off on provenance grounds.",
+        "Overlay on Plomp & Levelt (1965) Fig. 10 remains an outstanding",
+        "but **non-blocking** corroboration check.",
         "",
     ]
     DOC_PATH.parent.mkdir(parents=True, exist_ok=True)

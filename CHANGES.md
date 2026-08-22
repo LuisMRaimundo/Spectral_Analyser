@@ -1,3 +1,10 @@
+# v4.4.0 addendum — roughness basis signed off on provenance
+
+`zwicker_cb` is the provenance-consistent F-037 default: Plomp & Levelt
+(1965) used Zwicker, Flottorp & Stevens (1957) critical bands, not ERB.
+The previous “PL ref” column was an identity check and is labelled as
+such. Overlay on P&L Fig. 10 is outstanding but non-blocking.
+
 # v4.4.0 addendum — H&K sub-bass bandwidth (open item)
 
 `HutchinsonKnopoffDissonance.cbw` is still `1.72 · f^0.65` by default.

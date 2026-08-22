@@ -1,10 +1,9 @@
 # Roughness bandwidth basis — author validation artefact
 
-**Primary-source confirmation is outstanding.** This document compares
-three kernels so the author can read them against the published
-Plomp & Levelt (1965) dissonance curves. The default
-`bandwidth_basis="zwicker_cb"` **may change** on that reading.
-Do not treat these numbers as a validated basis.
+The default `bandwidth_basis="zwicker_cb"` is signed off on
+**provenance grounds** (see below). Comparison against Plomp &
+Levelt (1965) Fig. 10 is outstanding corroboration and is
+**non-blocking**.
 
 Kernels:
 
@@ -15,6 +14,21 @@ Kernels:
 
 The ACD ERB helper in `tools/spectral_density_hill.py` is independent
 and was not imported here.
+
+## Provenance (the load-bearing argument)
+
+Plomp and Levelt (1965) derived the 25%-of-critical-bandwidth result
+against the critical-band data of Zwicker, Flottorp and Stevens (1957).
+ERB is a different psychophysical construct, measured by a different
+method, and was not published until Glasberg and Moore (1990).
+Applying P&L's 0.25 factor to an ERB denominator is therefore a
+**unit mismatch with the source**, independent of which formula better
+describes the auditory filter. Zwicker & Fastl (2007) is a fit to the
+same lineage P&L used, so `zwicker_cb` is the provenance-consistent
+basis.
+
+This argument is checkable from the papers. Overlaying the two-tone
+curves on P&L Fig. 10 is corroboration, not the basis of the decision.
 
 ## Quarter-bandwidth widths
 
@@ -29,20 +43,24 @@ and was not imported here.
 
 ## Maximum-location table
 
-`df` of the two-tone peak (unit amplitudes). Plomp–Levelt reference
-column is **0.25 × Zwicker CB(f0)** — the conventional “~25% of a
-critical band” location on the Zwicker scale. At 1 kHz the published
-Plomp–Levelt maximum is near 30–40 Hz. These columns are for the
-author to compare with the 1965 figures; they are not a validation.
+`df` of the two-tone peak (unit amplitudes). The last column is an
+**identity check**: it is `0.25 × Zwicker CB(f0)` evaluated by the
+same formula as the kernel denominator, not an external Plomp–Levelt
+measurement. Residuals against the swept peak are sweep-grid
+resolution plus the min-frequency convention (peak search uses
+`np.linspace(0.5, max(2·f0, 400), 400)`, so the step is
+`(hi − 0.5) / 399` Hz). The table shows the
+implementation computing what it was told to compute. It is not
+external validation.
 
-| f0 (Hz) | legacy `0.25f+24.7` | 0.25·ERB | 0.25·Zwicker | PL ref (0.25·Zwicker CB) |
-|---:|---:|---:|---:|---:|
-| 65.4 | 41.55 | 7.51 | 25.53 | 25.08 |
-| 110 | 52.57 | 9.51 | 25.53 | 25.22 |
-| 146.83 | 61.58 | 10.51 | 25.53 | 25.39 |
-| 220 | 79.81 | 12.62 | 25.83 | 25.87 |
-| 440 | 134.96 | 18.13 | 29.16 | 28.37 |
-| 1000 | 276.12 | 35.58 | 40.59 | 40.55 |
+| f0 (Hz) | legacy `0.25f+24.7` | 0.25·ERB | 0.25·Zwicker | identity check (grid resolution) | grid step (Hz) |
+|---:|---:|---:|---:|---:|---:|
+| 65.4 | 41.55 | 7.51 | 25.53 | 25.08 | 1.001 |
+| 110 | 52.57 | 9.51 | 25.53 | 25.22 | 1.001 |
+| 146.83 | 61.58 | 10.51 | 25.53 | 25.39 | 1.001 |
+| 220 | 79.81 | 12.62 | 25.83 | 25.87 | 1.102 |
+| 440 | 134.96 | 18.13 | 29.16 | 28.37 | 2.204 |
+| 1000 | 276.12 | 35.58 | 40.59 | 40.55 | 5.011 |
 
 ## Corpus-register impact (20-partial 1/n series)
 
@@ -117,6 +135,6 @@ cello path absent). Task 4 remains gated.
 
 ## Outstanding judgement
 
-The default may change after the author compares the figures with
-Plomp & Levelt (1965). Until then, treat `zwicker_cb` as a proposed
-default, not a validated one.
+The bandwidth basis is signed off on provenance grounds.
+Overlay on Plomp & Levelt (1965) Fig. 10 remains an outstanding
+but **non-blocking** corroboration check.
