@@ -8,16 +8,19 @@ from __future__ import annotations
 
 from typing import Dict, Tuple
 
+# Retired from the visible dropdown on 2026-08-22: Squared, Cubic,
+# Exponential, Inverse log. Reason: no acoustic or historical use;
+# expansive weightings run counter to auditory compression.
+# Same pattern as the earlier D2/D8 retirement — keys stay in
+# `_LEGACY_WEIGHT_LABEL_MAP` (map to themselves) so old presets resolve,
+# and `density.get_weight_function` still computes them for batch
+# reproducibility of old runs.
 # (combo label shown to the user, internal key for density / proc_audio)
 WEIGHT_FUNCTION_UI_CHOICES: Tuple[Tuple[str, str], ...] = (
     ("Linear", "linear"),
     ("Logarithmic", "log"),
     ("Square root", "sqrt"),
     ("Cube root", "cbrt"),
-    ("Squared", "squared"),
-    ("Cubic", "cubic"),
-    ("Exponential", "exp"),
-    ("Inverse log", "inverse log"),
     ("D3 (Σlog1p A)", "d3"),
     ("D10 (Σlog1p·N_eff/N)", "d10"),
     ("D17 (log1p E · log1p N_eff)", "d17"),
@@ -71,6 +74,15 @@ _LEGACY_WEIGHT_LABEL_MAP: Dict[str, str] = {
 }
 
 
+_RETIRED_WEIGHT_DISPLAY: Dict[str, str] = {
+    "squared": "Squared",
+    "cubic": "Cubic",
+    "exp": "Exponential",
+    "exponential": "Exponential",
+    "inverse log": "Inverse log",
+}
+
+
 def display_label_for_weight_key(key: str) -> str:
     """Return the UI combo label for an internal weight key, or the key itself if unknown."""
     k = (key or "").strip().lower()
@@ -78,6 +90,8 @@ def display_label_for_weight_key(key: str) -> str:
         return "Linear"
     if k == "d8":
         return "D17 (log1p E · log1p N_eff)"
+    if k in _RETIRED_WEIGHT_DISPLAY:
+        return _RETIRED_WEIGHT_DISPLAY[k]
     for disp, kk in WEIGHT_FUNCTION_UI_CHOICES:
         if kk == k:
             return disp

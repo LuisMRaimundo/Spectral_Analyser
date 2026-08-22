@@ -54,6 +54,7 @@ _FIELD_NAMES = (
     "ontology_family",
     "formula_id",
     "formula_version",
+    "notes",
 )
 
 
@@ -126,7 +127,7 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
 
 
 def test_every_contract_field_is_a_non_empty_string() -> None:
-    optional_stamps = {"formula_id", "formula_version"}
+    optional_stamps = {"formula_id", "formula_version", "notes"}
     for definition in build_metric_contracts().values():
         for field in _FIELD_NAMES:
             value = getattr(definition, field)
@@ -201,6 +202,7 @@ def test_export_fields_flatten_with_stable_prefix_and_full_schema() -> None:
         if key not in {
             "metric_contract_formula_id",
             "metric_contract_formula_version",
+            "metric_contract_notes",
         }:
             assert value != ""
     assert out["metric_contract_name"] == "density_metric_raw"

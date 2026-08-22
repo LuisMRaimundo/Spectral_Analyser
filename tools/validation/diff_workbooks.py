@@ -32,6 +32,7 @@ VOLATILE_COLUMNS = frozenset(
 )
 VOLATILE_HEADER_FRAGMENTS = ("timestamp", "generated_at", "git_describe")
 _ISO_STAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}")
+_GIT_IDENT = re.compile(r"(^|-)g?[0-9a-f]{7,40}(-dirty)?$", re.I)
 
 
 @dataclass
@@ -95,6 +96,16 @@ def _text_whitelisted(item: str, allow_s: set[str], allow_c: set[str]) -> bool:
     return False
 
 
+def _looks_like_identity(va, vb) -> bool:
+    for val in (va, vb):
+        if not isinstance(val, str):
+            continue
+        s = val.strip()
+        if _ISO_STAMP.search(s) or _GIT_IDENT.search(s) or "dirty" in s.lower():
+            return True
+    return False
+
+
 def _is_volatile(header: str | None) -> bool:
     if not header:
         return False
@@ -115,13 +126,8 @@ def _as_number(value):
             return float("nan")
         return float(value)
     if isinstance(value, str):
-        s = value.strip()
-        if not s:
-            return None
-        try:
-            return float(s)
-        except ValueError:
-            return None
+        # Do not coerce strings: git short hashes can be all-digit (e.g. 0968082).
+        return None
     return None
 
 
@@ -184,12 +190,7 @@ def diff_workbooks(
                             report.numeric_mismatches.append(f"{loc}: {na} -> {nb}")
                     continue
                 if va != vb:
-                    if volatile or (
-                        isinstance(va, str)
-                        and isinstance(vb, str)
-                        and _ISO_STAMP.search(va)
-                        and _ISO_STAMP.search(vb)
-                    ):
+                    if volatile or _looks_like_identity(va, vb):
                         report.volatile_notes.append(f"{loc}: {va!r} -> {vb!r}")
                     else:
                         report.text_mismatches.append(f"{loc}: {va!r} -> {vb!r}")

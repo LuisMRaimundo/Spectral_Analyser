@@ -37,6 +37,7 @@ class MetricDefinition:
     ontology_family: str
     formula_id: str = ""
     formula_version: str = ""
+    notes: str = ""
 
 
 def _density_weighted_formula() -> str:
@@ -707,6 +708,10 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
             "diagnostic_low_frequency_residual_not_partial rows; substituting for F-047."
         ),
         ontology_family="partial_count_descriptor",
+        notes=(
+            "superseded by ACD_score (rho = 0.999 on validation corpora); "
+            "retained for workbook compatibility"
+        ),
     )
     note_balanced_component_density_pool_count = MetricDefinition(
         name="note_balanced_component_density_pool_count",
@@ -742,6 +747,10 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
             "Do not change its computation."
         ),
         ontology_family="legacy_only",
+        notes=(
+            "superseded as a mass/fullness measure by spectral_mass (F-061); "
+            "retained as the validated developmental ancestor (see methods documentation)"
+        ),
     )
     acd_score = MetricDefinition(
         name="ACD_score",
@@ -895,6 +904,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         physical_interpretation="Documented double correction only. Do not change the algebra.",
         not_valid_for="Cross-note comparison against log-weighted EWSD.",
         ontology_family="legacy_only",
+        notes="double-corrected; open item in CHANGES.md; not recommended",
     )
     return {
         density_raw.name: density_raw,
