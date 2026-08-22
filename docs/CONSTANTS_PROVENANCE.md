@@ -79,6 +79,8 @@ Provenance classes:
 - `PL_CB_FRACTION` (`0.25`) - `primary_source` - Plomp & Levelt (1965) / Parncutt (1989): peak at ~0.25 critical bandwidths.
 - `CB_ZWICKER_A/B/C/EXP` (`25`, `75`, `1.4`, `0.69`) - `primary_source` - Zwicker & Fastl (2007) `CB(f)=25+75(1+1.4(f/1000)^2)^0.69`. Proposed default (`bandwidth_basis="zwicker_cb"`). Author confirmation against published Plomp–Levelt figures is outstanding: [`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`](validation/ROUGHNESS_BANDWIDTH_BASIS.md).
 - `BANDWIDTH_BASIS_DEFAULT` (`zwicker_cb`) - `internal_default` - Proposed; may change after author reading.
+- `HK_CBW_COEFF` / `HK_CBW_EXP` (`1.72`, `0.65`) - `primary_source` - Hutchinson & Knopoff (1978) Fig. 2. Default of `HutchinsonKnopoffDissonance.cbw`.
+- `HK_LOW_FREQUENCY_CUTOFF_HZ` (`200`) - `internal_default` - Switch point for optional `low_frequency_basis="zwicker_below_200hz"`. Default remains `hk1978` pending author decision.
 - `HARMONIC_TOLERANCE_BASE` (`0.1`) - `convention` - Baseline tolerance convention for robust harmonic matching.
 - `HARMONIC_TOLERANCE_ADAPTIVE_FACTOR` (`0.1`) - `convention` - Adaptive tolerance scaling convention for robust matching.
 - `HARMONIC_MAX_CHECK` (`100`) - `convention` - Practical harmonic-order cap convention.

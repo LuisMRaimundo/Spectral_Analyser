@@ -8,7 +8,7 @@ Visual comparison helpers used by the orchestrator GUI.
 from __future__ import annotations
 import numpy as np
 import pandas as pd
-from typing import List, Tuple, Dict, Optional, Any
+from typing import List, Tuple, Dict, Optional, Any, Literal
 import matplotlib.pyplot as plt
 from abc import ABC, abstractmethod
 import math
@@ -17,6 +17,8 @@ from functools import lru_cache
 import os
 from pathlib import Path
 import scipy.signal
+
+from mir_descriptors import critical_bandwidth_zwicker_hz
 
 # Logging configuration
 logger = logging.getLogger(__name__)
@@ -31,6 +33,10 @@ HK_G_TABLE_PROVENANCE = (
     "and data/hk1978_g_table_provenance.txt."
 )
 _HK_G_TABLE_CSV = Path(__file__).resolve().parent / "data" / "hk1978_g_table.csv"
+HKLowFrequencyBasis = Literal["hk1978", "zwicker_below_200hz"]
+HK_LOW_FREQUENCY_CUTOFF_HZ: float = 200.0
+HK_CBW_COEFF: float = 1.72  # Hutchinson & Knopoff (1978) Fig. 2
+HK_CBW_EXP: float = 0.65
 
 
 def _load_hk_default_g_table() -> list[tuple[float, float]]:
@@ -559,16 +565,43 @@ class HutchinsonKnopoffDissonance(DissonanceModel):
 
     DEFAULT_G_TABLE = _load_hk_default_g_table()
 
-    def __init__(self, g_table=None):
+    def __init__(
+        self,
+        g_table=None,
+        low_frequency_basis: HKLowFrequencyBasis = "hk1978",
+    ):
         super().__init__("Hutchinson-Knopoff", "CBW( f̄ ) and g(y) lookup (1978)")
         # g_table: list of points [(y0,g0), (y1,g1), ...] typically spanning [0, 1.2]
         # If omitted, use the default CSV table.
         self.g_table = sorted(g_table) if g_table else sorted(self.DEFAULT_G_TABLE)
+        basis = str(low_frequency_basis).strip().lower()
+        if basis not in ("hk1978", "zwicker_below_200hz"):
+            raise ValueError(
+                f"unknown low_frequency_basis {low_frequency_basis!r}; "
+                "expected 'hk1978' or 'zwicker_below_200hz'"
+            )
+        self.low_frequency_basis: HKLowFrequencyBasis = basis  # type: ignore[assignment]
 
     @staticmethod
-    def cbw(f_bar: float) -> float:
-        # CBW = 1.72 * (f̄)^0.65 (Fig. 2; empirical fit)
-        return 1.72 * (f_bar ** 0.65)
+    def cbw(
+        f_bar: float,
+        low_frequency_basis: HKLowFrequencyBasis = "hk1978",
+    ) -> float:
+        # CBW = 1.72 * (f̄)^0.65 (Fig. 2; empirical fit). Default unchanged.
+        # Optional hybrid: Zwicker CB below 200 Hz (author decision pending).
+        f = float(f_bar)
+        hk = HK_CBW_COEFF * (f ** HK_CBW_EXP)
+        basis = str(low_frequency_basis).strip().lower()
+        if basis == "hk1978":
+            return hk
+        if basis == "zwicker_below_200hz":
+            if f < HK_LOW_FREQUENCY_CUTOFF_HZ:
+                return float(critical_bandwidth_zwicker_hz(np.asarray([f]))[0])
+            return hk
+        raise ValueError(
+            f"unknown low_frequency_basis {low_frequency_basis!r}; "
+            "expected 'hk1978' or 'zwicker_below_200hz'"
+        )
 
     def g(self, y: float) -> float:
         # y = |fi - fj| / CBW(f̄)
@@ -594,7 +627,7 @@ class HutchinsonKnopoffDissonance(DissonanceModel):
             return 0.0
 
         f_bar = 0.5 * (f1 + f2)
-        cb = self.cbw(f_bar)
+        cb = self.cbw(f_bar, low_frequency_basis=self.low_frequency_basis)
         if cb <= 0.0:
             return 0.0
 
@@ -626,7 +659,7 @@ class HutchinsonKnopoffDissonance(DissonanceModel):
                 fj, aj = partials[j]
 
                 f_bar = 0.5 * (fi + fj)
-                cb = self.cbw(f_bar)
+                cb = self.cbw(f_bar, low_frequency_basis=self.low_frequency_basis)
                 if cb <= 0.0:
                     continue
 

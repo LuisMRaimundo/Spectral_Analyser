@@ -1,3 +1,13 @@
+# v4.4.0 addendum — H&K sub-bass bandwidth (open item)
+
+`HutchinsonKnopoffDissonance.cbw` is still `1.72 · f^0.65` by default.
+Optional `low_frequency_basis="zwicker_below_200hz"` is available and
+does not change default arithmetic. At 50 Hz the 1978 fit is ~21.7 Hz
+against a Zwicker CB near 100 Hz. **Open item:** should the hybrid
+become the default for the S-region? Author decision required.
+Comparison: `docs/validation/HK_SUBBASS_BANDWIDTH.md`. The four
+previously noted defects in `dissonance_models.py` were not touched.
+
 # v4.4.0 addendum — roughness alias retired
 
 `_roughness_aures_1985` now raises `NotImplementedError`. New Stage 1
