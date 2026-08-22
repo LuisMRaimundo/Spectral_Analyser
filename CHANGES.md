@@ -1,3 +1,13 @@
+# v4.4.0 — Phase 33: roughness Zwicker bandwidth basis
+
+Proposed default `bandwidth_basis="zwicker_cb"` for F-037. Round-3
+`0.25·ERB` is too narrow below 500 Hz (classical CB flattens near
+100 Hz). `erb` remains selectable. Primary-source confirmation against
+Plomp & Levelt (1965) figures is **outstanding**; the default may
+change. Tests live in `tests/phase_33/`. Artefact:
+`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`. ACD / EWSD numerics
+unchanged.
+
 # v4.4.0 addendum — CI hang-killer and live_audio marker
 
 `pytest-timeout` (300 s) and `@pytest.mark.live_audio` keep local-path

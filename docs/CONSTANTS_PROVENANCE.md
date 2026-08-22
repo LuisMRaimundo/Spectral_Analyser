@@ -75,8 +75,10 @@ Provenance classes:
 - `HARMONIC_DETECTION_THRESHOLD_DB` (`-60.0`) - `convention` - Common peak-picking floor in spectral analysis.
 - `SNR_THRESHOLD_DB` (`6.0`) - `convention` - Standard detectability margin convention.
 - `DISSONANCE_PAIRWISE_PARTIAL_CAP` (`80`) - `convention` - Computational cap convention for pairwise roughness models.
-- `_ROUGHNESS_ERB_SLOPE` (`0.108`) / `_ROUGHNESS_ERB_INTERCEPT_HZ` (`24.7`) - `primary_source` - Glasberg & Moore (1990) ERB used **only** in `mir_descriptors._roughness_parncutt_denom_hz`. Independent of `tools/spectral_density_hill.py`.
-- `_ROUGHNESS_PARNCUTT_CB_FRACTION` (`0.25`) - `primary_source` - Parncutt (1989) normalisation: peak roughness at ~0.25 critical bandwidths, `x = (df / ERB) / 0.25`. The previous denominator `0.25 f + 24.7` substituted this fraction for the ERB slope. At 1 kHz the kernel maximum moves from df ≈ 275 Hz to df ≈ 33 Hz.
+- `_ROUGHNESS_ERB_SLOPE` (`0.108`) / `_ROUGHNESS_ERB_INTERCEPT_HZ` (`24.7`) - `primary_source` - Glasberg & Moore (1990) ERB used **only** as `bandwidth_basis="erb"` in `mir_descriptors`. Independent of `tools/spectral_density_hill.py`.
+- `PL_CB_FRACTION` (`0.25`) - `primary_source` - Plomp & Levelt (1965) / Parncutt (1989): peak at ~0.25 critical bandwidths.
+- `CB_ZWICKER_A/B/C/EXP` (`25`, `75`, `1.4`, `0.69`) - `primary_source` - Zwicker & Fastl (2007) `CB(f)=25+75(1+1.4(f/1000)^2)^0.69`. Proposed default (`bandwidth_basis="zwicker_cb"`). Author confirmation against published Plomp–Levelt figures is outstanding: [`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`](validation/ROUGHNESS_BANDWIDTH_BASIS.md).
+- `BANDWIDTH_BASIS_DEFAULT` (`zwicker_cb`) - `internal_default` - Proposed; may change after author reading.
 - `HARMONIC_TOLERANCE_BASE` (`0.1`) - `convention` - Baseline tolerance convention for robust harmonic matching.
 - `HARMONIC_TOLERANCE_ADAPTIVE_FACTOR` (`0.1`) - `convention` - Adaptive tolerance scaling convention for robust matching.
 - `HARMONIC_MAX_CHECK` (`100`) - `convention` - Practical harmonic-order cap convention.

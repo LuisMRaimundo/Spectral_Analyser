@@ -288,7 +288,7 @@ def test_roughness_aures_alias_warns() -> None:
 
 
 def test_roughness_peak_near_quarter_erb_at_1khz() -> None:
-    """Corrected kernel peaks near 33 Hz at 1 kHz, not ~275 Hz."""
+    """Default (Zwicker) kernel peaks in 20–50 Hz at 1 kHz, not ~275 Hz."""
     f0 = 1000.0
     amps = np.asarray([1.0, 1.0], dtype=float)
     dfs = np.linspace(5.0, 400.0, 80)

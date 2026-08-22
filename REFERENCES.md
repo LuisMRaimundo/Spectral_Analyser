@@ -56,7 +56,7 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 | `subbass_policy.py` | Zwicker & Fastl (1990) |
 | `constants.py` (`DENSITY_WEIGHT_FUNCTION_DEFAULT`) | Fechner (1860); Stevens (1955); Zwicker & Fastl (1990) |
 | `dissonance_models.py` (`SetharesDissonance`) | Sethares (2005) |
-| `mir_descriptors.py` | Plomp & Levelt (1965); Parncutt (1989); Glasberg & Moore (1990); Pollard & Jansson (1982); Peeters et al. (2011) |
+| `mir_descriptors.py` | Plomp & Levelt (1965); Parncutt (1989); Zwicker & Fastl (2007); Glasberg & Moore (1990); Pollard & Jansson (1982); Peeters et al. (2011) |
 | `tools/spectral_density_hill.py` | Glasberg & Moore (1990); Moore & Glasberg (1983); Hill (1973); Jost (2006); Hurley & Rickard (2009); Moore, Glasberg & Baer (1997); ISO 532-2:2017 |
 | `adaptive_density_engine.py` | Lin (1991); Gelman et al. (2013) |
 | `metric_contract.py` | Hatton (1997); Soergel (2015) |

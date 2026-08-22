@@ -126,10 +126,11 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
     roughness_parncutt_kernel = MetricDefinition(
         name="roughness_parncutt_kernel",
         formula=(
-            "F-037: x = |f_i-f_j| / (0.25 * ERB(f_lo)); "
-            "ERB(f) = 0.108 f + 24.7 (Glasberg & Moore, 1990); "
-            "g(x) = x * exp(1-x) (Parncutt 1989 / Plomp & Levelt 1965). "
-            "Not Aures (1985)."
+            "F-037: x = |f_i-f_j| / (0.25 * CB(f_lo)); default CB = Zwicker "
+            "25+75(1+1.4(f/1000)^2)^0.69 (Zwicker & Fastl, 2007). "
+            "bandwidth_basis='erb' keeps 0.25*ERB(f)=0.25*(0.108f+24.7). "
+            "g(x)=x*exp(1-x) (Parncutt 1989 / Plomp & Levelt 1965). "
+            "Default is proposed, not author-validated."
         ),
         input_domain="peak-picked linear amplitudes and frequencies",
         unit_or_scale="pairwise kernel units",
@@ -137,8 +138,8 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         power_basis="not used (amplitude product)",
         normalization_scope="per spectrum",
         physical_interpretation=(
-            "Pairwise spectral roughness. Maximum at ~0.25 ERB "
-            "(~33 Hz at 1 kHz). Independent of ACD ERB helpers."
+            "Pairwise spectral roughness. Proposed default peaks at ~0.25 "
+            "Zwicker CB (~40 Hz at 1 kHz). Independent of ACD ERB helpers."
         ),
         not_valid_for="Citing as Aures (1985); importing into spectral_density_hill.",
         ontology_family="sensory_dissonance",
