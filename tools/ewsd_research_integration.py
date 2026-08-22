@@ -9,6 +9,7 @@ analysis folder and left-joins scores into ``Spectral_Density_Metrics``.
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Any, List, Optional, Sequence
 
@@ -76,7 +77,20 @@ EWSD_RESEARCH_UNCERTAINTY_COLUMNS: tuple[str, ...] = (
     "EWSD_score_acoustic_balanced_ci_low",
     "EWSD_score_acoustic_balanced_ci_high",
     "EWSD_score_acoustic_balanced_rel_uncertainty",
+    "EWSD_score_total_ci_low_bca",
+    "EWSD_score_total_ci_high_bca",
+    "EWSD_score_acoustic_balanced_ci_low_bca",
+    "EWSD_score_acoustic_balanced_ci_high_bca",
+    "ewsd_score_total_point_under_bootstrap_ratios",
+    "ewsd_ratio_definition_point",
+    "ewsd_ratio_definition_bootstrap",
+    "ewsd_bootstrap_bias_absolute",
+    "ewsd_bootstrap_bias_relative",
+    "ewsd_bootstrap_seed_used",
     "ewsd_uncertainty_sources",
+    "ewsd_balanced_families_present",
+    "ewsd_f0_source",
+    "ewsd_corpus_weight_function_homogeneous",
 )
 
 EWSD_RESEARCH_ALL_COLUMNS: tuple[str, ...] = (
@@ -186,6 +200,15 @@ def _compartment_bootstrap_data_from_cset(
     return out
 
 
+def deterministic_ewsd_bootstrap_seed(source_sha256: str, fallback: int = 0) -> int:
+    """Derive a note-stable bootstrap seed from ``source_sha256`` (B4)."""
+    text = (source_sha256 or "").strip()
+    if not text:
+        return int(fallback) % (2**32)
+    digest = hashlib.sha256(text.encode("utf-8")).digest()[:8]
+    return int.from_bytes(digest, "big") % (2**32)
+
+
 def compute_ewsd_dataframe_from_analysis_root(
     analysis_root: Path,
     *,
@@ -222,13 +245,17 @@ def compute_ewsd_dataframe_from_analysis_root(
         if cset is not None:
             row = compute_ewsd(cset, threshold_db_relative, apply_anti_concentration)
             if include_uncertainty and cset.his_weights.is_valid():
+                seed_used = deterministic_ewsd_bootstrap_seed(
+                    cset.source_sha256, fallback=bootstrap_seed
+                )
+                row["ewsd_bootstrap_seed_used"] = int(seed_used)
                 try:
                     boot = bootstrap_ewsd_from_compartments(
                         _compartment_bootstrap_data_from_cset(cset, threshold_db_relative),
                         acoustic_balance_alpha=acoustic_balance_alpha,
                         n_boot=bootstrap_n,
                         ci=bootstrap_ci,
-                        seed=bootstrap_seed + len(rows),
+                        seed=seed_used,
                         propagate_ratio_uncertainty=True,
                     )
                     row.update(
@@ -245,6 +272,23 @@ def compute_ewsd_dataframe_from_analysis_root(
                             "EWSD_score_acoustic_balanced_rel_uncertainty": boot[
                                 "ewsd_score_acoustic_balanced_rel_uncertainty"
                             ],
+                            "EWSD_score_total_ci_low_bca": boot["ewsd_score_total_ci_low_bca"],
+                            "EWSD_score_total_ci_high_bca": boot["ewsd_score_total_ci_high_bca"],
+                            "EWSD_score_acoustic_balanced_ci_low_bca": boot[
+                                "ewsd_score_acoustic_balanced_ci_low_bca"
+                            ],
+                            "EWSD_score_acoustic_balanced_ci_high_bca": boot[
+                                "ewsd_score_acoustic_balanced_ci_high_bca"
+                            ],
+                            "ewsd_score_total_point_under_bootstrap_ratios": boot[
+                                "ewsd_score_total_point_under_bootstrap_ratios"
+                            ],
+                            "ewsd_ratio_definition_point": boot["ewsd_ratio_definition_point"],
+                            "ewsd_ratio_definition_bootstrap": boot[
+                                "ewsd_ratio_definition_bootstrap"
+                            ],
+                            "ewsd_bootstrap_bias_absolute": boot["ewsd_bootstrap_bias_absolute"],
+                            "ewsd_bootstrap_bias_relative": boot["ewsd_bootstrap_bias_relative"],
                             "ewsd_uncertainty_sources": boot["uncertainty_sources"],
                         }
                     )
@@ -274,6 +318,29 @@ def compute_ewsd_dataframe_from_analysis_root(
     result = add_quality_columns(result)
     if "ewsd_score" in result.columns and "EWSD_score_total" not in result.columns:
         result["EWSD_score_total"] = pd.to_numeric(result["ewsd_score"], errors="coerce")
+    if "weight_function_canonical" in result.columns:
+        eligible_mask = result.get("primary_analysis_eligible", pd.Series(False, index=result.index))
+        if not isinstance(eligible_mask, pd.Series):
+            eligible_mask = pd.Series(False, index=result.index)
+        phis = (
+            result.loc[eligible_mask.astype(bool), "weight_function_canonical"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
+        uniq = sorted({p for p in phis.tolist() if p and p != "nan"})
+        homogeneous = len(uniq) <= 1
+        result["ewsd_corpus_weight_function_homogeneous"] = bool(homogeneous)
+        result["ewsd_corpus_weight_function_distribution"] = ",".join(uniq)
+        if not homogeneous:
+            import warnings as _warnings
+
+            _warnings.warn(
+                "Eligible EWSD rows use more than one canonical weight function "
+                f"({uniq}); scores are not on a common scale.",
+                UserWarning,
+                stacklevel=2,
+            )
     return result
 
 
@@ -347,6 +414,44 @@ def _prepare_ewsd_merge_frame(ewsd: pd.DataFrame) -> pd.DataFrame:
         frame.get("EWSD_score_acoustic_balanced_rel_uncertainty"), errors="coerce"
     )
     merge["ewsd_uncertainty_sources"] = frame.get("ewsd_uncertainty_sources", np.nan)
+    merge["EWSD_score_total_ci_low_bca"] = pd.to_numeric(
+        frame.get("EWSD_score_total_ci_low_bca"), errors="coerce"
+    )
+    merge["EWSD_score_total_ci_high_bca"] = pd.to_numeric(
+        frame.get("EWSD_score_total_ci_high_bca"), errors="coerce"
+    )
+    merge["EWSD_score_acoustic_balanced_ci_low_bca"] = pd.to_numeric(
+        frame.get("EWSD_score_acoustic_balanced_ci_low_bca"), errors="coerce"
+    )
+    merge["EWSD_score_acoustic_balanced_ci_high_bca"] = pd.to_numeric(
+        frame.get("EWSD_score_acoustic_balanced_ci_high_bca"), errors="coerce"
+    )
+    merge["ewsd_score_total_point_under_bootstrap_ratios"] = pd.to_numeric(
+        frame.get("ewsd_score_total_point_under_bootstrap_ratios"), errors="coerce"
+    )
+    merge["ewsd_ratio_definition_point"] = frame.get("ewsd_ratio_definition_point", np.nan)
+    merge["ewsd_ratio_definition_bootstrap"] = frame.get(
+        "ewsd_ratio_definition_bootstrap", np.nan
+    )
+    merge["ewsd_bootstrap_bias_absolute"] = pd.to_numeric(
+        frame.get("ewsd_bootstrap_bias_absolute"), errors="coerce"
+    )
+    merge["ewsd_bootstrap_bias_relative"] = pd.to_numeric(
+        frame.get("ewsd_bootstrap_bias_relative"), errors="coerce"
+    )
+    merge["ewsd_bootstrap_seed_used"] = pd.to_numeric(
+        frame.get("ewsd_bootstrap_seed_used"), errors="coerce"
+    )
+    merge["ewsd_balanced_families_present"] = pd.to_numeric(
+        frame.get("ewsd_balanced_families_present"), errors="coerce"
+    )
+    merge["ewsd_f0_source"] = frame.get("ewsd_f0_source", np.nan)
+    if "ewsd_corpus_weight_function_homogeneous" in frame.columns:
+        merge["ewsd_corpus_weight_function_homogeneous"] = frame[
+            "ewsd_corpus_weight_function_homogeneous"
+        ].astype(bool)
+    else:
+        merge["ewsd_corpus_weight_function_homogeneous"] = True
     merge["ewsd_merge_status"] = np.where(
         merge["ewsd_mode"].eq("individual_exact"),
         "merged_individual_exact",
@@ -476,6 +581,17 @@ def merge_ewsd_stage3(
         frequency_ceiling_hz=freq_ceiling,
         n_workbooks=n_workbooks,
     )
+    if (
+        not diagnostics_summary.empty
+        and "ewsd_corpus_weight_function_homogeneous" in out.columns
+    ):
+        diagnostics_summary["ewsd_corpus_weight_function_homogeneous"] = bool(
+            out["ewsd_corpus_weight_function_homogeneous"].iloc[0]
+        )
+        if "ewsd_corpus_weight_function_distribution" in out.columns:
+            diagnostics_summary["ewsd_corpus_weight_function_distribution"] = str(
+                out["ewsd_corpus_weight_function_distribution"].iloc[0]
+            )
     status = assess_stage3_merge_result(
         out,
         include_ewsd=True,

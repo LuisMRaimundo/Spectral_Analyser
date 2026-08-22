@@ -231,9 +231,11 @@ Stage 3 runs automatically during research export (default `include_ewsd=True`).
 |---|---|
 | `EWSD_score_total` | Strict EWSD: $\sum_k r_k D_k (N_{\mathrm{eff},k}/N_k)$ |
 | `EWSD_score_acoustic_balanced` | Companion: same with penalty exponent $\alpha=0.5$ |
-| `EWSD_score_total_ci_low` / `_ci_high` / `_rel_uncertainty` | Bootstrap 95% CI for strict EWSD |
-| `EWSD_score_acoustic_balanced_ci_low` / `_ci_high` / `_rel_uncertainty` | Bootstrap 95% CI for balanced EWSD |
-| `ewsd_uncertainty_sources` | `partials+ratios`, `partials`, or `unavailable` |
+| `EWSD_score_total_ci_low` / `_ci_high` / `_rel_uncertainty` | Percentile sensitivity band for strict EWSD (F-050) |
+| `EWSD_score_acoustic_balanced_ci_low` / `_ci_high` / `_rel_uncertainty` | Percentile sensitivity band for balanced EWSD |
+| `ewsd_uncertainty_sources` | `partial_multiset_sensitivity` or `unavailable` |
+| `ACD_score` / `ACD_magnitude_per_component` | F-057 / F-058 pair — report together |
+| `ACD_D0` / `ACD_D1` / `ACD_D2` / `ACD_Dinf` / `ACD_evenness_D2_over_D0` | F-059 Hill profile |
 | `ewsd_primary_analysis_eligible` | Thesis gate — filter to `True` for final statistics |
 | `ewsd_mode` | Must be `individual_exact` for primary use |
 | `ewsd_H_ratio`, `ewsd_I_ratio`, `ewsd_S_noise_ratio` | Per-note H/I/S ratios used |

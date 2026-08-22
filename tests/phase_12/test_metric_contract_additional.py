@@ -104,6 +104,11 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "note_balanced_component_density",
         "note_balanced_component_density_pool_count",
         "EWSD_score_acoustic_balanced",
+        "ACD_score",
+        "ACD_magnitude_per_component",
+        "ACD_D2",
+        "ACD_count_merged_harmonic",
+        "ewsd_weight_function_d10",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():

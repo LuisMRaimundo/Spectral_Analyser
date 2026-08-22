@@ -671,6 +671,92 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ),
         ontology_family="legacy_only",
     )
+    acd_score = MetricDefinition(
+        name="ACD_score",
+        formula=(
+            "F-057: r_k = energy_k / sum_j energy_j (derived); "
+            "ACD = sum_k r_k * D2_k after optional ERB merge. "
+            "Report only as a pair with ACD_magnitude_per_component."
+        ),
+        input_domain="Per-note H/I/S linear amplitudes and frequencies (uniform filter)",
+        unit_or_scale="Hill number q=2 (effective ERB-merged component count)",
+        amplitude_basis="Amplitude_raw (linear); no dB conversion",
+        power_basis="P_i = Amplitude_raw^2 (energy shares and r_k)",
+        normalization_scope="per note, compartments energy-weighted",
+        physical_interpretation=(
+            "Effective number of ERB-merged components. Scale-invariant. "
+            "Not interpretable without ACD_magnitude_per_component."
+        ),
+        not_valid_for=(
+            "Empty note (NaN, never 0.0); substituting for EWSD F-048/F-049; "
+            "reading r_k from Excel AUTO_RATIO_PRIORITY columns."
+        ),
+        ontology_family="partial_count_descriptor",
+    )
+    acd_magnitude = MetricDefinition(
+        name="ACD_magnitude_per_component",
+        formula="F-058: LAM = sum_k energy_k / ACD_score",
+        input_domain="same ACD compartments as ACD_score",
+        unit_or_scale="linear energy per effective component",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="sum of A^2 over usable compartments",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Typical component energy given ACD_score. "
+            "Not interpretable without ACD_score."
+        ),
+        not_valid_for="Using as a standalone loudness or density score.",
+        ontology_family="partial_count_descriptor",
+    )
+    acd_hill_profile = MetricDefinition(
+        name="ACD_D2",
+        formula=(
+            "F-059: energy-weighted compartment Hill profile "
+            "D_q = (sum p_i^q)^(1/(1-q)); D1 = exp(-sum p ln p); Dinf = 1/max(p). "
+            "p_i = A_i^2 / sum A^2 after ERB merge."
+        ),
+        input_domain="ERB-merged compartment amplitudes",
+        unit_or_scale="Hill numbers and evenness D2/D0",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="energy shares",
+        normalization_scope="per note (energy-weighted over compartments)",
+        physical_interpretation="Hill profile of the same representation as ACD_score.",
+        not_valid_for="Empty compartment (NaN, never silent 0.0).",
+        ontology_family="partial_count_descriptor",
+    )
+    acd_erb_merge = MetricDefinition(
+        name="ACD_count_merged_harmonic",
+        formula=(
+            "F-060: merge peaks with f_next - f_centroid <= erb_fraction * ERB(f_centroid); "
+            "ERB(f) = 0.108 f + 24.7 (Glasberg & Moore, 1990). "
+            "Merged A = sqrt(sum A^2). Tier B excitation-pattern front end is a scaffold only."
+        ),
+        input_domain="(frequency_hz, Amplitude_raw) pairs",
+        unit_or_scale="count after merge; erb_fraction provenance",
+        amplitude_basis="Amplitude_raw",
+        power_basis="energy-preserving merge",
+        normalization_scope="per compartment",
+        physical_interpretation="Auditory-filter peak clustering before Hill numbers.",
+        not_valid_for="Importing mir_descriptors 0.25*f+24.7 (not ERB).",
+        ontology_family="partial_count_descriptor",
+    )
+    ewsd_d10_double_penalty = MetricDefinition(
+        name="ewsd_weight_function_d10",
+        formula=(
+            "d10: D = sum(log1p(A)) * (N_eff_energy / N) then F-048 multiplies by "
+            "penalty = N_eff_phi / N on log1p shares. Double anti-concentration with "
+            "incompatible share definitions. Arithmetic frozen. Membership in "
+            "THESIS_SAFE_WEIGHT_FUNCTIONS is an open item."
+        ),
+        input_domain="EWSD weight_function == d10",
+        unit_or_scale="EWSD units (not commensurate with log)",
+        amplitude_basis="same as F-048",
+        power_basis="energy N_eff inside D; phi-weight N_eff in the penalty",
+        normalization_scope="per compartment",
+        physical_interpretation="Documented double correction only. Do not change the algebra.",
+        not_valid_for="Cross-note comparison against log-weighted EWSD.",
+        ontology_family="legacy_only",
+    )
     return {
         density_raw.name: density_raw,
         density_alias.name: density_alias,
@@ -714,6 +800,11 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         note_balanced_component_density.name: note_balanced_component_density,
         note_balanced_component_density_pool_count.name: note_balanced_component_density_pool_count,
         ewsd_score_acoustic_balanced.name: ewsd_score_acoustic_balanced,
+        acd_score.name: acd_score,
+        acd_magnitude.name: acd_magnitude,
+        acd_hill_profile.name: acd_hill_profile,
+        acd_erb_merge.name: acd_erb_merge,
+        ewsd_d10_double_penalty.name: ewsd_d10_double_penalty,
     }
 
 

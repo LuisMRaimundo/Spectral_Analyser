@@ -35,7 +35,7 @@ def test_bootstrap_ewsd_ci_brackets_point_estimate() -> None:
     assert res["ewsd_score_acoustic_balanced_ci_low"] <= res["ewsd_score_acoustic_balanced"]
     assert res["ewsd_score_acoustic_balanced"] <= res["ewsd_score_acoustic_balanced_ci_high"]
     assert res["ewsd_score_total_ci_low"] <= res["ewsd_score_total"] <= res["ewsd_score_total_ci_high"]
-    assert res["uncertainty_sources"] == "partials+ratios"
+    assert res["uncertainty_sources"] == "partial_multiset_sensitivity"
     assert res["ewsd_score_acoustic_balanced_rel_uncertainty"] >= 0.0
 
 
@@ -51,8 +51,10 @@ def test_ratio_propagation_widens_or_matches_ewsd_uncertainty() -> None:
     full = bootstrap_ewsd_from_compartments(
         comps, n_boot=800, seed=11, propagate_ratio_uncertainty=True
     )
-    assert partials_only["uncertainty_sources"] == "partials"
-    assert full["uncertainty_sources"] == "partials+ratios"
+    assert partials_only["uncertainty_sources"] == "partial_multiset_sensitivity"
+    assert full["uncertainty_sources"] == "partial_multiset_sensitivity"
+    assert partials_only["ewsd_ratio_definition_bootstrap"] == "excel_analysis_ratio"
+    assert full["ewsd_ratio_definition_bootstrap"] == "resampled_energy_ratio"
     assert full["ewsd_score_acoustic_balanced_rel_uncertainty"] >= (
         partials_only["ewsd_score_acoustic_balanced_rel_uncertainty"] - 1e-9
     )

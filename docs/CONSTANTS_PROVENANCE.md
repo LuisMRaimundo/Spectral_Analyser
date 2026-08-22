@@ -212,3 +212,12 @@ Provenance classes:
 - `STRENGTH_OCCUPANCY_WEIGHT_HARMONIC` (`1.0`) - `convention` - Neutral equal-weight symmetry convention used by Phase-7 policy.
 - `STRENGTH_OCCUPANCY_WEIGHT_INHARMONIC` (`1.0`) - `convention` - Neutral equal-weight symmetry convention used by Phase-7 policy.
 - `STRENGTH_OCCUPANCY_WEIGHT_SUBBASS` (`1.0`) - `convention` - Neutral equal-weight symmetry convention used by Phase-7 policy.
+
+## Auditory Component Density (ACD v1.0)
+
+- `ERB_SLOPE` (`0.108`) - `primary_source` - Glasberg & Moore (1990) ERB(f) = 0.108 f + 24.7.
+- `ERB_INTERCEPT_HZ` (`24.7`) - `primary_source` - Glasberg & Moore (1990).
+- `ERB_RATE_SCALE` (`21.4`) - `primary_source` - Moore & Glasberg (1983) ERB-rate E(f) = 21.4 log10(1 + 0.00437 f).
+- `ERB_RATE_COEFF` (`0.00437`) - `primary_source` - Moore & Glasberg (1983).
+- `ENERGY_EPS` (`1e-30`) - `internal_default` - Numerical floor for empty/degenerate energy in Hill shares.
+- `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites.

@@ -1,0 +1,66 @@
+{
+  "revision": "ACD v1.0",
+  "formula_ids": "F-057,F-058,F-059,F-060",
+  "well_separated": [
+    {
+      "k": 1,
+      "D0": 1.0,
+      "D1": 1.0,
+      "D2": 1.0,
+      "Dinf": 1.0,
+      "count_merged": 1,
+      "status": "ok"
+    },
+    {
+      "k": 2,
+      "D0": 2.0,
+      "D1": 2.0,
+      "D2": 2.0,
+      "Dinf": 2.0,
+      "count_merged": 2,
+      "status": "ok"
+    },
+    {
+      "k": 4,
+      "D0": 4.0,
+      "D1": 4.0,
+      "D2": 4.0,
+      "Dinf": 4.0,
+      "count_merged": 4,
+      "status": "ok"
+    },
+    {
+      "k": 8,
+      "D0": 8.0,
+      "D1": 7.999999999999998,
+      "D2": 8.0,
+      "Dinf": 8.0,
+      "count_merged": 8,
+      "status": "ok"
+    },
+    {
+      "k": 16,
+      "D0": 16.0,
+      "D1": 15.999999999999998,
+      "D2": 16.0,
+      "Dinf": 16.0,
+      "count_merged": 16,
+      "status": "ok"
+    },
+    {
+      "k": 32,
+      "D0": 32.0,
+      "D1": 32.0,
+      "D2": 32.0,
+      "Dinf": 32.0,
+      "count_merged": 32,
+      "status": "ok"
+    }
+  ],
+  "intra_erb_saturation": {
+    "k": 16,
+    "merged_count": 1,
+    "D2": 1.0,
+    "saturation_point": "single_erb_cluster"
+  }
+}
