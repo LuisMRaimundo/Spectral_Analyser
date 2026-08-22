@@ -75,8 +75,15 @@ Provenance classes:
 - `HARMONIC_DETECTION_THRESHOLD_DB` (`-60.0`) - `convention` - Common peak-picking floor in spectral analysis.
 - `SNR_THRESHOLD_DB` (`6.0`) - `convention` - Standard detectability margin convention.
 - `DISSONANCE_PAIRWISE_PARTIAL_CAP` (`80`) - `convention` - Computational cap convention for pairwise roughness models.
-- `_ROUGHNESS_ERB_SLOPE` (`0.108`) / `_ROUGHNESS_ERB_INTERCEPT_HZ` (`24.7`) - `primary_source` - Glasberg & Moore (1990) ERB used **only** in `mir_descriptors._roughness_parncutt_denom_hz`. Independent of `tools/spectral_density_hill.py`.
-- `_ROUGHNESS_PARNCUTT_CB_FRACTION` (`0.25`) - `primary_source` - Parncutt (1989) normalisation: peak roughness at ~0.25 critical bandwidths, `x = (df / ERB) / 0.25`. The previous denominator `0.25 f + 24.7` substituted this fraction for the ERB slope. At 1 kHz the kernel maximum moves from df ≈ 275 Hz to df ≈ 33 Hz.
+- `_ROUGHNESS_ERB_SLOPE` (`0.108`) / `_ROUGHNESS_ERB_INTERCEPT_HZ` (`24.7`) - `primary_source` - Glasberg & Moore (1990) ERB used **only** as `bandwidth_basis="erb"` in `mir_descriptors`. Independent of `tools/spectral_density_hill.py`.
+- `PL_CB_FRACTION` (`0.25`) - `primary_source` - Plomp & Levelt (1965) / Parncutt (1989): peak at ~0.25 critical bandwidths.
+- `PL_ROUGHNESS_CUTOFF_CB` (`1.2`) - `primary_source` - Hutchinson & Knopoff (1978) hard zero of `g` beyond 1.2 CB. Optional `cutoff_cb` on F-037; default `None` (no cutoff). Open item whether this should become the default.
+- `CB_ZWICKER_A/B/C/EXP` (`25`, `75`, `1.4`, `0.69`) - `primary_source` - Zwicker & Fastl (2007) `CB(f)=25+75(1+1.4(f/1000)^2)^0.69`, a fit to the Zwicker, Flottorp & Stevens (1957) critical-band lineage that Plomp & Levelt (1965) used for the 25%-of-CB result. Default `bandwidth_basis="zwicker_cb"` is **provenance-consistent**: applying P&L's 0.25 factor to Glasberg & Moore (1990) ERB is a unit mismatch with the source. Overlay on P&L Fig. 10 is outstanding but non-blocking corroboration. See [`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`](validation/ROUGHNESS_BANDWIDTH_BASIS.md).
+- `CB_ZWICKER_VALID_MAX_HZ` (`15500`) - `primary_source` - Upper end of the Bark scale / Zwicker CB lineage. `critical_bandwidth_zwicker_hz` returns NaN above this; F-037 drops pairs whose higher member exceeds it.
+- `ERB_VALID_MIN_HZ` / `ERB_VALID_MAX_HZ` (`100`, `15000`) - `primary_source` - Glasberg & Moore (1990) approximate fitted range. Documented only; not a numeric guard (a guard would change optional `bandwidth_basis="erb"` and ACD ERB merge). See Task 5 list in [`BANDWIDTH_VALIDITY_AUDIT.md`](validation/BANDWIDTH_VALIDITY_AUDIT.md).
+- `BANDWIDTH_BASIS_DEFAULT` (`zwicker_cb`) - `primary_source` - Provenance-consistent default (P&L 1965 × Zwicker CB lineage). Not an ERB-based default.
+- `HK_CBW_COEFF` / `HK_CBW_EXP` (`1.72`, `0.65`) - `primary_source` - Hutchinson & Knopoff (1978) Fig. 2. Default of `HutchinsonKnopoffDissonance.cbw`.
+- `HK_LOW_FREQUENCY_CUTOFF_HZ` (`200`) - `internal_default` - Switch point for optional `low_frequency_basis="zwicker_below_200hz"`. Default remains `hk1978` pending author decision.
 - `HARMONIC_TOLERANCE_BASE` (`0.1`) - `convention` - Baseline tolerance convention for robust harmonic matching.
 - `HARMONIC_TOLERANCE_ADAPTIVE_FACTOR` (`0.1`) - `convention` - Adaptive tolerance scaling convention for robust matching.
 - `HARMONIC_MAX_CHECK` (`100`) - `convention` - Practical harmonic-order cap convention.

@@ -13,6 +13,7 @@ import math
 import numpy as np
 import pytest
 
+from metric_formula_versions import MIR_VALUE_COLUMNS, mir_stamp_fields
 from mir_descriptors import (
     _erb_rate_hz,
     _roughness_aures_1985,
@@ -36,19 +37,31 @@ EXPECTED_KEYS = (
     "spectral_rolloff_hz_95",
     "roughness_parncutt_kernel",
     "roughness_aures_1985",
+    "roughness_pairs_excluded_above_validity",
     "erb_weighted_spectral_density",
-)
+) + tuple(mir_stamp_fields())
 
 
 def _assert_all_nan(desc: dict[str, float]) -> None:
     assert set(desc.keys()) == set(EXPECTED_KEYS)
+    stamps = mir_stamp_fields()
     for key in EXPECTED_KEYS:
+        if key in stamps:
+            assert desc[key] == stamps[key], key
+            continue
         assert math.isnan(desc[key]), key
 
 
 def _assert_all_finite(desc: dict[str, float]) -> None:
+    stamps = mir_stamp_fields()
     for key, value in desc.items():
+        if key in stamps:
+            assert value == stamps[key], key
+            continue
         assert isinstance(value, float)
+        if key == "roughness_aures_1985":
+            assert math.isnan(value), key
+            continue
         assert math.isfinite(value), key
 
 
@@ -91,7 +104,8 @@ def test_single_bin_spectrum_has_zero_spread_and_flatness_one() -> None:
     assert desc["spectral_rolloff_hz_85"] == pytest.approx(1000.0)
     assert desc["spectral_rolloff_hz_95"] == pytest.approx(1000.0)
     assert desc["roughness_parncutt_kernel"] == pytest.approx(0.0)
-    assert desc["roughness_aures_1985"] == pytest.approx(0.0)
+    assert math.isnan(desc["roughness_aures_1985"])
+    assert desc["roughness_pairs_excluded_above_validity"] == pytest.approx(0.0)
     assert math.isnan(desc["tristimulus_1_fundamental"])
 
 
@@ -279,16 +293,13 @@ def test_roughness_is_positive_for_close_partial_pair() -> None:
     assert math.isfinite(val)
 
 
-def test_roughness_aures_alias_warns() -> None:
-    with pytest.warns(DeprecationWarning, match="misattribution"):
-        aliased = _roughness_aures_1985(np.array([440.0, 445.0]), np.array([1.0, 1.0]))
-    assert aliased == pytest.approx(
-        _roughness_parncutt_kernel(np.array([440.0, 445.0]), np.array([1.0, 1.0]))
-    )
+def test_roughness_aures_alias_raises() -> None:
+    with pytest.raises(NotImplementedError, match="roughness_parncutt_kernel"):
+        _roughness_aures_1985(np.array([440.0, 445.0]), np.array([1.0, 1.0]))
 
 
 def test_roughness_peak_near_quarter_erb_at_1khz() -> None:
-    """Corrected kernel peaks near 33 Hz at 1 kHz, not ~275 Hz."""
+    """Default (Zwicker) kernel peaks in 20–50 Hz at 1 kHz, not ~275 Hz."""
     f0 = 1000.0
     amps = np.asarray([1.0, 1.0], dtype=float)
     dfs = np.linspace(5.0, 400.0, 80)
@@ -350,7 +361,13 @@ def test_compute_mir_descriptors_is_deterministic() -> None:
         frequencies_hz=freqs, amplitudes=amps, f0_hz=220.0
     )
     for key in EXPECTED_KEYS:
-        assert first[key] == pytest.approx(second[key], rel=0.0, abs=0.0)
+        a, b = first[key], second[key]
+        if isinstance(a, str) or isinstance(b, str):
+            assert a == b
+            continue
+        if math.isnan(a) and math.isnan(b):
+            continue
+        assert a == pytest.approx(b, rel=0.0, abs=0.0)
 
 
 def test_centroid_and_rolloff_invariant_to_input_order() -> None:

@@ -59,6 +59,7 @@ def _contract_formula_ids() -> list[str]:
             definition.not_valid_for,
             definition.amplitude_basis,
             definition.power_basis,
+            getattr(definition, "formula_id", ""),
         ):
             ids.extend(FORMULA_ID_RE.findall(str(field)))
     return ids

@@ -52,6 +52,8 @@ _FIELD_NAMES = (
     "physical_interpretation",
     "not_valid_for",
     "ontology_family",
+    "formula_id",
+    "formula_version",
 )
 
 
@@ -69,6 +71,7 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "sethares_dissonance",
         "roughness_parncutt_kernel",
         "roughness_aures_1985",
+        "roughness_pairs_excluded_above_validity",
         "inharmonic_density_sum",
         "inharmonic_status",
         "inharmonic_confirmed_count",
@@ -122,13 +125,14 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
 
 
 def test_every_contract_field_is_a_non_empty_string() -> None:
+    optional_stamps = {"formula_id", "formula_version"}
     for definition in build_metric_contracts().values():
         for field in _FIELD_NAMES:
             value = getattr(definition, field)
-            assert isinstance(value, str) and value.strip() != "", (
-                definition.name,
-                field,
-            )
+            assert isinstance(value, str), (definition.name, field)
+            if field in optional_stamps:
+                continue
+            assert value.strip() != "", (definition.name, field)
 
 
 def test_canonical_density_formula_token() -> None:
@@ -192,7 +196,12 @@ def test_export_fields_flatten_with_stable_prefix_and_full_schema() -> None:
     assert set(out.keys()) == {f"metric_contract_{f}" for f in _FIELD_NAMES}
     for key, value in out.items():
         assert key.startswith("metric_contract_")
-        assert isinstance(value, str) and value != ""
+        assert isinstance(value, str)
+        if key not in {
+            "metric_contract_formula_id",
+            "metric_contract_formula_version",
+        }:
+            assert value != ""
     assert out["metric_contract_name"] == "density_metric_raw"
     assert out["metric_contract_formula"] == _CANONICAL_FORMULA
 

@@ -9472,12 +9472,27 @@ class AudioProcessor:
             # Decidir quais modelos calcular
             models_to_calc = list_available_models() if self.dissonance_compare_models else [self.dissonance_model]
 
+            from dissonance_models import DEFAULT_DISSONANCE_METRIC_MODE as _diss_mode_default
+
+            self.dissonance_metric_mode = str(
+                getattr(self, "dissonance_metric_mode", None)
+                or _diss_mode_default
+            )
+            self.hutchinson_knopoff_legacy_mean_pair_scaled = None
+
             for mname in models_to_calc:
                 try:
                     model = get_dissonance_model(mname)
 
                     # 1. Cálculo do valor escalar (usando o DataFrame reduzido)
-                    self.dissonance_values[mname] = model.calculate_dissonance_metric(df_calc)
+                    self.dissonance_values[mname] = model.calculate_dissonance_metric(
+                        df_calc,
+                        metric_mode=self.dissonance_metric_mode,
+                    )
+                    if mname in {"hutchinson-knopoff", "hutchinson"}:
+                        self.hutchinson_knopoff_legacy_mean_pair_scaled = (
+                            model.legacy_mean_pair_scaled_dissonance(df_calc)
+                        )
 
                     # 2. Cálculo da Curva (se ativado)
                     if self.dissonance_curve_enabled:
@@ -11551,7 +11566,13 @@ class AudioProcessor:
             "spectral_rolloff_hz_95",
             "roughness_parncutt_kernel",
             "roughness_aures_1985",
+            "roughness_pairs_excluded_above_validity",
             "erb_weighted_spectral_density",
+        ]
+        _phase5_stamp_keys = [
+            f"{_k}_{_sfx}"
+            for _k in _phase5_base_keys
+            for _sfx in ("formula_id", "formula_version")
         ]
         main_metrics["log_attack_time_s"] = metric_float_or_nan(
             getattr(self, "log_attack_time_s", None)
@@ -11570,6 +11591,9 @@ class AudioProcessor:
                 main_metrics[f"{_k}_on_{_seg}"] = metric_float_or_nan(
                     getattr(self, f"{_k}_on_{_seg}", None)
                 )
+        for _k in _phase5_stamp_keys:
+            _stamp = getattr(self, _k, "")
+            main_metrics[_k] = str(_stamp) if _stamp not in (None, "") else ""
         for _k in _phase5_density_keys:
             for _seg in ("attack", "sustain", "release"):
                 main_metrics[f"{_k}_on_{_seg}"] = metric_float_or_nan(
@@ -12538,7 +12562,14 @@ class AudioProcessor:
                             f0_hz=float(_f0_for_mir) if _f0_for_mir is not None else None,
                         )
                         for _k, _v in _mir_all.items():
-                            setattr(self, _k, float(_v) if np.isfinite(float(_v)) else float("nan"))
+                            if isinstance(_v, str):
+                                setattr(self, _k, _v)
+                            else:
+                                setattr(
+                                    self,
+                                    _k,
+                                    float(_v) if np.isfinite(float(_v)) else float("nan"),
+                                )
 
                 def _segment_spectrum(y_seg: np.ndarray, sr_val: float) -> tuple[np.ndarray, np.ndarray]:
                     if y_seg is None or y_seg.size == 0:
@@ -12570,6 +12601,8 @@ class AudioProcessor:
                             f0_hz=_f0_seg if np.isfinite(_f0_seg) else None,
                         )
                         for _k, _v in _mir_seg.items():
+                            if isinstance(_v, str):
+                                continue
                             setattr(self, f"{_k}_on_{_name}", float(_v) if np.isfinite(float(_v)) else float("nan"))
                             if _name == "sustain":
                                 setattr(
@@ -13927,7 +13960,17 @@ class AudioProcessor:
                         "Note": note,
                         "selected_dissonance_model": _selected_dm_for_meta
                         or str(getattr(self, "dissonance_model", "") or ""),
+                        "dissonance_metric_mode": str(
+                            getattr(self, "dissonance_metric_mode", "") or ""
+                        ),
                     }
+                    _hk_legacy = getattr(
+                        self, "hutchinson_knopoff_legacy_mean_pair_scaled", None
+                    )
+                    if _hk_legacy is not None and np.isfinite(float(_hk_legacy)):
+                        drow["hutchinson_knopoff_legacy_mean_pair_scaled"] = float(
+                            _hk_legacy
+                        )
                     _dpc = getattr(self, "dissonance_partial_count", None)
                     if _dpc is not None:
                         drow["dissonance_partial_count"] = int(_dpc)
@@ -13957,6 +14000,12 @@ class AudioProcessor:
                                 break
                     if sv is not None and np.isfinite(float(sv)):
                         drow["selected_dissonance_value"] = float(sv)
+                    try:
+                        from metric_formula_versions import dissonance_stamp_fields as _diss_stamps
+
+                        drow.update(_diss_stamps())
+                    except Exception:
+                        pass
                     ddf = pd.DataFrame([drow])
                     hasv = any(
                         CANONICAL_VALUE_BY_SLUG[s] in ddf.columns
@@ -13972,11 +14021,14 @@ class AudioProcessor:
                                 for c in (
                                     "selected_dissonance_model",
                                     "selected_dissonance_value",
+                                    "dissonance_metric_mode",
+                                    "hutchinson_knopoff_legacy_mean_pair_scaled",
                                     "dissonance_partial_count",
                                     "dissonance_pair_count",
                                 )
                                 if c in ddf.columns
                             ]
+                            + [c for c in ddf.columns if c.endswith("_formula_id") or c.endswith("_formula_version")]
                             + [c for c in DISSONANCE_AUDIT_COPY_COLUMNS if c in ddf.columns]
                         )
                         _pub_df(ddf[[c for c in pref if c in ddf.columns]]).to_excel(

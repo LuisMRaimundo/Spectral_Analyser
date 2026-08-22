@@ -659,7 +659,13 @@ PHASE5_DESCRIPTOR_BASE_COLUMNS: List[str] = [
     "spectral_rolloff_hz_95",
     "roughness_parncutt_kernel",
     "roughness_aures_1985",
+    "roughness_pairs_excluded_above_validity",
     "erb_weighted_spectral_density",
+]
+PHASE5_FORMULA_STAMP_COLUMNS: List[str] = [
+    f"{c}_{suffix}"
+    for c in PHASE5_DESCRIPTOR_BASE_COLUMNS
+    for suffix in ("formula_id", "formula_version")
 ]
 PHASE5_SEGMENT_SUFFIXES: Tuple[str, ...] = (
     "_on_attack",
@@ -682,6 +688,7 @@ PHASE5_ALL_DESCRIPTOR_COLUMNS: List[str] = (
     + [f"{c}_on_sustain_segment" for c in PHASE5_DESCRIPTOR_BASE_COLUMNS]
     + [f"{c}{s}" for c in PHASE5_DESCRIPTOR_BASE_COLUMNS for s in PHASE5_SEGMENT_SUFFIXES]
     + PHASE5_SEGMENTED_DENSITY_COMPONENT_COLUMNS
+    + PHASE5_FORMULA_STAMP_COLUMNS
 )
 
 for _col in PHASE5_ALL_DESCRIPTOR_COLUMNS:
@@ -5931,8 +5938,9 @@ def _append_dissonance_excel_sheets(
         preferred = (
             ["Note"]
             + [CANONICAL_VALUE_BY_SLUG[s] for s in MODEL_SLUGS if CANONICAL_VALUE_BY_SLUG[s] in diss_df.columns]
-            + [c for c in ("selected_dissonance_model", "selected_dissonance_value") if c in diss_df.columns]
+            + [c for c in ("selected_dissonance_model", "selected_dissonance_value", "dissonance_metric_mode") if c in diss_df.columns]
             + [c for c in OPTIONAL_EXTRA_FIELDS if c in diss_df.columns]
+            + [c for c in diss_df.columns if c.endswith("_formula_id") or c.endswith("_formula_version")]
             + [c for c in DISSONANCE_AUDIT_COPY_COLUMNS if c in diss_df.columns]
         )
         out_cols = [c for c in preferred if c in diss_df.columns]
@@ -7487,6 +7495,7 @@ TEXT_FIELDS: set[str] = {
     "DM Domain",
     "Density Scale",   # <— novo: 'bark', 'mel', 'hz', etc. é texto
     "selected_dissonance_model",
+    "dissonance_metric_mode",
     "f0_source",
     "harmonic_validation_status",
     "harmonic_alignment_status",
@@ -8247,7 +8256,11 @@ def read_excel_metrics(file_path: Union[str, Path]) -> Dict[str, Optional[float]
                 for column in dm.columns:
                     if column == "Register" or str(column).lower() == "register":
                         continue
-                    if column in TEXT_FIELDS:
+                    if (
+                        column in TEXT_FIELDS
+                        or str(column).endswith("_formula_id")
+                        or str(column).endswith("_formula_version")
+                    ):
                         raw_txt = dm[column].iloc[0]
                         if pd.notna(raw_txt):
                             metrics[str(column)] = str(raw_txt)

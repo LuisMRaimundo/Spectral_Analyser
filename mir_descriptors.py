@@ -13,6 +13,11 @@ References
 - Glasberg, B. R., & Moore, B. C. J. (1990). Derivation of auditory
   filter shapes from notched-noise data. Hearing Research, 47(1–2),
   103–138.
+- Zwicker, E., Flottorp, G., & Stevens, S. S. (1957). Critical band
+  width in loudness summation. Journal of the Acoustical Society of
+  America, 29(5), 548–557.
+- Zwicker, E., & Fastl, H. (2007). Psychoacoustics: Facts and models
+  (3rd ed.). Springer.
 - Peeters, G., Giordano, B. L., Susini, P., Misdariis, N., & McAdams, S.
   (2011). The Timbre Toolbox: Extracting audio descriptors from musical
   signals. Journal of the Acoustical Society of America, 130(5), 2902–2916.
@@ -26,18 +31,41 @@ See REFERENCES.md at the repository root for canonical APA-7 entries.
 
 from __future__ import annotations
 
-import warnings
-from typing import Dict
+from typing import Dict, Literal
 
 import numpy as np
+
+from metric_formula_versions import mir_stamp_fields
 
 # Local copies — do not import from tools.spectral_density_hill.
 # ERB(f) = 0.108 f + 24.7 (Glasberg & Moore, 1990).
 _ROUGHNESS_ERB_SLOPE = 0.108
 _ROUGHNESS_ERB_INTERCEPT_HZ = 24.7
-# Parncutt normalises interval to ~0.25 critical bandwidths.
-_ROUGHNESS_PARNCUTT_CB_FRACTION = 0.25
-_AURES_ALIAS_WARNED = False
+ERB_SLOPE = _ROUGHNESS_ERB_SLOPE
+ERB_INTERCEPT_HZ = _ROUGHNESS_ERB_INTERCEPT_HZ
+
+CB_ZWICKER_A: float = 25.0  # Zwicker & Fastl (2007) -- primary_source
+CB_ZWICKER_B: float = 75.0  # Zwicker & Fastl (2007) -- primary_source
+CB_ZWICKER_C: float = 1.4  # Zwicker & Fastl (2007) -- primary_source
+CB_ZWICKER_EXP: float = 0.69  # Zwicker & Fastl (2007) -- primary_source
+# Bark scale / Zwicker CB lineage ends near 15.5 kHz (Zwicker & Fastl 2007).
+CB_ZWICKER_VALID_MAX_HZ: float = 15500.0  # primary_source
+# Glasberg & Moore (1990) ERB data span roughly 100 Hz–15 kHz (~3–40 ERB).
+ERB_VALID_MIN_HZ: float = 100.0  # primary_source (documented; not a numeric guard)
+ERB_VALID_MAX_HZ: float = 15000.0  # primary_source (documented; not a numeric guard)
+PL_CB_FRACTION: float = 0.25  # Plomp & Levelt (1965) -- primary_source
+# H&K zeroes g beyond 1.2 CB. Optional Parncutt cutoff; default None (no cutoff).
+PL_ROUGHNESS_CUTOFF_CB: float = 1.2  # Hutchinson & Knopoff (1978) -- primary_source
+_ROUGHNESS_PARNCUTT_CB_FRACTION = PL_CB_FRACTION
+
+BandwidthBasis = Literal["zwicker_cb", "erb", "legacy_conflated"]
+BANDWIDTH_BASIS_DEFAULT: BandwidthBasis = "zwicker_cb"
+_ROUGHNESS_AURES_ALIAS_RETIRED = (
+    "roughness_aures_1985 is retired. Use the replacement column "
+    "roughness_parncutt_kernel. Archived roughness_aures_1985 values were "
+    "computed with a mis-specified bandwidth and are not comparable to the "
+    "current kernel. See docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md."
+)
 
 
 def _safe_prob(weights: np.ndarray) -> np.ndarray:
@@ -55,66 +83,131 @@ def _erb_rate_hz(freq_hz: np.ndarray) -> np.ndarray:
     return 21.4 * np.log10(1.0 + 0.00437 * f)
 
 
-def _roughness_parncutt_denom_hz(freq_hz: np.ndarray) -> np.ndarray:
-    """0.25 * ERB(f) so g(x)=x exp(1-x) peaks at df ≈ 0.25 ERB.
+def erb_bandwidth_hz(freq_hz: np.ndarray) -> np.ndarray:
+    """ERB(f) = 0.108*f + 24.7 (Glasberg & Moore, 1990).
 
-    Previous form ``0.25*f + 24.7`` substituted the Parncutt 0.25 CB
-    fraction for the Glasberg & Moore ERB slope (0.108). At 1 kHz that
-    put the kernel maximum at df ≈ 275 Hz instead of ≈ 33 Hz.
+    Local copy for the roughness kernel. Do not import this into
+    ``tools.spectral_density_hill``; that module has its own helper.
     """
     f = np.asarray(freq_hz, dtype=float)
-    erb = _ROUGHNESS_ERB_SLOPE * f + _ROUGHNESS_ERB_INTERCEPT_HZ
-    return np.maximum(_ROUGHNESS_PARNCUTT_CB_FRACTION * erb, 1e-9)
+    return ERB_SLOPE * f + ERB_INTERCEPT_HZ
 
 
-def _roughness_parncutt_kernel(
+def _zwicker_cb_algebraic_hz(freq_hz: np.ndarray) -> np.ndarray:
+    """Unbounded algebraic Zwicker CB (for comparison / identity checks)."""
+    f = np.asarray(freq_hz, dtype=float)
+    return CB_ZWICKER_A + CB_ZWICKER_B * np.power(
+        1.0 + CB_ZWICKER_C * np.square(f / 1000.0),
+        CB_ZWICKER_EXP,
+    )
+
+
+def critical_bandwidth_zwicker_hz(freq_hz: np.ndarray) -> np.ndarray:
+    """CB(f) = 25 + 75*(1 + 1.4*(f/1000)^2)^0.69  (Zwicker & Fastl, 2007).
+
+    Returns NaN above ``CB_ZWICKER_VALID_MAX_HZ`` (15.5 kHz). The Bark
+    scale does not extend beyond that; the algebraic fit is undefined
+    there, not merely imprecise.
+    """
+    f = np.asarray(freq_hz, dtype=float)
+    return np.where(f > CB_ZWICKER_VALID_MAX_HZ, np.nan, _zwicker_cb_algebraic_hz(f))
+
+
+def _legacy_conflated_bandwidth_hz(freq_hz: np.ndarray) -> np.ndarray:
+    """Pre-round-3 denominator ``0.25 f + 24.7`` (already includes 0.25)."""
+    f = np.asarray(freq_hz, dtype=float)
+    return 0.25 * f + 24.7
+
+
+def _roughness_parncutt_denom_hz(
+    freq_hz: np.ndarray,
+    *,
+    bandwidth_basis: BandwidthBasis = BANDWIDTH_BASIS_DEFAULT,
+    validity_max_hz: float | None = CB_ZWICKER_VALID_MAX_HZ,
+) -> np.ndarray:
+    """Denominator of x so g(x)=x exp(1-x) peaks at ~0.25 of the chosen CB.
+
+    ``zwicker_cb`` (default): 0.25 * Zwicker CB.
+    ``erb``: 0.25 * ERB(f) — round-3 kernel, kept for comparison.
+    ``legacy_conflated``: 0.25 f + 24.7 — pre-round-3 form (comparison only).
+    """
+    basis = str(bandwidth_basis).strip().lower()
+    f = np.asarray(freq_hz, dtype=float)
+    if basis == "zwicker_cb":
+        if validity_max_hz is None:
+            bw = _zwicker_cb_algebraic_hz(f)
+        else:
+            bw = critical_bandwidth_zwicker_hz(f)
+        denom = PL_CB_FRACTION * bw
+        finite = np.isfinite(denom)
+        return np.where(finite, np.maximum(denom, 1e-9), np.inf)
+    if basis == "erb":
+        bw = erb_bandwidth_hz(f)
+        return np.maximum(PL_CB_FRACTION * bw, 1e-9)
+    if basis == "legacy_conflated":
+        return np.maximum(_legacy_conflated_bandwidth_hz(f), 1e-9)
+    raise ValueError(
+        f"unknown bandwidth_basis {bandwidth_basis!r}; "
+        "expected 'zwicker_cb', 'erb', or 'legacy_conflated'"
+    )
+
+
+def roughness_parncutt_kernel_report(
     freq_hz: np.ndarray,
     amp: np.ndarray,
     *,
     x_cutoff: float = 20.0,
-) -> float:
-    """Parncutt / Plomp–Levelt pairwise spectral roughness (F-037).
+    bandwidth_basis: BandwidthBasis = BANDWIDTH_BASIS_DEFAULT,
+    validity_max_hz: float | None = CB_ZWICKER_VALID_MAX_HZ,
+    cutoff_cb: float | None = None,
+) -> tuple[float, int]:
+    """Return ``(roughness, n_pairs_excluded_above_validity)``.
 
-    ``x = |f_i - f_j| / (0.25 * ERB(f_i))`` with
-    ``ERB(f) = 0.108 f + 24.7`` (Glasberg & Moore, 1990) evaluated at the
-    lower frequency of each pair. ``g(x) = x * exp(1 - x)`` is Parncutt's
-    standard curve for the Plomp–Levelt (1965) data; the maximum sits at
-    ``x = 1``, i.e. one-quarter of a critical bandwidth.
-
-    The kernel decays to a negligible value for ``x`` beyond a few units
-    (e.g. ``x = 20`` → ``20 * exp(-19) ≈ 1.1e-7``). Pairs whose
-    frequency separation exceeds ``x_cutoff`` units therefore contribute
-    nothing measurable to the sum.
-
-    This implementation sorts the spectrum by frequency and, for each
-    component ``i``, vectorises the inner sum over only the neighbouring
-    components ``j > i`` whose separation stays under the cutoff.
+    Pairs whose higher member exceeds ``validity_max_hz`` are dropped
+    from the sum. Pass ``validity_max_hz=None`` to disable the ceiling.
     """
     f = np.asarray(freq_hz, dtype=float).ravel()
     a = np.maximum(np.asarray(amp, dtype=float), 0.0).ravel()
     if f.size < 2 or a.size != f.size:
-        return 0.0
+        return 0.0, 0
 
     valid = np.isfinite(f) & (f > 0.0) & np.isfinite(a)
     f = f[valid]
     a = a[valid]
     if f.size < 2:
-        return 0.0
+        return 0.0, 0
 
     order = np.argsort(f, kind="mergesort")
     f = f[order]
     a = a[order]
 
-    denom = _roughness_parncutt_denom_hz(f)
+    n = f.size
+    excluded = 0
+    j_cap = n
+    if validity_max_hz is not None:
+        j_cap = int(np.searchsorted(f, float(validity_max_hz), side="right"))
+        for i in range(n - 1):
+            start = max(j_cap, i + 1)
+            if start < n:
+                excluded += n - start
+
+    denom = _roughness_parncutt_denom_hz(
+        f, bandwidth_basis=bandwidth_basis, validity_max_hz=validity_max_hz
+    )
     # For component i (the lower frequency in each pair, since f is sorted
     # ascending), contributions vanish once f_j - f_i > x_cutoff * denom_i.
     df_max = float(x_cutoff) * denom
+    if cutoff_cb is not None:
+        # cutoff_cb is in critical-band units of the chosen CB(f_lo).
+        # denom = PL_CB_FRACTION * CB, so 1 CB = denom / PL_CB_FRACTION.
+        df_max = np.minimum(
+            df_max, float(cutoff_cb) * denom / PL_CB_FRACTION
+        )
     upper_freq = f + df_max
-    # First index strictly greater than i whose frequency is still within
-    # the cutoff window. searchsorted on the ascending frequency axis.
     j_end = np.searchsorted(f, upper_freq, side="right")
+    if j_cap < n:
+        j_end = np.minimum(j_end, j_cap)
 
-    n = f.size
     total = 0.0
     for i in range(n - 1):
         k = int(j_end[i])
@@ -122,9 +215,64 @@ def _roughness_parncutt_kernel(
             continue
         fj = f[i + 1 : k]
         aj = a[i + 1 : k]
-        x = (fj - f[i]) / denom[i]
+        di = float(denom[i])
+        if not np.isfinite(di) or di <= 0.0:
+            continue
+        x = (fj - f[i]) / di
         total += float(a[i] * np.sum(aj * (x * np.exp(1.0 - x))))
-    return float(max(total, 0.0))
+    return float(max(total, 0.0)), int(excluded)
+
+
+def roughness_parncutt_kernel(
+    freq_hz: np.ndarray,
+    amp: np.ndarray,
+    *,
+    x_cutoff: float = 20.0,
+    bandwidth_basis: BandwidthBasis = BANDWIDTH_BASIS_DEFAULT,
+    validity_max_hz: float | None = CB_ZWICKER_VALID_MAX_HZ,
+    cutoff_cb: float | None = None,
+) -> float:
+    """Parncutt / Plomp–Levelt pairwise spectral roughness (F-037).
+
+    ``x = |f_i - f_j| / denom(f_i)`` with ``denom`` from
+    ``bandwidth_basis`` (default ``zwicker_cb``). ``g(x) = x * exp(1 - x)``
+    is Parncutt's standard curve for the Plomp–Levelt (1965) data; the
+    maximum sits at ``x = 1``. The default bandwidth is Zwicker & Fastl
+    (2007) critical band, not ERB. That default is provenance-consistent
+    with Plomp & Levelt (1965), who used the Zwicker, Flottorp & Stevens
+    (1957) critical-band lineage. Overlay on P&L Fig. 10 is outstanding
+    but non-blocking corroboration.
+
+    Pairs whose higher frequency exceeds ``CB_ZWICKER_VALID_MAX_HZ``
+    (15.5 kHz) are excluded: the Zwicker CB fit is undefined above the
+    Bark scale.
+
+    The kernel decays to a negligible value for ``x`` beyond a few units
+    (e.g. ``x = 20`` → ``20 * exp(-19) ≈ 1.1e-7``). ``x_cutoff`` is a
+    numerical truncation for speed, not a psychoacoustic cutoff. A
+    per-pair tail of ~1e-7 is not an aggregate bound; empirically
+    ``|R(x_cutoff=20) - R(untruncated)| <= (sum a)^2 * kappa`` with
+    ``kappa`` measured in the validation artefact. Optional
+    ``cutoff_cb`` (default ``None``) applies an H&K-style hard zero
+    beyond that many critical bands. Changing the default would move
+    exported F-037 numbers.
+
+    This implementation sorts the spectrum by frequency and, for each
+    component ``i``, vectorises the inner sum over only the neighbouring
+    components ``j > i`` whose separation stays under the cutoff.
+    """
+    value, _excluded = roughness_parncutt_kernel_report(
+        freq_hz,
+        amp,
+        x_cutoff=x_cutoff,
+        bandwidth_basis=bandwidth_basis,
+        validity_max_hz=validity_max_hz,
+        cutoff_cb=cutoff_cb,
+    )
+    return value
+
+
+_roughness_parncutt_kernel = roughness_parncutt_kernel
 
 
 def _roughness_aures_1985(
@@ -133,15 +281,8 @@ def _roughness_aures_1985(
     *,
     x_cutoff: float = 20.0,
 ) -> float:
-    """Deprecated alias of ``_roughness_parncutt_kernel`` (one version)."""
-    warnings.warn(
-        "roughness_aures_1985 is a misattribution: the kernel is Parncutt / "
-        "Plomp-Levelt, not Aures (1985). Use roughness_parncutt_kernel. "
-        "Deprecated alias retained for one version.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return _roughness_parncutt_kernel(freq_hz, amp, x_cutoff=x_cutoff)
+    """Retired name. Raises so archived workbooks cannot be compared silently."""
+    raise NotImplementedError(_ROUGHNESS_AURES_ALIAS_RETIRED)
 
 
 def compute_mir_descriptors_from_spectrum(
@@ -170,7 +311,9 @@ def compute_mir_descriptors_from_spectrum(
             "spectral_rolloff_hz_95": float("nan"),
             "roughness_parncutt_kernel": float("nan"),
             "roughness_aures_1985": float("nan"),
+            "roughness_pairs_excluded_above_validity": float("nan"),
             "erb_weighted_spectral_density": float("nan"),
+            **mir_stamp_fields(),
         }
 
     power = amp * amp
@@ -220,17 +363,7 @@ def compute_mir_descriptors_from_spectrum(
         r85 = float("nan")
         r95 = float("nan")
 
-    rough = _roughness_parncutt_kernel(freq, amp)
-    global _AURES_ALIAS_WARNED
-    if not _AURES_ALIAS_WARNED:
-        warnings.warn(
-            "roughness_aures_1985 is a deprecated alias of "
-            "roughness_parncutt_kernel (Parncutt / Plomp-Levelt, not Aures "
-            "1985). Retained for one version.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        _AURES_ALIAS_WARNED = True
+    rough, n_excluded = roughness_parncutt_kernel_report(freq, amp)
 
     erb = _erb_rate_hz(freq)
     erb_bins = np.floor(erb).astype(int)
@@ -255,6 +388,8 @@ def compute_mir_descriptors_from_spectrum(
         "spectral_rolloff_hz_85": r85,
         "spectral_rolloff_hz_95": r95,
         "roughness_parncutt_kernel": rough,
-        "roughness_aures_1985": rough,
+        "roughness_aures_1985": float("nan"),
+        "roughness_pairs_excluded_above_validity": float(n_excluded),
         "erb_weighted_spectral_density": erb_weighted_density,
+        **mir_stamp_fields(),
     }

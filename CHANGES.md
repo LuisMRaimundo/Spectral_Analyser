@@ -1,3 +1,80 @@
+# v4.6.0 — dissonance export repairs
+
+`hutchinson_knopoff_dissonance` is now Hutchinson & Knopoff (1978) eq. (3).
+The previous mean-pair quantity is
+`hutchinson_knopoff_legacy_mean_pair_scaled`. Sethares no longer overrides
+the base signature; default `metric_mode` is `minamp_norm`.
+`dissonance_metric_mode` is exported on every row.
+`analyze_real_timbre(save_directory=None)` no longer crashes. Hygiene:
+lazy HK g-table, symmetric `find_local_minima`, unused imports and dead
+harmonicity flags removed. Tests live in `tests/phase_33/`.
+Migration: `docs/validation/DISSONANCE_MIGRATION.md`.
+
+# v4.5.0 — per-column formula versions
+
+Package version is 4.5.0 so the three F-037 generations that shared
+4.4.0 are no longer ambiguous. Every compiled/MIR export column has a
+`formula_id` and `formula_version`. MIR value columns export companion
+stamps. CI rejects unstamped export columns.
+`tools/build_corpus_manifest.py` records `source_sha256` (same helper
+as Stage 3) for a later move of the Desktop corpus. Tests live in
+`tests/phase_33/`.
+
+# v4.4.0 addendum — Parncutt 1.2-CB cutoff (open item)
+
+`roughness_parncutt_kernel` accepts `cutoff_cb` (H&K-style hard zero).
+Default remains `None`. `x_cutoff=20` is numerical only; the aggregate
+error bound is `|R(20)−R(∞)| ≤ (∑a)² κ` in
+`ROUGHNESS_BANDWIDTH_BASIS.md`. **Open item:** should `cutoff_cb=1.2`
+become the default? That would move F-037.
+
+# v4.4.0 addendum — bandwidth validity (Zwicker 15.5 kHz ceiling)
+
+Zwicker CB returns NaN above 15.5 kHz. F-037 drops pairs whose higher
+member exceeds that ceiling and exports
+`roughness_pairs_excluded_above_validity`. The f0 = 1000 Hz 20-partial
+row changes (~31.5% of the uncapped total was undefined). Other
+bandwidth expressions are audited in
+`docs/validation/BANDWIDTH_VALIDITY_AUDIT.md`; guards that would change
+ACD / ERB-weighted density / Sethares / default H&K are deferred.
+H&K default remains `hk1978`; cello C2–C6 register from committed
+metadata is in `HK_SUBBASS_BANDWIDTH.md`.
+
+# v4.4.0 addendum — roughness basis signed off on provenance
+
+`zwicker_cb` is the provenance-consistent F-037 default: Plomp & Levelt
+(1965) used Zwicker, Flottorp & Stevens (1957) critical bands, not ERB.
+The previous “PL ref” column was an identity check and is labelled as
+such. Overlay on P&L Fig. 10 is outstanding but non-blocking.
+
+# v4.4.0 addendum — H&K sub-bass bandwidth (open item)
+
+`HutchinsonKnopoffDissonance.cbw` is still `1.72 · f^0.65` by default.
+Optional `low_frequency_basis="zwicker_below_200hz"` is available and
+does not change default arithmetic. At 50 Hz the 1978 fit is ~21.7 Hz
+against a Zwicker CB near 100 Hz. **Open item:** should the hybrid
+become the default for the S-region? Author decision required.
+Comparison: `docs/validation/HK_SUBBASS_BANDWIDTH.md`. The four
+previously noted defects in `dissonance_models.py` were not touched.
+
+# v4.4.0 addendum — roughness alias retired
+
+`_roughness_aures_1985` now raises `NotImplementedError`. New Stage 1
+exports write NaN in `roughness_aures_1985`. Use
+`roughness_parncutt_kernel`. Archived values used a mis-specified
+bandwidth and are not comparable; the change is not a rescaling.
+See `docs/validation/ROUGHNESS_MIGRATION.md` and export map §11.
+
+# v4.4.0 — Phase 33: roughness Zwicker bandwidth basis
+
+Proposed default `bandwidth_basis="zwicker_cb"` for F-037. Round-3
+`0.25·ERB` is too narrow below 500 Hz (classical CB flattens near
+100 Hz). `erb` remains selectable. Primary-source confirmation against
+Plomp & Levelt (1965) figures is **outstanding**; the default may
+change. Tests live in `tests/phase_33/`. Artefact:
+`docs/validation/ROUGHNESS_BANDWIDTH_BASIS.md`. ACD / EWSD numerics
+unchanged.
+
 # v4.4.0 addendum — CI hang-killer and live_audio marker
 
 `pytest-timeout` (300 s) and `@pytest.mark.live_audio` keep local-path

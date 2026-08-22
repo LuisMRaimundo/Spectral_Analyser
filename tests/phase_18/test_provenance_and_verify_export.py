@@ -24,7 +24,7 @@ def test_provenance_stamps_package_and_git_describe() -> None:
     pkg, source = resolve_package_version()
     assert pkg != "unknown"
     assert source.startswith("pyproject.toml") or source.startswith("importlib.metadata")
-    assert pkg == "4.4.0" or not source.startswith("pyproject.toml")
+    assert pkg == "4.6.0" or not source.startswith("pyproject.toml")
     p = resolve_analysis_provenance()
     assert p["package_version"] == pkg
     assert p["export_schema_version"] == EXPORT_SCHEMA_VERSION

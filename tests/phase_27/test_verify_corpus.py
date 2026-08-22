@@ -70,7 +70,7 @@ def _good_run(tmp_path: Path) -> Path:
 def test_package_version_is_4_3_0() -> None:
     pkg, source = resolve_package_version()
     assert source.startswith("pyproject.toml")
-    assert pkg == "4.4.0"
+    assert pkg == "4.6.0"
 
 
 def test_cli_still_defaults_to_fft_policy_fixed() -> None:

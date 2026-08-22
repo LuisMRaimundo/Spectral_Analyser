@@ -35,6 +35,8 @@ class MetricDefinition:
     physical_interpretation: str
     not_valid_for: str
     ontology_family: str
+    formula_id: str = ""
+    formula_version: str = ""
 
 
 def _density_weighted_formula() -> str:
@@ -109,27 +111,36 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
     )
     sethares_dissonance = MetricDefinition(
         name="sethares_dissonance",
-        formula="Sethares pairwise roughness on (frequency, amplitude) pairs",
+        formula=(
+            "Sethares pairwise roughness; default metric_mode=minamp_norm "
+            "(Σ d_ij / Σ min(a_i,a_j)). mean_pair_scaled is retained as an "
+            "opt-in. Shared base implementation with Vassilakis (no Liskov override)."
+        ),
         input_domain="validated_partials_only",
-        unit_or_scale="model units (Sethares)",
+        unit_or_scale="model units (Sethares, minamp_norm)",
         amplitude_basis="Amplitude_raw of include_for_density=True harmonics",
         power_basis="not used",
         normalization_scope="validated harmonic partials only (Fix 2)",
         physical_interpretation=(
             "Dissonance from validated harmonic partials after exclusive "
-            "assignment plus confirmed inharmonic partials. Source note "
-            "states the validated list, not the residual-candidate count."
+            "assignment plus confirmed inharmonic partials. Default is "
+            "invariant to peak count and global amplitude scale."
         ),
         not_valid_for="Retained nonharmonic / floor-candidate lists.",
         ontology_family="sensory_dissonance",
+        formula_id="COL:sethares_dissonance",
+        formula_version="4.6.0",
     )
     roughness_parncutt_kernel = MetricDefinition(
         name="roughness_parncutt_kernel",
         formula=(
-            "F-037: x = |f_i-f_j| / (0.25 * ERB(f_lo)); "
-            "ERB(f) = 0.108 f + 24.7 (Glasberg & Moore, 1990); "
-            "g(x) = x * exp(1-x) (Parncutt 1989 / Plomp & Levelt 1965). "
-            "Not Aures (1985)."
+            "F-037: x = |f_i-f_j| / (0.25 * CB(f_lo)); default CB = Zwicker "
+            "25+75(1+1.4(f/1000)^2)^0.69 (Zwicker & Fastl, 2007). "
+            "bandwidth_basis='erb' keeps 0.25*ERB(f)=0.25*(0.108f+24.7). "
+            "g(x)=x*exp(1-x) (Parncutt 1989 / Plomp & Levelt 1965). "
+            "Pairs with max(f_i,f_j) > CB_ZWICKER_VALID_MAX_HZ=15500 are excluded. "
+            "Default is provenance-consistent (P&L used the Zwicker CB lineage, "
+            "not ERB). Fig. 10 overlay is outstanding non-blocking corroboration."
         ),
         input_domain="peak-picked linear amplitudes and frequencies",
         unit_or_scale="pairwise kernel units",
@@ -137,26 +148,50 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         power_basis="not used (amplitude product)",
         normalization_scope="per spectrum",
         physical_interpretation=(
-            "Pairwise spectral roughness. Maximum at ~0.25 ERB "
-            "(~33 Hz at 1 kHz). Independent of ACD ERB helpers."
+            "Pairwise spectral roughness. Provenance-consistent default peaks "
+            "at ~0.25 Zwicker CB (~40 Hz at 1 kHz). Independent of ACD ERB helpers."
         ),
         not_valid_for="Citing as Aures (1985); importing into spectral_density_hill.",
         ontology_family="sensory_dissonance",
+        formula_id="F-037",
+        formula_version="4.5.0",
     )
     roughness_aures_1985 = MetricDefinition(
         name="roughness_aures_1985",
         formula=(
-            "Deprecated alias of roughness_parncutt_kernel (F-037), retained "
-            "for one version. The implemented kernel was never Aures (1985)."
+            "Retired name. Calling the function raises NotImplementedError. "
+            "New exports write NaN. Use roughness_parncutt_kernel (F-037). "
+            "Archived values used a mis-specified bandwidth and are not comparable."
         ),
-        input_domain="same as roughness_parncutt_kernel",
-        unit_or_scale="pairwise kernel units",
+        input_domain="retired; see roughness_parncutt_kernel",
+        unit_or_scale="pairwise kernel units (archived only)",
         amplitude_basis="Amplitude_raw (linear)",
         power_basis="not used (amplitude product)",
         normalization_scope="per spectrum",
-        physical_interpretation="Alias of roughness_parncutt_kernel.",
-        not_valid_for="New analyses; use roughness_parncutt_kernel.",
+        physical_interpretation=(
+            "Retired column. Not a live alias of roughness_parncutt_kernel."
+        ),
+        not_valid_for="Any new analysis; archived values are not comparable.",
         ontology_family="sensory_dissonance",
+    )
+    roughness_pairs_excluded_above_validity = MetricDefinition(
+        name="roughness_pairs_excluded_above_validity",
+        formula=(
+            "Count of unordered pairs (i,j) whose higher frequency exceeds "
+            "CB_ZWICKER_VALID_MAX_HZ = 15500 (Bark-scale ceiling of the "
+            "Zwicker CB fit). Those pairs are omitted from F-037."
+        ),
+        input_domain="peak-picked frequencies (same list as F-037)",
+        unit_or_scale="pair count",
+        amplitude_basis="not used",
+        power_basis="not used",
+        normalization_scope="per spectrum",
+        physical_interpretation=(
+            "Diagnostic: how much of the pairwise roster sits above the "
+            "defined Zwicker CB range."
+        ),
+        not_valid_for="Treating as a roughness magnitude.",
+        ontology_family="diagnostic_count",
     )
     inharmonic_density_sum = MetricDefinition(
         name="inharmonic_density_sum",
@@ -838,6 +873,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         sethares_dissonance.name: sethares_dissonance,
         roughness_parncutt_kernel.name: roughness_parncutt_kernel,
         roughness_aures_1985.name: roughness_aures_1985,
+        roughness_pairs_excluded_above_validity.name: roughness_pairs_excluded_above_validity,
         inharmonic_density_sum.name: inharmonic_density_sum,
         inharmonic_status.name: inharmonic_status,
         inharmonic_confirmed_count.name: inharmonic_confirmed_count,

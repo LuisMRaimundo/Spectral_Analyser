@@ -14,6 +14,7 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 - Sethares, W. A. (2005). *Tuning, timbre, spectrum, scale* (2nd ed.). Springer.
 - Fechner, G. T. (1860). *Elemente der Psychophysik*. Breitkopf und Härtel.
 - Stevens, S. S. (1955). The measurement of loudness. *Journal of the Acoustical Society of America, 27*(5), 815–829.
+- Zwicker, E., Flottorp, G., & Stevens, S. S. (1957). Critical band width in loudness summation. *Journal of the Acoustical Society of America, 29*(5), 548–557.
 - Zwicker, E., & Fastl, H. (1990). *Psychoacoustics: Facts and models*. Springer.
 - Moore, B. C. J., & Glasberg, B. R. (1983). Suggested formulae for calculating auditory-filter bandwidths and excitation patterns. *Journal of the Acoustical Society of America, 74*(3), 750–753.
 - Glasberg, B. R., & Moore, B. C. J. (1990). Derivation of auditory filter shapes from notched-noise data. *Hearing Research, 47*(1–2), 103–138.
@@ -56,7 +57,7 @@ This file is the canonical bibliography for all theoretical anchors used in the 
 | `subbass_policy.py` | Zwicker & Fastl (1990) |
 | `constants.py` (`DENSITY_WEIGHT_FUNCTION_DEFAULT`) | Fechner (1860); Stevens (1955); Zwicker & Fastl (1990) |
 | `dissonance_models.py` (`SetharesDissonance`) | Sethares (2005) |
-| `mir_descriptors.py` | Plomp & Levelt (1965); Parncutt (1989); Glasberg & Moore (1990); Pollard & Jansson (1982); Peeters et al. (2011) |
+| `mir_descriptors.py` | Plomp & Levelt (1965); Zwicker, Flottorp & Stevens (1957); Parncutt (1989); Zwicker & Fastl (2007); Glasberg & Moore (1990); Pollard & Jansson (1982); Peeters et al. (2011) |
 | `tools/spectral_density_hill.py` | Glasberg & Moore (1990); Moore & Glasberg (1983); Hill (1973); Jost (2006); Hurley & Rickard (2009); Moore, Glasberg & Baer (1997); ISO 532-2:2017 |
 | `adaptive_density_engine.py` | Lin (1991); Gelman et al. (2013) |
 | `metric_contract.py` | Hatton (1997); Soergel (2015) |

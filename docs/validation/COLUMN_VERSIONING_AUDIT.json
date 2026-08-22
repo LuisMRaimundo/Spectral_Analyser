@@ -1,0 +1,1137 @@
+{
+  "package_formula_version": "4.5.0",
+  "columns": {
+    "Note": {
+      "formula_id": "COL:Note",
+      "formula_version": "4.5.0"
+    },
+    "canonical_density_v5_adapted": {
+      "formula_id": "COL:canonical_density_v5_adapted",
+      "formula_version": "4.5.0"
+    },
+    "density_normalized_global": {
+      "formula_id": "COL:density_normalized_global",
+      "formula_version": "4.5.0"
+    },
+    "density_per_component": {
+      "formula_id": "COL:density_per_component",
+      "formula_version": "4.5.0"
+    },
+    "discrete_metric_d3": {
+      "formula_id": "COL:discrete_metric_d3",
+      "formula_version": "4.5.0"
+    },
+    "discrete_metric_d10": {
+      "formula_id": "COL:discrete_metric_d10",
+      "formula_version": "4.5.0"
+    },
+    "discrete_metric_d17": {
+      "formula_id": "COL:discrete_metric_d17",
+      "formula_version": "4.5.0"
+    },
+    "discrete_metric_d24": {
+      "formula_id": "COL:discrete_metric_d24",
+      "formula_version": "4.5.0"
+    },
+    "effective_partial_density": {
+      "formula_id": "COL:effective_partial_density",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_energy_sum": {
+      "formula_id": "COL:harmonic_energy_sum",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_energy_sum_tier_normalized": {
+      "formula_id": "COL:harmonic_energy_sum_tier_normalized",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_energy_sum": {
+      "formula_id": "COL:inharmonic_energy_sum",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_energy_sum_tier_normalized": {
+      "formula_id": "COL:inharmonic_energy_sum_tier_normalized",
+      "formula_version": "4.5.0"
+    },
+    "subbass_energy_sum": {
+      "formula_id": "COL:subbass_energy_sum",
+      "formula_version": "4.5.0"
+    },
+    "subbass_energy_sum_tier_normalized": {
+      "formula_id": "COL:subbass_energy_sum_tier_normalized",
+      "formula_version": "4.5.0"
+    },
+    "total_component_energy": {
+      "formula_id": "COL:total_component_energy",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_energy_ratio": {
+      "formula_id": "COL:harmonic_energy_ratio",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_energy_ratio": {
+      "formula_id": "COL:inharmonic_energy_ratio",
+      "formula_version": "4.5.0"
+    },
+    "subbass_energy_ratio": {
+      "formula_id": "COL:subbass_energy_ratio",
+      "formula_version": "4.5.0"
+    },
+    "linear_sum_amplitude_harmonic": {
+      "formula_id": "COL:linear_sum_amplitude_harmonic",
+      "formula_version": "4.5.0"
+    },
+    "linear_sum_amplitude_inharmonic_partial": {
+      "formula_id": "COL:linear_sum_amplitude_inharmonic_partial",
+      "formula_version": "4.5.0"
+    },
+    "linear_sum_amplitude_subbass_band": {
+      "formula_id": "COL:linear_sum_amplitude_subbass_band",
+      "formula_version": "4.5.0"
+    },
+    "Soma_A_linear_harmonicos": {
+      "formula_id": "COL:Soma_A_linear_harmonicos",
+      "formula_version": "4.5.0"
+    },
+    "Soma_A_linear_inarmonicos": {
+      "formula_id": "COL:Soma_A_linear_inarmonicos",
+      "formula_version": "4.5.0"
+    },
+    "Soma_A_linear_subbass": {
+      "formula_id": "COL:Soma_A_linear_subbass",
+      "formula_version": "4.5.0"
+    },
+    "Soma_A_linear_total": {
+      "formula_id": "COL:Soma_A_linear_total",
+      "formula_version": "4.5.0"
+    },
+    "linear_amplitude_fraction_inharmonic_of_HI": {
+      "formula_id": "COL:linear_amplitude_fraction_inharmonic_of_HI",
+      "formula_version": "4.5.0"
+    },
+    "linear_amplitude_fraction_nonharmonic_of_total": {
+      "formula_id": "COL:linear_amplitude_fraction_nonharmonic_of_total",
+      "formula_version": "4.5.0"
+    },
+    "linear_amplitude_batch_alignment_factor": {
+      "formula_id": "COL:linear_amplitude_batch_alignment_factor",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_order_count": {
+      "formula_id": "COL:harmonic_order_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_candidate_count_20khz": {
+      "formula_id": "COL:harmonic_candidate_count_20khz",
+      "formula_version": "4.5.0"
+    },
+    "validated_harmonic_component_count_body_ceiling": {
+      "formula_id": "COL:validated_harmonic_component_count_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "probable_harmonic_component_count_body_ceiling": {
+      "formula_id": "COL:probable_harmonic_component_count_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "probable_harmonic_component_energy_sum_body_ceiling": {
+      "formula_id": "COL:probable_harmonic_component_energy_sum_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "acoustic_f0_status": {
+      "formula_id": "COL:acoustic_f0_status",
+      "formula_version": "4.5.0"
+    },
+    "f0_used_for_density_source": {
+      "formula_id": "COL:f0_used_for_density_source",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_region_occupancy_count": {
+      "formula_id": "COL:harmonic_region_occupancy_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_occupancy_detected_order_count": {
+      "formula_id": "COL:harmonic_occupancy_detected_order_count",
+      "formula_version": "4.5.0"
+    },
+    "expected_harmonic_slot_count": {
+      "formula_id": "COL:expected_harmonic_slot_count",
+      "formula_version": "4.5.0"
+    },
+    "detected_harmonic_slot_count": {
+      "formula_id": "COL:detected_harmonic_slot_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_slot_expected_count": {
+      "formula_id": "COL:harmonic_slot_expected_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_slot_matched_count": {
+      "formula_id": "COL:harmonic_slot_matched_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_slot_coverage_ratio": {
+      "formula_id": "COL:harmonic_slot_coverage_ratio",
+      "formula_version": "4.5.0"
+    },
+    "body_weighted_effective_density": {
+      "formula_id": "COL:body_weighted_effective_density",
+      "formula_version": "4.5.0"
+    },
+    "low_mid_energy_ratio": {
+      "formula_id": "COL:low_mid_energy_ratio",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_body_density": {
+      "formula_id": "COL:harmonic_body_density",
+      "formula_version": "4.5.0"
+    },
+    "expected_harmonic_slots_up_to_body_ceiling": {
+      "formula_id": "COL:expected_harmonic_slots_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_body_density_normalized": {
+      "formula_id": "COL:harmonic_body_density_normalized",
+      "formula_version": "4.5.0"
+    },
+    "residual_body_contribution": {
+      "formula_id": "COL:residual_body_contribution",
+      "formula_version": "4.5.0"
+    },
+    "residual_body_contribution_capped": {
+      "formula_id": "COL:residual_body_contribution_capped",
+      "formula_version": "4.5.0"
+    },
+    "spectral_body_thickness_index": {
+      "formula_id": "COL:spectral_body_thickness_index",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_order_count_up_to_body_ceiling": {
+      "formula_id": "COL:salient_harmonic_order_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "expected_harmonic_order_count_up_to_body_ceiling": {
+      "formula_id": "COL:expected_harmonic_order_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_coverage_up_to_body_ceiling": {
+      "formula_id": "COL:salient_harmonic_coverage_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "theoretical_harmonic_order_count_up_to_body_ceiling": {
+      "formula_id": "COL:theoretical_harmonic_order_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "detected_salient_harmonic_order_count_up_to_body_ceiling": {
+      "formula_id": "COL:detected_salient_harmonic_order_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_coverage_ratio_up_to_body_ceiling": {
+      "formula_id": "COL:salient_harmonic_coverage_ratio_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_mass_up_to_body_ceiling": {
+      "formula_id": "COL:salient_harmonic_mass_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_order_count_up_to_density_ceiling_hz": {
+      "formula_id": "COL:salient_harmonic_order_count_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "expected_harmonic_order_count_up_to_density_ceiling_hz": {
+      "formula_id": "COL:expected_harmonic_order_count_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_coverage_up_to_density_ceiling_hz": {
+      "formula_id": "COL:salient_harmonic_coverage_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_mass_up_to_density_ceiling_hz": {
+      "formula_id": "COL:salient_harmonic_mass_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "salient_odd_harmonic_count_up_to_body_ceiling": {
+      "formula_id": "COL:salient_odd_harmonic_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_even_harmonic_count_up_to_body_ceiling": {
+      "formula_id": "COL:salient_even_harmonic_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "odd_even_harmonic_energy_ratio": {
+      "formula_id": "COL:odd_even_harmonic_energy_ratio",
+      "formula_version": "4.5.0"
+    },
+    "salient_inharmonic_log_bin_count_up_to_body_ceiling": {
+      "formula_id": "COL:salient_inharmonic_log_bin_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_subbass_particle_count": {
+      "formula_id": "COL:salient_subbass_particle_count",
+      "formula_version": "4.5.0"
+    },
+    "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz": {
+      "formula_id": "COL:salient_inharmonic_log_bin_count_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "salient_subbass_particle_count_up_to_density_ceiling_hz": {
+      "formula_id": "COL:salient_subbass_particle_count_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "final_note_density_count_based": {
+      "formula_id": "COL:final_note_density_count_based",
+      "formula_version": "4.5.0"
+    },
+    "final_note_density_salience_weighted": {
+      "formula_id": "COL:final_note_density_salience_weighted",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_component": {
+      "formula_id": "COL:harmonic_density_component",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_component": {
+      "formula_id": "COL:inharmonic_density_component",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_component": {
+      "formula_id": "COL:subbass_density_component",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_weight": {
+      "formula_id": "COL:harmonic_density_weight",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_weight": {
+      "formula_id": "COL:inharmonic_density_weight",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_weight": {
+      "formula_id": "COL:subbass_density_weight",
+      "formula_version": "4.5.0"
+    },
+    "density_summation_mode": {
+      "formula_id": "COL:density_summation_mode",
+      "formula_version": "4.5.0"
+    },
+    "f0_epistemic_status": {
+      "formula_id": "COL:f0_epistemic_status",
+      "formula_version": "4.5.0"
+    },
+    "f0_final_source": {
+      "formula_id": "COL:f0_final_source",
+      "formula_version": "4.5.0"
+    },
+    "valid_for_primary_statistics": {
+      "formula_id": "COL:valid_for_primary_statistics",
+      "formula_version": "4.5.0"
+    },
+    "density_confidence": {
+      "formula_id": "COL:density_confidence",
+      "formula_version": "4.5.0"
+    },
+    "f0_confidence": {
+      "formula_id": "COL:f0_confidence",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_assignment_confidence": {
+      "formula_id": "COL:harmonic_assignment_confidence",
+      "formula_version": "4.5.0"
+    },
+    "spectral_stability_confidence": {
+      "formula_id": "COL:spectral_stability_confidence",
+      "formula_version": "4.5.0"
+    },
+    "qc_status": {
+      "formula_id": "COL:qc_status",
+      "formula_version": "4.5.0"
+    },
+    "outlier_ratio_max_to_mean": {
+      "formula_id": "COL:outlier_ratio_max_to_mean",
+      "formula_version": "4.5.0"
+    },
+    "outlier_policy_applied": {
+      "formula_id": "COL:outlier_policy_applied",
+      "formula_version": "4.5.0"
+    },
+    "sethares_status": {
+      "formula_id": "COL:sethares_status",
+      "formula_version": "4.5.0"
+    },
+    "density_salience_threshold_db": {
+      "formula_id": "COL:density_salience_threshold_db",
+      "formula_version": "4.5.0"
+    },
+    "density_frequency_ceiling_hz": {
+      "formula_id": "COL:density_frequency_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "density_effective_ceiling_hz": {
+      "formula_id": "COL:density_effective_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_body_stop_hz": {
+      "formula_id": "COL:harmonic_body_stop_hz",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_body_stop_order": {
+      "formula_id": "COL:harmonic_body_stop_order",
+      "formula_version": "4.5.0"
+    },
+    "validated_harmonics_above_body_stop_count": {
+      "formula_id": "COL:validated_harmonics_above_body_stop_count",
+      "formula_version": "4.5.0"
+    },
+    "density_fragile": {
+      "formula_id": "COL:density_fragile",
+      "formula_version": "4.5.0"
+    },
+    "density_perturbation_spread_pct": {
+      "formula_id": "COL:density_perturbation_spread_pct",
+      "formula_version": "4.5.0"
+    },
+    "density_ci_relative_width_pct": {
+      "formula_id": "COL:density_ci_relative_width_pct",
+      "formula_version": "4.5.0"
+    },
+    "bin_to_f0_ratio": {
+      "formula_id": "COL:bin_to_f0_ratio",
+      "formula_version": "4.5.0"
+    },
+    "low_f0_resolution_warning": {
+      "formula_id": "COL:low_f0_resolution_warning",
+      "formula_version": "4.5.0"
+    },
+    "core_harmonic_energy_ratio": {
+      "formula_id": "COL:core_harmonic_energy_ratio",
+      "formula_version": "4.5.0"
+    },
+    "core_residual_energy_ratio": {
+      "formula_id": "COL:core_residual_energy_ratio",
+      "formula_version": "4.5.0"
+    },
+    "core_subbass_energy_ratio": {
+      "formula_id": "COL:core_subbass_energy_ratio",
+      "formula_version": "4.5.0"
+    },
+    "estimated_snr_db": {
+      "formula_id": "COL:estimated_snr_db",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density_normalized": {
+      "formula_id": "COL:harmonic_effective_power_density_normalized",
+      "formula_version": "4.5.0"
+    },
+    "energy_weighted_component_density_diagnostic": {
+      "formula_id": "COL:energy_weighted_component_density_diagnostic",
+      "formula_version": "4.5.0"
+    },
+    "effective_components_weighted_diagnostic": {
+      "formula_id": "COL:effective_components_weighted_diagnostic",
+      "formula_version": "4.5.0"
+    },
+    "diagnostic_effective_components_h": {
+      "formula_id": "COL:diagnostic_effective_components_h",
+      "formula_version": "4.5.0"
+    },
+    "diagnostic_effective_components_r": {
+      "formula_id": "COL:diagnostic_effective_components_r",
+      "formula_version": "4.5.0"
+    },
+    "diagnostic_effective_components_s": {
+      "formula_id": "COL:diagnostic_effective_components_s",
+      "formula_version": "4.5.0"
+    },
+    "tier_consistency_status": {
+      "formula_id": "COL:tier_consistency_status",
+      "formula_version": "4.5.0"
+    },
+    "spectral_entropy": {
+      "formula_id": "COL:spectral_entropy",
+      "formula_version": "4.5.0"
+    },
+    "density_source_formula": {
+      "formula_id": "COL:density_source_formula",
+      "formula_version": "4.5.0"
+    },
+    "density_normalization_scope": {
+      "formula_id": "COL:density_normalization_scope",
+      "formula_version": "4.5.0"
+    },
+    "density_normalization_denominator": {
+      "formula_id": "COL:density_normalization_denominator",
+      "formula_version": "4.5.0"
+    },
+    "density_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_compensated_harmonic_density": {
+      "formula_id": "COL:rolloff_compensated_harmonic_density",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_compensated_harmonic_density_alpha": {
+      "formula_id": "COL:rolloff_compensated_harmonic_density_alpha",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_compensated_harmonic_density_component_count": {
+      "formula_id": "COL:rolloff_compensated_harmonic_density_component_count",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_compensated_harmonic_density_status": {
+      "formula_id": "COL:rolloff_compensated_harmonic_density_status",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_harmonic_partial_count": {
+      "formula_id": "COL:rolloff_harmonic_partial_count",
+      "formula_version": "4.5.0"
+    },
+    "density_metric_per_harmonic": {
+      "formula_id": "COL:density_metric_per_harmonic",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density": {
+      "formula_id": "COL:harmonic_effective_power_density",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density_component_count": {
+      "formula_id": "COL:harmonic_effective_power_density_component_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density_status": {
+      "formula_id": "COL:harmonic_effective_power_density_status",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density_normalized_by_harmonic_count": {
+      "formula_id": "COL:harmonic_effective_power_density_normalized_by_harmonic_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_mass": {
+      "formula_id": "COL:harmonic_effective_power_mass",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_mean": {
+      "formula_id": "COL:harmonic_effective_power_mean",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_rms": {
+      "formula_id": "COL:harmonic_effective_power_rms",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_component_count": {
+      "formula_id": "COL:harmonic_effective_power_component_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_mass_status": {
+      "formula_id": "COL:harmonic_effective_power_mass_status",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz": {
+      "formula_id": "F-027",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz": {
+      "formula_id": "F-028",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness": {
+      "formula_id": "F-029",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis": {
+      "formula_id": "F-030",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity": {
+      "formula_id": "F-031",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental": {
+      "formula_id": "F-032",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4": {
+      "formula_id": "F-033",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus": {
+      "formula_id": "F-034",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness": {
+      "formula_id": "F-035",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85": {
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95": {
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel": {
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985": {
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity": {
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density": {
+      "formula_id": "F-039",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_on_sustain_segment": {
+      "formula_id": "COL:spectral_centroid_hz_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_on_sustain_segment": {
+      "formula_id": "COL:spectral_spread_hz_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_on_sustain_segment": {
+      "formula_id": "COL:spectral_skewness_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_on_sustain_segment": {
+      "formula_id": "COL:spectral_kurtosis_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_on_sustain_segment": {
+      "formula_id": "COL:spectral_irregularity_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_on_sustain_segment": {
+      "formula_id": "COL:tristimulus_1_fundamental_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_on_sustain_segment": {
+      "formula_id": "COL:tristimulus_2_low_harmonics_2_to_4_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_on_sustain_segment": {
+      "formula_id": "COL:tristimulus_3_high_harmonics_5_plus_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_on_sustain_segment": {
+      "formula_id": "COL:spectral_flatness_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_on_sustain_segment": {
+      "formula_id": "COL:spectral_rolloff_hz_85_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_on_sustain_segment": {
+      "formula_id": "COL:spectral_rolloff_hz_95_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_on_sustain_segment": {
+      "formula_id": "COL:roughness_parncutt_kernel_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_on_sustain_segment": {
+      "formula_id": "COL:roughness_aures_1985_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_on_sustain_segment": {
+      "formula_id": "COL:roughness_pairs_excluded_above_validity_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_on_sustain_segment": {
+      "formula_id": "COL:erb_weighted_spectral_density_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_on_attack": {
+      "formula_id": "COL:spectral_centroid_hz_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_on_sustain": {
+      "formula_id": "COL:spectral_centroid_hz_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_on_release": {
+      "formula_id": "COL:spectral_centroid_hz_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_on_attack": {
+      "formula_id": "COL:spectral_spread_hz_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_on_sustain": {
+      "formula_id": "COL:spectral_spread_hz_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_on_release": {
+      "formula_id": "COL:spectral_spread_hz_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_on_attack": {
+      "formula_id": "COL:spectral_skewness_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_on_sustain": {
+      "formula_id": "COL:spectral_skewness_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_on_release": {
+      "formula_id": "COL:spectral_skewness_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_on_attack": {
+      "formula_id": "COL:spectral_kurtosis_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_on_sustain": {
+      "formula_id": "COL:spectral_kurtosis_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_on_release": {
+      "formula_id": "COL:spectral_kurtosis_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_on_attack": {
+      "formula_id": "COL:spectral_irregularity_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_on_sustain": {
+      "formula_id": "COL:spectral_irregularity_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_on_release": {
+      "formula_id": "COL:spectral_irregularity_on_release",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_on_attack": {
+      "formula_id": "COL:tristimulus_1_fundamental_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_on_sustain": {
+      "formula_id": "COL:tristimulus_1_fundamental_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_on_release": {
+      "formula_id": "COL:tristimulus_1_fundamental_on_release",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_on_attack": {
+      "formula_id": "COL:tristimulus_2_low_harmonics_2_to_4_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_on_sustain": {
+      "formula_id": "COL:tristimulus_2_low_harmonics_2_to_4_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_on_release": {
+      "formula_id": "COL:tristimulus_2_low_harmonics_2_to_4_on_release",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_on_attack": {
+      "formula_id": "COL:tristimulus_3_high_harmonics_5_plus_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_on_sustain": {
+      "formula_id": "COL:tristimulus_3_high_harmonics_5_plus_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_on_release": {
+      "formula_id": "COL:tristimulus_3_high_harmonics_5_plus_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_on_attack": {
+      "formula_id": "COL:spectral_flatness_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_on_sustain": {
+      "formula_id": "COL:spectral_flatness_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_on_release": {
+      "formula_id": "COL:spectral_flatness_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_on_attack": {
+      "formula_id": "COL:spectral_rolloff_hz_85_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_on_sustain": {
+      "formula_id": "COL:spectral_rolloff_hz_85_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_on_release": {
+      "formula_id": "COL:spectral_rolloff_hz_85_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_on_attack": {
+      "formula_id": "COL:spectral_rolloff_hz_95_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_on_sustain": {
+      "formula_id": "COL:spectral_rolloff_hz_95_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_on_release": {
+      "formula_id": "COL:spectral_rolloff_hz_95_on_release",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_on_attack": {
+      "formula_id": "COL:roughness_parncutt_kernel_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_on_sustain": {
+      "formula_id": "COL:roughness_parncutt_kernel_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_on_release": {
+      "formula_id": "COL:roughness_parncutt_kernel_on_release",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_on_attack": {
+      "formula_id": "COL:roughness_aures_1985_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_on_sustain": {
+      "formula_id": "COL:roughness_aures_1985_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_on_release": {
+      "formula_id": "COL:roughness_aures_1985_on_release",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_on_attack": {
+      "formula_id": "COL:roughness_pairs_excluded_above_validity_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_on_sustain": {
+      "formula_id": "COL:roughness_pairs_excluded_above_validity_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_on_release": {
+      "formula_id": "COL:roughness_pairs_excluded_above_validity_on_release",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_on_attack": {
+      "formula_id": "COL:erb_weighted_spectral_density_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_on_sustain": {
+      "formula_id": "COL:erb_weighted_spectral_density_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_on_release": {
+      "formula_id": "COL:erb_weighted_spectral_density_on_release",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_component_on_attack": {
+      "formula_id": "COL:harmonic_density_component_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_component_on_sustain": {
+      "formula_id": "COL:harmonic_density_component_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_component_on_release": {
+      "formula_id": "COL:harmonic_density_component_on_release",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_component_on_attack": {
+      "formula_id": "COL:inharmonic_density_component_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_component_on_sustain": {
+      "formula_id": "COL:inharmonic_density_component_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_component_on_release": {
+      "formula_id": "COL:inharmonic_density_component_on_release",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_component_on_attack": {
+      "formula_id": "COL:subbass_density_component_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_component_on_sustain": {
+      "formula_id": "COL:subbass_density_component_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_component_on_release": {
+      "formula_id": "COL:subbass_density_component_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_coefficient_B": {
+      "formula_id": "COL:inharmonicity_coefficient_B",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_fit_residual_std_cents": {
+      "formula_id": "COL:inharmonicity_fit_residual_std_cents",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_fit_status": {
+      "formula_id": "COL:inharmonicity_fit_status",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_fit_method": {
+      "formula_id": "COL:inharmonicity_fit_method",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_model_applied": {
+      "formula_id": "COL:inharmonicity_model_applied",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_fit_source": {
+      "formula_id": "COL:inharmonicity_fit_source",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_validation_warning": {
+      "formula_id": "COL:inharmonicity_validation_warning",
+      "formula_version": "4.5.0"
+    },
+    "obs_w_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "pure_observation_w_h": {
+      "formula_id": "COL:pure_observation_w_h",
+      "formula_version": "4.5.0"
+    },
+    "pure_observation_w_i": {
+      "formula_id": "COL:pure_observation_w_i",
+      "formula_version": "4.5.0"
+    },
+    "pure_observation_w_s": {
+      "formula_id": "COL:pure_observation_w_s",
+      "formula_version": "4.5.0"
+    },
+    "component_strength_h": {
+      "formula_id": "COL:component_strength_h",
+      "formula_version": "4.5.0"
+    },
+    "component_strength_i": {
+      "formula_id": "COL:component_strength_i",
+      "formula_version": "4.5.0"
+    },
+    "component_strength_s": {
+      "formula_id": "COL:component_strength_s",
+      "formula_version": "4.5.0"
+    },
+    "legacy_component_strength_h_v55": {
+      "formula_id": "COL:legacy_component_strength_h_v55",
+      "formula_version": "4.5.0"
+    },
+    "legacy_component_strength_i_v55": {
+      "formula_id": "COL:legacy_component_strength_i_v55",
+      "formula_version": "4.5.0"
+    },
+    "legacy_component_strength_s_v55": {
+      "formula_id": "COL:legacy_component_strength_s_v55",
+      "formula_version": "4.5.0"
+    },
+    "mir_descriptors_available": {
+      "formula_id": "COL:mir_descriptors_available",
+      "formula_version": "4.5.0"
+    },
+    "mir_descriptors_source": {
+      "formula_id": "COL:mir_descriptors_source",
+      "formula_version": "4.5.0"
+    },
+    "mir_descriptors_missing_reason": {
+      "formula_id": "COL:mir_descriptors_missing_reason",
+      "formula_version": "4.5.0"
+    },
+    "sethares_dissonance": {
+      "formula_id": "COL:sethares_dissonance",
+      "formula_version": "4.6.0"
+    },
+    "sethares_dissonance_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "sethares_dissonance_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_dissonance": {
+      "formula_id": "COL:hutchinson_knopoff_dissonance",
+      "formula_version": "4.6.0"
+    },
+    "hutchinson_knopoff_dissonance_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_dissonance_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "vassilakis_dissonance": {
+      "formula_id": "COL:vassilakis_dissonance",
+      "formula_version": "4.6.0"
+    },
+    "vassilakis_dissonance_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "vassilakis_dissonance_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled": {
+      "formula_id": "COL:hutchinson_knopoff_legacy_mean_pair_scaled",
+      "formula_version": "4.6.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "selected_dissonance_value": {
+      "formula_id": "COL:selected_dissonance_value",
+      "formula_version": "4.6.0"
+    },
+    "selected_dissonance_value_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "selected_dissonance_value_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "dissonance_metric_mode": {
+      "formula_id": "COL:dissonance_metric_mode",
+      "formula_version": "4.6.0"
+    },
+    "dissonance_metric_mode_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "dissonance_metric_mode_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    }
+  }
+}

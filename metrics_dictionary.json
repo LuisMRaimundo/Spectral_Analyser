@@ -465,15 +465,22 @@
     "roughness_parncutt_kernel": {
       "status": "diagnostic",
       "phase": "phase_5",
-      "citation": "Parncutt (1989); Plomp & Levelt (1965); Glasberg & Moore (1990)",
-      "description": "Pairwise spectral roughness, g(x)=x exp(1-x), x=(df/ERB)/0.25. Not Aures (1985).",
+      "citation": "Parncutt (1989); Plomp & Levelt (1965); Zwicker & Fastl (2007)",
+      "description": "Pairwise spectral roughness, g(x)=x exp(1-x), x=df/(0.25*Zwicker CB). Provenance-consistent default (P&L 1965 used the Zwicker CB lineage, not ERB). bandwidth_basis='erb' keeps the round-3 kernel.",
+      "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
+    },
+    "roughness_pairs_excluded_above_validity": {
+      "status": "diagnostic",
+      "phase": "phase_33",
+      "citation": "Zwicker & Fastl (2007) Bark-scale ceiling 15.5 kHz",
+      "description": "Count of F-037 pairs whose higher member exceeds CB_ZWICKER_VALID_MAX_HZ. Omitted from the roughness sum.",
       "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
     },
     "roughness_aures_1985": {
       "status": "diagnostic",
       "phase": "phase_5",
-      "citation": "Deprecated alias of roughness_parncutt_kernel (one version)",
-      "description": "Misattributed name retained as an alias. The kernel is Parncutt / Plomp-Levelt.",
+      "citation": "Retired. Use roughness_parncutt_kernel. See docs/validation/ROUGHNESS_MIGRATION.md",
+      "description": "Schema slot retained. New exports write NaN. The function raises NotImplementedError. Archived values used a mis-specified bandwidth and are not comparable.",
       "sheet_or_export": "compiled Density_Metrics / research Spectral_Density_Metrics"
     },
     "erb_weighted_spectral_density": {

@@ -225,9 +225,9 @@ def test_package_and_citation_are_4_3_0() -> None:
 
     pkg, source = resolve_package_version()
     assert source.startswith("pyproject.toml")
-    assert pkg == "4.4.0"
+    assert pkg == "4.6.0"
     citation = Path("CITATION.cff").read_text(encoding="utf-8")
-    assert citation.count('version: "4.4.0"') >= 2
+    assert citation.count('version: "4.6.0"') >= 2
 
 
 def test_registry_f056_defined_and_ewsd_deprecated() -> None:
