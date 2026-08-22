@@ -142,7 +142,7 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 |---|---|
 | `<note_name>/spectral_analysis.xlsx` | Per-note multi-sheet workbook (spectrum, peaks, partitioning, descriptors). |
 | `compiled_density_metrics.xlsx` | Corpus-level compiled workbook (16 sheets including `Density_Metrics`, `Canonical_Metrics`, `Diagnostic_Metrics`, `Validation_Metrics`, `PCA_*`, `Dissonance_Metrics`, `Analysis_Metadata`). |
-| `compiled_density_metrics_research.xlsx` | Reduced research workbook. Includes **`note_effective_component_density`** (fatness), **`note_density_final`**, EWSD-R v18.1 with bootstrap CI, **`Primary_Statistics_Eligible`**, **`Stage3_Diagnostics`**, **`Stage3_Summary`**. Red **data bars** on **`EWSD_score_acoustic_balanced`**. Export hygiene: dead columns pruned (v4.0.2); Metadata Phase-2 H/I/S weights, `Diagnostic_Metrics.sample_id`, identical `_2` column dedupe, numeric `zero_padding` per note (v4.0.3). Stage 1 (v4.1.0): spacing-capped harmonic match, f0 refit, body-stop count cut, noise-gated mass, `density_fragile`. Gate rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
+| `compiled_density_metrics_research.xlsx` | Reduced research workbook. Includes **`note_effective_component_density`** (fatness), **`note_density_final`**, EWSD-R v18.1 with bootstrap CI, **`Primary_Statistics_Eligible`**, **`Stage3_Diagnostics`**, **`Stage3_Summary`**. Red **data bars** on **`EWSD_score_acoustic_balanced`**; blue **data bars** on **`spectral_mass`**. Export hygiene: dead columns pruned (v4.0.2); Metadata Phase-2 H/I/S weights, `Diagnostic_Metrics.sample_id`, identical `_2` column dedupe, numeric `zero_padding` per note (v4.0.3). Stage 1 (v4.1.0): spacing-capped harmonic match, f0 refit, body-stop count cut, noise-gated mass, `density_fragile`. Gate rows with `valid_for_primary_statistics == True`; gate EWSD with `ewsd_primary_analysis_eligible == True`. |
 | `phase1_discovered_density_profiles.csv` | Full adaptive trajectory per note (observation triplets, JS divergence, reliability, confidence). |
 | `adaptive_density_engine_state.json` | Final engine state (posterior profile, concentration, confidence). |
 | `phase2_application_profile.json` | The profile applied during Stage 2 compilation. |
@@ -157,7 +157,7 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | [`docs/validation/REEXPORT_DIFF_SUMMARY.md`](docs/validation/REEXPORT_DIFF_SUMMARY.md) | R6 seven-corpus diffs vs pretag (`v4.2.3`) |
 | [`docs/validation/R6B_ADDENDUM.md`](docs/validation/R6B_ADDENDUM.md) | R6b B5/B6 audit, Iowa-bass / cello re-exports, D-updated composite |
 | [`docs/TECHNICAL_MANUAL_COMPLETE.md`](docs/TECHNICAL_MANUAL_COMPLETE.md) | Full implementation / mathematical manual; **§5.2.1** low-f₀ policy; **§11** roughness / dissonance; **§14.3** export schema; **§14.4** Stage 1 audit columns |
-| [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md) | Indexed formulae F-001–F-060 |
+| [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md) | Indexed formulae F-001–F-061 |
 | [`docs/DENSITY_EXPORT_SCHEMA.md`](docs/DENSITY_EXPORT_SCHEMA.md) | Normative export schema; **§R.6–R.10** |
 | [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md) | Audit repairs v4.0.0–v4.1.0; re-export table |
 | [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md) | Sheet/column inventory + traps table |
@@ -188,6 +188,7 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | How many effective partials carry energy (“fatness”)? | **`note_effective_component_density`** (primary noise-robust density; A4 / B7) | 2 / research |
 | How even is that energy (Hill $q=1$)? | **`note_balanced_component_density`** (F-056; stricter pool than F-047) | 2 / research |
 | How many ERB-merged components, and how large is each? | **`ACD_score`** (D1-based) with **`ACD_magnitude_per_component`** (F-057 / F-058). Neither column is interpretable alone: a scalar cannot distinguish a sparse loud sound from a dense quiet one. | 3 (research) |
+| How much is sounding (mass)? | **`spectral_mass`** (F-061); decomposes into `spectral_mass_count` × a bounded size factor. Level-inclusive; valid only inside level-controlled corpora. | 3 (research) |
 | How much GUI-weighted H/I/S content? | **`note_density_final`** | 2 / research |
 | Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI — **diagnostic only; level-dependent; not for cross-note comparison** (report `estimated_snr_db`) | 3 (research) |
 

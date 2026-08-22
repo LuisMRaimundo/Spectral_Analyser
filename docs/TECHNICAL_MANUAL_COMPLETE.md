@@ -1040,7 +1040,7 @@ tree and diffs `EWSD_score_acoustic_balanced` against a previous series.
 
 `compiled_density_metrics_research.xlsx` major sheets:
 
-- `Spectral_Density_Metrics` (includes `note_density_final` — see §7.7; `note_effective_component_density` — see §7.7.1; EWSD scores — see §7.8; red data bars on `EWSD_score_acoustic_balanced`)
+- `Spectral_Density_Metrics` (includes `note_density_final` — see §7.7; `note_effective_component_density` — see §7.7.1; EWSD scores — see §7.8; red data bars on `EWSD_score_acoustic_balanced`; blue data bars on `spectral_mass`)
 - `Primary_Statistics_Eligible` (thesis rows passing `valid_for_primary_statistics` + `is_primary_comparable_profile`)
 - `Stage3_Diagnostics` / `Stage3_Summary` (EWSD merge audit; summary separated from note rows)
 - `Component_Balance`

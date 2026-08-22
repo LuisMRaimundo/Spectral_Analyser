@@ -231,3 +231,22 @@ Provenance classes:
 - `ENERGY_EPS` (`1e-30`) - `internal_default` - Numerical floor for empty/degenerate energy in Hill shares.
 - `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites. Sensitivity is measured on a 40-partial 1/n series (not 8-ERB spacing): [`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`](validation/ACD_ERB_FRACTION_SENSITIVITY.md). The earlier “[0.5, 1.5] usable range” claim is discarded.
 - `MERGE_STRATEGY_DEFAULT` (`fixed_erb_grid`) - `internal_default` - Default ERB merge after the Stage 1 FFT-tier comparison. `fixed_erb_grid` reduced wander from 3.80 % to 2.74 %; neither strategy fell below ~2 %. Decision: [`docs/validation/ACD_MERGE_STRATEGY.md`](validation/ACD_MERGE_STRATEGY.md).
+
+## Spectral mass (F-061)
+
+Constants live in `tools/spectral_mass.py` (derived-column module; not `constants.py`).
+
+- `MASS_COUNT_BLEND` (`0.5`) - `convention` - Geometric-mean blend of presence-count (D0) and share-weighted count (D1). See the candidate-selection record below.
+- `MASS_LEVEL_EXPONENT` (`0.15`) - `convention` - Bounded level elasticity. See the candidate-selection record below.
+
+Candidates tested on the 47-note clarinet corpus (inversion = level overturns
+a >10% richness advantage):
+  A: D1 * lambda^0.30  (Stevens sone-law exponent)      — 14.2% inversions
+  B: D1 * lambda^0.15                                    — 6.3% inversions
+  C: D0 * lambda^0.15  (all components count fully)      — 0.1% inversions
+  D: sqrt(D0*D1) * lambda^0.15                           — 1.3% inversions (SELECTED)
+C won the inversion criterion outright; D was selected over C because the
+geometric-mean count halves D0's exposure to sub-audibility components and to
+erb_fraction sensitivity, at the cost of 1.2 points of inversion rate.
+Key empirical finding motivating the D0 ingredient: F#4 has D0 = 24.9 merged
+components but D1 = 1.15 — dominance is not sparsity.

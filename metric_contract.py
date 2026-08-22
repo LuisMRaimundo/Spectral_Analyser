@@ -848,6 +848,37 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Importing mir_descriptors 0.25*f+24.7 (not ERB).",
         ontology_family="partial_count_descriptor",
     )
+    spectral_mass = MetricDefinition(
+        name="spectral_mass",
+        formula=(
+            "F-061: spectral_mass = (ACD_D0 * ACD_score)**MASS_COUNT_BLEND "
+            "* ACD_magnitude_per_component**MASS_LEVEL_EXPONENT "
+            "with MASS_COUNT_BLEND=0.5 and MASS_LEVEL_EXPONENT=0.15. "
+            "presence constitutes richness; loudness modulates it but must not overturn it"
+        ),
+        input_domain=(
+            "Derived from ACD_D0, ACD_score, ACD_magnitude_per_component "
+            "when ACD_status == 'ok'"
+        ),
+        unit_or_scale="count × bounded level (derived)",
+        amplitude_basis="same ACD linear amplitudes as F-057 / F-058 (unchanged)",
+        power_basis="same ACD energy shares as F-057 / F-058 (unchanged)",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "How much is sounding: compromise component count times a "
+            "bounded per-component size. "
+            "presence constitutes richness; loudness modulates it but must not overturn it"
+        ),
+        not_valid_for=(
+            "Level-inclusive by design. Valid within level-controlled "
+            "corpora (uniform recording conditions). Not valid for comparison across recording "
+            "sessions, microphone distances, or gain settings. Decomposes exactly into "
+            "spectral_mass_count and a size factor."
+        ),
+        ontology_family="mass_descriptor",
+        formula_id="F-061",
+        formula_version="1.0",
+    )
     ewsd_d10_double_penalty = MetricDefinition(
         name="ewsd_weight_function_d10",
         formula=(
@@ -917,6 +948,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         acd_score_d2_dominance.name: acd_score_d2_dominance,
         acd_d0_minus_d1.name: acd_d0_minus_d1,
         acd_erb_merge.name: acd_erb_merge,
+        spectral_mass.name: spectral_mass,
         ewsd_d10_double_penalty.name: ewsd_d10_double_penalty,
     }
 

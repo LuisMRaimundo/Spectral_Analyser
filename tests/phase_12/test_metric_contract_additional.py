@@ -115,6 +115,7 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "ACD_score_D2_dominance",
         "ACD_D0_minus_D1",
         "ACD_count_merged_harmonic",
+        "spectral_mass",
         "ewsd_weight_function_d10",
     }
     # Key <-> definition-name consistency and uniqueness.

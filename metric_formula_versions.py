@@ -14,6 +14,7 @@ from typing import Dict, Iterable, List, Tuple
 
 PACKAGE_FORMULA_VERSION = "4.5.0"
 DISSONANCE_FORMULA_VERSION = "4.6.0"
+SPECTRAL_MASS_FORMULA_VERSION = "1.0"
 
 MIR_VALUE_COLUMNS: Tuple[str, ...] = (
     "spectral_centroid_hz",
@@ -76,6 +77,20 @@ DISSONANCE_STAMPS: Dict[str, Tuple[str, str]] = {
         DISSONANCE_FORMULA_VERSION,
     ),
     "dissonance_metric_mode": ("COL:dissonance_metric_mode", DISSONANCE_FORMULA_VERSION),
+}
+
+SPECTRAL_MASS_VALUE_COLUMNS: Tuple[str, ...] = (
+    "spectral_mass",
+    "spectral_mass_count",
+    "spectral_mass_count_blend",
+    "spectral_mass_level_exponent",
+)
+
+SPECTRAL_MASS_STAMPS: Dict[str, Tuple[str, str]] = {
+    "spectral_mass": ("F-061", SPECTRAL_MASS_FORMULA_VERSION),
+    "spectral_mass_count": ("F-061", SPECTRAL_MASS_FORMULA_VERSION),
+    "spectral_mass_count_blend": ("F-061", SPECTRAL_MASS_FORMULA_VERSION),
+    "spectral_mass_level_exponent": ("F-061", SPECTRAL_MASS_FORMULA_VERSION),
 }
 
 _INDEX_ROW = re.compile(
@@ -147,6 +162,11 @@ def exported_column_names() -> List[str]:
             names.append(col)
         names.append(f"{col}_formula_id")
         names.append(f"{col}_formula_version")
+    for col in SPECTRAL_MASS_VALUE_COLUMNS:
+        if col not in names:
+            names.append(col)
+    names.append("spectral_mass_formula_id")
+    names.append("spectral_mass_formula_version")
     return names
 
 
@@ -155,6 +175,8 @@ def column_stamp(column: str) -> Tuple[str, str]:
         return MIR_STAMPS[column]
     if column in DISSONANCE_STAMPS:
         return DISSONANCE_STAMPS[column]
+    if column in SPECTRAL_MASS_STAMPS:
+        return SPECTRAL_MASS_STAMPS[column]
     if column.endswith("_formula_id"):
         return ("META", PACKAGE_FORMULA_VERSION)
     if column.endswith("_formula_version"):
