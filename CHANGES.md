@@ -1,3 +1,9 @@
+# v4.4.0 addendum — CI hang-killer and live_audio marker
+
+`pytest-timeout` (300 s) and `@pytest.mark.live_audio` keep local-path
+and Stage 1 sweeps out of the default suite. Formula-ID uniqueness is
+gated on CI. Default `addopts` is `-m "not live_audio"`.
+
 # v4.4.0 addendum — roughness kernel attribution
 
 `mir_descriptors` pairwise roughness is Parncutt / Plomp–Levelt, not

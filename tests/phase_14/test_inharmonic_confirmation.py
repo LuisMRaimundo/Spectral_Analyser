@@ -220,6 +220,7 @@ def test_metric_contract_inharmonic_density_confirmed_domain() -> None:
     assert d.input_domain == "confirmed_inharmonic_partials"
 
 
+@pytest.mark.live_audio
 def test_iowa_tuba_a2_workbook_zero_confirmed_if_present() -> None:
     path = A2_PHASE13 if A2_PHASE13.is_file() else A2_RUN2
     if not path.is_file():

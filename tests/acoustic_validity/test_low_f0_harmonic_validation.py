@@ -135,6 +135,7 @@ def _included(wb: Path) -> pd.DataFrame:
     return harm.loc[harm["include_for_density"].astype(bool)].copy()
 
 
+@pytest.mark.slow
 def test_synthetic_33hz_noise_floor_stop(tmp_path: Path) -> None:
     """Clean 33 Hz series to 1 kHz + flat −45 dBFS noise."""
     true_n = int(np.floor(1000.0 / 33.0))
@@ -158,6 +159,7 @@ def test_synthetic_33hz_noise_floor_stop(tmp_path: Path) -> None:
         assert float(inc["Frequency (Hz)"].max()) <= stop_hz + 33.0
 
 
+@pytest.mark.slow
 def test_synthetic_33hz_window_perturbation_not_fragile(tmp_path: Path) -> None:
     true_n = int(np.floor(1000.0 / 33.0))
     wb0 = _run_note(
@@ -171,6 +173,7 @@ def test_synthetic_33hz_window_perturbation_not_fragile(tmp_path: Path) -> None:
     assert bool(row.get("density_fragile", False)) is False
 
 
+@pytest.mark.slow
 def test_synthetic_stretched_B_validates_to_h40(tmp_path: Path) -> None:
     """B = 5e-4 tone: every partial through H40 must validate.
 
@@ -202,6 +205,7 @@ def test_synthetic_stretched_B_validates_to_h40(tmp_path: Path) -> None:
     assert abs(got - pred) / pred < 0.02
 
 
+@pytest.mark.slow
 def test_synthetic_523hz_unchanged_vs_cap_inactive(tmp_path: Path) -> None:
     """On-grid 523 Hz series to 12 kHz: cap/stop must not change the validated set."""
     n_harm = int(np.floor(12000.0 / 523.0))
@@ -221,6 +225,7 @@ def test_synthetic_523hz_unchanged_vs_cap_inactive(tmp_path: Path) -> None:
             assert (low["tolerance_limb"].astype(str) == "cents").all()
 
 
+@pytest.mark.slow
 def test_multiphonic_half_integers_are_inharmonic(tmp_path: Path) -> None:
     wb = _run_note(
         tmp_path,
@@ -366,6 +371,7 @@ def _metrics_row(wb: Path) -> pd.Series:
     return pd.read_excel(wb, sheet_name="Metrics").iloc[0]
 
 
+@pytest.mark.live_audio
 def test_c1_fixture_count_drops_if_present(tmp_path: Path) -> None:
     folder = FIXTURE_DIR / "C1"
     old_wb = folder / "spectral_analysis.xlsx"
@@ -392,6 +398,7 @@ def test_c1_fixture_count_drops_if_present(tmp_path: Path) -> None:
     assert np.isfinite(stop_hz) and 400.0 <= stop_hz <= 2500.0
 
 
+@pytest.mark.live_audio
 def test_trombone_pp_regression_if_present(tmp_path: Path) -> None:
     if not TROMBONE_DIR.exists():
         pytest.skip("trombone pp fixtures not present")
