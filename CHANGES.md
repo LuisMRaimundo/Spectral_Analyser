@@ -1,18 +1,19 @@
 # v4.6.0 addendum — F-061 spectral_mass
 
 Derived Stage 3 column. No ACD or EWSD numeric change.
-Excel candidate testing on the 47-note clarinet corpus compared four
-constructs of (count) × (level):
+Candidates tested on the 47-note clarinet corpus (inversion = level overturns
+a >10% richness advantage):
+  A: D1 * lambda^0.30  (Stevens sone-law exponent)      — 14.2% inversions
+  B: D1 * lambda^0.15                                    — 6.3% inversions
+  C: D0 * lambda^0.15  (all components count fully)      — 0.1% inversions
+  D: sqrt(D0*D1) * lambda^0.15                           — 1.3% inversions (SELECTED)
+C won the inversion criterion outright; D was selected over C because the
+geometric-mean count halves D0's exposure to sub-audibility components and to
+erb_fraction sensitivity, at the cost of 1.2 points of inversion rate.
+Key empirical finding motivating the D0 ingredient: F#4 has D0 = 24.9 merged
+components but D1 = 1.15 — dominance is not sparsity.
 
-- A: presence-only `sqrt(D0·D1)` (no level)
-- B: linear level `count × λ`
-- C: Stevens 0.3 `count × λ^0.3` — level overturns a >10% richness
-  advantage in 14.2% of note pairs
-- D: bounded 0.15 `count × λ^0.15` — the same inversion in 1.3% of
-  pairs; selected
-
-F#4 on that corpus has D0 = 24.9 vs D1 = 1.15: dominance is not
-sparsity. `spectral_mass` sits immediately right of
+`spectral_mass` sits immediately right of
 `EWSD_score_acoustic_balanced` with blue data bars. Backfill existing
 workbooks with `tools/backfill_spectral_mass.py` (writes
 `<name>_massfilled.xlsx`, never overwrites). Tests live in

@@ -236,5 +236,17 @@ Provenance classes:
 
 Constants live in `tools/spectral_mass.py` (derived-column module; not `constants.py`).
 
-- `MASS_COUNT_BLEND` (`0.5`) - `convention` - Geometric-mean blend of presence-count (D0) and share-weighted count (D1), damping D0's dust/merge sensitivity and D1's dominance compression by half each. Selected by candidate testing on the 47-note clarinet corpus.
-- `MASS_LEVEL_EXPONENT` (`0.15`) - `convention` - Bounded level elasticity. Selected by candidate testing on the 47-note clarinet corpus; 0.15 bounds the level factor to <2x across a 65x corpus level range so that level overturns a >10% richness advantage in ~1% of pairs.
+- `MASS_COUNT_BLEND` (`0.5`) - `convention` - Geometric-mean blend of presence-count (D0) and share-weighted count (D1). See the candidate-selection record below.
+- `MASS_LEVEL_EXPONENT` (`0.15`) - `convention` - Bounded level elasticity. See the candidate-selection record below.
+
+Candidates tested on the 47-note clarinet corpus (inversion = level overturns
+a >10% richness advantage):
+  A: D1 * lambda^0.30  (Stevens sone-law exponent)      — 14.2% inversions
+  B: D1 * lambda^0.15                                    — 6.3% inversions
+  C: D0 * lambda^0.15  (all components count fully)      — 0.1% inversions
+  D: sqrt(D0*D1) * lambda^0.15                           — 1.3% inversions (SELECTED)
+C won the inversion criterion outright; D was selected over C because the
+geometric-mean count halves D0's exposure to sub-audibility components and to
+erb_fraction sensitivity, at the cost of 1.2 points of inversion rate.
+Key empirical finding motivating the D0 ingredient: F#4 has D0 = 24.9 merged
+components but D1 = 1.15 — dominance is not sparsity.
