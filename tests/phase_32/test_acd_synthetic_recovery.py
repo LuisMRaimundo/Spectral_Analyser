@@ -34,7 +34,12 @@ def test_well_separated_equal_amplitudes_recover_k(k: int) -> None:
     freqs, amps = _well_separated_partials(k)
     comp = compute_density_compartment(amps, freqs, merge_within_erb=True)
     assert comp.status == "ok"
+    assert comp.d1 == pytest.approx(float(k), rel=0.01)
     assert comp.d2 == pytest.approx(float(k), rel=0.01)
+    for other in K_VALUES:
+        if other == k:
+            continue
+        assert abs(comp.d1 - float(other)) / float(other) > 0.01
 
 
 def test_intra_erb_packing_saturates() -> None:
@@ -53,7 +58,20 @@ def test_intra_erb_packing_saturates() -> None:
     assert d2 == pytest.approx(1.0, abs=1e-12)
 
 
+def test_d1_discriminates_partial_count_d2_does_not() -> None:
+    """Unmerged 1/n series: D1 separates N=12 from N=40 by >20%; D2 does not."""
+    from tests.phase_32.acd_d1_promotion_tables import power_law_profile
+
+    d12 = power_law_profile(12, 1.0)
+    d40 = power_law_profile(40, 1.0)
+    d1_rel = abs(d40["D1"] - d12["D1"]) / d12["D1"]
+    d2_rel = abs(d40["D2"] - d12["D2"]) / d12["D2"]
+    assert d1_rel > 0.20
+    assert d2_rel < 0.20
+
+
 def test_golden_file_exists_and_covers_k() -> None:
     payload = json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))
     assert payload["revision"] == "ACD v1.0"
+    assert payload.get("headline_q") == 1.0
     assert [c["k"] for c in payload["well_separated"]] == list(K_VALUES)

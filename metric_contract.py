@@ -654,7 +654,9 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         name="EWSD_score_acoustic_balanced",
         formula=(
             "F-049: sum_k r_k D_k (N_eff,k / N_k)^alpha, alpha=0.5. "
-            "diagnostic only; level-dependent; not for cross-note comparison"
+            "diagnostic only; level-dependent; not for cross-note comparison. "
+            "Companion sensitivity columns are F-050 "
+            "(partial_multiset_sensitivity). F-048 is the strict EWSD point."
         ),
         input_domain="Stage 3 H/I/S compartments (computation unchanged)",
         unit_or_scale="EWSD units",
@@ -675,16 +677,17 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         name="ACD_score",
         formula=(
             "F-057: r_k = energy_k / sum_j energy_j (derived); "
-            "ACD = sum_k r_k * D2_k after optional ERB merge. "
-            "Report only as a pair with ACD_magnitude_per_component."
+            "ACD = sum_k r_k * D1_k after optional ERB merge. "
+            "Report only as a pair with ACD_magnitude_per_component. "
+            "Previous D2-based value is ACD_score_D2_dominance."
         ),
         input_domain="Per-note H/I/S linear amplitudes and frequencies (uniform filter)",
-        unit_or_scale="Hill number q=2 (effective ERB-merged component count)",
+        unit_or_scale="Hill number q=1 (effective ERB-merged component count)",
         amplitude_basis="Amplitude_raw (linear); no dB conversion",
         power_basis="P_i = Amplitude_raw^2 (energy shares and r_k)",
         normalization_scope="per note, compartments energy-weighted",
         physical_interpretation=(
-            "Effective number of ERB-merged components. Scale-invariant. "
+            "Effective number of ERB-merged components (D1). Scale-invariant. "
             "Not interpretable without ACD_magnitude_per_component."
         ),
         not_valid_for=(
@@ -695,7 +698,7 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
     )
     acd_magnitude = MetricDefinition(
         name="ACD_magnitude_per_component",
-        formula="F-058: LAM = sum_k energy_k / ACD_score",
+        formula="F-058: LAM = sum_k energy_k / ACD_score (D1-based; energy = ACD_score * LAM)",
         input_domain="same ACD compartments as ACD_score",
         unit_or_scale="linear energy per effective component",
         amplitude_basis="Amplitude_raw (linear)",
@@ -724,12 +727,47 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Empty compartment (NaN, never silent 0.0).",
         ontology_family="partial_count_descriptor",
     )
+    acd_score_d2_dominance = MetricDefinition(
+        name="ACD_score_D2_dominance",
+        formula=(
+            "Diagnostic companion to F-057: sum_k r_k * D2_k after the same "
+            "ERB merge. Previous headline score; retained so D2 is not lost."
+        ),
+        input_domain="same ACD compartments as ACD_score",
+        unit_or_scale="Hill number q=2 (dominance)",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="P_i = Amplitude_raw^2",
+        normalization_scope="per note, compartments energy-weighted",
+        physical_interpretation=(
+            "D2-based ACD. Saturates near 2.5 on a 1/n series. Diagnostic, "
+            "not the headline count."
+        ),
+        not_valid_for="Treating as the headline component count.",
+        ontology_family="partial_count_descriptor",
+    )
+    acd_d0_minus_d1 = MetricDefinition(
+        name="ACD_D0_minus_D1",
+        formula="ACD_D0 - ACD_D1 (energy-weighted compartment Hill numbers)",
+        input_domain="same ACD compartments as ACD_score",
+        unit_or_scale="component count (present minus effective weight)",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="energy shares",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Components present but not carrying effective weight. "
+            "Texture descriptor, not a diagnostic."
+        ),
+        not_valid_for="Using as a fail-closed status flag.",
+        ontology_family="partial_count_descriptor",
+    )
     acd_erb_merge = MetricDefinition(
         name="ACD_count_merged_harmonic",
         formula=(
-            "F-060: merge peaks with f_next - f_centroid <= erb_fraction * ERB(f_centroid); "
-            "ERB(f) = 0.108 f + 24.7 (Glasberg & Moore, 1990). "
-            "Merged A = sqrt(sum A^2). Tier B excitation-pattern front end is a scaffold only."
+            "F-060: default merge_strategy=fixed_erb_grid "
+            "(bin_index = floor(erb_rate(f) / erb_fraction)); "
+            "moving_centroid joins if f_next - f_centroid <= erb_fraction * ERB(f_centroid). "
+            "ERB(f) = 0.108 f + 24.7; E(f) = 21.4 log10(1 + 0.00437 f). "
+            "Merged A = sqrt(sum A^2). roex-overlap weighting is a stub only."
         ),
         input_domain="(frequency_hz, Amplitude_raw) pairs",
         unit_or_scale="count after merge; erb_fraction provenance",
@@ -803,6 +841,8 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         acd_score.name: acd_score,
         acd_magnitude.name: acd_magnitude,
         acd_hill_profile.name: acd_hill_profile,
+        acd_score_d2_dominance.name: acd_score_d2_dominance,
+        acd_d0_minus_d1.name: acd_d0_minus_d1,
         acd_erb_merge.name: acd_erb_merge,
         ewsd_d10_double_penalty.name: ewsd_d10_double_penalty,
     }

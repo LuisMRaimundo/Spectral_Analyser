@@ -17,6 +17,8 @@ from tools.spectral_density_hill import (
     compute_density_compartment,
     compute_density_from_excitation_pattern,
     compute_note_density,
+    merge_peaks_fixed_erb_grid,
+    merge_peaks_roex_overlap,
     merge_peaks_within_erb,
 )
 
@@ -27,6 +29,8 @@ def test_merge_conserves_energy() -> None:
     a = rng.uniform(0.01, 2.0, 40)
     _mf, ma, _mn = merge_peaks_within_erb(f, a, erb_fraction=1.0)
     assert abs(float(np.sum(np.square(ma))) - float(np.sum(np.square(a)))) <= 1e-12
+    _ff, fa, _fn = merge_peaks_fixed_erb_grid(f, a, erb_fraction=1.0)
+    assert abs(float(np.sum(np.square(fa))) - float(np.sum(np.square(a)))) <= 1e-12
 
 
 def test_ratios_sum_to_one_when_energy_present() -> None:
@@ -46,6 +50,10 @@ def test_ratios_sum_to_one_when_energy_present() -> None:
     rsum = note["r_harmonic"] + note["r_inharmonic"] + note["r_subbass"]
     assert rsum == pytest.approx(1.0, abs=1e-15)
     assert note["ACD_status"].startswith("ok")
+    assert note["energy_total"] == pytest.approx(
+        note["ACD_score"] * note["ACD_magnitude_per_component"], abs=1e-12
+    )
+    assert note["ACD_score"] == pytest.approx(note["ACD_D1"], abs=1e-12)
 
 
 def test_empty_compartment_nan_not_silent_zero() -> None:
@@ -60,8 +68,13 @@ def test_empty_compartment_nan_not_silent_zero() -> None:
     assert note["r_inharmonic"] == 0.0
     assert note["r_subbass"] == 0.0
     assert math.isnan(note["D2_inharmonic"])
-    assert note["ACD_score"] == pytest.approx(filled.d2)
+    assert note["ACD_score"] == pytest.approx(filled.d1)
+    assert note["ACD_score_D2_dominance"] == pytest.approx(filled.d2)
+    assert note["ACD_D0_minus_D1"] == pytest.approx(filled.d0 - filled.d1)
     assert not math.isnan(note["ACD_score"])
+    assert note["energy_total"] == pytest.approx(
+        note["ACD_score"] * note["ACD_magnitude_per_component"], abs=1e-12
+    )
 
 
 def test_all_empty_note_is_nan() -> None:
@@ -90,6 +103,8 @@ def test_ewsd_identity_r_mean_phi_neff() -> None:
 def test_excitation_pattern_scaffold_raises() -> None:
     with pytest.raises(NotImplementedError):
         compute_density_from_excitation_pattern()
+    with pytest.raises(NotImplementedError):
+        merge_peaks_roex_overlap()
 
 
 def test_missing_frequency_fail_closed() -> None:

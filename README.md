@@ -178,7 +178,7 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 |------------------|----------------|-------|
 | How many effective partials carry energy (“fatness”)? | **`note_effective_component_density`** (primary noise-robust density; A4 / B7) | 2 / research |
 | How even is that energy (Hill $q=1$)? | **`note_balanced_component_density`** (F-056; stricter pool than F-047) | 2 / research |
-| How many ERB-merged components, and how large is each? | **`ACD_score`** with **`ACD_magnitude_per_component`** (F-057 / F-058). Neither column is interpretable alone: a scalar cannot distinguish a sparse loud sound from a dense quiet one. | 3 (research) |
+| How many ERB-merged components, and how large is each? | **`ACD_score`** (D1-based) with **`ACD_magnitude_per_component`** (F-057 / F-058). Neither column is interpretable alone: a scalar cannot distinguish a sparse loud sound from a dense quiet one. | 3 (research) |
 | How much GUI-weighted H/I/S content? | **`note_density_final`** | 2 / research |
 | Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI — **diagnostic only; level-dependent; not for cross-note comparison** (report `estimated_snr_db`) | 3 (research) |
 

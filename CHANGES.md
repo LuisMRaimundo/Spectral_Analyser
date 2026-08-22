@@ -1,3 +1,22 @@
+# v4.4.0 addendum — ACD merge stability and D1 headline
+
+Default ERB merge is now `fixed_erb_grid` (order-independent ERB-rate
+bins). On the synthesised D3 Stage 1 tier sweep it cut ACD wander from
+3.80% (`moving_centroid`) to 2.74%. Neither strategy fell below ~2%;
+hard assignment is the remaining limit and a roex-overlap stub is
+documented, not implemented. FFT-tier gate is 4% relative (measured max
+plus 1 pp, rounded up; not above 5%). Decision:
+`docs/validation/ACD_MERGE_STRATEGY.md`.
+
+Headline `ACD_score` is now `sum_k r_k D1_k` (F-057). D2 saturates at
+`(π²/6)²/(π⁴/90) = 2.500` on a 1/n series; a 15× change in partial
+count moves D2 by 29%. Dynamic range over N ∈ [8, 40] and slope ∈
+[0.5, 2.0]: D0 5.0×, D1 15.0×, D2 9.7×. The previous D2-based score is
+`ACD_score_D2_dominance`. `ACD_D0_minus_D1` is a texture descriptor.
+Goldens in `tests/phase_32/golden/acd_golden.json` were regenerated
+because the headline order changed from D2 to D1; well-separated
+K-recovery values themselves are unchanged (D1 == D2 == K).
+
 # v4.4.0 — Phase 13: Auditory Component Density + EWSD diagnostics
 
 ACD (F-057–F-060) is an additive companion. F-048 / F-049 / F-050

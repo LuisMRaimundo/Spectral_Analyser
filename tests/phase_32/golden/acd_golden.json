@@ -1,6 +1,8 @@
 {
   "revision": "ACD v1.0",
   "formula_ids": "F-057,F-058,F-059,F-060",
+  "headline_q": 1.0,
+  "headline_note": "ACD_score is now sum r_k D1_k; ACD_score_D2_dominance retains the previous D2-based score. Well-separated equal-amplitude K-recovery is unchanged (D1 == D2 == K).",
   "well_separated": [
     {
       "k": 1,

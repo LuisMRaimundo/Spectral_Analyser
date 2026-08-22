@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any, Literal, Mapping, Optional
 
 import numpy as np
 
@@ -39,6 +39,17 @@ ERB_RATE_SCALE: float = 21.4  # Moore & Glasberg (1983) -- primary_source
 ERB_RATE_COEFF: float = 0.00437  # Moore & Glasberg (1983) -- primary_source
 ENERGY_EPS: float = 1e-30  # numerical floor -- internal_default
 ERB_FRACTION_DEFAULT: float = 1.0  # merge bandwidth in ERB units -- internal_default
+
+MergeStrategy = Literal["moving_centroid", "fixed_erb_grid"]
+MERGE_STRATEGY_MOVING_CENTROID: MergeStrategy = "moving_centroid"
+MERGE_STRATEGY_FIXED_ERB_GRID: MergeStrategy = "fixed_erb_grid"
+MERGE_STRATEGIES: tuple[MergeStrategy, ...] = (
+    MERGE_STRATEGY_MOVING_CENTROID,
+    MERGE_STRATEGY_FIXED_ERB_GRID,
+)
+# Task 1.3: fixed_erb_grid reduced Stage 1 FFT-tier wander (3.80% → 2.74%).
+# Neither strategy fell below ~2%; hard assignment is the remaining limit.
+MERGE_STRATEGY_DEFAULT: MergeStrategy = MERGE_STRATEGY_FIXED_ERB_GRID
 
 _COMPARTMENT_KEYS: tuple[str, str, str] = ("harmonic", "inharmonic", "subbass")
 
@@ -135,6 +146,75 @@ def merge_peaks_within_erb(
         merged_f[i] = _centroid(cf, ca)
         merged_n[i] = int(len(ca))
     return merged_f, merged_a, merged_n
+
+
+def merge_peaks_fixed_erb_grid(
+    freq_hz: np.ndarray,
+    amplitudes: np.ndarray,
+    *,
+    erb_fraction: float = ERB_FRACTION_DEFAULT,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Merge peaks by a fixed partition of the ERB-rate axis.
+
+    bin_index = floor(erb_rate(f) / erb_fraction)
+
+    Deterministic and order-independent: no moving centroid, so no chaining.
+    Merged amplitude = sqrt(sum(A_i^2)); merged frequency = energy-weighted
+    centroid within the bin. Energy conserved exactly.
+    """
+    frac = float(erb_fraction)
+    if not np.isfinite(frac) or frac <= 0.0:
+        raise ValueError("erb_fraction must be finite and > 0")
+
+    f, a = _finite_nonnegative_pair(freq_hz, amplitudes)
+    if f.size == 0:
+        empty = np.zeros(0, dtype=float)
+        return empty, empty, np.zeros(0, dtype=int)
+
+    rates = erb_rate(f)
+    bin_idx = np.floor(rates / frac)
+    unique = np.unique(bin_idx)
+    n_c = int(unique.size)
+    merged_f = np.empty(n_c, dtype=float)
+    merged_a = np.empty(n_c, dtype=float)
+    merged_n = np.empty(n_c, dtype=int)
+    for i, b in enumerate(unique):
+        mask = bin_idx == b
+        ff = f[mask]
+        aa = a[mask]
+        pwr = np.square(aa)
+        tot = float(np.sum(pwr))
+        merged_a[i] = math.sqrt(max(tot, 0.0))
+        if tot <= ENERGY_EPS:
+            merged_f[i] = float(np.mean(ff))
+        else:
+            merged_f[i] = float(np.dot(ff, pwr) / tot)
+        merged_n[i] = int(ff.size)
+    order = np.argsort(merged_f, kind="mergesort")
+    return merged_f[order], merged_a[order], merged_n[order]
+
+
+def merge_peaks(
+    freq_hz: np.ndarray,
+    amplitudes: np.ndarray,
+    *,
+    erb_fraction: float = ERB_FRACTION_DEFAULT,
+    merge_strategy: MergeStrategy = MERGE_STRATEGY_DEFAULT,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Dispatch to the selected ERB merge strategy."""
+    strategy = str(merge_strategy).strip().lower()
+    if strategy == MERGE_STRATEGY_FIXED_ERB_GRID:
+        return merge_peaks_fixed_erb_grid(
+            freq_hz, amplitudes, erb_fraction=erb_fraction
+        )
+    if strategy == MERGE_STRATEGY_MOVING_CENTROID:
+        return merge_peaks_within_erb(
+            freq_hz, amplitudes, erb_fraction=erb_fraction
+        )
+    raise ValueError(
+        f"unknown merge_strategy {merge_strategy!r}; "
+        f"expected one of {MERGE_STRATEGIES}"
+    )
 
 
 def energy_shares(amplitudes: np.ndarray) -> np.ndarray:
@@ -234,6 +314,7 @@ def compute_density_compartment(
     *,
     merge_within_erb: bool = True,
     erb_fraction: float = ERB_FRACTION_DEFAULT,
+    merge_strategy: MergeStrategy = MERGE_STRATEGY_DEFAULT,
 ) -> DensityCompartment:
     """One H/I/S compartment: ERB-merge (optional) then Hill profile.
 
@@ -253,13 +334,19 @@ def compute_density_compartment(
         if f_all.size != a_all.size:
             return _empty_compartment("frequency_length_mismatch", count_raw)
         try:
-            _mf, a_work, _mn = merge_peaks_within_erb(
+            _mf, a_work, _mn = merge_peaks(
                 f_all[raw_mask],
                 a_work,
                 erb_fraction=erb_fraction,
+                merge_strategy=merge_strategy,
             )
-        except ValueError:
-            return _empty_compartment("invalid_erb_fraction", count_raw)
+        except ValueError as exc:
+            reason = (
+                "invalid_merge_strategy"
+                if "merge_strategy" in str(exc)
+                else "invalid_erb_fraction"
+            )
+            return _empty_compartment(reason, count_raw)
         if a_work.size == 0:
             return _empty_compartment("empty", count_raw)
 
@@ -311,24 +398,28 @@ def _dq_of(comp: DensityCompartment, q: float) -> float:
 def compute_note_density(
     compartments: Mapping[str, DensityCompartment],
     *,
-    q: float = 2.0,
+    q: float = 1.0,
 ) -> dict[str, float]:
     """Note-level Auditory Component Density.
 
     r_k   = energy_k / sum_j energy_j          (derived, NOT read from Excel)
-    ACD   = sum_k r_k * D_q,k                  (F-057)
+    ACD   = sum_k r_k * D_q,k                  (F-057; default q=1 → D1)
     LAM   = sum_k energy_k / ACD               (F-058) magnitude per effective component
     Returns r_k, ACD, LAM, and the per-compartment profile flattened.
 
-    Empty compartments (NaN D_q) do not contribute a silent 0.0 to ACD.
+    Headline score uses D1. The previous D2-based value is always exported
+    as ``ACD_score_D2_dominance``. Empty compartments (NaN D_q) do not
+    contribute a silent 0.0 to ACD.
     """
     out: dict[str, Any] = {
         "ACD_score": float("nan"),
+        "ACD_score_D2_dominance": float("nan"),
         "ACD_magnitude_per_component": float("nan"),
         "ACD_D0": float("nan"),
         "ACD_D1": float("nan"),
         "ACD_D2": float("nan"),
         "ACD_Dinf": float("nan"),
+        "ACD_D0_minus_D1": float("nan"),
         "ACD_evenness_D2_over_D0": float("nan"),
         "ACD_status": "empty",
         "q": float(q),
@@ -375,6 +466,7 @@ def compute_note_density(
         return out
 
     acd = 0.0
+    acd_d2 = 0.0
     d0_w = 0.0
     d1_w = 0.0
     d2_w = 0.0
@@ -383,12 +475,14 @@ def compute_note_density(
         rk = float(energies[name] / e_total)
         out[f"r_{name}"] = rk
         acd += rk * _dq_of(comp, q)
+        acd_d2 += rk * float(comp.d2)
         d0_w += rk * float(comp.d0)
         d1_w += rk * float(comp.d1)
         d2_w += rk * float(comp.d2)
         dinf_w += rk * float(comp.d_inf)
 
     out["ACD_score"] = float(acd)
+    out["ACD_score_D2_dominance"] = float(acd_d2)
     out["ACD_magnitude_per_component"] = (
         float(e_total / acd) if np.isfinite(acd) and acd > 0.0 else float("nan")
     )
@@ -396,12 +490,32 @@ def compute_note_density(
     out["ACD_D1"] = float(d1_w)
     out["ACD_D2"] = float(d2_w)
     out["ACD_Dinf"] = float(dinf_w)
+    out["ACD_D0_minus_D1"] = (
+        float(d0_w - d1_w)
+        if np.isfinite(d0_w) and np.isfinite(d1_w)
+        else float("nan")
+    )
     out["ACD_evenness_D2_over_D0"] = (
         float(d2_w / d0_w) if np.isfinite(d2_w) and np.isfinite(d0_w) and d0_w > 0.0 else float("nan")
     )
     out["ACD_status"] = "ok" if not warnings else "ok_with_unused:" + ",".join(warnings)
     out["energy_total"] = e_total
     return out
+
+
+def merge_peaks_roex_overlap(*args: Any, **kwargs: Any) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Identified next step after hard assignment — not implemented.
+
+    Both ``moving_centroid`` and ``fixed_erb_grid`` still wander ≥ 2 %
+    across production FFT tiers. The remaining artefact is hard
+    assignment: a peak belongs to one cluster or one ERB-rate bin.
+    A roex-overlap weighting would assign each partial smoothly by
+    auditory-filter overlap rather than binning. Do not implement here.
+    """
+    raise NotImplementedError(
+        "merge_peaks_roex_overlap is a documented next step after hard "
+        "assignment; it is not implemented (ACD v1.0)."
+    )
 
 
 def compute_density_from_excitation_pattern(*args: Any, **kwargs: Any) -> dict[str, float]:
