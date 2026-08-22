@@ -93,6 +93,10 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ),
         not_valid_for="Ungated peak-candidate lists or Complete Spectrum bins.",
         ontology_family="partial_count_descriptor",
+        notes=(
+            "superseded for analytical use by ACD_score (F-057) / spectral_mass "
+            "(F-061); retained for workbook compatibility"
+        ),
     )
     linear_sum_amplitude = MetricDefinition(
         name="linear_sum_amplitude_*",
@@ -174,6 +178,11 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ),
         not_valid_for="Any new analysis; archived values are not comparable.",
         ontology_family="sensory_dissonance",
+        notes=(
+            "retired key, NaN-filled, misattributed citation; successor is "
+            "roughness_parncutt_kernel (F-037); scheduled for removal from new "
+            "exports at next major version"
+        ),
     )
     roughness_pairs_excluded_above_validity = MetricDefinition(
         name="roughness_pairs_excluded_above_validity",

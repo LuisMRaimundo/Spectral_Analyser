@@ -312,3 +312,19 @@ To avoid acoustic misinterpretation, exported columns follow this policy:
   - Ceiling is explicit in `full_spectrum_frequency_ceiling_hz` (default 20000 Hz).
 - **Interpretation rule**
   - Full-spectrum 20 kHz fields and bin-integrated body-band diagnostics are not body/fatness metrics and must not replace `density_component_body_weighted_sum_body_ceiling` in research interpretation.
+
+## 6) Column-triage deprecations (export still written)
+
+Class `deprecated`. Values are still computed and exported. Do not use in new analyses.
+
+| Column | Successor / note |
+|--------|------------------|
+| `roughness_aures_1985_on_{attack,release,sustain,sustain_segment}` | `roughness_parncutt_kernel_*` (F-037). Retired key; NaN-filled; misattributed citation. Scheduled for removal from new exports at the next major version. |
+| `canonical_density_v5_adapted`, `body_weighted_effective_density`, `final_note_density_count_based`, `final_note_density_salience_weighted`, `effective_partial_density`, `density_metric_per_harmonic`, `density_normalized_global`, `density_per_component`, `rolloff_compensated_harmonic_density`, `rolloff_compensated_harmonic_density_alpha`, `rolloff_compensated_harmonic_density_component_count`, `rolloff_harmonic_partial_count` | ACD (F-057) / `spectral_mass` (F-061). Internal; superseded for analytical use. |
+| `discrete_metric_d10` | Double-corrected; open item in `CHANGES.md`; not recommended. |
+| `Soma_A_linear_harmonicos`, `Soma_A_linear_inarmonicos`, `Soma_A_linear_subbass` | Portuguese-named copies of `linear_sum_amplitude_harmonic`, `linear_sum_amplitude_inharmonic_partial`, `linear_sum_amplitude_subbass_band`. Do not rename either set. |
+| `Soma_A_linear_total` | NaN→0 sum of the three Soma/linear-amplitude twins. Not `total_component_energy`. |
+
+Internal density-machinery columns reclassed `diagnostic` carry the note:
+"internal; superseded for analytical use by F-057/F-061". See
+`docs/validation/COLUMN_TRIAGE_DECISIONS.md` for columns the rule did not place.

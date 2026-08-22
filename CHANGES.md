@@ -1,3 +1,11 @@
+# Export-column triage (numerically invisible)
+
+Four-branch rule on the 202 class-`metric` `COL:` residue. No computation
+change and no column rename/removal. Commit 1 reclasses settings, flags,
+retired quantities, and internal machinery; writes
+`docs/validation/COLUMN_TRIAGE_DECISIONS.md`. Commit 2 assigns F-ids and
+contracts to the remaining citable metrics.
+
 # Repository cleanup (numerically invisible)
 
 Three commits on a local copy. No ACD / EWSD / F-061 arithmetic change.
