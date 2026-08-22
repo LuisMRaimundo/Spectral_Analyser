@@ -1,3 +1,18 @@
+# v4.4.0 addendum — roughness kernel attribution
+
+`mir_descriptors` pairwise roughness is Parncutt / Plomp–Levelt, not
+Aures (1985). Aures is a filterbank temporal-envelope model and is not
+implemented. The denominator `0.25 f + 24.7` conflated Parncutt’s 0.25
+CB normalisation with the Glasberg & Moore ERB slope; the corrected
+form is `x = df / (0.25 * (0.108 f + 24.7))`. At 1 kHz the kernel
+maximum moves from df ≈ 275 Hz to df ≈ 33 Hz. On a 40-partial 1/n
+series at 146.83 Hz the score falls to 5.2% of the old value; on a
+110 Hz harmonic stack (phase-5 fixture) to 0.43%. A 1 kHz pair at
+df = 33 Hz rises 3.45× (kernel now near its maximum). Column renamed
+to `roughness_parncutt_kernel`; `roughness_aures_1985` is a one-version
+deprecated alias. Not imported into `tools/spectral_density_hill.py`.
+The 49-note corpus was not recomputed here.
+
 # v4.4.0 addendum — ACD erb_fraction on a harmonic series
 
 The 8-ERB “usable range at least [0.5, 1.5]” claim is discarded: that

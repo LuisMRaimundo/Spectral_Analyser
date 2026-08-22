@@ -657,6 +657,7 @@ PHASE5_DESCRIPTOR_BASE_COLUMNS: List[str] = [
     "spectral_flatness",
     "spectral_rolloff_hz_85",
     "spectral_rolloff_hz_95",
+    "roughness_parncutt_kernel",
     "roughness_aures_1985",
     "erb_weighted_spectral_density",
 ]

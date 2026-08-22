@@ -123,6 +123,41 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         not_valid_for="Retained nonharmonic / floor-candidate lists.",
         ontology_family="sensory_dissonance",
     )
+    roughness_parncutt_kernel = MetricDefinition(
+        name="roughness_parncutt_kernel",
+        formula=(
+            "F-037: x = |f_i-f_j| / (0.25 * ERB(f_lo)); "
+            "ERB(f) = 0.108 f + 24.7 (Glasberg & Moore, 1990); "
+            "g(x) = x * exp(1-x) (Parncutt 1989 / Plomp & Levelt 1965). "
+            "Not Aures (1985)."
+        ),
+        input_domain="peak-picked linear amplitudes and frequencies",
+        unit_or_scale="pairwise kernel units",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="not used (amplitude product)",
+        normalization_scope="per spectrum",
+        physical_interpretation=(
+            "Pairwise spectral roughness. Maximum at ~0.25 ERB "
+            "(~33 Hz at 1 kHz). Independent of ACD ERB helpers."
+        ),
+        not_valid_for="Citing as Aures (1985); importing into spectral_density_hill.",
+        ontology_family="sensory_dissonance",
+    )
+    roughness_aures_1985 = MetricDefinition(
+        name="roughness_aures_1985",
+        formula=(
+            "Deprecated alias of roughness_parncutt_kernel (F-037), retained "
+            "for one version. The implemented kernel was never Aures (1985)."
+        ),
+        input_domain="same as roughness_parncutt_kernel",
+        unit_or_scale="pairwise kernel units",
+        amplitude_basis="Amplitude_raw (linear)",
+        power_basis="not used (amplitude product)",
+        normalization_scope="per spectrum",
+        physical_interpretation="Alias of roughness_parncutt_kernel.",
+        not_valid_for="New analyses; use roughness_parncutt_kernel.",
+        ontology_family="sensory_dissonance",
+    )
     inharmonic_density_sum = MetricDefinition(
         name="inharmonic_density_sum",
         formula="D_I = Σ_{i ∈ I} φ(A_i)  (F-014; φ unchanged)",
@@ -801,6 +836,8 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         effective_partial_density.name: effective_partial_density,
         linear_sum_amplitude.name: linear_sum_amplitude,
         sethares_dissonance.name: sethares_dissonance,
+        roughness_parncutt_kernel.name: roughness_parncutt_kernel,
+        roughness_aures_1985.name: roughness_aures_1985,
         inharmonic_density_sum.name: inharmonic_density_sum,
         inharmonic_status.name: inharmonic_status,
         inharmonic_confirmed_count.name: inharmonic_confirmed_count,

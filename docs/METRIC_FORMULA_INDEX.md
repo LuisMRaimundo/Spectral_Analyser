@@ -43,7 +43,7 @@
 | F-034 | $T_3=\sum_{i\ge5}A_i/\sum_iA_i$ | Tristimulus 3 | same | `tristimulus_3_high_harmonics_5_plus` |
 | F-035 | $F=\exp(\frac1K\sum_i\ln P_i)/(\frac1K\sum_iP_i)$ | Spectral flatness | same | `spectral_flatness` |
 | F-036 | $\sum_{f_i\le R_p}P_i=p\sum_iP_i$ | Spectral rolloff | same | `spectral_rolloff_hz_85`, `spectral_rolloff_hz_95` |
-| F-037 | $x=\frac{|f_i-f_j|}{0.25\min(f_i,f_j)+24.7},\ g(x)=xe^{1-x}$ | Aures-like roughness kernel | `_roughness_aures_1985` | `roughness_aures_1985` |
+| F-037 | $x=\frac{|f_i-f_j|}{0.25\,\mathrm{ERB}(f_\mathrm{lo})},\ \mathrm{ERB}(f)=0.108f+24.7,\ g(x)=xe^{1-x}$ | Parncutt / Plomp–Levelt pairwise roughness (not Aures 1985). Previous $0.25f+24.7$ form conflated the 0.25 CB fraction with the ERB slope. | `mir_descriptors._roughness_parncutt_kernel` | `roughness_parncutt_kernel` (`roughness_aures_1985` deprecated alias, one version) |
 | F-038 | $\text{ERB}(f)=21.4\log_{10}(1+0.00437f)$ | ERB-rate transform | `_erb_rate_hz` | ERB grouping intermediary |
 | F-039 | $D_{ERB}=1/\sum_b q_b^2$ | ERB effective density | MIR ERB grouping logic | `erb_weighted_spectral_density` |
 | F-040 | $\mathrm{LAT}=\log_{10}(t_{attack})$ | Log attack time | `temporal_segmentation.segment_attack_sustain_release` | `log_attack_time_s` |
