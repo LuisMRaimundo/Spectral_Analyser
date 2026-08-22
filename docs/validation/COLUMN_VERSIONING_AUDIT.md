@@ -7,7 +7,7 @@ per-column version. MIR descriptors, including three incompatible
 F-037 kernels, shipped under `package_version=4.4.0` with no
 per-column stamp.
 
-- Exported columns inventoried: **283**
+- Exported columns inventoried: **289**
 - Columns that lacked a contracted F-id (first-stamped as `COL:<name>`): **224**
 - MIR value columns now export `<name>_formula_id` and
   `<name>_formula_version` from `metric_contract` / `MIR_STAMPS`.
@@ -238,6 +238,12 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `spectral_kurtosis_on_release` | `COL:spectral_kurtosis_on_release` | `4.5.0` |
 | `spectral_kurtosis_on_sustain` | `COL:spectral_kurtosis_on_sustain` | `4.5.0` |
 | `spectral_kurtosis_on_sustain_segment` | `COL:spectral_kurtosis_on_sustain_segment` | `4.5.0` |
+| `spectral_mass` | `F-061` | `1.0` |
+| `spectral_mass_count` | `F-061` | `1.0` |
+| `spectral_mass_count_blend` | `F-061` | `1.0` |
+| `spectral_mass_formula_id` | `META` | `4.5.0` |
+| `spectral_mass_formula_version` | `META` | `4.5.0` |
+| `spectral_mass_level_exponent` | `F-061` | `1.0` |
 | `spectral_rolloff_hz_85` | `F-036` | `4.5.0` |
 | `spectral_rolloff_hz_85_formula_id` | `META` | `4.5.0` |
 | `spectral_rolloff_hz_85_formula_version` | `META` | `4.5.0` |

@@ -1,0 +1,52 @@
+{
+  "formula_id": "F-061",
+  "formula_version": "1.0",
+  "corpus": "47-note clarinet candidate-test freeze",
+  "notes": [
+    {
+      "Note": "F#4",
+      "ACD_D0": 24.9,
+      "ACD_score": 1.15,
+      "ACD_magnitude_per_component": 9208.02,
+      "ACD_status": "ok",
+      "spectral_mass": 21.041346674988155,
+      "spectral_mass_count": 5.351168096780365
+    },
+    {
+      "Note": "G#6",
+      "ACD_D0": 11.95,
+      "ACD_score": 2.02,
+      "ACD_magnitude_per_component": 303.14,
+      "ACD_status": "ok",
+      "spectral_mass": 11.577268999608554,
+      "spectral_mass_count": 4.913145631873738
+    },
+    {
+      "Note": "C4",
+      "ACD_D0": 22.1,
+      "ACD_score": 1.32,
+      "ACD_magnitude_per_component": 5400.0,
+      "ACD_status": "ok",
+      "spectral_mass": 19.60388591282588,
+      "spectral_mass_count": 5.4011109968227835
+    },
+    {
+      "Note": "A4",
+      "ACD_D0": 18.4,
+      "ACD_score": 1.48,
+      "ACD_magnitude_per_component": 3100.0,
+      "ACD_status": "ok",
+      "spectral_mass": 17.42785842441349,
+      "spectral_mass_count": 5.218428882336139
+    },
+    {
+      "Note": "D5",
+      "ACD_D0": 15.2,
+      "ACD_score": 1.7,
+      "ACD_magnitude_per_component": 1500.0,
+      "ACD_status": "ok",
+      "spectral_mass": 15.225092628036624,
+      "spectral_mass_count": 5.083306010855534
+    }
+  ]
+}

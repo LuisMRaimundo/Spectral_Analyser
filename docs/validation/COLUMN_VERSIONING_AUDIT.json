@@ -1132,6 +1132,30 @@
     "dissonance_metric_mode_formula_version": {
       "formula_id": "META",
       "formula_version": "4.5.0"
+    },
+    "spectral_mass": {
+      "formula_id": "F-061",
+      "formula_version": "1.0"
+    },
+    "spectral_mass_count": {
+      "formula_id": "F-061",
+      "formula_version": "1.0"
+    },
+    "spectral_mass_count_blend": {
+      "formula_id": "F-061",
+      "formula_version": "1.0"
+    },
+    "spectral_mass_level_exponent": {
+      "formula_id": "F-061",
+      "formula_version": "1.0"
+    },
+    "spectral_mass_formula_id": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_mass_formula_version": {
+      "formula_id": "META",
+      "formula_version": "4.5.0"
     }
   }
 }

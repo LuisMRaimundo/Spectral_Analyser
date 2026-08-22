@@ -165,6 +165,7 @@ RESEARCH_FILL_NOTE_DENSITY_FINAL = PatternFill("solid", fgColor="ADD8E6")
 # Pale orange highlight for Stage 3 strict EWSD (EWSD-R v18).
 RESEARCH_FILL_EWSD_SCORE_TOTAL = PatternFill("solid", fgColor="FFE5CC")
 # Red gradient data bar on EWSD_score_acoustic_balanced (Excel data-bar fill).
+# Blue data bars on spectral_mass reuse the same add_rule path (see F-061).
 EWSD_ACOUSTIC_BALANCED_DATA_BAR_COLOR = "FFC00000"
 RESEARCH_HIGHLIGHT_HEADER_FONT = Font(bold=True, color="1F4E79", size=11)
 
@@ -3162,6 +3163,12 @@ def _write_data_sheet(
         df = place_balanced_density_left_of_ewsd(df)
     except Exception:
         pass
+    try:
+        from tools.spectral_mass import place_spectral_mass_right_of_ewsd
+
+        df = place_spectral_mass_right_of_ewsd(df)
+    except Exception:
+        pass
     ws = wb.create_sheet(title)
     for row in dataframe_to_rows(df, index=False, header=True):
         ws.append(row)
@@ -3257,6 +3264,9 @@ def _apply_sdm_conditional(ws, headers: List[str | None]) -> None:
             maxLength=100,
         ),
     )
+    from tools.spectral_mass import spectral_mass_data_bar_rule
+
+    add_rule("spectral_mass", spectral_mass_data_bar_rule())
 
 
 def _write_dashboard_layout(
@@ -3742,6 +3752,9 @@ def build_workbook(
             for col in acd_result.diagnostics_summary.columns:
                 if col not in stage3_summary.columns:
                     stage3_summary[col] = acd_result.diagnostics_summary[col].iloc[0]
+        from tools.spectral_mass import add_spectral_mass_column
+
+        sd = add_spectral_mass_column(sd)
     required_front_cols = [
         "Technique",
         "metadata_inference_status",
@@ -3800,6 +3813,8 @@ def build_workbook(
         "ACD_score",
         "ACD_magnitude_per_component",
         "EWSD_score_acoustic_balanced",
+        "spectral_mass",
+        "spectral_mass_count",
         "ewsd_primary_analysis_eligible",
         "harmonic_density_component",
         "inharmonic_density_component",
@@ -4072,6 +4087,8 @@ def build_workbook(
         "ACD_status",
         "ACD_version",
         "EWSD_score_acoustic_balanced",
+        "spectral_mass",
+        "spectral_mass_count",
         "EWSD_score_total_ci_low",
         "EWSD_score_total_ci_high",
         "EWSD_score_total_rel_uncertainty",

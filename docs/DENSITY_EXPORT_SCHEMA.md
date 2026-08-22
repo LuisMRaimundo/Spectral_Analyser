@@ -247,7 +247,7 @@ Stage 3 runs automatically during research export (default `include_ewsd=True`).
 
 Implementation: `tools/ewsd_pure.py`, `tools/ewsd_core.py`, `tools/ewsd_uncertainty.py`, `tools/ewsd_research_integration.py`.
 Highlight: `EWSD_score_total` uses pale orange fill (research workbook only).
-**Conditional formatting:** `EWSD_score_acoustic_balanced` carries red **data bars** (min–max, `#C00000`) on `Spectral_Density_Metrics`.
+**Conditional formatting:** `EWSD_score_acoustic_balanced` carries red **data bars** (min–max, `#C00000`) on `Spectral_Density_Metrics`; `spectral_mass` carries blue **data bars** (min–max, `#4472C4`).
 Construct validity: `docs/validation/EWSD_CONSTRUCT_VALIDITY.md`; sensitivity CLI: `tools/ewsd_sensitivity_report.py`.
 Stage 3 sheets: `Stage3_Diagnostics` (per-note merge audit); `Stage3_Summary` (run-level metadata — not mixed with note rows).
 
@@ -259,6 +259,7 @@ Applied by `tools/export_research_density_workbook._apply_sdm_conditional` (rese
 |--------|------|
 | `harmonic_energy_ratio` | Three-color scale (red → yellow → green, 0–1) |
 | `EWSD_score_acoustic_balanced` | Red **data bars** (automatic min/max within column) |
+| `spectral_mass` | Blue **data bars** (automatic min/max within column, `#4472C4`) |
 | `f0_fit_accepted` | Green / amber cell fill for TRUE / FALSE |
 | `debug_counts_invariant_status` | Green when `passed` |
 

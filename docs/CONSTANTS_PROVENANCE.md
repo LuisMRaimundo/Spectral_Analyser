@@ -231,3 +231,10 @@ Provenance classes:
 - `ENERGY_EPS` (`1e-30`) - `internal_default` - Numerical floor for empty/degenerate energy in Hill shares.
 - `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites. Sensitivity is measured on a 40-partial 1/n series (not 8-ERB spacing): [`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`](validation/ACD_ERB_FRACTION_SENSITIVITY.md). The earlier “[0.5, 1.5] usable range” claim is discarded.
 - `MERGE_STRATEGY_DEFAULT` (`fixed_erb_grid`) - `internal_default` - Default ERB merge after the Stage 1 FFT-tier comparison. `fixed_erb_grid` reduced wander from 3.80 % to 2.74 %; neither strategy fell below ~2 %. Decision: [`docs/validation/ACD_MERGE_STRATEGY.md`](validation/ACD_MERGE_STRATEGY.md).
+
+## Spectral mass (F-061)
+
+Constants live in `tools/spectral_mass.py` (derived-column module; not `constants.py`).
+
+- `MASS_COUNT_BLEND` (`0.5`) - `convention` - Geometric-mean blend of presence-count (D0) and share-weighted count (D1), damping D0's dust/merge sensitivity and D1's dominance compression by half each. Selected by candidate testing on the 47-note clarinet corpus.
+- `MASS_LEVEL_EXPONENT` (`0.15`) - `convention` - Bounded level elasticity. Selected by candidate testing on the 47-note clarinet corpus; 0.15 bounds the level factor to <2x across a 65x corpus level range so that level overturns a >10% richness advantage in ~1% of pairs.

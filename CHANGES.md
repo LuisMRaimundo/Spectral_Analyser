@@ -1,3 +1,23 @@
+# v4.6.0 addendum — F-061 spectral_mass
+
+Derived Stage 3 column. No ACD or EWSD numeric change.
+Excel candidate testing on the 47-note clarinet corpus compared four
+constructs of (count) × (level):
+
+- A: presence-only `sqrt(D0·D1)` (no level)
+- B: linear level `count × λ`
+- C: Stevens 0.3 `count × λ^0.3` — level overturns a >10% richness
+  advantage in 14.2% of note pairs
+- D: bounded 0.15 `count × λ^0.15` — the same inversion in 1.3% of
+  pairs; selected
+
+F#4 on that corpus has D0 = 24.9 vs D1 = 1.15: dominance is not
+sparsity. `spectral_mass` sits immediately right of
+`EWSD_score_acoustic_balanced` with blue data bars. Backfill existing
+workbooks with `tools/backfill_spectral_mass.py` (writes
+`<name>_massfilled.xlsx`, never overwrites). Tests live in
+`tests/phase_34/`.
+
 # v4.6.0 addendum — front-door documentation
 
 README, technical manual header / §11, and
@@ -1764,3 +1784,7 @@ Full suite: 102 passed, 2 skipped.
 - McAulay, R. J., & Quatieri, T. F. (1986). Speech analysis/synthesis based on a sinusoidal representation. *IEEE Transactions on Acoustics, Speech, and Signal Processing, 34*(4), 744-754.
 - Moore, B. C. J. (2012). *An introduction to the psychology of hearing* (6th ed.). Brill.
 - Zwicker, E., & Fastl, H. (1990). *Psychoacoustics: Facts and models*. Springer.
+
+# Phase 34
+
+Tests live in `tests/phase_34/`.
