@@ -4,13 +4,14 @@ Spectral_Analyser is a spectral-analysis pipeline developed in support of doctor
 
 > **Documentation status.** The implementation / mathematical manual, formula
 > index, export schema, and pipeline semantics documents listed in the map below
-> are present in this repository. Current package is **v4.6.0**. The density-era
+> are present in this repository. Current package is **v4.7.0** (local
+> instrument-final tree). The density-era
 > freeze dossier remains the `v4.2.1` record; ACD / roughness / dissonance work
 > since then is in `CHANGES.md` (v4.4.0–v4.6.0) and the validation notes below.
 
 ## Status
 
-- **Version**: 4.6.0 (current `main`; [PR #97](https://github.com/LuisMRaimundo/Spectral_Analyser/pull/97)).
+- **Version**: 4.7.0 (local `cleanup/repo-hygiene`; 4.6.0 remains the last published `main` / [PR #97](https://github.com/LuisMRaimundo/Spectral_Analyser/pull/97)).
 - **Python**: >=3.10,<3.12.
 - **Development status**: Current. Density-era freeze reference remains tag `v4.2.1` (kept; supersedes `v4.2.0`).
 - **License**: Proprietary — see `LICENSE` at the repository root.

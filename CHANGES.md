@@ -1,3 +1,22 @@
+# v4.7.0 — local instrument-final (cleanup tree only)
+
+Package bump on `cleanup/repo-hygiene`. Surface classes, F-041/F-062–F-070,
+and the documented `total_component_energy` misnomer. No ACD / EWSD /
+spectral_mass arithmetic change. The merge-strategy cache still records
+3.26 % wander (enforced 0.05); `REAL_NOTE_FFT_TIER_ACD_REL_TOL` stays 0.04
+per the round-3 derivation. Adoption into canonical is the author's step;
+see `docs/ADOPTION_CHECKLIST.md`.
+
+# v4.7.0 — local instrument-final (cleanup tree)
+
+Package bump on `cleanup/repo-hygiene` only. Surface classes, F-041 and
+F-062–F-070 stamps, and the documented energy-ratio / misnomer closures.
+The ACD merge-strategy cache was regenerated under the 0.04 policy and
+could not satisfy it (measured winner wander 3.26345 % → cache 0.05).
+The constant `REAL_NOTE_FFT_TIER_ACD_REL_TOL = 0.04` was not loosened.
+Adoption into canonical is the author's decision; see
+`docs/ADOPTION_CHECKLIST.md`.
+
 # Export-column triage (numerically invisible)
 
 Four-branch rule on the 202 class-`metric` `COL:` residue. No computation

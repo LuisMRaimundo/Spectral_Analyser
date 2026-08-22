@@ -24,6 +24,7 @@ VOLATILE_COLUMNS = frozenset(
         "git_status_reason",
         "code_dirty",
         "analysis_version",
+        "package_version",
         "generated",
         "generated_utc",
         "export_generated",
@@ -168,8 +169,18 @@ def diff_workbooks(
         max_row = max(ws_a.max_row, ws_b.max_row)
         for header in shared:
             ca, cb = col_a[header], col_b[header]
-            volatile = _is_volatile(str(header))
+            header_volatile = _is_volatile(str(header))
             for r in range(2, max_row + 1):
+                volatile = header_volatile
+                if sheet == "Metadata":
+                    key_header = next(
+                        (name for name in ("Parameter", "Field") if name in col_a),
+                        None,
+                    )
+                    if key_header:
+                        param = ws_a.cell(r, col_a[key_header]).value
+                        if _is_volatile(str(param or "")):
+                            volatile = True
                 va = ws_a.cell(r, ca).value if r <= ws_a.max_row else None
                 vb = ws_b.cell(r, cb).value if r <= ws_b.max_row else None
                 na, nb = _as_number(va), _as_number(vb)
