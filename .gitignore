@@ -1,3 +1,6 @@
+# Local Backup/ copies (git history is the backup)
+Backup/
+
 # Byte-compiled / optimized files
 __pycache__/
 *.py[cod]

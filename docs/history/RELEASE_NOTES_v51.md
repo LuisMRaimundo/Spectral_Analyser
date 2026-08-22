@@ -1,5 +1,11 @@
 # Spectral_Analyser v51 Release Notes
 
+> Historical note: this document predates the 4.x version scheme. It is
+> retained because it records the version-surface history an examiner may
+> ask about.
+
+# Spectral_Analyser v51 Release Notes
+
 ## Scientific consolidation scope
 
 Version 51 consolidates Phases 1-6 into a single reproducible analytical profile for per-note spectral density analysis. The release finalizes the separation of observation from prior, harmonizes low-frequency policy, normalizes FFT-tier comparability, introduces explicit inharmonicity parameterization, extends MIR descriptor coverage with temporal segmentation, and documents parameter provenance at the constant/signature-default level.

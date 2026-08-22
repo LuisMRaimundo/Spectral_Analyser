@@ -3,7 +3,7 @@
 This document covers visible options in:
 
 - canonical operational GUI: `pipeline_orchestrator_gui.py` (Tk),
-- legacy/reference GUI: `interface.py` (PyQt) — **archived to `Backup/root_modules/`**; not wired into the active package. Section B below is retained for historical reference only.
+- legacy/reference GUI: `interface.py` (PyQt) — **archived to `attic/`**; not wired into the active package. Section B below is retained for historical reference only.
 
 ---
 
@@ -96,9 +96,9 @@ not `Analysis_Settings_By_Note` weight columns. Full table:
 
 ## B. PyQt GUI (`interface.py`) — reference/legacy surface (ARCHIVED)
 
-This module has been archived to `Backup/root_modules/interface.py` and is no
+This module has been archived to `attic/interface.py` and is no
 longer part of the active package. The section below is kept for historical
-reference; to use it, restore the file per `Backup/README.md`.
+reference; to use it, restore the file per `attic/README.md`.
 
 ### B1. Shared analysis controls
 

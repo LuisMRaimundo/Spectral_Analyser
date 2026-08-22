@@ -1167,7 +1167,7 @@ EWSD is acoustic until the listener protocol in
 ## 15. GUI option tutorial (advanced user)
 
 Primary operational GUI: `pipeline_orchestrator_gui.py` (Tk).  
-Legacy/reference GUI: `interface.py` (PyQt) — archived to `Backup/root_modules/` (no longer in the active package).
+Legacy/reference GUI: `interface.py` (PyQt) — archived to `attic/` (no longer in the active package).
 
 Core controls (Tk):
 
@@ -1281,7 +1281,7 @@ Numeric constants are now explicitly classified as `primary_source`, `derived`, 
    Sheets such as `Compiled Metrics`, `Compiled_Metrics_All`, PCA outputs, and optional dissonance/debug/correlation sheets are generated conditionally. Their exact column sets vary with runtime options, data sufficiency, and enabled analysis branches.
 
 4. **GUI surface mismatch remains by design.**  
-   The Tk orchestrator (`pipeline_orchestrator_gui.py`) is the canonical operational interface. The PyQt interface (`interface.py`) was a legacy/reference surface and has been archived to `Backup/root_modules/`.
+   The Tk orchestrator (`pipeline_orchestrator_gui.py`) is the canonical operational interface. The PyQt interface (`interface.py`) was a legacy/reference surface and has been archived to `attic/`.
 
 5. **Research workbook inharmonicity family gap.**  
    `compiled_density_metrics_research.xlsx` currently does not expose the full `inharmonicity_*` diagnostic family present in compiled `Density_Metrics`; inharmonicity audit should therefore reference the compiled workbook until research mapping is extended.
