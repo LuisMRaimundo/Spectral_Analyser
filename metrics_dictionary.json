@@ -2117,6 +2117,56 @@
       "class": "provenance",
       "formula_id": "META",
       "formula_version": "4.5.0"
+    },
+    "odd_even_harmonic_energy_ratio_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "odd_even_harmonic_energy_ratio_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "low_mid_energy_ratio_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "low_mid_energy_ratio_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_weight_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_weight_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_weight_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_weight_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_weight_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_weight_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
     }
   }
 }

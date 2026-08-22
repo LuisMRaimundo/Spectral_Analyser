@@ -2162,6 +2162,12 @@ def build_spectral_density_metrics(
                 "Use Primary_Statistics_Eligible for thesis-grade primary statistics."
             )
 
+    from metric_formula_versions import DISSONANCE_VALUE_COLUMNS
+
+    for col in DISSONANCE_VALUE_COLUMNS:
+        if col in merged.columns and col not in out.columns:
+            out[col] = merged[col]
+
     out = out.sort_values("MIDI", na_position="last", kind="mergesort")
     return out
 
@@ -3839,6 +3845,23 @@ def build_workbook(
         from tools.spectral_mass import add_spectral_mass_column
 
         sd = add_spectral_mass_column(sd)
+    from metric_formula_versions import (
+        dissonance_stamp_fields,
+        triage_companion_stamp_fields,
+    )
+
+    _stamp_fields = {}
+    _stamp_fields.update(dissonance_stamp_fields())
+    _stamp_fields.update(triage_companion_stamp_fields())
+    for _key, _val in _stamp_fields.items():
+        if _key.endswith("_formula_id"):
+            _base = _key[: -len("_formula_id")]
+        elif _key.endswith("_formula_version"):
+            _base = _key[: -len("_formula_version")]
+        else:
+            continue
+        if _base in sd.columns:
+            sd[_key] = _val
     required_front_cols = [
         "Technique",
         "metadata_inference_status",

@@ -6,6 +6,9 @@ retired quantities, and internal machinery; writes
 `docs/validation/COLUMN_TRIAGE_DECISIONS.md`. Commit 2 assigns F-062–F-068
 and reuses F-008/F-011/F-023/F-027–F-039 for the remaining citable
 metrics; each new id has a contract and a `METRIC_FORMULA_INDEX` row.
+Most of the round-5 unstamped surface was registered-but-unstamped
+(F-027..F-039 existed); the governance registry was more complete than
+the export surface revealed.
 Decision-doc closures (2026-08-22): F-041 restamped; F-069/F-070 for the
 two energy-ratio triples; `total_component_energy` misnomer documented.
 

@@ -133,6 +133,26 @@ def dissonance_stamp_fields() -> Dict[str, str]:
     return out
 
 
+# Citable triage columns that ship value+companion stamps on research SDM.
+TRIAGE_COMPANION_VALUE_COLUMNS: Tuple[str, ...] = (
+    "odd_even_harmonic_energy_ratio",
+    "low_mid_energy_ratio",
+    "harmonic_density_weight",
+    "inharmonic_density_weight",
+    "subbass_density_weight",
+)
+
+
+def triage_companion_stamp_fields() -> Dict[str, str]:
+    """Companion stamps for F-066 / F-067 / F-068 research-export columns."""
+    out: Dict[str, str] = {}
+    for col in TRIAGE_COMPANION_VALUE_COLUMNS:
+        fid, ver = TRIAGE_REUSED_STAMPS[col]
+        out[f"{col}_formula_id"] = fid
+        out[f"{col}_formula_version"] = ver
+    return out
+
+
 def _index_column_map() -> Dict[str, str]:
     text = (_ROOT / "docs" / "METRIC_FORMULA_INDEX.md").read_text(encoding="utf-8")
     mapping: Dict[str, str] = {}
@@ -182,6 +202,11 @@ def exported_column_names() -> List[str]:
             names.append(col)
     names.append("spectral_mass_formula_id")
     names.append("spectral_mass_formula_version")
+    for col in TRIAGE_COMPANION_VALUE_COLUMNS:
+        if col not in names:
+            names.append(col)
+        names.append(f"{col}_formula_id")
+        names.append(f"{col}_formula_version")
     return names
 
 
