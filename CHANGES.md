@@ -1,3 +1,11 @@
+# v4.4.0 addendum — Parncutt 1.2-CB cutoff (open item)
+
+`roughness_parncutt_kernel` accepts `cutoff_cb` (H&K-style hard zero).
+Default remains `None`. `x_cutoff=20` is numerical only; the aggregate
+error bound is `|R(20)−R(∞)| ≤ (∑a)² κ` in
+`ROUGHNESS_BANDWIDTH_BASIS.md`. **Open item:** should `cutoff_cb=1.2`
+become the default? That would move F-037.
+
 # v4.4.0 addendum — bandwidth validity (Zwicker 15.5 kHz ceiling)
 
 Zwicker CB returns NaN above 15.5 kHz. F-037 drops pairs whose higher

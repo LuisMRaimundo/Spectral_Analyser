@@ -13,6 +13,7 @@ import numpy as np
 from mir_descriptors import (
     CB_ZWICKER_VALID_MAX_HZ,
     PL_CB_FRACTION,
+    PL_ROUGHNESS_CUTOFF_CB,
     critical_bandwidth_zwicker_hz,
     erb_bandwidth_hz,
     roughness_parncutt_kernel,
@@ -161,6 +162,19 @@ def generate() -> dict:
         ser_row["share_above"] = (
             (1.0 - capped / uncapped) if uncapped > 0 else 0.0
         )
+        with_cut = roughness_parncutt_kernel(
+            freqs, amps, bandwidth_basis="zwicker_cb", cutoff_cb=PL_ROUGHNESS_CUTOFF_CB
+        )
+        untrunc = roughness_parncutt_kernel(
+            freqs, amps, bandwidth_basis="zwicker_cb", x_cutoff=1.0e6
+        )
+        sum_a = float(np.sum(amps))
+        ser_row["zwicker_cutoff_12"] = with_cut
+        ser_row["cutoff_ratio"] = (with_cut / capped) if capped > 0 else float("nan")
+        ser_row["x20_vs_untrunc"] = abs(capped - untrunc)
+        ser_row["kappa"] = (
+            abs(capped - untrunc) / (sum_a * sum_a) if sum_a > 0 else 0.0
+        )
         peaks.append(peak_row)
         series.append(ser_row)
 
@@ -286,6 +300,42 @@ def write_markdown(payload: dict) -> None:
             f"{float(row['zwicker_capped']):.4f} | "
             f"{100.0 * float(row['share_above']):.1f}% | "
             f"{int(row['n_excluded'])} |"
+        )
+
+    lines += [
+        "",
+        "## Optional 1.2-CB psychoacoustic cutoff (default unchanged)",
+        "",
+        "`HutchinsonKnopoffDissonance` zeroes `g` beyond 1.2 critical bands.",
+        "The Parncutt kernel has no such cutoff (`cutoff_cb=None`). The",
+        "table is `cutoff_cb=1.2` versus the current default, on the same",
+        "20-partial 1/n series (15.5 kHz ceiling on). **Do not change the",
+        "default without a version bump** — it moves F-037.",
+        "",
+        "| f0 (Hz) | no cutoff (default) | cutoff_cb=1.2 | ratio |",
+        "|---:|---:|---:|---:|",
+    ]
+    for row in payload["series"]:
+        lines.append(
+            f"| {row['f0']:g} | {float(row['zwicker_capped']):.6g} | "
+            f"{float(row['zwicker_cutoff_12']):.6g} | "
+            f"{float(row['cutoff_ratio']):.3f} |"
+        )
+
+    lines += [
+        "",
+        "`x_cutoff=20` is a **numerical** truncation, not a psychoacoustic",
+        "cutoff. A per-pair tail of `20·exp(-19) ≈ 1.1e-7` is not an",
+        "aggregate bound. Restated: `|R(20) − R(untruncated)| ≤ (∑a)² · κ`",
+        "with `κ` measured on this series:",
+        "",
+        "| f0 (Hz) | |R(20)−R(∞)| | κ = |err|/(∑a)² |",
+        "|---:|---:|---:|",
+    ]
+    for row in payload["series"]:
+        lines.append(
+            f"| {row['f0']:g} | {float(row['x20_vs_untrunc']):.3e} | "
+            f"{float(row['kappa']):.3e} |"
         )
 
     lines += [

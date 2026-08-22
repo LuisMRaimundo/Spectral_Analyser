@@ -9,6 +9,7 @@ import pytest
 
 from mir_descriptors import (
     CB_ZWICKER_VALID_MAX_HZ,
+    PL_ROUGHNESS_CUTOFF_CB,
     _roughness_aures_1985,
     critical_bandwidth_zwicker_hz,
     roughness_parncutt_kernel,
@@ -65,6 +66,8 @@ def test_validation_doc_signs_off_on_provenance_not_circular_table() -> None:
     assert "non-blocking" in text
     assert "Fig. 10" in text
     assert "Zwicker CB validity ceiling" in text
+    assert "cutoff_cb=1.2" in text
+    assert "numerical" in text.lower()
 
 
 def test_zwicker_kernel_peak_locations() -> None:
@@ -121,6 +124,19 @@ def test_ceiling_changes_1khz_series_not_d3() -> None:
     assert capped == pytest.approx(0.0900, abs=5e-4)
     assert open_ == pytest.approx(0.1315, abs=5e-4)
     assert (1.0 - capped / open_) == pytest.approx(0.315, abs=0.02)
+
+
+def test_cutoff_cb_default_unchanged_and_optional_differs() -> None:
+    freqs = 146.83 * np.arange(1, 21, dtype=float)
+    amps = 1.0 / np.arange(1, 21, dtype=float)
+    default = roughness_parncutt_kernel(freqs, amps)
+    explicit_none = roughness_parncutt_kernel(freqs, amps, cutoff_cb=None)
+    with_cut = roughness_parncutt_kernel(
+        freqs, amps, cutoff_cb=PL_ROUGHNESS_CUTOFF_CB
+    )
+    assert default == pytest.approx(explicit_none, rel=0.0, abs=0.0)
+    assert with_cut != pytest.approx(default, rel=0.0, abs=1e-15)
+    assert PL_ROUGHNESS_CUTOFF_CB == 1.2
 
 
 def test_retired_aures_alias_raises() -> None:

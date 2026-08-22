@@ -52,6 +52,8 @@ CB_ZWICKER_VALID_MAX_HZ: float = 15500.0  # primary_source
 ERB_VALID_MIN_HZ: float = 100.0  # primary_source (documented; not a numeric guard)
 ERB_VALID_MAX_HZ: float = 15000.0  # primary_source (documented; not a numeric guard)
 PL_CB_FRACTION: float = 0.25  # Plomp & Levelt (1965) -- primary_source
+# H&K zeroes g beyond 1.2 CB. Optional Parncutt cutoff; default None (no cutoff).
+PL_ROUGHNESS_CUTOFF_CB: float = 1.2  # Hutchinson & Knopoff (1978) -- primary_source
 _ROUGHNESS_PARNCUTT_CB_FRACTION = PL_CB_FRACTION
 
 BandwidthBasis = Literal["zwicker_cb", "erb", "legacy_conflated"]
@@ -155,6 +157,7 @@ def roughness_parncutt_kernel_report(
     x_cutoff: float = 20.0,
     bandwidth_basis: BandwidthBasis = BANDWIDTH_BASIS_DEFAULT,
     validity_max_hz: float | None = CB_ZWICKER_VALID_MAX_HZ,
+    cutoff_cb: float | None = None,
 ) -> tuple[float, int]:
     """Return ``(roughness, n_pairs_excluded_above_validity)``.
 
@@ -192,6 +195,12 @@ def roughness_parncutt_kernel_report(
     # For component i (the lower frequency in each pair, since f is sorted
     # ascending), contributions vanish once f_j - f_i > x_cutoff * denom_i.
     df_max = float(x_cutoff) * denom
+    if cutoff_cb is not None:
+        # cutoff_cb is in critical-band units of the chosen CB(f_lo).
+        # denom = PL_CB_FRACTION * CB, so 1 CB = denom / PL_CB_FRACTION.
+        df_max = np.minimum(
+            df_max, float(cutoff_cb) * denom / PL_CB_FRACTION
+        )
     upper_freq = f + df_max
     j_end = np.searchsorted(f, upper_freq, side="right")
     if j_cap < n:
@@ -219,6 +228,7 @@ def roughness_parncutt_kernel(
     x_cutoff: float = 20.0,
     bandwidth_basis: BandwidthBasis = BANDWIDTH_BASIS_DEFAULT,
     validity_max_hz: float | None = CB_ZWICKER_VALID_MAX_HZ,
+    cutoff_cb: float | None = None,
 ) -> float:
     """Parncutt / Plomp–Levelt pairwise spectral roughness (F-037).
 
@@ -236,10 +246,14 @@ def roughness_parncutt_kernel(
     Bark scale.
 
     The kernel decays to a negligible value for ``x`` beyond a few units
-    (e.g. ``x = 20`` → ``20 * exp(-19) ≈ 1.1e-7``). Pairs whose
-    frequency separation exceeds ``x_cutoff`` units therefore contribute
-    nothing measurable to the sum. ``x_cutoff`` is a numerical
-    truncation, not a psychoacoustic cutoff.
+    (e.g. ``x = 20`` → ``20 * exp(-19) ≈ 1.1e-7``). ``x_cutoff`` is a
+    numerical truncation for speed, not a psychoacoustic cutoff. A
+    per-pair tail of ~1e-7 is not an aggregate bound; empirically
+    ``|R(x_cutoff=20) - R(untruncated)| <= (sum a)^2 * kappa`` with
+    ``kappa`` measured in the validation artefact. Optional
+    ``cutoff_cb`` (default ``None``) applies an H&K-style hard zero
+    beyond that many critical bands. Changing the default would move
+    exported F-037 numbers.
 
     This implementation sorts the spectrum by frequency and, for each
     component ``i``, vectorises the inner sum over only the neighbouring
@@ -251,6 +265,7 @@ def roughness_parncutt_kernel(
         x_cutoff=x_cutoff,
         bandwidth_basis=bandwidth_basis,
         validity_max_hz=validity_max_hz,
+        cutoff_cb=cutoff_cb,
     )
     return value
 

@@ -93,6 +93,37 @@ came from pairs whose higher member sits above the Bark scale.
 | 440 | 0.0892 | 0.0892 | 0.0% | 0 |
 | 1000 | 0.1315 | 0.0900 | 31.5% | 85 |
 
+## Optional 1.2-CB psychoacoustic cutoff (default unchanged)
+
+`HutchinsonKnopoffDissonance` zeroes `g` beyond 1.2 critical bands.
+The Parncutt kernel has no such cutoff (`cutoff_cb=None`). The
+table is `cutoff_cb=1.2` versus the current default, on the same
+20-partial 1/n series (15.5 kHz ceiling on). **Do not change the
+default without a version bump** — it moves F-037.
+
+| f0 (Hz) | no cutoff (default) | cutoff_cb=1.2 | ratio |
+|---:|---:|---:|---:|
+| 65.4 | 0.603422 | 0.546741 | 0.906 |
+| 110 | 0.215322 | 0.207702 | 0.965 |
+| 146.83 | 0.119136 | 0.073826 | 0.620 |
+| 220 | 0.0783963 | 0.0644582 | 0.822 |
+| 440 | 0.089239 | 0.081026 | 0.908 |
+| 1000 | 0.0899965 | 0.0840767 | 0.934 |
+
+`x_cutoff=20` is a **numerical** truncation, not a psychoacoustic
+cutoff. A per-pair tail of `20·exp(-19) ≈ 1.1e-7` is not an
+aggregate bound. Restated: `|R(20) − R(untruncated)| ≤ (∑a)² · κ`
+with `κ` measured on this series:
+
+| f0 (Hz) | |R(20)−R(∞)| | κ = |err|/(∑a)² |
+|---:|---:|---:|
+| 65.4 | 1.412e-08 | 1.091e-09 |
+| 110 | 1.207e-08 | 9.328e-10 |
+| 146.83 | 7.018e-09 | 5.422e-10 |
+| 220 | 8.954e-09 | 6.917e-10 |
+| 440 | 7.096e-09 | 5.482e-10 |
+| 1000 | 2.219e-09 | 1.714e-10 |
+
 ## Two-tone curves
 
 Each PNG is normalised to its own maximum. Raw (unnormalised) sweeps
