@@ -11554,6 +11554,11 @@ class AudioProcessor:
             "roughness_pairs_excluded_above_validity",
             "erb_weighted_spectral_density",
         ]
+        _phase5_stamp_keys = [
+            f"{_k}_{_sfx}"
+            for _k in _phase5_base_keys
+            for _sfx in ("formula_id", "formula_version")
+        ]
         main_metrics["log_attack_time_s"] = metric_float_or_nan(
             getattr(self, "log_attack_time_s", None)
         )
@@ -11571,6 +11576,9 @@ class AudioProcessor:
                 main_metrics[f"{_k}_on_{_seg}"] = metric_float_or_nan(
                     getattr(self, f"{_k}_on_{_seg}", None)
                 )
+        for _k in _phase5_stamp_keys:
+            _stamp = getattr(self, _k, "")
+            main_metrics[_k] = str(_stamp) if _stamp not in (None, "") else ""
         for _k in _phase5_density_keys:
             for _seg in ("attack", "sustain", "release"):
                 main_metrics[f"{_k}_on_{_seg}"] = metric_float_or_nan(
@@ -12539,7 +12547,14 @@ class AudioProcessor:
                             f0_hz=float(_f0_for_mir) if _f0_for_mir is not None else None,
                         )
                         for _k, _v in _mir_all.items():
-                            setattr(self, _k, float(_v) if np.isfinite(float(_v)) else float("nan"))
+                            if isinstance(_v, str):
+                                setattr(self, _k, _v)
+                            else:
+                                setattr(
+                                    self,
+                                    _k,
+                                    float(_v) if np.isfinite(float(_v)) else float("nan"),
+                                )
 
                 def _segment_spectrum(y_seg: np.ndarray, sr_val: float) -> tuple[np.ndarray, np.ndarray]:
                     if y_seg is None or y_seg.size == 0:
@@ -12571,6 +12586,8 @@ class AudioProcessor:
                             f0_hz=_f0_seg if np.isfinite(_f0_seg) else None,
                         )
                         for _k, _v in _mir_seg.items():
+                            if isinstance(_v, str):
+                                continue
                             setattr(self, f"{_k}_on_{_name}", float(_v) if np.isfinite(float(_v)) else float("nan"))
                             if _name == "sustain":
                                 setattr(

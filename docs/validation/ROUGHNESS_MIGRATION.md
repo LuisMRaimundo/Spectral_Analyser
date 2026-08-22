@@ -1,12 +1,10 @@
 # Roughness kernel generations — archived-export migration
 
-Three implementations have shipped under this package as **v4.4.0**.
-`package_version` alone cannot tell them apart. Use `git_commit` /
-`code_commit` (research Metadata / Analysis_Metadata) and the column
-layout below. There is no per-column `metric_version` or `formula_id`
-on the MIR roughness fields; F-037 lives in
-`docs/METRIC_FORMULA_INDEX.md` and `metric_contract.py`, not in the
-workbook cells.
+Four implementations have shipped. Generations 1–3 lived under
+**v4.4.0** and were distinguishable only by git commit or column
+layout. Generation 4 is **v4.5.0** and carries per-column
+`roughness_parncutt_kernel_formula_id` = `F-037` and
+`roughness_parncutt_kernel_formula_version` = `4.5.0`.
 
 The change between generations is **frequency-dependent**. It is not a
 constant rescaling. Rank orderings across a multi-register corpus
@@ -18,7 +16,8 @@ differ. Do not multiply an archived column by a factor to “update” it.
 |---:|---|---|---|
 | 1 | `x = df / (0.25 f + 24.7)` (legacy conflated). Misattributed as Aures (1985). | Package ≤ 4.4.0 before commit `d615ebe` (PR #96, round 3). | Column `roughness_aures_1985` only. |
 | 2 | `x = df / (0.25 · ERB(f))`, `ERB = 0.108 f + 24.7`. Renamed to Parncutt. | `d615ebe` through `c474c64` (round 3 merge; before round-4 Task 1). | Both `roughness_parncutt_kernel` and `roughness_aures_1985` written with the **same** ERB-basis number. |
-| 3 | `x = df / (0.25 · Zwicker CB(f))` proposed default. `bandwidth_basis="erb"` still reproduces gen 2. | This branch, from `c474c64` (Task 1) plus the retired alias (this document). | Live value is `roughness_parncutt_kernel`. `roughness_aures_1985` is **NaN** on new exports. The Python name raises `NotImplementedError`. |
+| 3 | `x = df / (0.25 · Zwicker CB(f))` without a Bark-scale ceiling. | `c474c64` through `d01773d` (still package 4.4.0). | Live value is `roughness_parncutt_kernel`. `roughness_aures_1985` is **NaN** on new exports. |
+| 4 | Same Zwicker kernel, pairs with higher member > 15.5 kHz dropped. | Package **4.5.0**. | `roughness_parncutt_kernel_formula_version=4.5.0`. Diagnostic `roughness_pairs_excluded_above_validity`. |
 
 Primary-source confirmation of gen 3 against Plomp & Levelt (1965) is
 **outstanding**. See [`ROUGHNESS_BANDWIDTH_BASIS.md`](ROUGHNESS_BANDWIDTH_BASIS.md).

@@ -99,7 +99,7 @@ helpers to `export_row_identity.py`:
 - `dedupe_identical_columns` — drops byte-identical `*_2` suffix columns (v4.0.3: also
   after header uniquification in research export).
 
-## 11. Export schema version map (v4.0.0–v4.1.0)
+## 11. Export schema version map (v4.0.0–v4.5.0)
 
 | Version | Scope | Key behaviour |
 |---------|-------|----------------|
@@ -111,7 +111,8 @@ helpers to `export_row_identity.py`:
 | v4.1.0 + schema `2026_08` | Exclusive assignment / gating | One `peak_bin_index` per slot; F-012 / amplitude / Sethares on validated partials; `sample_note_tag` + `partial_pitch_name`; `harmonic_validated_count` |
 | v4.4.0 (F-037 gen 1) | MIR roughness | `roughness_aures_1985` = `df/(0.25f+24.7)`. Misattributed. Pre-`d615ebe`. |
 | v4.4.0 (F-037 gen 2) | MIR roughness | `roughness_parncutt_kernel` = `df/(0.25·ERB)`. Alias still wrote the same number. `d615ebe`–`c474c64`. |
-| v4.4.0 (F-037 gen 3) | MIR roughness | Proposed Zwicker-CB default. Retired alias raises; new exports write NaN in `roughness_aures_1985`. Not a rescaling — ranks change. See `docs/validation/ROUGHNESS_MIGRATION.md`. Author confirmation of the default is outstanding. |
+| v4.4.0 (F-037 gen 3) | MIR roughness | Zwicker-CB default, no 15.5 kHz ceiling. Retired alias raises; new exports write NaN in `roughness_aures_1985`. `c474c64`–`d01773d`. |
+| v4.5.0 (F-037 gen 4) | MIR roughness + column stamps | Provenance-signed Zwicker default; pairs with higher member > 15.5 kHz dropped; `roughness_pairs_excluded_above_validity`. Every export column has `formula_id` / `formula_version`. See `docs/validation/ROUGHNESS_MIGRATION.md` and `COLUMN_VERSIONING_AUDIT.md`. |
 
 **Re-export:** v4.0.3 schema refresh requires Stage 2 + Stage 3. v4.1.0 harmonic
 identity and the `2026_08` exclusive-assignment / gating phase require Stage 1 + 2 + 3. See

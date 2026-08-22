@@ -662,6 +662,11 @@ PHASE5_DESCRIPTOR_BASE_COLUMNS: List[str] = [
     "roughness_pairs_excluded_above_validity",
     "erb_weighted_spectral_density",
 ]
+PHASE5_FORMULA_STAMP_COLUMNS: List[str] = [
+    f"{c}_{suffix}"
+    for c in PHASE5_DESCRIPTOR_BASE_COLUMNS
+    for suffix in ("formula_id", "formula_version")
+]
 PHASE5_SEGMENT_SUFFIXES: Tuple[str, ...] = (
     "_on_attack",
     "_on_sustain",
@@ -683,6 +688,7 @@ PHASE5_ALL_DESCRIPTOR_COLUMNS: List[str] = (
     + [f"{c}_on_sustain_segment" for c in PHASE5_DESCRIPTOR_BASE_COLUMNS]
     + [f"{c}{s}" for c in PHASE5_DESCRIPTOR_BASE_COLUMNS for s in PHASE5_SEGMENT_SUFFIXES]
     + PHASE5_SEGMENTED_DENSITY_COMPONENT_COLUMNS
+    + PHASE5_FORMULA_STAMP_COLUMNS
 )
 
 for _col in PHASE5_ALL_DESCRIPTOR_COLUMNS:

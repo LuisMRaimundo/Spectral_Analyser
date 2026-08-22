@@ -35,6 +35,8 @@ from typing import Dict, Literal
 
 import numpy as np
 
+from metric_formula_versions import mir_stamp_fields
+
 # Local copies — do not import from tools.spectral_density_hill.
 # ERB(f) = 0.108 f + 24.7 (Glasberg & Moore, 1990).
 _ROUGHNESS_ERB_SLOPE = 0.108
@@ -311,6 +313,7 @@ def compute_mir_descriptors_from_spectrum(
             "roughness_aures_1985": float("nan"),
             "roughness_pairs_excluded_above_validity": float("nan"),
             "erb_weighted_spectral_density": float("nan"),
+            **mir_stamp_fields(),
         }
 
     power = amp * amp
@@ -388,4 +391,5 @@ def compute_mir_descriptors_from_spectrum(
         "roughness_aures_1985": float("nan"),
         "roughness_pairs_excluded_above_validity": float(n_excluded),
         "erb_weighted_spectral_density": erb_weighted_density,
+        **mir_stamp_fields(),
     }

@@ -45,7 +45,7 @@ jobs:
         run: pytest tests/phase_11/test_ewsd_golden_vectors.py tests/phase_11/test_ewsd_pure_matches_core.py tests/phase_11/test_ewsd_corpus_regression.py tests/phase_11/test_ewsd_uncertainty.py tests/phase_11/test_ewsd_stage3_contract.py tests/phase_11/test_research_export_includes_ewsd.py -q
 
       - name: ACD validation gate (Stage 3 companion)
-        run: pytest tests/phase_32/test_acd_golden.py tests/phase_32/test_acd_axiomatic.py tests/phase_32/test_acd_structural.py tests/phase_32/test_acd_synthetic_recovery.py tests/phase_32/test_acd_invariance.py tests/phase_32/test_acd_erb_fraction_sensitivity.py tests/phase_32/test_acd_d1_tables.py tests/phase_32/test_acd_merge_strategy.py tests/phase_32/test_ewsd_part_b_repairs.py tests/phase_32/test_id_registry_uniqueness.py tests/phase_33/test_roughness_bandwidth_basis.py tests/phase_33/test_hk_subbass_bandwidth.py -q -m "not slow and not live_audio"
+        run: pytest tests/phase_32/test_acd_golden.py tests/phase_32/test_acd_axiomatic.py tests/phase_32/test_acd_structural.py tests/phase_32/test_acd_synthetic_recovery.py tests/phase_32/test_acd_invariance.py tests/phase_32/test_acd_erb_fraction_sensitivity.py tests/phase_32/test_acd_d1_tables.py tests/phase_32/test_acd_merge_strategy.py tests/phase_32/test_ewsd_part_b_repairs.py tests/phase_32/test_id_registry_uniqueness.py tests/phase_33/test_roughness_bandwidth_basis.py tests/phase_33/test_hk_subbass_bandwidth.py tests/phase_33/test_column_formula_versions.py tests/phase_33/test_corpus_manifest.py -q -m "not slow and not live_audio"
 
       - name: Run test suite
         # testpaths/markers are configured in pyproject.toml

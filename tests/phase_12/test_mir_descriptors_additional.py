@@ -13,6 +13,7 @@ import math
 import numpy as np
 import pytest
 
+from metric_formula_versions import MIR_VALUE_COLUMNS, mir_stamp_fields
 from mir_descriptors import (
     _erb_rate_hz,
     _roughness_aures_1985,
@@ -38,17 +39,25 @@ EXPECTED_KEYS = (
     "roughness_aures_1985",
     "roughness_pairs_excluded_above_validity",
     "erb_weighted_spectral_density",
-)
+) + tuple(mir_stamp_fields())
 
 
 def _assert_all_nan(desc: dict[str, float]) -> None:
     assert set(desc.keys()) == set(EXPECTED_KEYS)
+    stamps = mir_stamp_fields()
     for key in EXPECTED_KEYS:
+        if key in stamps:
+            assert desc[key] == stamps[key], key
+            continue
         assert math.isnan(desc[key]), key
 
 
 def _assert_all_finite(desc: dict[str, float]) -> None:
+    stamps = mir_stamp_fields()
     for key, value in desc.items():
+        if key in stamps:
+            assert value == stamps[key], key
+            continue
         assert isinstance(value, float)
         if key == "roughness_aures_1985":
             assert math.isnan(value), key
@@ -353,6 +362,9 @@ def test_compute_mir_descriptors_is_deterministic() -> None:
     )
     for key in EXPECTED_KEYS:
         a, b = first[key], second[key]
+        if isinstance(a, str) or isinstance(b, str):
+            assert a == b
+            continue
         if math.isnan(a) and math.isnan(b):
             continue
         assert a == pytest.approx(b, rel=0.0, abs=0.0)

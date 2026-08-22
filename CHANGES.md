@@ -1,3 +1,13 @@
+# v4.5.0 — per-column formula versions
+
+Package version is 4.5.0 so the three F-037 generations that shared
+4.4.0 are no longer ambiguous. Every compiled/MIR export column has a
+`formula_id` and `formula_version`. MIR value columns export companion
+stamps. CI rejects unstamped export columns.
+`tools/build_corpus_manifest.py` records `source_sha256` (same helper
+as Stage 3) for a later move of the Desktop corpus. Tests live in
+`tests/phase_33/`.
+
 # v4.4.0 addendum — Parncutt 1.2-CB cutoff (open item)
 
 `roughness_parncutt_kernel` accepts `cutoff_cb` (H&K-style hard zero).

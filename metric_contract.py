@@ -35,6 +35,8 @@ class MetricDefinition:
     physical_interpretation: str
     not_valid_for: str
     ontology_family: str
+    formula_id: str = ""
+    formula_version: str = ""
 
 
 def _density_weighted_formula() -> str:
@@ -145,6 +147,8 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ),
         not_valid_for="Citing as Aures (1985); importing into spectral_density_hill.",
         ontology_family="sensory_dissonance",
+        formula_id="F-037",
+        formula_version="4.5.0",
     )
     roughness_aures_1985 = MetricDefinition(
         name="roughness_aures_1985",
