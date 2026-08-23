@@ -84,21 +84,21 @@ This document covers operational scripts in `Spectral_Analyser` (runtime, orches
 | `audio_analysis/super_audio_analyzer_gui.py` | `SuperAudioAnalyzerGUI`, workers | GUI front-end for super analyzer | GUI orchestration |
 | `audio_analysis/batch_audio_analyzer.py` | `BatchAudioAnalyzer`, `main` | Batch analysis runner and row deduplication | Batch traversal |
 
-## Archived modules (moved to `Backup/`)
+## Archived modules
 
-The following modules were removed from the active tree (no Python importer;
-not entry points; not tests) and archived under `Backup/`. See
-`Backup/README.md` for provenance and restore instructions.
+The Tk GUI is canonical since v4.x. The PyQt reference surface lives at
+`attic/interface.py`. Other unused helpers previously stored under `Backup/`
+were untracked (git history is the backup).
 
 | Module | Reason |
 |---|---|
-| `interface.py` | Legacy/reference PyQt GUI; `main.py` forwards to the Tk orchestrator. |
-| `export_paths.py` | Unused path-sanitization helper (active sanitization is in `metadata_sanitizer.py`). |
-| `public_audio_identifiers.py` | Unused ID/hash builders. |
-| `reference_signal_utils.py` | Unused synthetic-signal generators. |
-| `runtime_versions.py` | Unused runtime version fingerprint. |
-| `audio_analysis/batch_example.py` | Example/demo script. |
-| `scripts/harmonic_count_audit.py` | Standalone developer audit CLI. |
+| `attic/interface.py` | Legacy/reference PyQt GUI; `main.py` forwards to the Tk orchestrator. |
+| `export_paths.py` | Unused path-sanitization helper (active sanitization is in `metadata_sanitizer.py`). History only. |
+| `public_audio_identifiers.py` | Unused ID/hash builders. History only. |
+| `reference_signal_utils.py` | Unused synthetic-signal generators. History only. |
+| `runtime_versions.py` | Unused runtime version fingerprint. History only. |
+| `audio_analysis/batch_example.py` | Example/demo script. History only. |
+| `scripts/harmonic_count_audit.py` | Standalone developer audit CLI. History only. |
 
 ## Notes on formula coverage
 

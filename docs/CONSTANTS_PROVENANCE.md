@@ -232,6 +232,13 @@ Provenance classes:
 - `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites. Sensitivity is measured on a 40-partial 1/n series (not 8-ERB spacing): [`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`](validation/ACD_ERB_FRACTION_SENSITIVITY.md). The earlier “[0.5, 1.5] usable range” claim is discarded.
 - `MERGE_STRATEGY_DEFAULT` (`fixed_erb_grid`) - `internal_default` - Default ERB merge after the Stage 1 FFT-tier comparison. `fixed_erb_grid` reduced wander from 3.80 % to 2.74 %; neither strategy fell below ~2 %. Decision: [`docs/validation/ACD_MERGE_STRATEGY.md`](validation/ACD_MERGE_STRATEGY.md).
 
+## Acoustic-core body split (F-067)
+
+Not exported by `constants.py`; default argument of
+`acoustic_density_core.compute_acoustic_density_descriptors`.
+
+- `low_mid_upper_hz` (`2000.0`) - `internal_default` - Body-salience split for F-067 `low_mid_energy_ratio`: share of body-peak salience at or below this frequency. Cross-reference: F-067 in `docs/METRIC_FORMULA_INDEX.md`.
+
 ## Spectral mass (F-061)
 
 Constants live in `tools/spectral_mass.py` (derived-column module; not `constants.py`).

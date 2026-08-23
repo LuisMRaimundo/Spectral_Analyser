@@ -8,7 +8,7 @@
     "v4.0.3": "Metadata Phase-2 H/I/S weights, Diagnostic sample_id fill, post-uniquify dedupe, zero_padding per note",
     "v4.1.0": "spacing-capped harmonic match, f0/B refit, body-stop count cut, noise-gated mass, density_fragile",
     "v4.1.0_2026_08": "exclusive peak-to-slot assignment, validated_partials_only gating, sample_note_tag/partial_pitch_name, harmonic_validated_count",
-    "v4.2.0": "closure programme WP1–WP5: residual main-lobe footprint, production policy, verify_corpus, freeze-ready tag"
+    "v4.2.0": "closure programme WP1\u2013WP5: residual main-lobe footprint, production policy, verify_corpus, freeze-ready tag"
   },
   "registry_semantics": {
     "status_values": {
@@ -17,7 +17,7 @@
       "validation": "Quality-control or warning/status field.",
       "legacy": "Backward compatibility field; not recommended as new primary endpoint."
     },
-    "notes": "This registry documents project-defined metric families and export semantics. Direct external-package primitive calls are not listed unless wrapped in project logic. Export hygiene helpers live in export_row_identity.py (v4.0.2–v4.0.3)."
+    "notes": "This registry documents project-defined metric families and export semantics. Direct external-package primitive calls are not listed unless wrapped in project logic. Export hygiene helpers live in export_row_identity.py (v4.0.2\u2013v4.0.3)."
   },
   "export_row_identity": {
     "sample_id": {
@@ -670,6 +670,1503 @@
       "description": "Legacy aggregate scalar retained for compatibility.",
       "sheet_or_export": "compiled Legacy_Compatibility / research Legacy_Compatibility",
       "citation": "implementation-defined legacy"
+    }
+  },
+  "column_surface": {
+    "Note": {
+      "class": "metadata",
+      "formula_id": "COL:Note",
+      "formula_version": "4.5.0"
+    },
+    "canonical_density_v5_adapted": {
+      "class": "deprecated",
+      "formula_id": "COL:canonical_density_v5_adapted",
+      "formula_version": "4.5.0"
+    },
+    "density_normalized_global": {
+      "class": "deprecated",
+      "formula_id": "COL:density_normalized_global",
+      "formula_version": "4.5.0"
+    },
+    "density_per_component": {
+      "class": "deprecated",
+      "formula_id": "COL:density_per_component",
+      "formula_version": "4.5.0"
+    },
+    "discrete_metric_d3": {
+      "class": "diagnostic",
+      "formula_id": "COL:discrete_metric_d3",
+      "formula_version": "4.5.0"
+    },
+    "discrete_metric_d10": {
+      "class": "deprecated",
+      "formula_id": "COL:discrete_metric_d10",
+      "formula_version": "4.5.0"
+    },
+    "discrete_metric_d17": {
+      "class": "diagnostic",
+      "formula_id": "COL:discrete_metric_d17",
+      "formula_version": "4.5.0"
+    },
+    "discrete_metric_d24": {
+      "class": "diagnostic",
+      "formula_id": "COL:discrete_metric_d24",
+      "formula_version": "4.5.0"
+    },
+    "effective_partial_density": {
+      "class": "deprecated",
+      "formula_id": "COL:effective_partial_density",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_energy_sum": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_energy_sum",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_energy_sum_tier_normalized": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_energy_sum_tier_normalized",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_energy_sum": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonic_energy_sum",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_energy_sum_tier_normalized": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonic_energy_sum_tier_normalized",
+      "formula_version": "4.5.0"
+    },
+    "subbass_energy_sum": {
+      "class": "diagnostic",
+      "formula_id": "COL:subbass_energy_sum",
+      "formula_version": "4.5.0"
+    },
+    "subbass_energy_sum_tier_normalized": {
+      "class": "diagnostic",
+      "formula_id": "COL:subbass_energy_sum_tier_normalized",
+      "formula_version": "4.5.0"
+    },
+    "total_component_energy": {
+      "class": "diagnostic",
+      "formula_id": "COL:total_component_energy",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_energy_ratio": {
+      "class": "metric",
+      "formula_id": "F-069",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_energy_ratio": {
+      "class": "metric",
+      "formula_id": "F-069",
+      "formula_version": "4.5.0"
+    },
+    "subbass_energy_ratio": {
+      "class": "metric",
+      "formula_id": "F-069",
+      "formula_version": "4.5.0"
+    },
+    "linear_sum_amplitude_harmonic": {
+      "class": "diagnostic",
+      "formula_id": "COL:linear_sum_amplitude_harmonic",
+      "formula_version": "4.5.0"
+    },
+    "linear_sum_amplitude_inharmonic_partial": {
+      "class": "diagnostic",
+      "formula_id": "COL:linear_sum_amplitude_inharmonic_partial",
+      "formula_version": "4.5.0"
+    },
+    "linear_sum_amplitude_subbass_band": {
+      "class": "diagnostic",
+      "formula_id": "COL:linear_sum_amplitude_subbass_band",
+      "formula_version": "4.5.0"
+    },
+    "Soma_A_linear_harmonicos": {
+      "class": "deprecated",
+      "formula_id": "COL:Soma_A_linear_harmonicos",
+      "formula_version": "4.5.0"
+    },
+    "Soma_A_linear_inarmonicos": {
+      "class": "deprecated",
+      "formula_id": "COL:Soma_A_linear_inarmonicos",
+      "formula_version": "4.5.0"
+    },
+    "Soma_A_linear_subbass": {
+      "class": "deprecated",
+      "formula_id": "COL:Soma_A_linear_subbass",
+      "formula_version": "4.5.0"
+    },
+    "Soma_A_linear_total": {
+      "class": "deprecated",
+      "formula_id": "COL:Soma_A_linear_total",
+      "formula_version": "4.5.0"
+    },
+    "linear_amplitude_fraction_inharmonic_of_HI": {
+      "class": "diagnostic",
+      "formula_id": "COL:linear_amplitude_fraction_inharmonic_of_HI",
+      "formula_version": "4.5.0"
+    },
+    "linear_amplitude_fraction_nonharmonic_of_total": {
+      "class": "diagnostic",
+      "formula_id": "COL:linear_amplitude_fraction_nonharmonic_of_total",
+      "formula_version": "4.5.0"
+    },
+    "linear_amplitude_batch_alignment_factor": {
+      "class": "provenance",
+      "formula_id": "COL:linear_amplitude_batch_alignment_factor",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_order_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_order_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_candidate_count_20khz": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_candidate_count_20khz",
+      "formula_version": "4.5.0"
+    },
+    "validated_harmonic_component_count_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:validated_harmonic_component_count_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "probable_harmonic_component_count_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:probable_harmonic_component_count_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "probable_harmonic_component_energy_sum_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:probable_harmonic_component_energy_sum_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "acoustic_f0_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:acoustic_f0_status",
+      "formula_version": "4.5.0"
+    },
+    "f0_used_for_density_source": {
+      "class": "provenance",
+      "formula_id": "COL:f0_used_for_density_source",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_region_occupancy_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_region_occupancy_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_occupancy_detected_order_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_occupancy_detected_order_count",
+      "formula_version": "4.5.0"
+    },
+    "expected_harmonic_slot_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:expected_harmonic_slot_count",
+      "formula_version": "4.5.0"
+    },
+    "detected_harmonic_slot_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:detected_harmonic_slot_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_slot_expected_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_slot_expected_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_slot_matched_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_slot_matched_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_slot_coverage_ratio": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_slot_coverage_ratio",
+      "formula_version": "4.5.0"
+    },
+    "body_weighted_effective_density": {
+      "class": "deprecated",
+      "formula_id": "COL:body_weighted_effective_density",
+      "formula_version": "4.5.0"
+    },
+    "low_mid_energy_ratio": {
+      "class": "metric",
+      "formula_id": "F-067",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_body_density": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_body_density",
+      "formula_version": "4.5.0"
+    },
+    "expected_harmonic_slots_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:expected_harmonic_slots_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_body_density_normalized": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_body_density_normalized",
+      "formula_version": "4.5.0"
+    },
+    "residual_body_contribution": {
+      "class": "diagnostic",
+      "formula_id": "COL:residual_body_contribution",
+      "formula_version": "4.5.0"
+    },
+    "residual_body_contribution_capped": {
+      "class": "diagnostic",
+      "formula_id": "COL:residual_body_contribution_capped",
+      "formula_version": "4.5.0"
+    },
+    "spectral_body_thickness_index": {
+      "class": "metric",
+      "formula_id": "F-041",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_order_count_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_harmonic_order_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "expected_harmonic_order_count_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:expected_harmonic_order_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_coverage_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_harmonic_coverage_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "theoretical_harmonic_order_count_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:theoretical_harmonic_order_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "detected_salient_harmonic_order_count_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:detected_salient_harmonic_order_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_coverage_ratio_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_harmonic_coverage_ratio_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_mass_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_harmonic_mass_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_order_count_up_to_density_ceiling_hz": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_harmonic_order_count_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "expected_harmonic_order_count_up_to_density_ceiling_hz": {
+      "class": "diagnostic",
+      "formula_id": "COL:expected_harmonic_order_count_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_coverage_up_to_density_ceiling_hz": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_harmonic_coverage_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "salient_harmonic_mass_up_to_density_ceiling_hz": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_harmonic_mass_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "salient_odd_harmonic_count_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_odd_harmonic_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_even_harmonic_count_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_even_harmonic_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "odd_even_harmonic_energy_ratio": {
+      "class": "metric",
+      "formula_id": "F-066",
+      "formula_version": "4.5.0"
+    },
+    "salient_inharmonic_log_bin_count_up_to_body_ceiling": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_inharmonic_log_bin_count_up_to_body_ceiling",
+      "formula_version": "4.5.0"
+    },
+    "salient_subbass_particle_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_subbass_particle_count",
+      "formula_version": "4.5.0"
+    },
+    "salient_inharmonic_log_bin_count_up_to_density_ceiling_hz": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_inharmonic_log_bin_count_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "salient_subbass_particle_count_up_to_density_ceiling_hz": {
+      "class": "diagnostic",
+      "formula_id": "COL:salient_subbass_particle_count_up_to_density_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "final_note_density_count_based": {
+      "class": "deprecated",
+      "formula_id": "COL:final_note_density_count_based",
+      "formula_version": "4.5.0"
+    },
+    "final_note_density_salience_weighted": {
+      "class": "deprecated",
+      "formula_id": "COL:final_note_density_salience_weighted",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_component": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_density_component",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_component": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonic_density_component",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_component": {
+      "class": "diagnostic",
+      "formula_id": "COL:subbass_density_component",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_weight": {
+      "class": "metric",
+      "formula_id": "F-068",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_weight": {
+      "class": "metric",
+      "formula_id": "F-068",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_weight": {
+      "class": "metric",
+      "formula_id": "F-068",
+      "formula_version": "4.5.0"
+    },
+    "density_summation_mode": {
+      "class": "provenance",
+      "formula_id": "COL:density_summation_mode",
+      "formula_version": "4.5.0"
+    },
+    "f0_epistemic_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:f0_epistemic_status",
+      "formula_version": "4.5.0"
+    },
+    "f0_final_source": {
+      "class": "provenance",
+      "formula_id": "COL:f0_final_source",
+      "formula_version": "4.5.0"
+    },
+    "valid_for_primary_statistics": {
+      "class": "diagnostic",
+      "formula_id": "COL:valid_for_primary_statistics",
+      "formula_version": "4.5.0"
+    },
+    "density_confidence": {
+      "class": "diagnostic",
+      "formula_id": "COL:density_confidence",
+      "formula_version": "4.5.0"
+    },
+    "f0_confidence": {
+      "class": "diagnostic",
+      "formula_id": "COL:f0_confidence",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_assignment_confidence": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_assignment_confidence",
+      "formula_version": "4.5.0"
+    },
+    "spectral_stability_confidence": {
+      "class": "diagnostic",
+      "formula_id": "COL:spectral_stability_confidence",
+      "formula_version": "4.5.0"
+    },
+    "qc_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:qc_status",
+      "formula_version": "4.5.0"
+    },
+    "outlier_ratio_max_to_mean": {
+      "class": "diagnostic",
+      "formula_id": "COL:outlier_ratio_max_to_mean",
+      "formula_version": "4.5.0"
+    },
+    "outlier_policy_applied": {
+      "class": "provenance",
+      "formula_id": "COL:outlier_policy_applied",
+      "formula_version": "4.5.0"
+    },
+    "sethares_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:sethares_status",
+      "formula_version": "4.5.0"
+    },
+    "density_salience_threshold_db": {
+      "class": "provenance",
+      "formula_id": "COL:density_salience_threshold_db",
+      "formula_version": "4.5.0"
+    },
+    "density_frequency_ceiling_hz": {
+      "class": "provenance",
+      "formula_id": "COL:density_frequency_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "density_effective_ceiling_hz": {
+      "class": "provenance",
+      "formula_id": "COL:density_effective_ceiling_hz",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_body_stop_hz": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_body_stop_hz",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_body_stop_order": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_body_stop_order",
+      "formula_version": "4.5.0"
+    },
+    "validated_harmonics_above_body_stop_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:validated_harmonics_above_body_stop_count",
+      "formula_version": "4.5.0"
+    },
+    "density_fragile": {
+      "class": "diagnostic",
+      "formula_id": "COL:density_fragile",
+      "formula_version": "4.5.0"
+    },
+    "density_perturbation_spread_pct": {
+      "class": "diagnostic",
+      "formula_id": "COL:density_perturbation_spread_pct",
+      "formula_version": "4.5.0"
+    },
+    "density_ci_relative_width_pct": {
+      "class": "diagnostic",
+      "formula_id": "COL:density_ci_relative_width_pct",
+      "formula_version": "4.5.0"
+    },
+    "bin_to_f0_ratio": {
+      "class": "diagnostic",
+      "formula_id": "COL:bin_to_f0_ratio",
+      "formula_version": "4.5.0"
+    },
+    "low_f0_resolution_warning": {
+      "class": "diagnostic",
+      "formula_id": "COL:low_f0_resolution_warning",
+      "formula_version": "4.5.0"
+    },
+    "core_harmonic_energy_ratio": {
+      "class": "metric",
+      "formula_id": "F-070",
+      "formula_version": "4.5.0"
+    },
+    "core_residual_energy_ratio": {
+      "class": "metric",
+      "formula_id": "F-070",
+      "formula_version": "4.5.0"
+    },
+    "core_subbass_energy_ratio": {
+      "class": "metric",
+      "formula_id": "F-070",
+      "formula_version": "4.5.0"
+    },
+    "estimated_snr_db": {
+      "class": "diagnostic",
+      "formula_id": "COL:estimated_snr_db",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density_normalized": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_density_normalized",
+      "formula_version": "4.5.0"
+    },
+    "energy_weighted_component_density_diagnostic": {
+      "class": "deprecated",
+      "formula_id": "COL:energy_weighted_component_density_diagnostic",
+      "formula_version": "4.5.0"
+    },
+    "effective_components_weighted_diagnostic": {
+      "class": "diagnostic",
+      "formula_id": "COL:effective_components_weighted_diagnostic",
+      "formula_version": "4.5.0"
+    },
+    "diagnostic_effective_components_h": {
+      "class": "diagnostic",
+      "formula_id": "COL:diagnostic_effective_components_h",
+      "formula_version": "4.5.0"
+    },
+    "diagnostic_effective_components_r": {
+      "class": "diagnostic",
+      "formula_id": "COL:diagnostic_effective_components_r",
+      "formula_version": "4.5.0"
+    },
+    "diagnostic_effective_components_s": {
+      "class": "diagnostic",
+      "formula_id": "COL:diagnostic_effective_components_s",
+      "formula_version": "4.5.0"
+    },
+    "tier_consistency_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:tier_consistency_status",
+      "formula_version": "4.5.0"
+    },
+    "spectral_entropy": {
+      "class": "metric",
+      "formula_id": "F-011",
+      "formula_version": "4.5.0"
+    },
+    "density_source_formula": {
+      "class": "provenance",
+      "formula_id": "COL:density_source_formula",
+      "formula_version": "4.5.0"
+    },
+    "density_normalization_scope": {
+      "class": "provenance",
+      "formula_id": "COL:density_normalization_scope",
+      "formula_version": "4.5.0"
+    },
+    "density_normalization_denominator": {
+      "class": "provenance",
+      "formula_id": "COL:density_normalization_denominator",
+      "formula_version": "4.5.0"
+    },
+    "density_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_compensated_harmonic_density": {
+      "class": "deprecated",
+      "formula_id": "COL:rolloff_compensated_harmonic_density",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_compensated_harmonic_density_alpha": {
+      "class": "deprecated",
+      "formula_id": "COL:rolloff_compensated_harmonic_density_alpha",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_compensated_harmonic_density_component_count": {
+      "class": "deprecated",
+      "formula_id": "COL:rolloff_compensated_harmonic_density_component_count",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_compensated_harmonic_density_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:rolloff_compensated_harmonic_density_status",
+      "formula_version": "4.5.0"
+    },
+    "rolloff_harmonic_partial_count": {
+      "class": "deprecated",
+      "formula_id": "COL:rolloff_harmonic_partial_count",
+      "formula_version": "4.5.0"
+    },
+    "density_metric_per_harmonic": {
+      "class": "deprecated",
+      "formula_id": "COL:density_metric_per_harmonic",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_density",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density_component_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_density_component_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_density_status",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_density_normalized_by_harmonic_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_density_normalized_by_harmonic_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_mass": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_mass",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_mean": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_mean",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_rms": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_rms",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_component_count": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_component_count",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_effective_power_mass_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_effective_power_mass_status",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz": {
+      "class": "metric",
+      "formula_id": "F-027",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz": {
+      "class": "metric",
+      "formula_id": "F-028",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness": {
+      "class": "metric",
+      "formula_id": "F-029",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis": {
+      "class": "metric",
+      "formula_id": "F-030",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity": {
+      "class": "metric",
+      "formula_id": "F-031",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental": {
+      "class": "metric",
+      "formula_id": "F-032",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4": {
+      "class": "metric",
+      "formula_id": "F-033",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus": {
+      "class": "metric",
+      "formula_id": "F-034",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness": {
+      "class": "metric",
+      "formula_id": "F-035",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel": {
+      "class": "metric",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985": {
+      "class": "deprecated",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity": {
+      "class": "diagnostic",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density": {
+      "class": "metric",
+      "formula_id": "F-039",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-027",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-028",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-029",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-030",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-031",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-032",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-033",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-034",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-035",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_on_sustain_segment": {
+      "class": "deprecated",
+      "formula_id": "COL:roughness_aures_1985_on_sustain_segment",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_on_sustain_segment": {
+      "class": "diagnostic",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_on_sustain_segment": {
+      "class": "metric",
+      "formula_id": "F-039",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_on_attack": {
+      "class": "metric",
+      "formula_id": "F-027",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-027",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_on_release": {
+      "class": "metric",
+      "formula_id": "F-027",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_on_attack": {
+      "class": "metric",
+      "formula_id": "F-028",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-028",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_on_release": {
+      "class": "metric",
+      "formula_id": "F-028",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_on_attack": {
+      "class": "metric",
+      "formula_id": "F-029",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-029",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_on_release": {
+      "class": "metric",
+      "formula_id": "F-029",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_on_attack": {
+      "class": "metric",
+      "formula_id": "F-030",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-030",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_on_release": {
+      "class": "metric",
+      "formula_id": "F-030",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_on_attack": {
+      "class": "metric",
+      "formula_id": "F-031",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-031",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_on_release": {
+      "class": "metric",
+      "formula_id": "F-031",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_on_attack": {
+      "class": "metric",
+      "formula_id": "F-032",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-032",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_on_release": {
+      "class": "metric",
+      "formula_id": "F-032",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_on_attack": {
+      "class": "metric",
+      "formula_id": "F-033",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-033",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_on_release": {
+      "class": "metric",
+      "formula_id": "F-033",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_on_attack": {
+      "class": "metric",
+      "formula_id": "F-034",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-034",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_on_release": {
+      "class": "metric",
+      "formula_id": "F-034",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_on_attack": {
+      "class": "metric",
+      "formula_id": "F-035",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-035",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_on_release": {
+      "class": "metric",
+      "formula_id": "F-035",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_on_attack": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_on_release": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_on_attack": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_on_release": {
+      "class": "metric",
+      "formula_id": "F-036",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_on_attack": {
+      "class": "metric",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_on_release": {
+      "class": "metric",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_on_attack": {
+      "class": "deprecated",
+      "formula_id": "COL:roughness_aures_1985_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_on_sustain": {
+      "class": "deprecated",
+      "formula_id": "COL:roughness_aures_1985_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_on_release": {
+      "class": "deprecated",
+      "formula_id": "COL:roughness_aures_1985_on_release",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_on_attack": {
+      "class": "diagnostic",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_on_sustain": {
+      "class": "diagnostic",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_on_release": {
+      "class": "diagnostic",
+      "formula_id": "F-037",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_on_attack": {
+      "class": "metric",
+      "formula_id": "F-039",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_on_sustain": {
+      "class": "metric",
+      "formula_id": "F-039",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_on_release": {
+      "class": "metric",
+      "formula_id": "F-039",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_component_on_attack": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_density_component_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_component_on_sustain": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_density_component_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_component_on_release": {
+      "class": "diagnostic",
+      "formula_id": "COL:harmonic_density_component_on_release",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_component_on_attack": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonic_density_component_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_component_on_sustain": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonic_density_component_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_component_on_release": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonic_density_component_on_release",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_component_on_attack": {
+      "class": "diagnostic",
+      "formula_id": "COL:subbass_density_component_on_attack",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_component_on_sustain": {
+      "class": "diagnostic",
+      "formula_id": "COL:subbass_density_component_on_sustain",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_component_on_release": {
+      "class": "diagnostic",
+      "formula_id": "COL:subbass_density_component_on_release",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_centroid_hz_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_spread_hz_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_skewness_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_kurtosis_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_irregularity_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_1_fundamental_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_2_low_harmonics_2_to_4_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "tristimulus_3_high_harmonics_5_plus_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_flatness_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_85_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_rolloff_hz_95_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_parncutt_kernel_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_aures_1985_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "roughness_pairs_excluded_above_validity_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "erb_weighted_spectral_density_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_coefficient_B": {
+      "class": "metric",
+      "formula_id": "F-008",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_fit_residual_std_cents": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonicity_fit_residual_std_cents",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_fit_status": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonicity_fit_status",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_fit_method": {
+      "class": "provenance",
+      "formula_id": "COL:inharmonicity_fit_method",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_model_applied": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonicity_model_applied",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_fit_source": {
+      "class": "provenance",
+      "formula_id": "COL:inharmonicity_fit_source",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_validation_warning": {
+      "class": "diagnostic",
+      "formula_id": "COL:inharmonicity_validation_warning",
+      "formula_version": "4.5.0"
+    },
+    "obs_w_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "pure_observation_w_h": {
+      "class": "metric",
+      "formula_id": "F-023",
+      "formula_version": "4.5.0"
+    },
+    "pure_observation_w_i": {
+      "class": "metric",
+      "formula_id": "F-023",
+      "formula_version": "4.5.0"
+    },
+    "pure_observation_w_s": {
+      "class": "metric",
+      "formula_id": "F-023",
+      "formula_version": "4.5.0"
+    },
+    "component_strength_h": {
+      "class": "diagnostic",
+      "formula_id": "COL:component_strength_h",
+      "formula_version": "4.5.0"
+    },
+    "component_strength_i": {
+      "class": "diagnostic",
+      "formula_id": "COL:component_strength_i",
+      "formula_version": "4.5.0"
+    },
+    "component_strength_s": {
+      "class": "diagnostic",
+      "formula_id": "COL:component_strength_s",
+      "formula_version": "4.5.0"
+    },
+    "legacy_component_strength_h_v55": {
+      "class": "deprecated",
+      "formula_id": "COL:legacy_component_strength_h_v55",
+      "formula_version": "4.5.0"
+    },
+    "legacy_component_strength_i_v55": {
+      "class": "deprecated",
+      "formula_id": "COL:legacy_component_strength_i_v55",
+      "formula_version": "4.5.0"
+    },
+    "legacy_component_strength_s_v55": {
+      "class": "deprecated",
+      "formula_id": "COL:legacy_component_strength_s_v55",
+      "formula_version": "4.5.0"
+    },
+    "mir_descriptors_available": {
+      "class": "diagnostic",
+      "formula_id": "COL:mir_descriptors_available",
+      "formula_version": "4.5.0"
+    },
+    "mir_descriptors_source": {
+      "class": "provenance",
+      "formula_id": "COL:mir_descriptors_source",
+      "formula_version": "4.5.0"
+    },
+    "mir_descriptors_missing_reason": {
+      "class": "provenance",
+      "formula_id": "COL:mir_descriptors_missing_reason",
+      "formula_version": "4.5.0"
+    },
+    "sethares_dissonance": {
+      "class": "metric",
+      "formula_id": "F-062",
+      "formula_version": "4.6.0"
+    },
+    "sethares_dissonance_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "sethares_dissonance_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_dissonance": {
+      "class": "metric",
+      "formula_id": "F-063",
+      "formula_version": "4.6.0"
+    },
+    "hutchinson_knopoff_dissonance_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_dissonance_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "vassilakis_dissonance": {
+      "class": "metric",
+      "formula_id": "F-064",
+      "formula_version": "4.6.0"
+    },
+    "vassilakis_dissonance_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "vassilakis_dissonance_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled": {
+      "class": "deprecated",
+      "formula_id": "COL:hutchinson_knopoff_legacy_mean_pair_scaled",
+      "formula_version": "4.6.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled_formula_id": {
+      "class": "deprecated",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "hutchinson_knopoff_legacy_mean_pair_scaled_formula_version": {
+      "class": "deprecated",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "selected_dissonance_value": {
+      "class": "metric",
+      "formula_id": "F-065",
+      "formula_version": "4.6.0"
+    },
+    "selected_dissonance_value_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "selected_dissonance_value_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "dissonance_metric_mode": {
+      "class": "provenance",
+      "formula_id": "COL:dissonance_metric_mode",
+      "formula_version": "4.6.0"
+    },
+    "dissonance_metric_mode_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "dissonance_metric_mode_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_mass": {
+      "class": "metric",
+      "formula_id": "F-061",
+      "formula_version": "1.0"
+    },
+    "spectral_mass_count": {
+      "class": "metric",
+      "formula_id": "F-061",
+      "formula_version": "1.0"
+    },
+    "spectral_mass_count_blend": {
+      "class": "metric",
+      "formula_id": "F-061",
+      "formula_version": "1.0"
+    },
+    "spectral_mass_level_exponent": {
+      "class": "metric",
+      "formula_id": "F-061",
+      "formula_version": "1.0"
+    },
+    "spectral_mass_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "spectral_mass_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "odd_even_harmonic_energy_ratio_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "odd_even_harmonic_energy_ratio_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "low_mid_energy_ratio_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "low_mid_energy_ratio_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_weight_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_density_weight_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_weight_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "inharmonic_density_weight_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_weight_formula_id": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
+    },
+    "subbass_density_weight_formula_version": {
+      "class": "provenance",
+      "formula_id": "META",
+      "formula_version": "4.5.0"
     }
   }
 }

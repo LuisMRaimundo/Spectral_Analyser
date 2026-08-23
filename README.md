@@ -4,13 +4,14 @@ Spectral_Analyser is a spectral-analysis pipeline developed in support of doctor
 
 > **Documentation status.** The implementation / mathematical manual, formula
 > index, export schema, and pipeline semantics documents listed in the map below
-> are present in this repository. Current package is **v4.6.0**. The density-era
+> are present in this repository. Current package is **v4.7.0** (local
+> instrument-final tree). The density-era
 > freeze dossier remains the `v4.2.1` record; ACD / roughness / dissonance work
 > since then is in `CHANGES.md` (v4.4.0–v4.6.0) and the validation notes below.
 
 ## Status
 
-- **Version**: 4.6.0 (current `main`; [PR #97](https://github.com/LuisMRaimundo/Spectral_Analyser/pull/97)).
+- **Version**: 4.7.0 (local `cleanup/repo-hygiene`; 4.6.0 remains the last published `main` / [PR #97](https://github.com/LuisMRaimundo/Spectral_Analyser/pull/97)).
 - **Python**: >=3.10,<3.12.
 - **Development status**: Current. Density-era freeze reference remains tag `v4.2.1` (kept; supersedes `v4.2.0`).
 - **License**: Proprietary — see `LICENSE` at the repository root.
@@ -149,6 +150,10 @@ For each input folder of audio files, the pipeline produces an `analysis_results
 
 Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](docs/EXPORT_COLUMN_DICTIONARY.md); formula-level documentation is in [`docs/METRIC_FORMULA_INDEX.md`](docs/METRIC_FORMULA_INDEX.md).
 
+### Which sheet do I read?
+
+Use **`Research_Core`** for citation-grade values (formulas into `Spectral_Density_Metrics`, so the two cannot drift). Use the full sheets (`Spectral_Density_Metrics`, `Stage3_Diagnostics`, `Uncertainty_Summary`, …) when you need diagnostics, CIs, or provenance.
+
 ## Documentation map (v4.6.0)
 
 | Document | Role |
@@ -190,7 +195,6 @@ Column-level documentation is provided in [`docs/EXPORT_COLUMN_DICTIONARY.md`](d
 | How many ERB-merged components, and how large is each? | **`ACD_score`** (D1-based) with **`ACD_magnitude_per_component`** (F-057 / F-058). Neither column is interpretable alone: a scalar cannot distinguish a sparse loud sound from a dense quiet one. | 3 (research) |
 | How much is sounding (mass)? | **`spectral_mass`** (F-061); decomposes into `spectral_mass_count` × a bounded size factor. Level-inclusive; valid only inside level-controlled corpora. | 3 (research) |
 | How much GUI-weighted H/I/S content? | **`note_density_final`** | 2 / research |
-| Cross-instrument comparative density | **`EWSD_score_acoustic_balanced`** ± CI — **diagnostic only; level-dependent; not for cross-note comparison** (report `estimated_snr_db`) | 3 (research) |
 
 Default φ is `log`. On the IOWA tuba *pp* SustainStable corpus (37 notes, `analysis_results_4`), EWSD ordering is **not** φ-invariant across all amplitude-family φ (minimum pairwise Spearman ρ = 0.075). Among compressive φ (`linear`, `log`, `sqrt`, `cbrt`) ρ ≥ 0.948. Full table: [`docs/validation/EWSD_SENSITIVITY_PHI.md`](docs/validation/EWSD_SENSITIVITY_PHI.md).
 

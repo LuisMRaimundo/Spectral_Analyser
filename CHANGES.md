@@ -1,3 +1,58 @@
+# v4.7.0 — local instrument-final (cleanup tree only)
+
+Package bump on `cleanup/repo-hygiene`. Surface classes, F-041/F-062–F-070,
+and the documented `total_component_energy` misnomer. No ACD / EWSD /
+spectral_mass arithmetic change. The merge-strategy cache still records
+3.26 % wander (enforced 0.05); `REAL_NOTE_FFT_TIER_ACD_REL_TOL` stays 0.04
+per the round-3 derivation. Adoption into canonical is the author's step;
+see `docs/ADOPTION_CHECKLIST.md`.
+
+# v4.7.0 — local instrument-final (cleanup tree)
+
+Package bump on `cleanup/repo-hygiene` only. Surface classes, F-041 and
+F-062–F-070 stamps, and the documented energy-ratio / misnomer closures.
+The ACD merge-strategy cache was regenerated under the 0.04 policy and
+could not satisfy it (measured winner wander 3.26345 % → cache 0.05).
+The constant `REAL_NOTE_FFT_TIER_ACD_REL_TOL = 0.04` was not loosened.
+Adoption into canonical is the author's decision; see
+`docs/ADOPTION_CHECKLIST.md`.
+
+# Export-column triage (numerically invisible)
+
+Four-branch rule on the 202 class-`metric` `COL:` residue. No computation
+change and no column rename/removal. Commit 1 reclasses settings, flags,
+retired quantities, and internal machinery; writes
+`docs/validation/COLUMN_TRIAGE_DECISIONS.md`. Commit 2 assigns F-062–F-068
+and reuses F-008/F-011/F-023/F-027–F-039 for the remaining citable
+metrics; each new id has a contract and a `METRIC_FORMULA_INDEX` row.
+Most of the round-5 unstamped surface was registered-but-unstamped
+(F-027..F-039 existed); the governance registry was more complete than
+the export surface revealed.
+Decision-doc closures (2026-08-22): F-041 restamped; F-069/F-070 for the
+two energy-ratio triples; `total_component_energy` misnomer documented.
+
+Open items: rename `total_component_energy` at the next major version;
+replace its NaN→0 coercion with NaN propagation at the same time. Do not
+change the computation now.
+
+# Repository cleanup (numerically invisible)
+
+Three commits on a local copy. No ACD / EWSD / F-061 arithmetic change.
+
+1. Dead weight: `Backup/` untracked (git history is the backup); PyQt
+   `interface.py` moved to `attic/` (Tk is canonical since v4.x);
+   `CHANGES_PHASE_7.md` folded into the Phase 7 section; `RELEASE_NOTES_v51.md`
+   moved to `docs/history/`. `debug_counts.py` stays — imported by
+   `proc_audio` and tests.
+2. Deprecations: expansive weight labels retired from the Tk dropdown
+   (still computed; legacy map unchanged). Dictionary / contract notes mark
+   superseded columns. EWSD left the README hierarchy table; F-061 answers
+   “how much is sounding”.
+3. Every inventoried export column now has class
+   `metric|diagnostic|metadata|provenance|deprecated` in
+   `metrics_dictionary.json`. Research workbooks gain `Research_Core`
+   immediately after `Dashboard`.
+
 # v4.6.0 addendum — F-061 spectral_mass
 
 Derived Stage 3 column. No ACD or EWSD numeric change.
@@ -1567,6 +1622,67 @@ Full suite: 102 passed, 2 skipped.
 - The previous v55 strength formula combined unlike counting alphabets (harmonic order slots vs 100-cent residual bins vs sub-bass particle slots) without normalizing by each alphabet’s available capacity. As f0 rises, this causes systematic register drift independent of actual spectral balance.  
 - Register-invariant occupancy normalization enforces commensurate comparison across H/I/S by dividing each density/count term by the number of available slots in that band before combination.  
 - Equal occupancy weights (1.0, 1.0, 1.0) are the neutral symmetry point; non-equal settings encode deliberate prior preference and must be explicitly documented.
+
+## Merged from CHANGES_PHASE_7.md (verbatim)
+
+## Scope
+- Phase 7 final scientific export audit only: export completeness, diagnostic transparency, residual anomaly flagging, and metadata hygiene.
+- No GUI cosmetic changes.
+- No changes to mathematical definitions of `density_metric_raw`, `density_metric_raw_per_note_balance`, `harmonic_density_sum`, `inharmonic_density_sum`, or `subbass_density_sum`.
+
+## Touched Files And Methodological Reason
+
+- `compile_metrics.py`
+  - Added full inharmonicity diagnostic export fields to `Density_Metrics`: `inharmonicity_model_applied`, `inharmonicity_fit_source`, and warning tokenization.
+  - Added conservative source labeling:
+    - `per_note_inharmonicity_fit_sheet` when fit diagnostics are complete.
+    - `partial_export_missing_status` when `B` exists but fit status/residual is absent.
+  - Added explicit inharmonicity validation warnings for:
+    - clarinet-note `B > 1e-5`,
+    - missing fit status,
+    - missing residual.
+  - Fixed per-note metrics sheet detection for MIR extraction so descriptor values in `Metrics` are propagated.
+  - Added MIR availability transparency columns: `mir_descriptors_available`, `mir_descriptors_source`, `mir_descriptors_missing_reason`.
+  - Added consistent `f0_final_source` propagation (`unknown` fallback when unavailable).
+  - Added workbook-level `Validation_Summary` sheet with required Phase 7 scientific summary fields (comparability, Phase 2 weights, tier summary, inharmonicity stats, obs_wS artifact counts, MIR availability summary).
+
+- `pipeline_orchestrator_gui.py`
+  - Added `compute_obs_ws_artifact_diagnostics(...)` to explicitly separate model-density residual behavior from physical sub-bass energy evidence.
+  - Extended Phase 1 discovery export history to include:
+    - pure observation triplet columns,
+    - sub-bass energy diagnostics,
+    - interpretation and artifact flags/reasons.
+  - Kept raw `obs_wS` untouched (no clamping, no forced reduction), and added explicit interpretation field:
+    - `model_density_residual_not_physical_subbass_energy` when conservative artifact criteria are met.
+
+- `tools/export_research_density_workbook.py`
+  - Added conservative `Technique` inference from filename/path tokens (including `ord`).
+  - Added row-level metadata transparency fields:
+    - `metadata_inference_status`,
+    - `metadata_missing_reason`.
+  - Ensured `f0_final_source` is always exported (`unknown` when absent).
+  - Reworked git metadata probing to avoid fatal-looking behavior outside a repo:
+    - `git_commit=unavailable_not_a_git_repository` when applicable,
+    - added `git_status_reason`.
+  - Hardened chart path handling to avoid dtype ambiguity by ensuring explicit string placeholders for missing chart paths.
+
+- `tests/phase_7/test_inharmonicity_diagnostics_export.py`
+  - New regression coverage for complete and partial inharmonicity exports, including fit-source semantics.
+
+- `tests/phase_7/test_obs_ws_artifact_flag.py`
+  - New regression coverage for conservative `obs_wS_artifact_flag` behavior and preservation of original `obs_wS`.
+
+- `tests/phase_7/test_mir_descriptor_export_or_availability.py`
+  - New regression coverage for MIR descriptor value propagation and explicit unavailable-state export.
+
+- `tests/phase_7/test_research_export_metadata_cleanliness.py`
+  - New regression coverage for instrument/dynamic/technique inference, chart path dtype safety, and non-git metadata handling.
+
+- `tests/phase_7/test_final_validation_summary.py`
+  - New regression coverage for required final validation summary fields in compiled workbook.
+
+## Scientific Interpretation Note
+- `obs_wS` is a model-density observation term, not a direct physical sub-bass energy ratio. When sub-bass energy-ratio evidence is near zero and sub-bass energy is negligible relative to harmonic energy, `obs_wS` should be interpreted as model residual structure and not as physical sub-bass content.
 
 ## References (APA)
 

@@ -54,6 +54,7 @@ _FIELD_NAMES = (
     "ontology_family",
     "formula_id",
     "formula_version",
+    "notes",
 )
 
 
@@ -117,6 +118,31 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "ACD_count_merged_harmonic",
         "spectral_mass",
         "ewsd_weight_function_d10",
+        "spectral_centroid_hz",
+        "spectral_spread_hz",
+        "spectral_skewness",
+        "spectral_kurtosis",
+        "spectral_irregularity",
+        "tristimulus_1_fundamental",
+        "tristimulus_2_low_harmonics_2_to_4",
+        "tristimulus_3_high_harmonics_5_plus",
+        "spectral_flatness",
+        "spectral_rolloff_hz_85",
+        "spectral_rolloff_hz_95",
+        "erb_weighted_spectral_density",
+        "hutchinson_knopoff_dissonance",
+        "vassilakis_dissonance",
+        "selected_dissonance_value",
+        "spectral_entropy",
+        "odd_even_harmonic_energy_ratio",
+        "low_mid_energy_ratio",
+        "inharmonicity_coefficient_B",
+        "pure_observation_w_*",
+        "*_density_weight",
+        "spectral_body_thickness_index",
+        "{harmonic,inharmonic,subbass}_energy_ratio",
+        "core_{harmonic,residual,subbass}_energy_ratio",
+        "total_component_energy",
     }
     # Key <-> definition-name consistency and uniqueness.
     for key, definition in contracts.items():
@@ -126,7 +152,7 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
 
 
 def test_every_contract_field_is_a_non_empty_string() -> None:
-    optional_stamps = {"formula_id", "formula_version"}
+    optional_stamps = {"formula_id", "formula_version", "notes"}
     for definition in build_metric_contracts().values():
         for field in _FIELD_NAMES:
             value = getattr(definition, field)
@@ -201,6 +227,7 @@ def test_export_fields_flatten_with_stable_prefix_and_full_schema() -> None:
         if key not in {
             "metric_contract_formula_id",
             "metric_contract_formula_version",
+            "metric_contract_notes",
         }:
             assert value != ""
     assert out["metric_contract_name"] == "density_metric_raw"

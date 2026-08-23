@@ -1,8 +1,12 @@
 """CI gate: every exported column ships with a formula stamp."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from metric_formula_versions import (
     PACKAGE_FORMULA_VERSION,
+    SURFACE_CLASSES,
     build_column_registry,
     exported_column_names,
     mir_stamp_fields,
@@ -33,3 +37,18 @@ def test_new_column_without_stamp_is_rejected() -> None:
     names = set(exported_column_names())
     registry = build_column_registry()
     assert names <= set(registry)
+
+
+def test_every_exported_column_has_surface_class() -> None:
+    registry = build_column_registry()
+    missing = [c for c, row in registry.items() if row.get("class") not in SURFACE_CLASSES]
+    assert not missing
+    payload = json.loads(
+        (Path(__file__).resolve().parents[2] / "metrics_dictionary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    surface = payload["column_surface"]
+    assert set(surface) == set(registry)
+    for name, row in surface.items():
+        assert row["class"] == registry[name]["class"]

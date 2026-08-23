@@ -120,7 +120,7 @@ Key interpretation rows:
 | `note_density_final_rel_uncertainty` | `Density_Metrics` (+ research) | Relative uncertainty of `note_density_final` | $\sigma_{boot}/|point|$ | ratio | per-note UQ magnitude | NaN if point≈0 or workbook unreadable |
 | `note_density_final_uncertainty_sources` | `Density_Metrics` (+ research) | Which uncertainty sources were propagated | bootstrap config | category | `partials+ratios` (full UQ), `partials`, or `unavailable` | not a numeric metric |
 | `note_effective_component_density` | `Density_Metrics` | **Acoustic fatness (F-047):** effective number of energy-bearing spectral components pooled over harmonic + inharmonic + sub-bass. **Primary noise-robust density** (A4 / B7: EPD stays flat with SNR). | $(\sum_i A_i^2)^2 / \sum_i A_i^4$ over all H+I+S components | count (≥1) | **primary fatness scalar**; instrument-discriminating; basis for chord/aggregate density | not loudness; not interchangeable with `note_density_final` or EWSD |
-| `note_balanced_component_density` | `Density_Metrics` (+ research, immediately left of `EWSD_score_acoustic_balanced`) | **Balanced component density (F-056, provenance defined):** Hill $q=1$ of energy shares on a pool stricter than F-047. | $D_1=\exp(-\sum p_i\ln p_i)$, $p_i=P_i/\sum P$, $P_i=A_i^2$; empty/$\sum P=0\to$ NaN | count (≥1) or NaN | evenness-aware companion to F-047; not a substitute for EPD | empty pool is NaN, never 0.0; not interchangeable with EWSD |
+| `note_balanced_component_density` | `Density_Metrics` (+ research, immediately left of `EWSD_score_acoustic_balanced`) | **Balanced component density (F-056, provenance defined):** Hill $q=1$ of energy shares on a pool stricter than F-047. **Superseded by ACD_score (rho = 0.999 on validation corpora); retained for workbook compatibility.** | $D_1=\exp(-\sum p_i\ln p_i)$, $p_i=P_i/\sum P$, $P_i=A_i^2$; empty/$\sum P=0\to$ NaN | count (≥1) or NaN | evenness-aware companion to F-047; not a substitute for EPD | empty pool is NaN, never 0.0; not interchangeable with EWSD |
 | `note_balanced_component_density_pool_count` | `Density_Metrics` (+ research) | Census of the F-056 pool after the stricter filter | integer count of admitted rows | count | report beside D1 | not the F-047 HIS census |
 | `estimated_snr_db` | `Metrics` / research `Spectral_Density_Metrics` | Note-level spectral cleanliness: power-weighted mean of validated-harmonic `snr_db` (peak vs local floor, already computed) | $\sum_n P_n\,\mathrm{snr}_n/\sum_n P_n$ | dB | report beside EWSD for cross-dynamic comparisons (B7) | not a laboratory SNR meter; not a substitute for EPD |
 | `note_effective_component_density_ci_low` / `ci_high` | `Density_Metrics` (+ research) | Bootstrap CI bounds for F-047 | resample amplitudes; recompute the same participation ratio | count (≥1) | fatness uncertainty band | algebra unchanged; NaN if fewer than 2 partials |
@@ -163,8 +163,11 @@ Key interpretation rows (EWSD — Stage 3):
 
 | Column | Sheet | Meaning | Formula/source | Unit | Recommended use | Caution |
 |---|---|---|---|---|---|---|
-| `EWSD_score_total` | `Spectral_Density_Metrics` | Strict EWSD with full anti-concentration penalty $(N_{\mathrm{eff}}/N)^1$ per H/I/S compartment | `tools/ewsd_core.compute_ewsd` + left-join | model units | strict companion anti-concentration index | requires per-note component spectra; NaN if workbooks missing |
-| `EWSD_score_acoustic_balanced` | `Spectral_Density_Metrics` | EWSD companion with moderated penalty $(N_{\mathrm{eff}}/N)^{0.5}$ | `add_acoustic_alignment_columns` | model units | **primary cross-instrument bibliographic distance metric** | same inputs as strict EWSD; filter with `ewsd_primary_analysis_eligible`; research export adds red **data bars** (conditional formatting) |
+| `EWSD_score_total` | `Spectral_Density_Metrics` | Strict EWSD with full anti-concentration penalty $(N_{\mathrm{eff}}/N)^1$ per H/I/S compartment. **Superseded as a mass/fullness measure by spectral_mass (F-061); retained as the validated developmental ancestor (see methods documentation).** | `tools/ewsd_core.compute_ewsd` + left-join | model units | strict companion anti-concentration index | requires per-note component spectra; NaN if workbooks missing |
+| `EWSD_score_acoustic_balanced` | `Spectral_Density_Metrics` | EWSD companion with moderated penalty $(N_{\mathrm{eff}}/N)^{0.5}$. **Superseded as a mass/fullness measure by spectral_mass (F-061); retained as the validated developmental ancestor (see methods documentation).** | `add_acoustic_alignment_columns` | model units | diagnostic bibliographic-distance companion | same inputs as strict EWSD; filter with `ewsd_primary_analysis_eligible`; research export adds red **data bars** (conditional formatting) |
+| `smoothed_w_h_legacy` / `smoothed_w_i_legacy` / `smoothed_w_s_legacy` | Phase-1 / compiled diagnostics | Prior-mixed observation weights retained for workbook compatibility | legacy smoother on `pure_observation_w_*` | weight | archive / old-run comparison | already marked legacy; **do not use in new analyses** |
+| `hutchinson_knopoff_legacy_mean_pair_scaled` | `Dissonance_Metrics` | Pre-4.6.0 mean-pair H&K export | legacy mean of pair-normalised *g* terms | model units | **legacy diagnostic; not the Hutchinson–Knopoff index; see DISSONANCE_MIGRATION.md** | do not treat as eq. (3) |
+| `d10` (weight function) | Stage 1–3 `weight_function` | `Σlog1p·N_eff/N` then F-048 applies a second `N_eff/N` | `ewsd_weight_function_d10` | EWSD units | old-run reproducibility only | **double-corrected; open item in CHANGES.md; not recommended** |
 | `ewsd_primary_analysis_eligible` | `Spectral_Density_Metrics` | Thesis safety gate | row-quality rule in `add_quality_columns` | bool | filter final publication statistics | `False` rows remain exported for audit |
 | `ewsd_merge_status` | `Spectral_Density_Metrics` | Stage 3 merge provenance | integration layer | category | diagnose missing EWSD (`no_per_note_workbooks_found`, etc.) | not a timbre metric |
 
@@ -309,3 +312,34 @@ To avoid acoustic misinterpretation, exported columns follow this policy:
   - Ceiling is explicit in `full_spectrum_frequency_ceiling_hz` (default 20000 Hz).
 - **Interpretation rule**
   - Full-spectrum 20 kHz fields and bin-integrated body-band diagnostics are not body/fatness metrics and must not replace `density_component_body_weighted_sum_body_ceiling` in research interpretation.
+
+## 6) Column-triage deprecations (export still written)
+
+Class `deprecated`. Values are still computed and exported. Do not use in new analyses.
+
+| Column | Successor / note |
+|--------|------------------|
+| `roughness_aures_1985_on_{attack,release,sustain,sustain_segment}` | `roughness_parncutt_kernel_*` (F-037). Retired key; NaN-filled; misattributed citation. Scheduled for removal from new exports at the next major version. |
+| `canonical_density_v5_adapted`, `body_weighted_effective_density`, `final_note_density_count_based`, `final_note_density_salience_weighted`, `effective_partial_density`, `density_metric_per_harmonic`, `density_normalized_global`, `density_per_component`, `rolloff_compensated_harmonic_density`, `rolloff_compensated_harmonic_density_alpha`, `rolloff_compensated_harmonic_density_component_count`, `rolloff_harmonic_partial_count` | ACD (F-057) / `spectral_mass` (F-061). Internal; superseded for analytical use. |
+| `discrete_metric_d10` | Double-corrected; open item in `CHANGES.md`; not recommended. |
+| `Soma_A_linear_harmonicos`, `Soma_A_linear_inarmonicos`, `Soma_A_linear_subbass` | Portuguese-named copies of `linear_sum_amplitude_harmonic`, `linear_sum_amplitude_inharmonic_partial`, `linear_sum_amplitude_subbass_band`. Do not rename either set. |
+| `Soma_A_linear_total` | NaN→0 sum of the three Soma/linear-amplitude twins. Not `total_component_energy`. |
+
+Internal density-machinery columns reclassed `diagnostic` carry the note:
+"internal; superseded for analytical use by F-057/F-061". Decision-doc
+closures: `docs/validation/COLUMN_TRIAGE_DECISIONS.md`.
+
+### Energy-ratio triples (F-069 vs F-070)
+
+| Triple | F-id | Denominator as coded |
+|--------|------|----------------------|
+| `{harmonic,inharmonic,subbass}_energy_ratio` | F-069 | H and S: acoustic-core PSD shares of `h+r+s`. I: discrete inharmonic peak-PSD share of `tot_energy = H+I+S`. |
+| `core_{harmonic,residual,subbass}_energy_ratio` | F-070 | `component_*` power shares; residual = inharmonic component share; denominator `Hn+In+Sn`. |
+
+The triples are not identical. Do not cite one for the other.
+
+### `total_component_energy`
+
+MISNOMER: computes an amplitude sum (NaN coerced to 0), not energy. Do not use
+as E in any calculation; spectral_mass and ACD derive energy independently.
+Class `diagnostic`. Rename + NaN propagation deferred to the next major version.
