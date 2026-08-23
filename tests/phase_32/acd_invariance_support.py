@@ -43,8 +43,8 @@ REAL_NOTE_CORPUS = "ORC_Vlc_arco_mf _Sustains (49-note cello corpus)"
 # Real Stage 1 changes bin width, peak census, and Phase 8 peak_amplitude_sum
 # together. Exact invariance is not expected. Gate is the winning merge
 # strategy's measured max |Δ%| plus 1 percentage point, rounded up
-# (fixed_erb_grid 2.74% → 4%). This is not above 5%.
-REAL_NOTE_FFT_TIER_ACD_REL_TOL = 0.04
+# (regenerated cache 3.26% → 5%).
+REAL_NOTE_FFT_TIER_ACD_REL_TOL = 0.05
 
 TABLE_PATH = (
     Path(__file__).resolve().parents[2] / "docs" / "validation" / "ACD_INVARIANCE_TABLE.md"

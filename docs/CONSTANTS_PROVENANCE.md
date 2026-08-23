@@ -232,6 +232,7 @@ Provenance classes:
 - `ENERGY_EPS` (`1e-30`) - `internal_default` - Numerical floor for empty/degenerate energy in Hill shares.
 - `ERB_FRACTION_DEFAULT` (`1.0`) - `internal_default` - Merge bandwidth in ERB units; exposed as `erb_fraction`, not hard-coded at call sites. Sensitivity is measured on a 40-partial 1/n series (not 8-ERB spacing): [`docs/validation/ACD_ERB_FRACTION_SENSITIVITY.md`](validation/ACD_ERB_FRACTION_SENSITIVITY.md). The earlier “[0.5, 1.5] usable range” claim is discarded.
 - `MERGE_STRATEGY_DEFAULT` (`fixed_erb_grid`) - `internal_default` - Default ERB merge after the Stage 1 FFT-tier comparison. `fixed_erb_grid` reduced wander from 3.80 % to 2.74 %; neither strategy fell below ~2 %. Decision: [`docs/validation/ACD_MERGE_STRATEGY.md`](validation/ACD_MERGE_STRATEGY.md).
+- `REAL_NOTE_FFT_TIER_ACD_REL_TOL` (`0.05`) - `derived` - Round-3 rule: measured maximum FFT-tier wander + 1 percentage point, rounded up. Original derivation: 2.74 % on the synthesised-D3 sweep → 0.04. Superseded by regenerated cache `tests/phase_32/golden/acd_merge_strategy.json` (`source=pipeline_synthesized_d3`, `winning_strategy=fixed_erb_grid`, `max_abs_delta_pct=3.2634525732661857`, last committed in `c14c347`) → 0.05. 5% sits at the ceiling of acceptable tolerance flagged in round 3; this value is provisional pending re-measurement on real-duration corpus notes, where the window-length hypothesis predicts smaller wander. Lives in `tests/phase_32/acd_invariance_support.py`.
 
 ## Acoustic-core body split (F-067)
 

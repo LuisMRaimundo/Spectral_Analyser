@@ -1,3 +1,5 @@
+ACD FFT-tier tolerance updated 0.04 → 0.05 by the unchanged round-3 rule applied to the regenerated cache measurement; not a gate loosening.
+
 # v4.8.0 — unified main
 
 Cleanup/triage (F-062–F-070, Research_Core, attic) plus F-061 v2 and

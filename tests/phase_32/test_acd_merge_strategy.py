@@ -105,6 +105,26 @@ def test_perturbation_d2_shift_is_small_on_clean_series() -> None:
 
 
 def test_merge_strategy_cache_and_tolerance() -> None:
+    """ACD FFT-tier relative tolerance — derivation history.
+
+    Policy rule (round 3): measured maximum tier wander + 1 percentage
+    point, rounded up.
+
+    Original derivation: measured 2.74% on the synthesised-D3 tier sweep
+    → 0.04.
+
+    Superseded by: regenerated cache
+    ``tests/phase_32/golden/acd_merge_strategy.json``
+    (``source=pipeline_synthesized_d3``,
+    ``winning_strategy=fixed_erb_grid``,
+    ``max_abs_delta_pct=3.2634525732661857``, last committed in
+    ``c14c347``) measured 3.26% winner wander → 0.05.
+
+    Caveat: 5% sits at the ceiling of acceptable tolerance flagged
+    in round 3; this value is provisional pending re-measurement on
+    real-duration corpus notes, where the window-length hypothesis predicts
+    smaller wander.
+    """
     if not CACHE_PATH.is_file():
         pytest.skip("merge-strategy Stage 1 cache not yet generated")
     payload = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
