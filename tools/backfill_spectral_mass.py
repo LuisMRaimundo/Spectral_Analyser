@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Append F-061 spectral_mass to an existing research workbook.
+"""Append F-061 v2 spectral_mass to an existing research workbook.
 
-Reads ACD_D0, ACD_score, and ACD_magnitude_per_component from
-``Spectral_Density_Metrics``, writes ``spectral_mass`` and
-``spectral_mass_count`` immediately right of
+Requires per-compartment ``ACD_D1_{harmonic,inharmonic,subbass}`` (and
+the matching D0 / r columns). Workbooks that lack them are refused —
+v1 pooled-count backfill is not applied silently.
+
+Writes ``spectral_mass`` and ``spectral_mass_count`` immediately right of
 ``EWSD_score_acoustic_balanced``, applies the same blue data bars as a
 fresh Stage 3 export, and saves alongside as ``<name>_massfilled.xlsx``.
 Never overwrites the source workbook.
@@ -23,6 +25,9 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from tools.spectral_mass import (
+    REQUIRED_D0_COLUMNS,
+    REQUIRED_D1_COLUMNS,
+    REQUIRED_R_COLUMNS,
     add_spectral_mass_column,
     apply_spectral_mass_data_bar,
     place_spectral_mass_right_of_ewsd,
@@ -43,6 +48,19 @@ def backfill_spectral_mass(src: Path, dest: Path | None = None) -> Path:
     if dest.exists():
         raise FileExistsError(f"refusing to overwrite existing file: {dest}")
     frame = pd.read_excel(src, sheet_name=SHEET)
+    missing = [
+        col
+        for col in REQUIRED_D0_COLUMNS + REQUIRED_D1_COLUMNS + REQUIRED_R_COLUMNS
+        if col not in frame.columns
+    ]
+    if missing:
+        raise ValueError(
+            "F-061 v2 backfill requires per-compartment ACD columns "
+            f"{list(REQUIRED_D1_COLUMNS)}; missing: {missing}. "
+            "Re-export Stage 3 (or re-analyse from audio) so "
+            "ACD_D1_harmonic / ACD_D1_inharmonic / ACD_D1_subbass are present. "
+            "Refusing to apply the v1 pooled-count formula."
+        )
     frame = add_spectral_mass_column(frame)
     frame = place_spectral_mass_right_of_ewsd(frame)
 

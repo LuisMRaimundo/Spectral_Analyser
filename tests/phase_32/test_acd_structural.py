@@ -107,6 +107,21 @@ def test_excitation_pattern_scaffold_raises() -> None:
         merge_peaks_roex_overlap()
 
 
+def test_per_compartment_d1_matches_density_compartment() -> None:
+    h = compute_density_compartment(
+        np.asarray([1.0, 0.7, 0.5]),
+        np.asarray([146.8, 293.7, 440.5]),
+    )
+    i = compute_density_compartment(np.asarray([0.2]), np.asarray([220.0]))
+    s = compute_density_compartment(np.asarray([0.05]), np.asarray([55.0]))
+    note = compute_note_density({"harmonic": h, "inharmonic": i, "subbass": s})
+    assert note["D1_harmonic"] == pytest.approx(h.d1, abs=1e-12)
+    assert note["D1_inharmonic"] == pytest.approx(i.d1, abs=1e-12)
+    assert note["D1_subbass"] == pytest.approx(s.d1, abs=1e-12)
+    assert note["D0_harmonic"] == pytest.approx(h.d0, abs=1e-12)
+    assert note["ACD_score"] == pytest.approx(note["ACD_D1"], abs=1e-12)
+
+
 def test_missing_frequency_fail_closed() -> None:
     c = compute_density_compartment(np.asarray([1.0, 0.5]), None, merge_within_erb=True)
     assert c.status == "missing_frequency"

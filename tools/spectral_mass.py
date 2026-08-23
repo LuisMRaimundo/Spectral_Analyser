@@ -1,36 +1,29 @@
-"""F-061 spectral mass — derived Stage 3 column (no signal processing).
+"""F-061 v2 spectral mass — derived Stage 3 column (no signal processing).
 
-Construct: how much is sounding, as (compromise component count) ×
-(bounded per-component size). Design intent: presence constitutes
-richness; loudness modulates it but must not overturn it.
+v1 pooled D0 across compartments, so inharmonic and sub-bass entities
+entered the count at entity weight (30% of counted entities on the cello
+corpus against ~2% of energy; I+S contribution to the count up to 15%).
+Author requirement: sub-bass and inharmonic content must never count
+more than its real (energy) weight.
 
-    count          = (ACD_D0 * ACD_score) ** MASS_COUNT_BLEND
-    size_factor    = ACD_magnitude_per_component ** MASS_LEVEL_EXPONENT
-    spectral_mass  = count * size_factor
+v2 (compartment-proportional count)::
 
-Inputs are existing ACD exports. NaN in any input, or ACD_status != "ok",
-yields NaN (never 0.0).
+    count_k = sqrt(D0_k * D1_k)          per compartment k in {H, I, S}
+    count   = sum_k r_k * count_k        r_k = E_k / sum(E)
+    lambda  = E_total / count
+    spectral_mass = count * lambda ** 0.15
 
-Candidates tested on the 47-note clarinet corpus (inversion = level overturns
-a >10% richness advantage):
-  A: D1 * lambda^0.30  (Stevens sone-law exponent)      — 14.2% inversions
-  B: D1 * lambda^0.15                                    — 6.3% inversions
-  C: D0 * lambda^0.15  (all components count fully)      — 0.1% inversions
-  D: sqrt(D0*D1) * lambda^0.15                           — 1.3% inversions (SELECTED)
-C won the inversion criterion outright; D was selected over C because the
-geometric-mean count halves D0's exposure to sub-audibility components and to
-erb_fraction sensitivity, at the cost of 1.2 points of inversion rate.
-Key empirical finding motivating the D0 ingredient: F#4 has D0 = 24.9 merged
-components but D1 = 1.15 — dominance is not sparsity.
+Within-compartment dominance protection is retained (the F#4 property);
+across compartments each pile is capped at its energy share.
+MASS_COUNT_BLEND applies within compartment; MASS_LEVEL_EXPONENT is
+unchanged.
 
-Planned exact form (F-061.1), not implemented: in-code Hill numbers of
-order 1 and 2 with an audibility floor, once perceptual validation
-exists. This module stays the Excel-selected candidate-D blend until
-that work is done.
+Inputs are existing ACD per-compartment exports. NaN in any required
+input, or ACD_status != "ok", yields NaN (never 0.0).
 """
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -39,7 +32,7 @@ MASS_COUNT_BLEND: float = 0.5
 MASS_LEVEL_EXPONENT: float = 0.15
 
 SPECTRAL_MASS_FORMULA_ID: str = "F-061"
-SPECTRAL_MASS_FORMULA_VERSION: str = "1.0"
+SPECTRAL_MASS_FORMULA_VERSION: str = "2.0"
 
 SPECTRAL_MASS_COLUMN: str = "spectral_mass"
 SPECTRAL_MASS_COUNT_COLUMN: str = "spectral_mass_count"
@@ -50,9 +43,24 @@ SPECTRAL_MASS_FORMULA_VERSION_COLUMN: str = "spectral_mass_formula_version"
 
 EWSD_ACOUSTIC_BALANCED_COLUMN: str = "EWSD_score_acoustic_balanced"
 
-# Blue data bars on spectral_mass (#4472C4). Distinct from the red
-# EWSD_score_acoustic_balanced bars (FFC00000).
 SPECTRAL_MASS_DATA_BAR_COLOR: str = "FF4472C4"
+
+COMPARTMENT_KEYS: tuple[str, ...] = ("harmonic", "inharmonic", "subbass")
+REQUIRED_D1_COLUMNS: tuple[str, ...] = (
+    "ACD_D1_harmonic",
+    "ACD_D1_inharmonic",
+    "ACD_D1_subbass",
+)
+REQUIRED_D0_COLUMNS: tuple[str, ...] = (
+    "ACD_D0_harmonic",
+    "ACD_D0_inharmonic",
+    "ACD_D0_subbass",
+)
+REQUIRED_R_COLUMNS: tuple[str, ...] = (
+    "ACD_r_harmonic",
+    "ACD_r_inharmonic",
+    "ACD_r_subbass",
+)
 
 _PLACEMENT_COLUMNS: Sequence[str] = (
     SPECTRAL_MASS_COLUMN,
@@ -64,29 +72,107 @@ _PLACEMENT_COLUMNS: Sequence[str] = (
 )
 
 
-def compute_spectral_mass(
+def _finite_positive(value: float) -> bool:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return False
+    return bool(np.isfinite(number) and number > 0.0)
+
+
+def compartment_count(d0: float, d1: float) -> float:
+    """Within-compartment presence/share blend: (D0*D1)**MASS_COUNT_BLEND."""
+    if not _finite_positive(d0) or not _finite_positive(d1):
+        return float("nan")
+    return float((float(d0) * float(d1)) ** MASS_COUNT_BLEND)
+
+
+def compute_spectral_mass_v1(
     d0: float,
     d1: float,
     lam: float,
     *,
     status: str = "ok",
 ) -> tuple[float, float]:
-    """Return ``(spectral_mass, spectral_mass_count)`` or ``(NaN, NaN)``."""
+    """F-061 v1 pooled count. Kept for v1↔v2 comparison only."""
     if str(status).strip() != "ok":
         return float("nan"), float("nan")
+    count = compartment_count(d0, d1)
+    if not _finite_positive(count) or not _finite_positive(lam):
+        return float("nan"), float("nan")
+    return float(count * (float(lam) ** MASS_LEVEL_EXPONENT)), count
+
+
+def compute_spectral_mass(
+    d0: Mapping[str, float],
+    d1: Mapping[str, float],
+    r: Mapping[str, float],
+    e_total: float,
+    *,
+    status: str = "ok",
+    lam: float | None = None,
+) -> tuple[float, float]:
+    """F-061 v2: return ``(spectral_mass, spectral_mass_count)`` or NaNs.
+
+    ``lam`` is derived as ``E_total / count`` unless an explicit value is
+    passed (extensivity tests that hold level fixed).
+    """
+    if str(status).strip() != "ok":
+        return float("nan"), float("nan")
+    count = 0.0
+    any_term = False
+    for key in COMPARTMENT_KEYS:
+        rk = r.get(key, float("nan"))
+        try:
+            rk_f = float(rk)
+        except (TypeError, ValueError):
+            return float("nan"), float("nan")
+        if not np.isfinite(rk_f):
+            return float("nan"), float("nan")
+        if rk_f == 0.0:
+            continue
+        if rk_f < 0.0:
+            return float("nan"), float("nan")
+        ck = compartment_count(d0.get(key, float("nan")), d1.get(key, float("nan")))
+        if not np.isfinite(ck):
+            return float("nan"), float("nan")
+        count += rk_f * ck
+        any_term = True
+    if not any_term or not _finite_positive(count):
+        return float("nan"), float("nan")
+    if lam is None:
+        if not _finite_positive(e_total):
+            return float("nan"), float("nan")
+        lam_f = float(e_total) / count
+    else:
+        try:
+            lam_f = float(lam)
+        except (TypeError, ValueError):
+            return float("nan"), float("nan")
+        if not _finite_positive(lam_f):
+            return float("nan"), float("nan")
+    return float(count * (lam_f ** MASS_LEVEL_EXPONENT)), float(count)
+
+
+def compartment_count_contribution(
+    d0: Mapping[str, float],
+    d1: Mapping[str, float],
+    r: Mapping[str, float],
+    key: str,
+) -> float:
+    """Return ``r_k * count_k`` for one compartment, or NaN."""
     try:
-        d0_f = float(d0)
-        d1_f = float(d1)
-        lam_f = float(lam)
+        rk = float(r.get(key, float("nan")))
     except (TypeError, ValueError):
-        return float("nan"), float("nan")
-    if not np.isfinite(d0_f) or not np.isfinite(d1_f) or not np.isfinite(lam_f):
-        return float("nan"), float("nan")
-    if d0_f <= 0.0 or d1_f <= 0.0 or lam_f <= 0.0:
-        return float("nan"), float("nan")
-    count = float((d0_f * d1_f) ** MASS_COUNT_BLEND)
-    mass = float(count * (lam_f ** MASS_LEVEL_EXPONENT))
-    return mass, count
+        return float("nan")
+    if not np.isfinite(rk):
+        return float("nan")
+    if rk == 0.0:
+        return 0.0
+    ck = compartment_count(d0.get(key, float("nan")), d1.get(key, float("nan")))
+    if not np.isfinite(ck):
+        return float("nan")
+    return float(rk * ck)
 
 
 def place_spectral_mass_right_of_ewsd(df: pd.DataFrame) -> pd.DataFrame:
@@ -104,28 +190,29 @@ def place_spectral_mass_right_of_ewsd(df: pd.DataFrame) -> pd.DataFrame:
     return df.loc[:, ordered]
 
 
-def add_spectral_mass_column(df: pd.DataFrame) -> pd.DataFrame:
-    """F-061: spectral_mass = (D0*D1)**MASS_COUNT_BLEND * lam**MASS_LEVEL_EXPONENT.
+def _row_e_total(row: pd.Series) -> float:
+    if "ACD_energy_total" in row.index:
+        try:
+            energy = float(row["ACD_energy_total"])
+        except (TypeError, ValueError):
+            energy = float("nan")
+        if np.isfinite(energy) and energy > 0.0:
+            return energy
+    try:
+        score = float(row.get("ACD_score", float("nan")))
+        lam = float(row.get("ACD_magnitude_per_component", float("nan")))
+    except (TypeError, ValueError):
+        return float("nan")
+    if np.isfinite(score) and np.isfinite(lam) and score > 0.0 and lam > 0.0:
+        return float(score * lam)
+    return float("nan")
 
-    Also exports spectral_mass_count = sqrt(D0*D1) and echoes the two constants
-    as spectral_mass_count_blend / spectral_mass_level_exponent per row.
-    """
+
+def add_spectral_mass_column(df: pd.DataFrame) -> pd.DataFrame:
+    """F-061 v2: compartment-weighted count times bounded level."""
     out = df.copy()
-    d0 = (
-        pd.to_numeric(out["ACD_D0"], errors="coerce")
-        if "ACD_D0" in out.columns
-        else pd.Series(np.nan, index=out.index, dtype=float)
-    )
-    d1 = (
-        pd.to_numeric(out["ACD_score"], errors="coerce")
-        if "ACD_score" in out.columns
-        else pd.Series(np.nan, index=out.index, dtype=float)
-    )
-    lam = (
-        pd.to_numeric(out["ACD_magnitude_per_component"], errors="coerce")
-        if "ACD_magnitude_per_component" in out.columns
-        else pd.Series(np.nan, index=out.index, dtype=float)
-    )
+    mass = pd.Series(np.nan, index=out.index, dtype=float)
+    count = pd.Series(np.nan, index=out.index, dtype=float)
     if "ACD_status" in out.columns:
         status_ok = out["ACD_status"].map(
             lambda v: str(v).strip() == "ok" if pd.notna(v) else False
@@ -133,24 +220,23 @@ def add_spectral_mass_column(df: pd.DataFrame) -> pd.DataFrame:
     else:
         status_ok = pd.Series(False, index=out.index)
 
-    valid = (
-        status_ok.astype(bool)
-        & d0.notna()
-        & d1.notna()
-        & lam.notna()
-        & np.isfinite(d0.to_numpy(dtype=float, copy=False))
-        & np.isfinite(d1.to_numpy(dtype=float, copy=False))
-        & np.isfinite(lam.to_numpy(dtype=float, copy=False))
-        & (d0 > 0.0)
-        & (d1 > 0.0)
-        & (lam > 0.0)
+    have_inputs = all(
+        col in out.columns
+        for col in REQUIRED_D0_COLUMNS + REQUIRED_D1_COLUMNS + REQUIRED_R_COLUMNS
     )
-
-    count = pd.Series(np.nan, index=out.index, dtype=float)
-    mass = pd.Series(np.nan, index=out.index, dtype=float)
-    if bool(valid.any()):
-        count.loc[valid] = (d0.loc[valid] * d1.loc[valid]) ** MASS_COUNT_BLEND
-        mass.loc[valid] = count.loc[valid] * (lam.loc[valid] ** MASS_LEVEL_EXPONENT)
+    if have_inputs:
+        for idx in out.index:
+            if not bool(status_ok.loc[idx]):
+                continue
+            row = out.loc[idx]
+            d0 = {k: row[f"ACD_D0_{k}"] for k in COMPARTMENT_KEYS}
+            d1 = {k: row[f"ACD_D1_{k}"] for k in COMPARTMENT_KEYS}
+            r = {k: row[f"ACD_r_{k}"] for k in COMPARTMENT_KEYS}
+            mass_i, count_i = compute_spectral_mass(
+                d0, d1, r, _row_e_total(row), status="ok"
+            )
+            mass.loc[idx] = mass_i
+            count.loc[idx] = count_i
 
     out[SPECTRAL_MASS_COLUMN] = mass
     out[SPECTRAL_MASS_COUNT_COLUMN] = count

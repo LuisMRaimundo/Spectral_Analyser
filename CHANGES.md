@@ -1,3 +1,18 @@
+# F-061 v2 — compartment-proportional count
+
+F-061 v1 pools D0 across compartments, so inharmonic and sub-bass entities enter the
+count at entity weight (30% of counted entities on the cello corpus against ~2% of
+energy; I+S contribution to the count up to 15%). Author requirement: sub-bass and
+inharmonic content must never count more than its real (energy) weight.
+
+v2: `count_k = sqrt(D0_k * D1_k)`; `count = sum_k r_k * count_k`;
+`lambda = E_total / count`; `spectral_mass = count * lambda ** 0.15`.
+Per-column formula version **2.0**. Column names unchanged. Stage 3 now
+also exports `ACD_D0_*`, `ACD_D1_*`, and `ACD_energy_total` (additive;
+existing ACD numbers unchanged). Backfill refuses workbooks that lack
+the three `ACD_D1_*` columns. Tests live in `tests/phase_34/`.
+Migration: `docs/validation/SPECTRAL_MASS_V2.md`.
+
 # v4.6.0 addendum — F-061 spectral_mass
 
 Derived Stage 3 column. No ACD or EWSD numeric change.

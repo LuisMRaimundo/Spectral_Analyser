@@ -14,7 +14,7 @@ from typing import Dict, Iterable, List, Tuple
 
 PACKAGE_FORMULA_VERSION = "4.5.0"
 DISSONANCE_FORMULA_VERSION = "4.6.0"
-SPECTRAL_MASS_FORMULA_VERSION = "1.0"
+SPECTRAL_MASS_FORMULA_VERSION = "2.0"
 
 MIR_VALUE_COLUMNS: Tuple[str, ...] = (
     "spectral_centroid_hz",
