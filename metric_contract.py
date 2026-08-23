@@ -878,23 +878,28 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
     spectral_mass = MetricDefinition(
         name="spectral_mass",
         formula=(
-            "F-061: spectral_mass = (ACD_D0 * ACD_score)**MASS_COUNT_BLEND "
-            "* ACD_magnitude_per_component**MASS_LEVEL_EXPONENT "
+            "F-061 v2: count_k = (D0_k * D1_k)**MASS_COUNT_BLEND; "
+            "count = sum_k r_k * count_k; lambda = E_total / count; "
+            "spectral_mass = count * lambda**MASS_LEVEL_EXPONENT "
             "with MASS_COUNT_BLEND=0.5 and MASS_LEVEL_EXPONENT=0.15. "
-            "presence constitutes richness; loudness modulates it but must not overturn it"
+            "presence constitutes richness; loudness modulates it but must not overturn it. "
+            "Cross-compartment contributions are bounded by energy share; "
+            "within-compartment counting blends presence (D0) and share-weighted (D1) counts."
         ),
         input_domain=(
-            "Derived from ACD_D0, ACD_score, ACD_magnitude_per_component "
-            "when ACD_status == 'ok'"
+            "Derived from per-compartment ACD_D0_*, ACD_D1_*, ACD_r_* and "
+            "E_total when ACD_status == 'ok'"
         ),
         unit_or_scale="count × bounded level (derived)",
         amplitude_basis="same ACD linear amplitudes as F-057 / F-058 (unchanged)",
         power_basis="same ACD energy shares as F-057 / F-058 (unchanged)",
         normalization_scope="per note",
         physical_interpretation=(
-            "How much is sounding: compromise component count times a "
-            "bounded per-component size. "
-            "presence constitutes richness; loudness modulates it but must not overturn it"
+            "How much is sounding: compartment-proportional compromise "
+            "count times a bounded per-component size. "
+            "presence constitutes richness; loudness modulates it but must not overturn it. "
+            "Cross-compartment contributions are bounded by energy share; "
+            "within-compartment counting blends presence (D0) and share-weighted (D1) counts."
         ),
         not_valid_for=(
             "Level-inclusive by design. Valid within level-controlled "
@@ -904,7 +909,56 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         ),
         ontology_family="mass_descriptor",
         formula_id="F-061",
-        formula_version="1.0",
+        formula_version="2.0",
+    )
+    inharmonicity_coefficient_B = MetricDefinition(
+        name="inharmonicity_coefficient_B",
+        formula=(
+            "F-008 v2: WLS of f_n^2 = a n^2 + c n^4, weights w_n ∝ 1/f_n^2; "
+            "B = c/a signed (unclamped). Assignment is global Hungarian match "
+            "then monotone-frequency prune (harmonic_assignment_method="
+            "global_monotone_v2). |t|>=2 is a heuristic significance screen; "
+            "residuals are dominated by systematic peak-frequency estimation "
+            "error, so no formal coverage is claimed. String-family only "
+            "(Fletcher 1962); otherwise NaN with inharmonicity_model_scope="
+            "out_of_family."
+        ),
+        input_domain="Peak-center frequencies and seed f0; instrument family metadata",
+        unit_or_scale="dimensionless stiff-string coefficient B",
+        amplitude_basis="not used (frequency fit)",
+        power_basis="not used (frequency fit)",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Stiff-string inharmonicity (Fletcher 1962) for string-family "
+            "sources. Signed: negative_stretch means flat-running partials."
+        ),
+        not_valid_for=(
+            "Non-string families (use spectral_stretch_coefficient). "
+            "Formal statistical coverage from the |t|>=2 screen."
+        ),
+        ontology_family="inharmonicity_model",
+        formula_id="F-008",
+        formula_version="2.0",
+    )
+    spectral_stretch_coefficient = MetricDefinition(
+        name="spectral_stretch_coefficient",
+        formula=(
+            "Same fitted value as F-008 v2 (WLS B). Exported for non-string "
+            "families. Phenomenological spectral stretch; no stiff-string "
+            "physical claim."
+        ),
+        input_domain="Same fit as inharmonicity_coefficient_B; non-string or unspecified family",
+        unit_or_scale="dimensionless phenomenological stretch",
+        amplitude_basis="not used (frequency fit)",
+        power_basis="not used (frequency fit)",
+        normalization_scope="per note",
+        physical_interpretation=(
+            "Phenomenological spectral stretch; no stiff-string physical claim."
+        ),
+        not_valid_for="Citing as Fletcher (1962) inharmonicity on winds, voice, or unspecified sources.",
+        ontology_family="spectral_stretch",
+        formula_id="COL:spectral_stretch_coefficient",
+        formula_version="2.0",
     )
     ewsd_d10_double_penalty = MetricDefinition(
         name="ewsd_weight_function_d10",
@@ -1301,6 +1355,8 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
         acd_d0_minus_d1.name: acd_d0_minus_d1,
         acd_erb_merge.name: acd_erb_merge,
         spectral_mass.name: spectral_mass,
+        inharmonicity_coefficient_B.name: inharmonicity_coefficient_B,
+        spectral_stretch_coefficient.name: spectral_stretch_coefficient,
         ewsd_d10_double_penalty.name: ewsd_d10_double_penalty,
         spectral_centroid_hz.name: spectral_centroid_hz,
         spectral_spread_hz.name: spectral_spread_hz,

@@ -57,9 +57,16 @@ ACD_RESEARCH_RATIO_COLUMNS: tuple[str, ...] = (
     "ACD_r_harmonic",
     "ACD_r_inharmonic",
     "ACD_r_subbass",
+    "ACD_D0_harmonic",
+    "ACD_D0_inharmonic",
+    "ACD_D0_subbass",
+    "ACD_D1_harmonic",
+    "ACD_D1_inharmonic",
+    "ACD_D1_subbass",
     "ACD_D2_harmonic",
     "ACD_D2_inharmonic",
     "ACD_D2_subbass",
+    "ACD_energy_total",
 )
 
 ACD_RESEARCH_COUNT_COLUMNS: tuple[str, ...] = (
@@ -116,9 +123,16 @@ def _empty_acd_row(
         "ACD_r_harmonic": np.nan,
         "ACD_r_inharmonic": np.nan,
         "ACD_r_subbass": np.nan,
+        "ACD_D0_harmonic": np.nan,
+        "ACD_D0_inharmonic": np.nan,
+        "ACD_D0_subbass": np.nan,
+        "ACD_D1_harmonic": np.nan,
+        "ACD_D1_inharmonic": np.nan,
+        "ACD_D1_subbass": np.nan,
         "ACD_D2_harmonic": np.nan,
         "ACD_D2_inharmonic": np.nan,
         "ACD_D2_subbass": np.nan,
+        "ACD_energy_total": np.nan,
         "ACD_count_raw_harmonic": np.nan,
         "ACD_count_raw_inharmonic": np.nan,
         "ACD_count_raw_subbass": np.nan,
@@ -222,9 +236,16 @@ def compute_acd_row_from_workbook(
     row["ACD_r_harmonic"] = note_metrics.get("r_harmonic", np.nan)
     row["ACD_r_inharmonic"] = note_metrics.get("r_inharmonic", np.nan)
     row["ACD_r_subbass"] = note_metrics.get("r_subbass", np.nan)
+    row["ACD_D0_harmonic"] = note_metrics.get("D0_harmonic", np.nan)
+    row["ACD_D0_inharmonic"] = note_metrics.get("D0_inharmonic", np.nan)
+    row["ACD_D0_subbass"] = note_metrics.get("D0_subbass", np.nan)
+    row["ACD_D1_harmonic"] = note_metrics.get("D1_harmonic", np.nan)
+    row["ACD_D1_inharmonic"] = note_metrics.get("D1_inharmonic", np.nan)
+    row["ACD_D1_subbass"] = note_metrics.get("D1_subbass", np.nan)
     row["ACD_D2_harmonic"] = note_metrics.get("D2_harmonic", np.nan)
     row["ACD_D2_inharmonic"] = note_metrics.get("D2_inharmonic", np.nan)
     row["ACD_D2_subbass"] = note_metrics.get("D2_subbass", np.nan)
+    row["ACD_energy_total"] = note_metrics.get("energy_total", np.nan)
     row["ACD_count_raw_harmonic"] = note_metrics.get("count_raw_harmonic", np.nan)
     row["ACD_count_raw_inharmonic"] = note_metrics.get("count_raw_inharmonic", np.nan)
     row["ACD_count_raw_subbass"] = note_metrics.get("count_raw_subbass", np.nan)

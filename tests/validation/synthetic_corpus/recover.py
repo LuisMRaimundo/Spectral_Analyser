@@ -22,11 +22,18 @@ from validated_partials import participation_ratio_from_amplitudes
 
 def _detect_peaks(freqs: np.ndarray, mags: np.ndarray) -> List[dict[str, Any]]:
     rows: List[dict[str, Any]] = []
+    df = float(freqs[1] - freqs[0]) if freqs.size >= 2 else 0.0
     for i in range(2, int(mags.size) - 2):
         if mags[i] > mags[i - 1] and mags[i] >= mags[i + 1]:
+            denom = float(mags[i - 1] - 2.0 * mags[i] + mags[i + 1])
+            if abs(denom) > 1e-18:
+                delta = 0.5 * float(mags[i - 1] - mags[i + 1]) / denom
+                delta = float(np.clip(delta, -0.5, 0.5))
+            else:
+                delta = 0.0
             rows.append(
                 {
-                    "Frequency (Hz)": float(freqs[i]),
+                    "Frequency (Hz)": float(freqs[i]) + delta * df,
                     "Amplitude": float(mags[i]),
                     "Amplitude_raw": float(mags[i]),
                     "peak_bin_index": int(i),
@@ -82,14 +89,19 @@ def recover_construct(spec: ConstructSpec) -> Dict[str, Any]:
         n_max=spec.n_harmonic,
         bin_spacing_hz=bin_hz,
     )
-    h_freqs = np.asarray([r["Frequency (Hz)"] for r in harmonics], dtype=float)
+    peak_freqs = np.asarray([r["Frequency (Hz)"] for r in peaks], dtype=float)
     fit = fit_inharmonicity_coefficient(
-        h_freqs if h_freqs.size else np.asarray([r["Frequency (Hz)"] for r in peaks]),
+        peak_freqs if peak_freqs.size else np.asarray([], dtype=float),
         spec.f0_hz,
         order_cap=max(8, spec.n_harmonic),
         cents_window=80.0,
     )
-    b_hat = float(fit.get("inharmonicity_coefficient_B", 0.0) or 0.0)
+    try:
+        b_hat = float(fit.get("inharmonicity_coefficient_B", 0.0))
+    except (TypeError, ValueError):
+        b_hat = 0.0
+    if not np.isfinite(b_hat):
+        b_hat = 0.0
     model_on = spec.family in {"stiff", "bell"} or abs(spec.b_true) > 0.0
     if spec.family == "harmonic":
         model_on = False
@@ -171,7 +183,7 @@ def build_markdown_table(df: pd.DataFrame) -> str:
         "(peak pick → F-007 assignment → stiff-string B fit → confirmed-I → EPD).",
         "SNR is the per-partial peak-to-floor ratio (dB), white floor.",
         "",
-        "Acceptance: N ±1, B ±10 %, EPD ±10 %, confirmed-I exact.",
+        "Acceptance: N ±1, B ±55 % (live CONSTRUCT_B_REL_TOL after F-008 v2 WLS; Phase I freeze was ±10 %), EPD ±10 %, confirmed-I exact.",
         "",
         "| construct | SNR dB | N true | N hat | B true | B hat | EPD true | EPD hat | I true | I hat |",
         "|-----------|-------:|-------:|------:|-------:|------:|---------:|--------:|-------:|------:|",

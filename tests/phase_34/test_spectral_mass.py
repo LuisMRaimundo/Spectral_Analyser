@@ -23,7 +23,10 @@ from tools.spectral_mass import (
     SPECTRAL_MASS_COLUMN,
     SPECTRAL_MASS_COUNT_COLUMN,
     SPECTRAL_MASS_DATA_BAR_COLOR,
+    SPECTRAL_MASS_FORMULA_VERSION,
     add_spectral_mass_column,
+    compartment_count,
+    compartment_count_contribution,
     compute_spectral_mass,
     place_spectral_mass_right_of_ewsd,
 )
@@ -39,35 +42,95 @@ def _acd_frame(rows: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _mass_from_golden_row(row: dict) -> tuple[float, float]:
+    return compute_spectral_mass(
+        {
+            "harmonic": row["ACD_D0_harmonic"],
+            "inharmonic": row["ACD_D0_inharmonic"],
+            "subbass": row["ACD_D0_subbass"],
+        },
+        {
+            "harmonic": row["ACD_D1_harmonic"],
+            "inharmonic": row["ACD_D1_inharmonic"],
+            "subbass": row["ACD_D1_subbass"],
+        },
+        {
+            "harmonic": row["ACD_r_harmonic"],
+            "inharmonic": row["ACD_r_inharmonic"],
+            "subbass": row["ACD_r_subbass"],
+        },
+        row["ACD_energy_total"],
+        status=row["ACD_status"],
+    )
+
+
+def _h_only(d0: float, d1: float, e_total: float, *, lam: float | None = None):
+    return compute_spectral_mass(
+        {"harmonic": d0, "inharmonic": 1.0, "subbass": 1.0},
+        {"harmonic": d1, "inharmonic": 1.0, "subbass": 1.0},
+        {"harmonic": 1.0, "inharmonic": 0.0, "subbass": 0.0},
+        e_total,
+        lam=lam,
+    )
+
+
 def test_extensivity_doubling_counts_at_fixed_lam_doubles_mass() -> None:
-    d0, d1, lam = 8.0, 2.0, 400.0
-    mass, _ = compute_spectral_mass(d0, d1, lam)
-    doubled, _ = compute_spectral_mass(2.0 * d0, 2.0 * d1, lam)
+    d0, d1, lam, energy = 8.0, 2.0, 400.0, 800.0
+    mass, _ = _h_only(d0, d1, energy, lam=lam)
+    doubled, _ = _h_only(2.0 * d0, 2.0 * d1, energy, lam=lam)
     assert doubled == pytest.approx(2.0 * mass, abs=1e-9)
 
 
 def test_bounded_level_lam_times_ten_scales_by_exponent() -> None:
-    d0, d1, lam = 6.0, 3.0, 250.0
-    mass, _ = compute_spectral_mass(d0, d1, lam)
-    scaled, _ = compute_spectral_mass(d0, d1, 10.0 * lam)
+    d0, d1, lam, energy = 6.0, 3.0, 250.0, 750.0
+    mass, _ = _h_only(d0, d1, energy, lam=lam)
+    scaled, _ = _h_only(d0, d1, energy, lam=10.0 * lam)
     assert scaled == pytest.approx(mass * (10.0 ** MASS_LEVEL_EXPONENT), abs=1e-12)
 
 
 def test_ordering_fsharp4_above_gsharp6() -> None:
-    mass_1, _ = compute_spectral_mass(24.90, 1.15, 9208.02)
-    mass_2, _ = compute_spectral_mass(11.95, 2.02, 303.14)
-    assert mass_1 == pytest.approx(21.0, abs=0.1)
-    assert mass_2 == pytest.approx(11.6, abs=0.1)
+    payload = _golden()
+    by_note = {row["Note"]: row for row in payload["notes"]}
+    mass_1, _ = _mass_from_golden_row(by_note["F#4"])
+    mass_2, _ = _mass_from_golden_row(by_note["G#6"])
     assert mass_1 > mass_2
 
 
+def test_inharmonic_contribution_capped_by_energy_share() -> None:
+    """r_I = 0.01 with many dominated I entities: I share of count <= 2%."""
+    d0 = {"harmonic": 10.0, "inharmonic": 200.0, "subbass": 1.0}
+    d1 = {"harmonic": 8.0, "inharmonic": 1.2, "subbass": 1.0}
+    r = {"harmonic": 0.99, "inharmonic": 0.01, "subbass": 0.0}
+    mass, count = compute_spectral_mass(d0, d1, r, e_total=1000.0)
+    assert np.isfinite(mass) and np.isfinite(count)
+    i_contrib = compartment_count_contribution(d0, d1, r, "inharmonic")
+    count_i = compartment_count(d0["inharmonic"], d1["inharmonic"])
+    assert i_contrib == pytest.approx(r["inharmonic"] * count_i, abs=1e-12)
+    assert i_contrib <= r["inharmonic"] * count_i + 1e-12
+    assert i_contrib / count <= 0.02 + 1e-12
+
+
 def test_nan_propagation_never_zero() -> None:
+    base = {
+        "ACD_D0_harmonic": 8.0,
+        "ACD_D1_harmonic": 2.0,
+        "ACD_r_harmonic": 0.9,
+        "ACD_D0_inharmonic": 4.0,
+        "ACD_D1_inharmonic": 1.5,
+        "ACD_r_inharmonic": 0.1,
+        "ACD_D0_subbass": 1.0,
+        "ACD_D1_subbass": 1.0,
+        "ACD_r_subbass": 0.0,
+        "ACD_energy_total": 100.0,
+        "ACD_status": "ok",
+    }
     cases = [
-        {"ACD_D0": np.nan, "ACD_score": 2.0, "ACD_magnitude_per_component": 10.0, "ACD_status": "ok"},
-        {"ACD_D0": 4.0, "ACD_score": np.nan, "ACD_magnitude_per_component": 10.0, "ACD_status": "ok"},
-        {"ACD_D0": 4.0, "ACD_score": 2.0, "ACD_magnitude_per_component": np.nan, "ACD_status": "ok"},
-        {"ACD_D0": 4.0, "ACD_score": 2.0, "ACD_magnitude_per_component": 10.0, "ACD_status": "empty"},
-        {"ACD_D0": 4.0, "ACD_score": 2.0, "ACD_magnitude_per_component": 10.0, "ACD_status": "ok_with_unused:x"},
+        {**base, "ACD_D0_harmonic": np.nan},
+        {**base, "ACD_D1_inharmonic": np.nan},
+        {**base, "ACD_r_harmonic": np.nan},
+        {**base, "ACD_energy_total": np.nan, "ACD_score": np.nan, "ACD_magnitude_per_component": np.nan},
+        {**base, "ACD_status": "empty"},
+        {**base, "ACD_status": "ok_with_unused:x"},
     ]
     out = add_spectral_mass_column(_acd_frame(cases))
     values = out["spectral_mass"].to_numpy(dtype=float)
@@ -80,7 +143,20 @@ def test_nan_propagation_never_zero() -> None:
 
 def test_missing_status_is_nan() -> None:
     frame = _acd_frame(
-        [{"ACD_D0": 4.0, "ACD_score": 2.0, "ACD_magnitude_per_component": 10.0}]
+        [
+            {
+                "ACD_D0_harmonic": 4.0,
+                "ACD_D1_harmonic": 2.0,
+                "ACD_r_harmonic": 1.0,
+                "ACD_D0_inharmonic": 1.0,
+                "ACD_D1_inharmonic": 1.0,
+                "ACD_r_inharmonic": 0.0,
+                "ACD_D0_subbass": 1.0,
+                "ACD_D1_subbass": 1.0,
+                "ACD_r_subbass": 0.0,
+                "ACD_energy_total": 10.0,
+            }
+        ]
     )
     out = add_spectral_mass_column(frame)
     assert np.isnan(float(out["spectral_mass"].iloc[0]))
@@ -95,6 +171,9 @@ def test_contract_f061_mass_descriptor() -> None:
     assert "presence constitutes richness; loudness modulates it but must not overturn it" in (
         definition.formula
     )
+    assert "Cross-compartment contributions are bounded by energy share" in definition.formula
+    assert definition.formula_version == "2.0"
+    assert SPECTRAL_MASS_FORMULA_VERSION == "2.0"
     assert definition.not_valid_for == (
         "Level-inclusive by design. Valid within level-controlled "
         "corpora (uniform recording conditions). Not valid for comparison across recording "
@@ -114,14 +193,11 @@ def test_column_formula_version_and_phase_33_gate() -> None:
 
 def test_clarinet_golden_vectors() -> None:
     payload = _golden()
+    assert payload["formula_version"] == "2.0"
+    assert "synthetic" in payload["note"]
     assert len(payload["notes"]) == 5
     for row in payload["notes"]:
-        mass, count = compute_spectral_mass(
-            row["ACD_D0"],
-            row["ACD_score"],
-            row["ACD_magnitude_per_component"],
-            status=row["ACD_status"],
-        )
+        mass, count = _mass_from_golden_row(row)
         assert mass == pytest.approx(row["spectral_mass"], abs=1e-12)
         assert count == pytest.approx(row["spectral_mass_count"], abs=1e-12)
         frame = add_spectral_mass_column(_acd_frame([row]))
@@ -249,6 +325,18 @@ def test_research_export_column_order_and_blue_data_bar(tmp_path: Path) -> None:
     assert "spectral_mass_formula_version" in headers
 
 
+def test_backfill_refuses_workbook_without_compartment_d1(tmp_path: Path) -> None:
+    src = tmp_path / "old_research.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Spectral_Density_Metrics"
+    ws.append(["Note", "ACD_D0", "ACD_score", "ACD_magnitude_per_component", "ACD_status"])
+    ws.append(["F#4", 24.9, 1.15, 9208.02, "ok"])
+    wb.save(src)
+    with pytest.raises(ValueError, match="ACD_D1_harmonic"):
+        backfill_spectral_mass(src)
+
+
 def test_backfill_writes_sidecar_with_placement_and_bars(tmp_path: Path) -> None:
     src = tmp_path / "compiled_density_metrics_research.xlsx"
     frame = place_spectral_mass_right_of_ewsd(
@@ -257,9 +345,16 @@ def test_backfill_writes_sidecar_with_placement_and_bars(tmp_path: Path) -> None
                 {
                     "Note": ["F#4"],
                     "EWSD_score_acoustic_balanced": [12.0],
-                    "ACD_D0": [24.90],
-                    "ACD_score": [1.15],
-                    "ACD_magnitude_per_component": [9208.02],
+                    "ACD_D0_harmonic": [24.0],
+                    "ACD_D1_harmonic": [1.10],
+                    "ACD_r_harmonic": [0.96],
+                    "ACD_D0_inharmonic": [40.0],
+                    "ACD_D1_inharmonic": [2.5],
+                    "ACD_r_inharmonic": [0.03],
+                    "ACD_D0_subbass": [15.0],
+                    "ACD_D1_subbass": [1.8],
+                    "ACD_r_subbass": [0.01],
+                    "ACD_energy_total": [10589.223],
                     "ACD_status": ["ok"],
                     "trailing": ["keep"],
                 }
@@ -295,6 +390,6 @@ def test_backfill_writes_sidecar_with_placement_and_bars(tmp_path: Path) -> None
     ewsd_i = headers.index("EWSD_score_acoustic_balanced")
     assert headers[ewsd_i + 1] == SPECTRAL_MASS_COLUMN
     assert headers[ewsd_i + 2] == SPECTRAL_MASS_COUNT_COLUMN
-    assert float(ws.cell(2, ewsd_i + 2).value) == pytest.approx(21.041346674988155, abs=1e-9)
+    assert float(ws.cell(2, ewsd_i + 2).value) == pytest.approx(16.530465555316866, abs=1e-9)
     assert _data_bar_rules_for_column(ws, SPECTRAL_MASS_COLUMN)
     assert "README" in filled.sheetnames

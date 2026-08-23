@@ -25,7 +25,22 @@ EXPECTED_KEYS = (
     "fit_residual_std_cents",
     "fit_status",
     "method",
+    "harmonic_assignment_method",
+    "orders_attempted",
+    "orders_matched",
+    "orders_missed",
+    "inharmonicity_b_sign_status",
+    "fit_converged",
+    "spectral_stretch_coefficient",
+    "inharmonicity_model_scope",
 )
+
+_ARRAY_KEYS = {
+    "stretched_harmonic_predicted_freqs_hz",
+    "orders_attempted",
+    "orders_matched",
+    "orders_missed",
+}
 
 
 def _stiff_series(f0_hz: float, b: float, n_orders: int) -> np.ndarray:
@@ -78,13 +93,12 @@ def test_fit_is_deterministic_for_identical_inputs() -> None:
     first = fit_inharmonicity_coefficient(freqs, f0_hz=110.0)
     second = fit_inharmonicity_coefficient(freqs.copy(), f0_hz=110.0)
     for key in EXPECTED_KEYS:
-        if key == "stretched_harmonic_predicted_freqs_hz":
-            assert np.allclose(
-                np.asarray(first[key]),
-                np.asarray(second[key]),
-                rtol=0.0,
-                atol=0.0,
-            )
+        if key in _ARRAY_KEYS:
+            assert np.array_equal(np.asarray(first[key]), np.asarray(second[key]))
+        elif isinstance(first[key], float) and isinstance(second[key], float):
+            if np.isnan(first[key]) and np.isnan(second[key]):
+                continue
+            assert first[key] == second[key]
         else:
             assert first[key] == second[key]
 
@@ -236,12 +250,12 @@ def test_small_numerical_noise_does_not_inflate_inharmonicity_coefficient() -> N
     assert float(fit["inharmonicity_coefficient_B"]) < 1e-6
 
 
-def test_extreme_stretch_can_be_rejected_without_plausible_b() -> None:
+def test_extreme_stretch_is_recovered_by_global_assignment() -> None:
     b_extreme = 1e-3
     freqs = _stiff_series(110.0, b_extreme, 24)
     fit = fit_inharmonicity_coefficient(freqs, f0_hz=110.0)
-    assert fit["fit_status"] == "rejected_poor_fit"
-    assert float(fit["inharmonicity_coefficient_B"]) == 0.0
+    assert fit["fit_status"] == "ok"
+    assert float(fit["inharmonicity_coefficient_B"]) == pytest.approx(b_extreme, rel=0.20)
 
 
 # ---------------------------------------------------------------------------

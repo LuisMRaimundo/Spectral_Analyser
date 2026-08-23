@@ -406,7 +406,11 @@ def _confirmed_i_freqs(df: Any) -> list:
         return []
     vals = pd.to_numeric(df[col], errors="coerce").to_numpy(dtype=float)
     return [float(x) for x in vals if np.isfinite(x) and x > 0.0]
-from inharmonicity_model import fit_inharmonicity_coefficient
+from inharmonicity_model import (
+    finite_or_nan,
+    fit_inharmonicity_coefficient,
+    stretch_enabled,
+)
 from mir_descriptors import compute_mir_descriptors_from_spectrum
 from temporal_segmentation import segment_attack_sustain_release
 from inharmonic_confirmation import (
@@ -3967,10 +3971,10 @@ class AudioProcessor:
         if str(fit.get("fit_status", "") or "") != "ok":
             return 0.0
         try:
-            b_hat = float(fit.get("inharmonicity_coefficient_B", 0.0) or 0.0)
+            b_hat = finite_or_nan(fit.get("inharmonicity_coefficient_B"))
         except (TypeError, ValueError):
             return 0.0
-        if not np.isfinite(b_hat) or b_hat <= float(INHARMONICITY_B_ENABLE_THRESHOLD):
+        if not stretch_enabled(b_hat, INHARMONICITY_B_ENABLE_THRESHOLD):
             return 0.0
         self._harmonic_comb_B = float(b_hat)
         self._inharmonicity_fit_for_comb = fit
@@ -3989,7 +3993,7 @@ class AudioProcessor:
                 b_lo = 0.0
             b_hat = (
                 float(b_lo)
-                if np.isfinite(b_lo) and b_lo > float(INHARMONICITY_B_ENABLE_THRESHOLD)
+                if stretch_enabled(b_lo, INHARMONICITY_B_ENABLE_THRESHOLD)
                 else 0.0
             )
         # Stretch around the caller-supplied f0. Iterative low-order refit
@@ -4007,8 +4011,10 @@ class AudioProcessor:
             return float("nan")
         if not np.isfinite(order) or order <= 0.0 or not np.isfinite(f0) or f0 <= 0.0:
             return float("nan")
-        if np.isfinite(b_hat) and b_hat > float(INHARMONICITY_B_ENABLE_THRESHOLD):
-            return float(order * f0 * np.sqrt(1.0 + b_hat * order * order))
+        if stretch_enabled(b_hat, INHARMONICITY_B_ENABLE_THRESHOLD):
+            inner = 1.0 + b_hat * order * order
+            if inner > 0.0:
+                return float(order * f0 * np.sqrt(inner))
         return float(order * f0)
 
     def _spacing_capped_tol_hz(
@@ -4410,7 +4416,7 @@ class AudioProcessor:
             _b_lo = 0.0
         self._low_order_B_refit = (
             float(_b_lo)
-            if np.isfinite(_b_lo) and _b_lo > float(INHARMONICITY_B_ENABLE_THRESHOLD)
+            if stretch_enabled(_b_lo, INHARMONICITY_B_ENABLE_THRESHOLD)
             else 0.0
         )
         self._low_order_refit_ready = int(_refit.get("n_peaks_used", 0) or 0) >= 3
@@ -7667,6 +7673,12 @@ class AudioProcessor:
                                 window_type=str(getattr(self, "window", DEFAULT_WINDOW) or DEFAULT_WINDOW),
                                 confirmed_inharmonic_freqs_hz=_confirmed_i_freqs(
                                     getattr(self, "confirmed_inharmonic_df", None)
+                                ),
+                                instrument=str(
+                                    getattr(self, "instrument", None)
+                                    or getattr(self, "source_file_name", None)
+                                    or getattr(self, "note", None)
+                                    or ""
                                 ),
                             )
                             self._acoustic_density_desc = dict(_desc)
@@ -12627,6 +12639,12 @@ class AudioProcessor:
                             sr_hz=float(getattr(self, "sr", 44100.0) or 44100.0),
                             n_fft=int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT),
                             window_type=str(getattr(self, "window", DEFAULT_WINDOW) or DEFAULT_WINDOW),
+                            instrument=str(
+                                getattr(self, "instrument", None)
+                                or getattr(self, "source_file_name", None)
+                                or getattr(self, "note", None)
+                                or ""
+                            ),
                         )
                         for _dens_key in (
                             "harmonic_density_component",
@@ -12769,9 +12787,22 @@ class AudioProcessor:
                 fit_payload = {}
             if fit_payload:
                 fit_row = {
-                    "inharmonicity_coefficient_B": float(
+                    "inharmonicity_coefficient_B": finite_or_nan(
                         fit_payload.get("inharmonicity_coefficient_B", float("nan"))
                     ),
+                    "spectral_stretch_coefficient": finite_or_nan(
+                        fit_payload.get("spectral_stretch_coefficient", float("nan"))
+                    ),
+                    "inharmonicity_model_scope": str(
+                        fit_payload.get("inharmonicity_model_scope", "") or ""
+                    ),
+                    "inharmonicity_b_sign_status": str(
+                        fit_payload.get("inharmonicity_b_sign_status", "") or ""
+                    ),
+                    "harmonic_assignment_method": str(
+                        fit_payload.get("harmonic_assignment_method", "") or ""
+                    ),
+                    "fit_converged": bool(fit_payload.get("fit_converged", False)),
                     "inharmonicity_fit_f0_hz": float(
                         fit_payload.get("inharmonicity_fit_f0_hz", float("nan"))
                     ),

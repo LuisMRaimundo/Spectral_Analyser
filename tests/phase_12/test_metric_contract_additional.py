@@ -117,6 +117,8 @@ def test_registry_contains_exactly_the_canonical_identifiers() -> None:
         "ACD_D0_minus_D1",
         "ACD_count_merged_harmonic",
         "spectral_mass",
+        "inharmonicity_coefficient_B",
+        "spectral_stretch_coefficient",
         "ewsd_weight_function_d10",
         "spectral_centroid_hz",
         "spectral_spread_hz",
