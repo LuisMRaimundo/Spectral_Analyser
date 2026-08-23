@@ -9,7 +9,7 @@
 | F-005 | $\Delta c = 1200\log_2(f_c/f_n)$ | Cents deviation | `acoustic_density_core.py`, `inharmonicity_model.py` | `f0_deviation_cents`, fit residuals |
 | F-006 | $f_n=nf_0$ | Ideal harmonic prediction | harmonic matching logic | harmonic candidate/order columns |
 | F-007 | $f_n=nf_0\sqrt{1+Bn^2}$ | Stiff-string prediction | `inharmonicity_model.fit_inharmonicity_coefficient` | inharmonicity diagnostics |
-| F-008 | $y_n=(f_n/(nf_0))^2-1\approx Bn^2$ | Linearized B fit relation | `inharmonicity_model.fit_inharmonicity_coefficient` | `inharmonicity_coefficient_B` |
+| F-008 | v2: WLS $f_n^2=an^2+cn^4$, $w_n\propto 1/f_n^2$, $B=c/a$ signed; global monotone assignment. $\|t\|\ge 2$ is a heuristic significance screen; residuals are dominated by systematic peak-frequency estimation error, so no formal coverage is claimed. String-family only (Fletcher 1962). | Inharmonicity B / phenomenological stretch | `inharmonicity_model.fit_inharmonicity_coefficient` | `inharmonicity_coefficient_B`, `spectral_stretch_coefficient` |
 | F-009 | $\tau_n=\max(\tau_{\text{cents}},1200\Delta f_{\text{bin}}/(nf_0))$ | Adaptive harmonic tolerance (cents limb) | policy in `constants.py` + usage path | harmonic alignment and matching diagnostics |
 | F-051 | $\mathrm{tol}_{hz}(n)=\max(\Delta f_{\mathrm{bin}},\min(n f_0\tau_n/1200,\beta f_0))$, $\beta=0.30$; each `peak_bin_index` assigned to at most one $n$ | Spacing-capped tolerance + exclusive slot assignment | `proc_audio._spacing_capped_tol_hz`, `apply_exclusive_harmonic_assignment` | `tolerance_limb`, `exclusion_reason`, `search_tol_hz` |
 | F-052 | $f_n=n f_0\sqrt{1+B n^2}$ when $B$ on; else $n f_0$ | Comb centre for the capped match | `proc_audio._comb_expected_freqs` | `expected_frequency_hz` |

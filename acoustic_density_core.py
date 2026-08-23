@@ -66,7 +66,12 @@ import warnings
 import numpy as np
 import pandas as pd
 from subbass_policy import SubBassPolicy
-from inharmonicity_model import fit_inharmonicity_coefficient
+from inharmonicity_model import (
+    apply_inharmonicity_family_scope,
+    finite_or_nan,
+    fit_inharmonicity_coefficient,
+    stretch_enabled,
+)
 from harmonic_peak_validation import noise_gated_power
 from constants import (
     ADAPTIVE_HARMONIC_TOLERANCE_POLICY_DOC,
@@ -402,6 +407,7 @@ def compute_acoustic_density_descriptors(
     n_fft: int = 4096,
     confirmed_inharmonic_freqs_hz: Optional[Sequence[float]] = None,
     apply_noise_gate: Optional[bool] = None,
+    instrument: Optional[str] = None,
 ) -> dict[str, Any]:
     """
     Compute separated acoustic descriptors from a peak/component table.
@@ -551,6 +557,11 @@ def compute_acoustic_density_descriptors(
         "diagnostic_effective_components_s": float("nan"),
         "energy_weighted_component_density_diagnostic": float("nan"),
         "inharmonicity_coefficient_B": float(0.0),
+        "spectral_stretch_coefficient": float("nan"),
+        "inharmonicity_model_scope": "",
+        "inharmonicity_b_sign_status": "not_significant",
+        "harmonic_assignment_method": "",
+        "fit_converged": False,
         "inharmonicity_fit_residual_std_cents": float("nan"),
         "inharmonicity_fit_status": "insufficient_partials",
         "inharmonicity_fit_method": "",
@@ -616,11 +627,17 @@ def compute_acoustic_density_descriptors(
         order_cap=int(INHARMONICITY_FIT_ORDER_CAP),
         cents_window=float(INHARMONICITY_FIT_CENTS_WINDOW),
     )
-    fit_B = float(fit_result.get("inharmonicity_coefficient_B", 0.0) or 0.0)
+    fit_B = finite_or_nan(fit_result.get("inharmonicity_coefficient_B"))
+    if not np.isfinite(fit_B):
+        fit_B = 0.0
     fit_status = str(fit_result.get("fit_status", "insufficient_partials") or "insufficient_partials")
     # Strong stretch (e.g. B = 5e-4 to H40) wraps high peaks onto neighbouring
     # n·f0 slots during the B=0 first match and zeros B. Retry on low orders.
-    if fit_status == "ok" and fit_B <= float(INHARMONICITY_B_ENABLE_THRESHOLD) and inharm_freqs.size >= 3:
+    if (
+        fit_status == "ok"
+        and not stretch_enabled(fit_B, INHARMONICITY_B_ENABLE_THRESHOLD)
+        and inharm_freqs.size >= 3
+    ):
         _fit_cap = 16
         _low = inharm_freqs[inharm_freqs <= (float(_fit_cap) * float(f0_hz) * 1.25)]
         if _low.size >= 3:
@@ -630,20 +647,26 @@ def compute_acoustic_density_descriptors(
                 order_cap=int(_fit_cap),
                 cents_window=float(INHARMONICITY_FIT_CENTS_WINDOW),
             )
-            _retry_B = float(_retry.get("inharmonicity_coefficient_B", 0.0) or 0.0)
-            if str(_retry.get("fit_status", "") or "") == "ok" and _retry_B > float(
-                INHARMONICITY_B_ENABLE_THRESHOLD
+            _retry_B = finite_or_nan(_retry.get("inharmonicity_coefficient_B"))
+            if str(_retry.get("fit_status", "") or "") == "ok" and stretch_enabled(
+                _retry_B, INHARMONICITY_B_ENABLE_THRESHOLD
             ):
                 fit_result = _retry
-                fit_B = _retry_B
+                fit_B = float(_retry_B)
                 fit_status = "ok"
-    out["inharmonicity_coefficient_B"] = fit_B
+    scoped = apply_inharmonicity_family_scope(fit_result, instrument=instrument)
+    out["inharmonicity_coefficient_B"] = finite_or_nan(scoped.get("inharmonicity_coefficient_B"))
+    out["spectral_stretch_coefficient"] = finite_or_nan(scoped.get("spectral_stretch_coefficient"))
+    out["inharmonicity_model_scope"] = str(scoped.get("inharmonicity_model_scope") or "")
+    out["inharmonicity_b_sign_status"] = str(scoped.get("inharmonicity_b_sign_status") or "")
+    out["harmonic_assignment_method"] = str(scoped.get("harmonic_assignment_method") or "")
+    out["fit_converged"] = bool(scoped.get("fit_converged", False))
     out["inharmonicity_fit_residual_std_cents"] = float(
         fit_result.get("fit_residual_std_cents", float("nan"))
     )
     out["inharmonicity_fit_status"] = fit_status
     out["inharmonicity_fit_method"] = str(fit_result.get("method", "") or "")
-    out["inharmonicity_fit_result"] = fit_result
+    out["inharmonicity_fit_result"] = scoped
     # Explicit boolean export semantic:
     # False => fit computed but stretched prediction not used in assignment.
     out["inharmonicity_stretch_applied"] = False
@@ -659,9 +682,14 @@ def compute_acoustic_density_descriptors(
     # (not rint(f / f0)) so a 0.30·f0 cap around n·f0 cannot reject real
     # high partials on piano / harp / other stretched sources.
     n_grid_max = max(int(expected_count), int(INHARMONICITY_FIT_ORDER_CAP), 1)
-    if fit_status == "ok" and fit_B > float(INHARMONICITY_B_ENABLE_THRESHOLD):
+    if fit_status == "ok" and stretch_enabled(fit_B, INHARMONICITY_B_ENABLE_THRESHOLD):
         n_grid = np.arange(1, n_grid_max + 1, dtype=float)
-        pred_grid = n_grid * float(f0_hz) * np.sqrt(1.0 + fit_B * (n_grid**2))
+        inner = 1.0 + float(fit_B) * (n_grid**2)
+        pred_grid = np.where(
+            inner > 0.0,
+            n_grid * float(f0_hz) * np.sqrt(np.maximum(inner, 0.0)),
+            n_grid * float(f0_hz),
+        )
         assign_idx = np.argmin(
             np.abs(freq_sig[:, None] - pred_grid[None, :]),
             axis=1,

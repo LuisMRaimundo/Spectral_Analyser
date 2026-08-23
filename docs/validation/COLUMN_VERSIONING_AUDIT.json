@@ -982,7 +982,27 @@
       "formula_version": "4.5.0"
     },
     "inharmonicity_coefficient_B": {
-      "formula_id": "COL:inharmonicity_coefficient_B",
+      "formula_id": "F-008",
+      "formula_version": "2.0"
+    },
+    "spectral_stretch_coefficient": {
+      "formula_id": "COL:spectral_stretch_coefficient",
+      "formula_version": "2.0"
+    },
+    "inharmonicity_model_scope": {
+      "formula_id": "COL:inharmonicity_model_scope",
+      "formula_version": "4.5.0"
+    },
+    "inharmonicity_b_sign_status": {
+      "formula_id": "COL:inharmonicity_b_sign_status",
+      "formula_version": "4.5.0"
+    },
+    "harmonic_assignment_method": {
+      "formula_id": "COL:harmonic_assignment_method",
+      "formula_version": "4.5.0"
+    },
+    "fit_converged": {
+      "formula_id": "COL:fit_converged",
       "formula_version": "4.5.0"
     },
     "inharmonicity_fit_residual_std_cents": {
@@ -1135,19 +1155,19 @@
     },
     "spectral_mass": {
       "formula_id": "F-061",
-      "formula_version": "1.0"
+      "formula_version": "2.0"
     },
     "spectral_mass_count": {
       "formula_id": "F-061",
-      "formula_version": "1.0"
+      "formula_version": "2.0"
     },
     "spectral_mass_count_blend": {
       "formula_id": "F-061",
-      "formula_version": "1.0"
+      "formula_version": "2.0"
     },
     "spectral_mass_level_exponent": {
       "formula_id": "F-061",
-      "formula_version": "1.0"
+      "formula_version": "2.0"
     },
     "spectral_mass_formula_id": {
       "formula_id": "META",

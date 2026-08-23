@@ -624,6 +624,11 @@ DENSITY_METRICS_MINIMAL_DISPLAY_COLUMNS: List[str] = [
 
 PHASE7_INHARMONICITY_COMPILED_COLUMNS: List[str] = [
     "inharmonicity_coefficient_B",
+    "spectral_stretch_coefficient",
+    "inharmonicity_model_scope",
+    "inharmonicity_b_sign_status",
+    "harmonic_assignment_method",
+    "fit_converged",
     "inharmonicity_fit_residual_std_cents",
     "inharmonicity_fit_status",
     "inharmonicity_fit_method",
@@ -3611,6 +3616,11 @@ def extract_density_components_from_per_note_workbook(
         "is_primary_comparable_profile": None,
         "primary_comparable_profile_definition": None,
         "inharmonicity_coefficient_B": None,
+        "spectral_stretch_coefficient": None,
+        "inharmonicity_model_scope": None,
+        "inharmonicity_b_sign_status": None,
+        "harmonic_assignment_method": None,
+        "fit_converged": None,
         "inharmonicity_fit_residual_std_cents": None,
         "inharmonicity_fit_status": None,
         "inharmonicity_fit_method": None,
@@ -3743,6 +3753,7 @@ def extract_density_components_from_per_note_workbook(
                     "probable_harmonic_component_energy_sum_body_ceiling",
                     "validated_harmonic_component_count_body_ceiling",
                     "inharmonicity_coefficient_B",
+                    "spectral_stretch_coefficient",
                     "inharmonicity_fit_residual_std_cents",
                     "pure_observation_w_h",
                     "pure_observation_w_i",
@@ -3768,6 +3779,10 @@ def extract_density_components_from_per_note_workbook(
                     ("inharmonicity_fit_status", ("inharmonicity_fit_status", "fit_status")),
                     ("inharmonicity_fit_method", ("inharmonicity_fit_method", "fit_method", "method")),
                     ("inharmonicity_model_applied", ("inharmonicity_model_applied", "model_applied")),
+                    ("inharmonicity_model_scope", ("inharmonicity_model_scope",)),
+                    ("inharmonicity_b_sign_status", ("inharmonicity_b_sign_status",)),
+                    ("harmonic_assignment_method", ("harmonic_assignment_method",)),
+                    ("fit_converged", ("fit_converged",)),
                     ("obs_w_formula_version", ("obs_w_formula_version",)),
                 ):
                     _src_col = next(
@@ -5290,6 +5305,19 @@ def _build_density_metrics_sheet_from_per_note_files(
             "inharmonicity_coefficient_B": _f(
                 info.get("inharmonicity_coefficient_B")
             ),
+            "spectral_stretch_coefficient": _f(
+                info.get("spectral_stretch_coefficient")
+            ),
+            "inharmonicity_model_scope": str(
+                info.get("inharmonicity_model_scope") or ""
+            ),
+            "inharmonicity_b_sign_status": str(
+                info.get("inharmonicity_b_sign_status") or ""
+            ),
+            "harmonic_assignment_method": str(
+                info.get("harmonic_assignment_method") or ""
+            ),
+            "fit_converged": str(info.get("fit_converged") or ""),
             "inharmonicity_fit_residual_std_cents": _f(
                 info.get("inharmonicity_fit_residual_std_cents")
             ),

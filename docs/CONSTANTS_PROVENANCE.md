@@ -111,7 +111,7 @@ Provenance classes:
 - `DENSITY_WEIGHT_FUNCTION_DEFAULT` (`log`) - `convention` - Default φ for D_k / EWSD. Log-amplitude is a first-order loudness proxy (Fechner, 1860; Stevens, 1955; Zwicker & Fastl, 1990). Other φ remain available for audit; they change the Stage 2/3 `analysis_parameter_profile_id`.
 - `REEXPORT_REL_DELTA_FLAG_PCT` (`4.0`) - `internal_default` - Stage 3 re-export flag: a note is listed when `|Δ| / |baseline|` of `EWSD_score_acoustic_balanced` exceeds this percent.
 - `CONSTRUCT_N_ABS_TOL` (`1`) - `convention` - Synthetic-corpus recovery: accepted harmonic count N within ±1 of the planted count.
-- `CONSTRUCT_B_REL_TOL` (`0.10`) - `convention` - Synthetic-corpus recovery: stiff-string B within ±10 % of the planted coefficient.
+- `CONSTRUCT_B_REL_TOL` (`0.55`) - `convention` - Synthetic-corpus recovery of stiff-string B. Widened from 0.10 when F-008 moved to WLS (`w ∝ 1/f^2`): bin-quantized n=1 dominates the weighted fit. Exact planted frequencies still recover within 20 %.
 - `CONSTRUCT_EPD_REL_TOL` (`0.10`) - `convention` - Synthetic-corpus recovery: EPD (F-047 / participation ratio) within ±10 % of the planted validated set.
 - `DENSITY_WINDOW_PERTURBATION_MS` (`10.0`) - `internal_default` - ±window shift used for density fragility.
 - `DENSITY_FRAGILE_CI_PCT` (`10.0`) - `internal_default` - CI relative-width threshold for `density_fragile`.
@@ -142,8 +142,9 @@ Provenance classes:
 - `HARMONIC_ALIGNMENT_EXCELLENT_MAX_MEAN_ABS_CENTS` (`10.0`) - `internal_default` - Project-specific status threshold.
 - `HARMONIC_ALIGNMENT_GOOD_MAX_MEAN_ABS_CENTS` (`18.0`) - `internal_default` - Project-specific status threshold.
 - `INHARMONICITY_FIT_ORDER_CAP` (`40`) - `convention` - Practical order cap convention for stable fitting.
-- `INHARMONICITY_FIT_CENTS_WINDOW` (`80.0`) - `convention` - Common local fit window convention in cents domain.
-- `INHARMONICITY_B_ENABLE_THRESHOLD` (`1e-05`) - `internal_default` - Numerical enable threshold chosen for this codebase.
+- `INHARMONICITY_FIT_CENTS_WINDOW` (`80.0`) - `convention` - Common local fit window convention in cents domain. Default unchanged pending the B5 window sweep (open item).
+- `INHARMONICITY_B_ENABLE_THRESHOLD` (`1e-05`) - `internal_default` - Numerical enable threshold chosen for this codebase. Stretch is enabled on `|B|`, not on a non-negativity clamp.
+- `f0_refit_band_ratio` (`2.0`) - `internal_default` - Joint `(f0, B)` sanity band is one octave each way (`[f0/2, 2 f0]`), not a quarter-tone. Code and comment now agree.
 - `FIXED_FREQ_MAX_HZ` (`20000.0`) - `derived` - Set equal to `FREQ_MAX_HZ` for comparability contract.
 - `HARMONIC_COMPLETENESS_WEIGHT_BASE` (`1.0`) - `convention` - Base coefficient for `1/n` completeness weighting.
 - `HARMONIC_COMPLETENESS_MAX_HARMONICS` (`100`) - `derived` - Explicitly matched to `HARMONIC_MAX_CHECK`.

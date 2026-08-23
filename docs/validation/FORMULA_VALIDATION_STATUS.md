@@ -42,10 +42,13 @@ The status of each formula is one of:
   is linear in two parameters, `f_n^2 = a·n^2 + c·n^4` with `f0 = sqrt(a)` and
   `B = c/a`, solved by OLS on the squared peak-center frequencies with iterative
   harmonic-order reassignment. The `f0_hz` argument only seeds order assignment.
-  A **significance gate** keeps `B` only when the `n^4` coefficient is
-  statistically distinguishable from zero (`|t| >= 2`), which suppresses the
-  spurious small `B` that a 2-parameter fit would otherwise read from sub-bin
-  frequency-measurement noise. The fit now also returns `inharmonicity_fit_f0_hz`.
+  A **heuristic significance screen** keeps `B` only when the `n^4`
+  coefficient satisfies `|t| >= 2`. Residuals are dominated by systematic
+  peak-frequency estimation error, so no formal coverage is claimed. The
+  estimator is weighted least squares (`w_n ∝ 1/f_n^2`); `B` is signed
+  (unclamped). Assignment is global Hungarian then monotone prune
+  (`harmonic_assignment_method = global_monotone_v2`). The fit now also
+  returns `inharmonicity_fit_f0_hz`.
 - **Isolated accuracy**: `tests/phase_4/test_inharmonicity_recovers_known_B.py`
   recovers a known `B` within 20%; `test_inharmonicity_zero_for_pure_harmonic.py`
   returns `B ≈ 0` on exact harmonics.

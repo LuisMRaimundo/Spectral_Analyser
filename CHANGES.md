@@ -1,3 +1,33 @@
+# F-008 v2 — global monotone assignment + signed B
+
+Harmonic-order matching is no longer a greedy nearest-peak loop.
+`inharmonicity_model._match_orders` uses Hungarian assignment on the
+cents-cost matrix, then a longest monotone-frequency chain. Collisions
+are explicit misses (`orders_missed`);
+`harmonic_assignment_method = global_monotone_v2`. The greedy matcher
+is retained as `_match_orders_legacy_greedy` for one version.
+The `(f0, B)` fit is weighted least squares (`w_n ∝ 1/f_n^2`);
+`res_std` uses `ddof=2`; `B` is signed (the `max(0, …)` clamp is gone)
+with `inharmonicity_b_sign_status`. The `|t|>=2` screen stays
+numerically but is documented as a heuristic: residuals are dominated
+by systematic peak-frequency estimation error, so no formal coverage
+is claimed. String-family sources keep `inharmonicity_coefficient_B`
+(Fletcher 1962); other families export the same number as
+`spectral_stretch_coefficient` and set B to NaN
+(`docs/validation/INHARMONICITY_FAMILY_SCOPE.md`).
+`f0_refit_band_ratio = 2.0` (octave each way). Default
+`cents_window` remains 80: the B5 synthetic sweep does not show a
+tighter window dominating precision, recall, and B error together
+(open item for the author). `harmonic_peak_validation.refine_f0_from_low_order_peaks`
+still clamps its local `B_refit` at 0; that is a separate estimator,
+not the F-008 export. Ground-truth harness: `tests/phase_35/`.
+Per-column formula version **2.0**. `CONSTRUCT_B_REL_TOL` widened
+0.10 → 0.55: WLS weights bin-quantized n=1 enough that planted
+stiff B=2e-4 recovers as ≈3.01e-4 on the construct spectra (exact
+planted frequencies still recover within 20 %). Corpora must be
+re-analysed from audio before any harmonic-order / B / tristimulus
+claim is cited.
+
 # F-061 v2 — compartment-proportional count
 
 F-061 v1 pools D0 across compartments, so inharmonic and sub-bass entities enter the

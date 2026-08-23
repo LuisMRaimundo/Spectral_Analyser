@@ -7,8 +7,8 @@ per-column version. MIR descriptors, including three incompatible
 F-037 kernels, shipped under `package_version=4.4.0` with no
 per-column stamp.
 
-- Exported columns inventoried: **289**
-- Columns that lacked a contracted F-id (first-stamped as `COL:<name>`): **224**
+- Exported columns inventoried: **294**
+- Columns that lacked a contracted F-id (first-stamped as `COL:<name>`): **228**
 - MIR value columns now export `<name>_formula_id` and
   `<name>_formula_version` from `metric_contract` / `MIR_STAMPS`.
 - CI: `tests/phase_33/test_column_formula_versions.py` fails if any
@@ -85,7 +85,9 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `f0_used_for_density_source` | `COL:f0_used_for_density_source` | `4.5.0` |
 | `final_note_density_count_based` | `COL:final_note_density_count_based` | `4.5.0` |
 | `final_note_density_salience_weighted` | `COL:final_note_density_salience_weighted` | `4.5.0` |
+| `fit_converged` | `COL:fit_converged` | `4.5.0` |
 | `harmonic_assignment_confidence` | `COL:harmonic_assignment_confidence` | `4.5.0` |
+| `harmonic_assignment_method` | `COL:harmonic_assignment_method` | `4.5.0` |
 | `harmonic_body_density` | `COL:harmonic_body_density` | `4.5.0` |
 | `harmonic_body_density_normalized` | `COL:harmonic_body_density_normalized` | `4.5.0` |
 | `harmonic_body_stop_hz` | `COL:harmonic_body_stop_hz` | `4.5.0` |
@@ -129,12 +131,14 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `inharmonic_energy_ratio` | `COL:inharmonic_energy_ratio` | `4.5.0` |
 | `inharmonic_energy_sum` | `COL:inharmonic_energy_sum` | `4.5.0` |
 | `inharmonic_energy_sum_tier_normalized` | `COL:inharmonic_energy_sum_tier_normalized` | `4.5.0` |
-| `inharmonicity_coefficient_B` | `COL:inharmonicity_coefficient_B` | `4.5.0` |
+| `inharmonicity_b_sign_status` | `COL:inharmonicity_b_sign_status` | `4.5.0` |
+| `inharmonicity_coefficient_B` | `F-008` | `2.0` |
 | `inharmonicity_fit_method` | `COL:inharmonicity_fit_method` | `4.5.0` |
 | `inharmonicity_fit_residual_std_cents` | `COL:inharmonicity_fit_residual_std_cents` | `4.5.0` |
 | `inharmonicity_fit_source` | `COL:inharmonicity_fit_source` | `4.5.0` |
 | `inharmonicity_fit_status` | `COL:inharmonicity_fit_status` | `4.5.0` |
 | `inharmonicity_model_applied` | `COL:inharmonicity_model_applied` | `4.5.0` |
+| `inharmonicity_model_scope` | `COL:inharmonicity_model_scope` | `4.5.0` |
 | `inharmonicity_validation_warning` | `COL:inharmonicity_validation_warning` | `4.5.0` |
 | `legacy_component_strength_h_v55` | `COL:legacy_component_strength_h_v55` | `4.5.0` |
 | `legacy_component_strength_i_v55` | `COL:legacy_component_strength_i_v55` | `4.5.0` |
@@ -238,12 +242,12 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `spectral_kurtosis_on_release` | `COL:spectral_kurtosis_on_release` | `4.5.0` |
 | `spectral_kurtosis_on_sustain` | `COL:spectral_kurtosis_on_sustain` | `4.5.0` |
 | `spectral_kurtosis_on_sustain_segment` | `COL:spectral_kurtosis_on_sustain_segment` | `4.5.0` |
-| `spectral_mass` | `F-061` | `1.0` |
-| `spectral_mass_count` | `F-061` | `1.0` |
-| `spectral_mass_count_blend` | `F-061` | `1.0` |
+| `spectral_mass` | `F-061` | `2.0` |
+| `spectral_mass_count` | `F-061` | `2.0` |
+| `spectral_mass_count_blend` | `F-061` | `2.0` |
 | `spectral_mass_formula_id` | `META` | `4.5.0` |
 | `spectral_mass_formula_version` | `META` | `4.5.0` |
-| `spectral_mass_level_exponent` | `F-061` | `1.0` |
+| `spectral_mass_level_exponent` | `F-061` | `2.0` |
 | `spectral_rolloff_hz_85` | `F-036` | `4.5.0` |
 | `spectral_rolloff_hz_85_formula_id` | `META` | `4.5.0` |
 | `spectral_rolloff_hz_85_formula_version` | `META` | `4.5.0` |
@@ -273,6 +277,7 @@ column has a numbered formula in `METRIC_FORMULA_INDEX.md`. Bump
 | `spectral_spread_hz_on_sustain` | `COL:spectral_spread_hz_on_sustain` | `4.5.0` |
 | `spectral_spread_hz_on_sustain_segment` | `COL:spectral_spread_hz_on_sustain_segment` | `4.5.0` |
 | `spectral_stability_confidence` | `COL:spectral_stability_confidence` | `4.5.0` |
+| `spectral_stretch_coefficient` | `COL:spectral_stretch_coefficient` | `2.0` |
 | `subbass_density_component` | `COL:subbass_density_component` | `4.5.0` |
 | `subbass_density_component_on_attack` | `COL:subbass_density_component_on_attack` | `4.5.0` |
 | `subbass_density_component_on_release` | `COL:subbass_density_component_on_release` | `4.5.0` |

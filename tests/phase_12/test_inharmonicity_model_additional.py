@@ -257,7 +257,7 @@ def test_incoherent_series_is_rejected_as_poor_fit() -> None:
     res = float(fit["fit_residual_std_cents"])
     # Documented gate: ok requires res <= max(25, cents_window * 0.5) = 40.
     assert np.isfinite(res) and res > 40.0
-    assert float(fit["inharmonicity_coefficient_B"]) >= 0.0
+    assert np.isfinite(float(fit["inharmonicity_coefficient_B"]))
 
 
 def test_f0_relocation_guard_keeps_fit_anchored_to_seed() -> None:
@@ -273,7 +273,7 @@ def test_f0_relocation_guard_keeps_fit_anchored_to_seed() -> None:
     f0_fit = float(fit["inharmonicity_fit_f0_hz"])
     assert 0.5 * seed <= f0_fit <= 2.0 * seed
     assert f0_fit == pytest.approx(seed, rel=1e-9)
-    assert float(fit["inharmonicity_coefficient_B"]) >= 0.0
+    assert np.isfinite(float(fit["inharmonicity_coefficient_B"]))
     assert np.isfinite(float(fit["fit_residual_std_cents"]))
 
 
@@ -288,6 +288,6 @@ def test_sparse_heavily_jittered_series_keeps_finite_diagnostics() -> None:
     fit = fit_inharmonicity_coefficient(freqs, f0_hz=110.0, cents_window=80.0)
     assert fit["fit_status"] in ("ok", "rejected_poor_fit")
     assert np.isfinite(float(fit["fit_residual_std_cents"]))
-    assert float(fit["inharmonicity_coefficient_B"]) >= 0.0
+    assert np.isfinite(float(fit["inharmonicity_coefficient_B"]))
     f0_fit = float(fit["inharmonicity_fit_f0_hz"])
     assert np.isfinite(f0_fit) and 0.5 * 110.0 <= f0_fit <= 2.0 * 110.0
