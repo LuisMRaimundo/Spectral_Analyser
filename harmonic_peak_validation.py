@@ -755,7 +755,8 @@ def refine_f0_from_low_order_peaks(
     harmonic ``f0 = Σ w n f / Σ w n^2`` when the two-parameter fit is
     ill-conditioned. ``f0_fit_discrepancy_cents = 1200·log2(f0_refit /
     f0_joint)``. The refit is applied when the absolute discrepancy
-    exceeds ``discrepancy_cents``.
+    exceeds ``discrepancy_cents``. ``B_refit`` is signed, matching the
+    F-008 export (no non-negativity clamp).
     """
     out: Dict[str, Any] = {
         "f0_refit_hz": float("nan"),
@@ -816,7 +817,7 @@ def refine_f0_from_low_order_peaks(
             if np.isfinite(f0_joint_ls) and f0_joint_ls > 0.0:
                 f0_refit = f0_joint_ls
                 if np.isfinite(c_hat):
-                    b_refit = float(max(0.0, c_hat / a_hat))
+                    b_refit = float(c_hat / a_hat)
     if not np.isfinite(f0_refit) or f0_refit <= 0.0:
         return out
     if np.isfinite(f0_seed) and f0_seed > 0.0:

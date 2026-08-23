@@ -111,7 +111,7 @@ Provenance classes:
 - `DENSITY_WEIGHT_FUNCTION_DEFAULT` (`log`) - `convention` - Default φ for D_k / EWSD. Log-amplitude is a first-order loudness proxy (Fechner, 1860; Stevens, 1955; Zwicker & Fastl, 1990). Other φ remain available for audit; they change the Stage 2/3 `analysis_parameter_profile_id`.
 - `REEXPORT_REL_DELTA_FLAG_PCT` (`4.0`) - `internal_default` - Stage 3 re-export flag: a note is listed when `|Δ| / |baseline|` of `EWSD_score_acoustic_balanced` exceeds this percent.
 - `CONSTRUCT_N_ABS_TOL` (`1`) - `convention` - Synthetic-corpus recovery: accepted harmonic count N within ±1 of the planted count.
-- `CONSTRUCT_B_REL_TOL` (`0.55`) - `convention` - Synthetic-corpus recovery of stiff-string B. Widened from 0.10 when F-008 moved to WLS (`w ∝ 1/f^2`): bin-quantized n=1 dominates the weighted fit. Exact planted frequencies still recover within 20 %.
+- `CONSTRUCT_B_REL_TOL` (`0.20`) - `convention` - Synthetic-corpus recovery of stiff-string B. 0.55 was a temporary accommodation of a since-removed low-order quantisation bias (n=1 WLS leverage). Restored to 20 % after excluding n=1 from the (a, c) step.
 - `CONSTRUCT_EPD_REL_TOL` (`0.10`) - `convention` - Synthetic-corpus recovery: EPD (F-047 / participation ratio) within ±10 % of the planted validated set.
 - `DENSITY_WINDOW_PERTURBATION_MS` (`10.0`) - `internal_default` - ±window shift used for density fragility.
 - `DENSITY_FRAGILE_CI_PCT` (`10.0`) - `internal_default` - CI relative-width threshold for `density_fragile`.

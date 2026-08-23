@@ -142,8 +142,8 @@ A2 reports `not comparable (pre-exclusive-assignment)`. Full table:
 (N=12, B=2e-4), and bell (3 H + 10 I) constructs at SNR 10/20/30/40 dB.
 Recovery uses peak pick → F-007 → B fit → confirmed-I → EPD. All 12
 conditions met N ±1, B ±10 %, EPD ±10 %, confirmed-I exact at the Phase I
-freeze. F-008 v2 (WLS, `w ∝ 1/f^2`) moved the live stiff-B gate to
-`CONSTRUCT_B_REL_TOL = 0.55`; the living table is
+freeze. F-008 v2 (WLS, `w ∝ 1/f^2`) briefly widened the live stiff-B gate to
+0.55; the n=1 leverage cap restored `CONSTRUCT_B_REL_TOL = 0.20`. The living table is
 `docs/validation/CONSTRUCT_VALIDATION_SYNTHETIC.md`. Listener study is
 scaffold only (`tools/perceptual_pairs.py`,
 `tools/perceptual_agreement.py`,
@@ -157,7 +157,7 @@ This table is the freeze acceptance record. It supersedes the archival
 
 - Construct recovery: `CONSTRUCT_VALIDATION_SYNTHETIC.md` (Phase I freeze:
   N ±1, B ±10 %, EPD ±10 %, confirmed-I exact; live stiff-B gate after
-  F-008 v2 is `CONSTRUCT_B_REL_TOL = 0.55`).
+  F-008 v2 n=1 leverage cap is `CONSTRUCT_B_REL_TOL = 0.20`).
 - Segmentation: `SEGMENTATION_CASE_STUDY_G2.md` — cello G2 full vs
   stable is 43 vs 16 harmonics, 551 vs 140 Hz, EWSD 50.2 vs 12.3,
   1.75 independent frames on the stable cut.

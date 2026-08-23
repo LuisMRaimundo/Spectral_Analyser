@@ -45,10 +45,16 @@ The status of each formula is one of:
   A **heuristic significance screen** keeps `B` only when the `n^4`
   coefficient satisfies `|t| >= 2`. Residuals are dominated by systematic
   peak-frequency estimation error, so no formal coverage is claimed. The
-  estimator is weighted least squares (`w_n ∝ 1/f_n^2`); `B` is signed
-  (unclamped). Assignment is global Hungarian then monotone prune
-  (`harmonic_assignment_method = global_monotone_v2`). The fit now also
-  returns `inharmonicity_fit_f0_hz`.
+  estimator is weighted least squares (`w_n ∝ 1/f_n^2`); n=1 is excluded
+  from the $c$ ($n^4$) step. `B` is signed (unclamped). Assignment is
+  global Hungarian then monotone prune
+  (`harmonic_assignment_method = global_monotone_v2`). Detection floor:
+  under realistic peak-frequency jitter (~5 cents), |B| ≲ 2e-5 —
+  including negative stretch — is reported as not_significant rather
+  than estimated; the practical estimation floor is ≈ 1e-4 with
+  relative accuracy of order a factor 1.5–2. B is a stretch descriptor
+  at this accuracy, not a precision physical measurement. The fit now
+  also returns `inharmonicity_fit_f0_hz`.
 - **Isolated accuracy**: `tests/phase_4/test_inharmonicity_recovers_known_B.py`
   recovers a known `B` within 20%; `test_inharmonicity_zero_for_pure_harmonic.py`
   returns `B ≈ 0` on exact harmonics.

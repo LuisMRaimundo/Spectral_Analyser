@@ -183,7 +183,7 @@ def build_markdown_table(df: pd.DataFrame) -> str:
         "(peak pick → F-007 assignment → stiff-string B fit → confirmed-I → EPD).",
         "SNR is the per-partial peak-to-floor ratio (dB), white floor.",
         "",
-        "Acceptance: N ±1, B ±55 % (live CONSTRUCT_B_REL_TOL after F-008 v2 WLS; Phase I freeze was ±10 %), EPD ±10 %, confirmed-I exact.",
+        "Acceptance: N ±1, B ±20 % (CONSTRUCT_B_REL_TOL after n=1 leverage cap; Phase I freeze was ±10 %), EPD ±10 %, confirmed-I exact.",
         "",
         "| construct | SNR dB | N true | N hat | B true | B hat | EPD true | EPD hat | I true | I hat |",
         "|-----------|-------:|-------:|------:|-------:|------:|---------:|--------:|-------:|------:|",

@@ -241,6 +241,7 @@ def _contiguous_prefix(orders: np.ndarray, freqs: np.ndarray) -> tuple[np.ndarra
 
 def _wls_t_c(orders: np.ndarray, freqs: np.ndarray, a_coef: float, c_coef: float) -> float:
     """Heuristic t for the n^4 coefficient under the same WLS weights."""
+    orders, freqs = _orders_for_c_estimation(orders, freqs)
     n2 = orders * orders
     n4 = n2 * n2
     y = freqs * freqs
@@ -262,16 +263,30 @@ def _wls_t_c(orders: np.ndarray, freqs: np.ndarray, a_coef: float, c_coef: float
     return float(c_coef / se_c)
 
 
-def _wls_ac(orders: np.ndarray, freqs: np.ndarray) -> tuple[float, float] | None:
-    """Weighted LS for f_n^2 = a n^2 + c n^4, weights w ∝ 1/f_n^2.
+def _orders_for_c_estimation(
+    orders: np.ndarray, freqs: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Drop n=1 from the (a, c) design when at least two n≥2 points remain."""
+    orders = np.asarray(orders, dtype=float)
+    freqs = np.asarray(freqs, dtype=float)
+    mask = orders >= 2.0
+    if int(np.count_nonzero(mask)) >= 2:
+        return orders[mask], freqs[mask]
+    return orders, freqs
 
-    Variance of f^2 scales with f^2 · var(f). An alternative is to fit in
-    cents-residual space; this implementation uses the WLS form on f^2.
-    """
+
+def _wls_ac_raw(
+    orders: np.ndarray,
+    freqs: np.ndarray,
+    *,
+    downweight_n1: bool = False,
+) -> tuple[float, float] | None:
     n2 = orders * orders
     n4 = n2 * n2
     y = freqs * freqs
     weights = 1.0 / np.maximum(y, 1e-12)
+    if downweight_n1:
+        weights = np.where(orders < 1.5, weights / 81.0, weights)
     x = np.column_stack([n2, n4])
     xw = x * weights[:, None]
     try:
@@ -283,6 +298,32 @@ def _wls_ac(orders: np.ndarray, freqs: np.ndarray) -> tuple[float, float] | None
     if not np.isfinite(a_coef) or not np.isfinite(c_coef):
         return None
     return a_coef, c_coef
+
+
+def _wls_ac(orders: np.ndarray, freqs: np.ndarray) -> tuple[float, float] | None:
+    """Weighted LS for f_n^2 = a n^2 + c n^4, weights w ∝ 1/f_n^2.
+
+    Variance of f^2 scales with f^2 · var(f). An alternative is to fit in
+    cents-residual space; this implementation uses the WLS form on f^2.
+
+    n=1 is excluded from the c (n^4) step when at least two n≥2 points
+    exist; a (hence f0) is recovered from all orders. n=1 has maximal
+    1/f^2 weight and n^4=1, so its quantisation error would otherwise
+    become B bias. Fallback: keep n=1 with weight /81 if exclusion is
+    unavailable.
+    """
+    orders = np.asarray(orders, dtype=float)
+    freqs = np.asarray(freqs, dtype=float)
+    c_orders, c_freqs = _orders_for_c_estimation(orders, freqs)
+    c_fit = _wls_ac_raw(c_orders, c_freqs)
+    a_fit = _wls_ac_raw(orders, freqs, downweight_n1=False)
+    if c_fit is None:
+        return a_fit
+    if a_fit is None:
+        return c_fit
+    # c from n≥2 (or down-weighted fallback); a from all orders so f0
+    # still sees n=1.
+    return a_fit[0], c_fit[1]
 
 
 def finite_or_nan(value: Any) -> float:
@@ -366,10 +407,19 @@ def fit_inharmonicity_coefficient(
     """Jointly fit ``(f0, B)`` in ``f_n = n * f0 * sqrt(1 + B * n^2)``.
 
     ``f_n^2 = a n^2 + c n^4`` is estimated by WLS with weights
-    ``w_n ∝ 1 / f_n^2``. B is signed (unclamped). The ``|t| >= 2`` screen
-    is a heuristic significance screen; residuals are dominated by
-    systematic peak-frequency estimation error, so no formal coverage is
-    claimed.
+    ``w_n ∝ 1 / f_n^2``.     Order n=1 is excluded from the (a, c) step
+    (maximal 1/f^2 weight, near-zero n^4 information); f0 = sqrt(a)
+    from that n≥2 fit. B is signed (unclamped).
+    The ``|t| >= 2`` screen is a heuristic significance screen; residuals
+    are dominated by systematic peak-frequency estimation error, so no
+    formal coverage is claimed.
+
+    Detection floor: under realistic peak-frequency jitter (~5 cents),
+    |B| ≲ 2e-5 — including negative stretch — is reported as
+    not_significant rather than estimated; the practical estimation
+    floor is ≈ 1e-4 with relative accuracy of order a factor 1.5–2.
+    B is a stretch descriptor at this accuracy, not a precision
+    physical measurement.
     """
     method = FIT_METHOD
     out: Dict[str, Any] = {

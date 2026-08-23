@@ -36,4 +36,13 @@ merged counts are not recomputed.
 
 `tools/backfill_spectral_mass.py` requires the three `ACD_D1_*`
 columns. Workbooks from v1 Stage 3 are refused with a message to
-re-export; the v1 pooled formula is not applied silently.
+re-export (or re-analyse from audio); the v1 pooled formula is not applied silently.
+
+External explanatory documents dated before v2 (including
+`Spectral_Mass_F061_Calculation.docx`) describe the v1 pooled-D0 count;
+the worked example (F#4 = 21.0413) is a v1 value.
+
+v2 worked example (synthetic per-compartment split of the same F#4
+energy): $D0_H=24$, $D1_H=1.10$, $r_H=0.96$, $D0_I=40$, $D1_I=2.5$,
+$r_I=0.03$, $D0_S=15$, $D1_S=1.8$, $r_S=0.01$, $E=10589.223$ →
+`spectral_mass` = 16.5305.

@@ -1,3 +1,12 @@
+# F-008 n=1 leverage cap (B-fit bias)
+
+WLS now estimates $(a,c)$ on orders $n\ge 2$ and recovers $f_0$ from $a$
+on all orders. `CONSTRUCT_B_REL_TOL` restored 0.55 → 0.20: **0.55 was a
+temporary accommodation of a since-removed low-order quantisation bias.**
+`B_refit` in `refine_f0_from_low_order_peaks` is signed (unclamped).
+Detection floor recorded on F-008: under ~5-cent jitter, $|B|\lesssim 2\times 10^{-5}$
+is `not_significant`; practical floor ≈ $10^{-4}$.
+
 # F-008 v2 — global monotone assignment + signed B
 
 Harmonic-order matching is no longer a greedy nearest-peak loop.
@@ -21,12 +30,11 @@ tighter window dominating precision, recall, and B error together
 (open item for the author). `harmonic_peak_validation.refine_f0_from_low_order_peaks`
 still clamps its local `B_refit` at 0; that is a separate estimator,
 not the F-008 export. Ground-truth harness: `tests/phase_35/`.
-Per-column formula version **2.0**. `CONSTRUCT_B_REL_TOL` widened
-0.10 → 0.55: WLS weights bin-quantized n=1 enough that planted
-stiff B=2e-4 recovers as ≈3.01e-4 on the construct spectra (exact
-planted frequencies still recover within 20 %). Corpora must be
+Per-column formula version **2.0**. Corpora must be
 re-analysed from audio before any harmonic-order / B / tristimulus
-claim is cited.
+claim is cited. External explanatory documents dated before v2
+describe the v1 pooled-D0 count; the worked example (F#4 = 21.0413)
+is a v1 value.
 
 # F-061 v2 — compartment-proportional count
 

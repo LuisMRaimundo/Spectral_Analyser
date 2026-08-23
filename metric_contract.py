@@ -919,9 +919,15 @@ def build_metric_contracts() -> Dict[str, MetricDefinition]:
             "then monotone-frequency prune (harmonic_assignment_method="
             "global_monotone_v2). |t|>=2 is a heuristic significance screen; "
             "residuals are dominated by systematic peak-frequency estimation "
-            "error, so no formal coverage is claimed. String-family only "
-            "(Fletcher 1962); otherwise NaN with inharmonicity_model_scope="
-            "out_of_family."
+            "error, so no formal coverage is claimed. Detection floor: under "
+            "realistic peak-frequency jitter (~5 cents), |B| ≲ 2e-5 — including "
+            "negative stretch — is reported as not_significant rather than "
+            "estimated; the practical estimation floor is ≈ 1e-4 with relative "
+            "accuracy of order a factor 1.5–2. B is a stretch descriptor at "
+            "this accuracy, not a precision physical measurement. "
+            "String-family only (Fletcher 1962); otherwise NaN with "
+            "inharmonicity_model_scope=out_of_family. n=1 is excluded from "
+            "the (a, c) step."
         ),
         input_domain="Peak-center frequencies and seed f0; instrument family metadata",
         unit_or_scale="dimensionless stiff-string coefficient B",

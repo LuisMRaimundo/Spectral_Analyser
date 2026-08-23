@@ -277,7 +277,7 @@ DENSITY_WEIGHT_FUNCTION_DEFAULT: Final[str] = "log"
 REEXPORT_REL_DELTA_FLAG_PCT: Final[float] = 4.0
 # Phase I: construct-validation recovery tolerances (synthetic corpus).
 CONSTRUCT_N_ABS_TOL: Final[int] = 1
-CONSTRUCT_B_REL_TOL: Final[float] = 0.55  # WLS-era; was 0.10 under OLS
+CONSTRUCT_B_REL_TOL: Final[float] = 0.20  # restored after n=1 leverage cap; 0.55 was temporary
 CONSTRUCT_EPD_REL_TOL: Final[float] = 0.10
 DENSITY_WINDOW_PERTURBATION_MS: Final[float] = 10.0
 DENSITY_FRAGILE_CI_PCT: Final[float] = 10.0
