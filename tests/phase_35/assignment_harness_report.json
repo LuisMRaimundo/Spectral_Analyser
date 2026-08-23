@@ -36,8 +36,8 @@
       "precision": 1.0,
       "recall": 1.0,
       "f0_cents_error": 0.6010046255444174,
-      "B_rel_error": 0.02225664946665302,
-      "B_hat": 0.00010222566494666531,
+      "B_rel_error": 0.03374657651091962,
+      "B_hat": 9.662534234890804e-05,
       "sign_status": "positive"
     },
     {
@@ -46,9 +46,9 @@
       "precision": 1.0,
       "recall": 1.0,
       "f0_cents_error": 5.993960005104808,
-      "B_rel_error": 0.4166730357089369,
-      "B_hat": 0.0007083365178544685,
-      "sign_status": "positive"
+      "B_rel_error": 1.0,
+      "B_hat": 0.0,
+      "sign_status": "not_significant"
     },
     {
       "f0": 146.8,
@@ -86,8 +86,8 @@
       "precision": 1.0,
       "recall": 1.0,
       "f0_cents_error": 0.27725677924057957,
-      "B_rel_error": 0.006284965685415973,
-      "B_hat": 9.937150343145841e-05,
+      "B_rel_error": 0.003303120535932708,
+      "B_hat": 9.966968794640673e-05,
       "sign_status": "positive"
     },
     {
@@ -136,9 +136,9 @@
       "precision": 1.0,
       "recall": 1.0,
       "f0_cents_error": 1.5953118094512742,
-      "B_rel_error": 0.6719152628585575,
-      "B_hat": 0.00016719152628585576,
-      "sign_status": "positive"
+      "B_rel_error": 1.0,
+      "B_hat": 0.0,
+      "sign_status": "not_significant"
     },
     {
       "f0": 261.6,
@@ -146,8 +146,8 @@
       "precision": 1.0,
       "recall": 1.0,
       "f0_cents_error": 0.5522924721945992,
-      "B_rel_error": 0.07065133749295581,
-      "B_hat": 0.0005353256687464779,
+      "B_rel_error": 0.08902475231474484,
+      "B_hat": 0.0005445123761573724,
       "sign_status": "positive"
     },
     {
@@ -186,8 +186,8 @@
       "precision": 1.0,
       "recall": 1.0,
       "f0_cents_error": 0.655930675290073,
-      "B_rel_error": 0.01748369629953311,
-      "B_hat": 9.82516303700467e-05,
+      "B_rel_error": 0.043898196587075805,
+      "B_hat": 9.561018034129242e-05,
       "sign_status": "positive"
     },
     {
@@ -196,8 +196,8 @@
       "precision": 1.0,
       "recall": 1.0,
       "f0_cents_error": 4.108790315542963,
-      "B_rel_error": 0.017193332550217162,
-      "B_hat": 0.0005085966662751086,
+      "B_rel_error": 0.01645539728990547,
+      "B_hat": 0.0004917723013550473,
       "sign_status": "positive"
     }
   ],
@@ -257,9 +257,9 @@
       "delta_precision": 0.0,
       "delta_recall": 0.0,
       "f0_cents_error": 0.6010046255444174,
-      "B_new": 0.00010222566494666531,
-      "B_old": 0.00010222566494666531,
-      "B_rel_error": 0.02225664946665302,
+      "B_new": 9.662534234890804e-05,
+      "B_old": 9.662534234890804e-05,
+      "B_rel_error": 0.03374657651091962,
       "sign_status": "positive"
     },
     {
@@ -272,10 +272,10 @@
       "delta_precision": 0.0,
       "delta_recall": 0.0,
       "f0_cents_error": 5.993960005104808,
-      "B_new": 0.0007083365178544685,
-      "B_old": 0.0007083365178544685,
-      "B_rel_error": 0.4166730357089369,
-      "sign_status": "positive"
+      "B_new": 0.0,
+      "B_old": 0.0,
+      "B_rel_error": 1.0,
+      "sign_status": "not_significant"
     },
     {
       "f0": 146.8,
@@ -332,9 +332,9 @@
       "delta_precision": 0.0,
       "delta_recall": 0.0,
       "f0_cents_error": 0.27725677924057957,
-      "B_new": 9.937150343145841e-05,
-      "B_old": 9.937150343145841e-05,
-      "B_rel_error": 0.006284965685415973,
+      "B_new": 9.966968794640673e-05,
+      "B_old": 9.966968794640673e-05,
+      "B_rel_error": 0.003303120535932708,
       "sign_status": "positive"
     },
     {
@@ -407,10 +407,10 @@
       "delta_precision": 0.0,
       "delta_recall": 0.0,
       "f0_cents_error": 1.5953118094512742,
-      "B_new": 0.00016719152628585576,
-      "B_old": 0.00016719152628585576,
-      "B_rel_error": 0.6719152628585575,
-      "sign_status": "positive"
+      "B_new": 0.0,
+      "B_old": 0.0,
+      "B_rel_error": 1.0,
+      "sign_status": "not_significant"
     },
     {
       "f0": 261.6,
@@ -422,9 +422,9 @@
       "delta_precision": 0.0,
       "delta_recall": 0.0,
       "f0_cents_error": 0.5522924721945992,
-      "B_new": 0.0005353256687464779,
-      "B_old": 0.0005353256687464779,
-      "B_rel_error": 0.07065133749295581,
+      "B_new": 0.0005445123761573724,
+      "B_old": 0.0005445123761573724,
+      "B_rel_error": 0.08902475231474484,
       "sign_status": "positive"
     },
     {
@@ -482,9 +482,9 @@
       "delta_precision": 0.0,
       "delta_recall": 0.0,
       "f0_cents_error": 0.655930675290073,
-      "B_new": 9.82516303700467e-05,
-      "B_old": 0.00013200822586364333,
-      "B_rel_error": 0.01748369629953311,
+      "B_new": 9.561018034129242e-05,
+      "B_old": 0.00013071148893972843,
+      "B_rel_error": 0.043898196587075805,
       "sign_status": "positive"
     },
     {
@@ -497,9 +497,9 @@
       "delta_precision": 0.0,
       "delta_recall": 0.0,
       "f0_cents_error": 4.108790315542963,
-      "B_new": 0.0005085966662751086,
-      "B_old": 0.0005085966662751086,
-      "B_rel_error": 0.017193332550217162,
+      "B_new": 0.0004917723013550473,
+      "B_old": 0.0004917723013550473,
+      "B_rel_error": 0.01645539728990547,
       "sign_status": "positive"
     }
   ],
@@ -510,35 +510,35 @@
       "cents_window": 30.0,
       "precision": 1.0,
       "recall": 0.8918918918918919,
-      "B_rel_error": 0.11442992819205729,
+      "B_rel_error": 0.1840519428961269,
       "fit_status": "ok"
     },
     {
       "cents_window": 40.0,
       "precision": 1.0,
       "recall": 0.972972972972973,
-      "B_rel_error": 0.11442992819205729,
+      "B_rel_error": 0.1840519428961269,
       "fit_status": "ok"
     },
     {
       "cents_window": 50.0,
       "precision": 1.0,
       "recall": 0.972972972972973,
-      "B_rel_error": 0.11442992819205729,
+      "B_rel_error": 0.1840519428961269,
       "fit_status": "ok"
     },
     {
       "cents_window": 60.0,
       "precision": 1.0,
       "recall": 0.972972972972973,
-      "B_rel_error": 0.11442992819205729,
+      "B_rel_error": 0.1840519428961269,
       "fit_status": "ok"
     },
     {
       "cents_window": 80.0,
       "precision": 1.0,
       "recall": 1.0,
-      "B_rel_error": 0.11442992819205729,
+      "B_rel_error": 0.1840519428961269,
       "fit_status": "ok"
     }
   ],

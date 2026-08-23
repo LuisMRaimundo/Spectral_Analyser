@@ -1,7 +1,7 @@
 # Spectral_Analyser — Complete Technical Manual
 
-**Package version:** 4.6.0 (`pyproject.toml`).  
-**Export schema:** v4.0.0–v4.6.0 — density-era repairs in
+**Package version:** 4.8.0 (`pyproject.toml`).  
+**Export schema:** v4.0.0–v4.8.0 — density-era repairs in
 [`docs/validation/EXPORT_SCHEMA_AUDIT_REPAIR.md`](validation/EXPORT_SCHEMA_AUDIT_REPAIR.md)
 and [`docs/DENSITY_EXPORT_SCHEMA.md`](DENSITY_EXPORT_SCHEMA.md) §R.6–R.10;
 version map in

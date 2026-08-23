@@ -1,3 +1,10 @@
+# v4.8.0 — unified main
+
+Cleanup/triage (F-062–F-070, Research_Core, attic) plus F-061 v2 and
+F-008 assignment repairs, with the n=1 B-fit leverage cap. Package
+4.8.0. The clarinet and cello corpora must be re-run from audio before
+harmonic-order / B / tristimulus / mass-v2 figures are cited.
+
 # F-008 n=1 leverage cap (B-fit bias)
 
 WLS now estimates $(a,c)$ on orders $n\ge 2$ and recovers $f_0$ from $a$

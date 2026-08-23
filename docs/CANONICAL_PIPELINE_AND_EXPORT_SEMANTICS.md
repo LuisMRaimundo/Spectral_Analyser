@@ -99,7 +99,7 @@ helpers to `export_row_identity.py`:
 - `dedupe_identical_columns` — drops byte-identical `*_2` suffix columns (v4.0.3: also
   after header uniquification in research export).
 
-## 11. Export schema version map (v4.0.0–v4.6.0)
+## 11. Export schema version map (v4.0.0–v4.8.0)
 
 | Version | Scope | Key behaviour |
 |---------|-------|----------------|
@@ -114,6 +114,8 @@ helpers to `export_row_identity.py`:
 | v4.4.0 (F-037 gen 3) | MIR roughness | Zwicker-CB default, no 15.5 kHz ceiling. Retired alias raises; new exports write NaN in `roughness_aures_1985`. `c474c64`–`d01773d`. |
 | v4.5.0 (F-037 gen 4) | MIR roughness + column stamps | Provenance-signed Zwicker default; pairs with higher member > 15.5 kHz dropped; `roughness_pairs_excluded_above_validity`. Every export column has `formula_id` / `formula_version`. See `docs/validation/ROUGHNESS_MIGRATION.md` and `COLUMN_VERSIONING_AUDIT.md`. |
 | v4.6.0 | Dissonance export | H&K column is eq. (3); legacy mean-pair kept as a diagnostic. Default `metric_mode=minamp_norm`. `dissonance_metric_mode` on every row. See `docs/validation/DISSONANCE_MIGRATION.md`. |
+| v4.7.0 | Surface / triage | F-041 restamp; F-062–F-070 contracts; Research_Core citation sheet; column surface classes. No ACD/EWSD arithmetic change. |
+| v4.8.0 | Unified main | F-061 v2 compartment-proportional count; F-008 v2 global monotone assignment + signed WLS B with n=1 leverage cap. Requires corpus re-analysis from audio. |
 
 **Re-export:** v4.0.3 schema refresh requires Stage 2 + Stage 3. v4.1.0 harmonic
 identity and the `2026_08` exclusive-assignment / gating phase require Stage 1 + 2 + 3. See
