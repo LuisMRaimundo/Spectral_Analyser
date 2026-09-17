@@ -12,6 +12,25 @@ DIGITAL_SILENCE_ABS = 1e-7
 MIN_PAD_S = 0.005
 
 
+def is_digital_silence(
+    y: np.ndarray,
+    *,
+    abs_threshold: float = DIGITAL_SILENCE_ABS,
+) -> bool:
+    """True when every sample is at or below the digital-silence floor.
+
+    An all-zero (or all-subthreshold) take is a valid input, but it is not
+    an acoustic measurement. Callers must not invent finite spectral metrics
+    or promote a filename note to an eligible f0.
+    """
+    arr = np.asarray(y, dtype=np.float64)
+    if arr.size == 0:
+        return True
+    if arr.ndim > 1:
+        arr = np.mean(arr, axis=1)
+    return not bool(np.any(np.abs(arr) > float(abs_threshold)))
+
+
 def trim_digital_silence(
     y: np.ndarray,
     sr: int,

@@ -27,6 +27,7 @@ matplotlib.use('Agg') # Backend headless (no-GUI) para evitar crashes
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+from tkinter import font as tkfont
 import threading
 import queue
 import logging
@@ -608,9 +609,57 @@ class RobustOrchestratorApp:
         self.stop_requested = False
         self.log_queue = queue.Queue()
         log.addHandler(QueueLogHandler(self.log_queue))
+        self._configure_readable_ui_fonts()
 
         self._build_ui()
         self.master.after(100, self._process_log_queue)
+
+    def _configure_readable_ui_fonts(self) -> None:
+        """Force named Tk fonts and ttk styles onto a installed UI face.
+
+        Windows ttk themes otherwise keep a fallback that ImageGrab and
+        some displays render as missing-glyph boxes.
+        """
+        preferred = ("Segoe UI", "Calibri", "Tahoma", "Arial")
+        try:
+            available = set(tkfont.families())
+        except Exception:
+            available = set()
+        family = next((name for name in preferred if name in available), "Arial")
+        for name in (
+            "TkDefaultFont",
+            "TkTextFont",
+            "TkHeadingFont",
+            "TkMenuFont",
+            "TkCaptionFont",
+            "TkSmallCaptionFont",
+            "TkIconFont",
+            "TkTooltipFont",
+        ):
+            try:
+                tkfont.nametofont(name).configure(family=family, size=10)
+            except Exception:
+                continue
+        try:
+            style = ttk.Style(self.master)
+            style.configure(".", font=(family, 10))
+            for cls in (
+                "TLabel",
+                "TButton",
+                "TCheckbutton",
+                "TRadiobutton",
+                "TLabelframe.Label",
+                "TNotebook.Tab",
+                "TEntry",
+                "TCombobox",
+            ):
+                style.configure(cls, font=(family, 10))
+        except Exception:
+            pass
+
+    @staticmethod
+    def _queue_label(n: int) -> str:
+        return f"Queue: {n} folders"
 
     def _build_ui(self):
         frame_input = ttk.LabelFrame(self.master, text="Input folders")
@@ -621,7 +670,7 @@ class RobustOrchestratorApp:
         ttk.Button(frame_input, text="Clear Queue", command=self._clear_queue).pack(
             side=tk.LEFT, padx=5, pady=5
         )
-        self.lbl_count = ttk.Label(frame_input, text="Queue: 0 folders")
+        self.lbl_count = ttk.Label(frame_input, text=self._queue_label(0))
         self.lbl_count.pack(side=tk.LEFT, padx=15)
 
         frame_options = ttk.LabelFrame(self.master, text="Pipeline controls")
@@ -1362,13 +1411,13 @@ class RobustOrchestratorApp:
         d = filedialog.askdirectory(mustexist=True)
         if d and Path(d) not in self.processing_queue:
             self.processing_queue.append(Path(d))
-            self.lbl_count.config(text=f"Queue: {len(self.processing_queue)}")
+            self.lbl_count.config(text=self._queue_label(len(self.processing_queue)))
             log.info(f"Added: {Path(d).name}")
 
     def _clear_queue(self):
         if not self.is_running:
             self.processing_queue.clear()
-            self.lbl_count.config(text="Queue: 0")
+            self.lbl_count.config(text=self._queue_label(0))
             log.info("Queue cleared.")
 
     def _stop(self):

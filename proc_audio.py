@@ -3236,7 +3236,29 @@ class AudioProcessor:
 
                 # 3. Execute Analysis (FFT)
                 self.note = note
+                self.source_file_name = Path(file_path).name
+                self.audio_path = str(file_path)
                 self._ensure_sample_identity(note)
+                from audio_silence_trim import is_digital_silence
+
+                if is_digital_silence(y):
+                    out_folder = results_directory / note
+                    out_folder.mkdir(parents=True, exist_ok=True)
+                    self._write_digital_silence_ineligible_workbook(
+                        out_folder,
+                        note=note,
+                        file_path=str(file_path),
+                        y=y,
+                        sr=int(sr),
+                    )
+                    self.logger.info(
+                        "%s/%s recorded as ineligible digital silence: note=%s file=%s",
+                        i,
+                        len(self.audio_data),
+                        note,
+                        Path(file_path).name,
+                    )
+                    continue
                 try:
                     _f0_guard = float(self.calculate_fundamental_frequency(note))
                 except Exception:
@@ -10571,6 +10593,130 @@ class AudioProcessor:
             self.logger.warning("Could not save component energy-ratio pie: %s", exc)
 
     # ----------------- salvar resultados (grÃ¡ficos + excel) -----------------
+    def _write_digital_silence_ineligible_workbook(
+        self,
+        output_folder: Union[str, Path],
+        *,
+        note: str,
+        file_path: str,
+        y: np.ndarray,
+        sr: int,
+    ) -> Path:
+        """Write a schema-complete, primary-ineligible silence workbook.
+
+        Digital silence is a valid input identity, not a measured spectrum.
+        Filename-note fallback is recorded as a prior only; f0 and density
+        metrics stay NaN so the take cannot enter primary statistics.
+        """
+        import pandas as pd
+
+        output_folder = Path(output_folder)
+        output_folder.mkdir(parents=True, exist_ok=True)
+        excel_path = output_folder / "spectral_analysis.xlsx"
+        src_name = Path(file_path).name
+        arr = np.asarray(y, dtype=np.float64)
+        n_samples = int(arr.size)
+        duration_s = float(n_samples) / float(sr) if sr else float("nan")
+        try:
+            self._stamp_analysis_provenance()
+        except Exception as exc:
+            self.logger.warning("Provenance stamp failed for digital silence: %s", exc)
+
+        self.digital_silence_input = True
+        self.valid_for_primary_statistics = False
+        self.qc_status = "ineligible:digital_silence"
+        self.f0_epistemic_status = "digital_silence_not_measured"
+        self.acoustic_f0_status = "not_measured_digital_silence"
+        self.model_weights_source = "current_analysis"
+        self.export_alignment_source = "disabled_integrated_single_pass"
+        self.export_alignment_factor = 1.0
+        self.source_file_name = src_name
+        self.audio_path = str(file_path)
+        self.note = note
+        nominal = float("nan")
+        try:
+            nominal = float(self.calculate_fundamental_frequency(note))
+        except Exception:
+            nominal = float("nan")
+
+        empty_spectrum = pd.DataFrame(
+            {
+                "Frequency (Hz)": pd.Series(dtype=float),
+                "Amplitude_raw": pd.Series(dtype=float),
+                "Power_raw": pd.Series(dtype=float),
+            }
+        )
+        metrics = pd.DataFrame(
+            [
+                {
+                    "Note": note,
+                    "source_file_name": src_name,
+                    "f0_final_hz": float("nan"),
+                    "f0_used_for_density_hz": float("nan"),
+                    "valid_for_primary_statistics": False,
+                    "digital_silence_input": True,
+                    "eligibility_exclusion_reason": "digital_silence",
+                    "qc_status": "ineligible:digital_silence",
+                    "f0_epistemic_status": "digital_silence_not_measured",
+                    "acoustic_f0_status": "not_measured_digital_silence",
+                    "note_density_final": float("nan"),
+                    "note_effective_component_density": float("nan"),
+                }
+            ]
+        )
+        meta_rows = [
+            ("analysis_schema_version", ANALYSIS_SCHEMA_VERSION),
+            ("ANALYSIS_SCHEMA_VERSION", ANALYSIS_SCHEMA_VERSION),
+            ("model_weights_source", "current_analysis"),
+            ("component_profile_source", "current_analysis"),
+            ("export_alignment_source", "disabled_integrated_single_pass"),
+            ("export_alignment_factor", 1.0),
+            ("canonical_output", True),
+            ("legacy_pipeline_used", False),
+            ("Note", note),
+            ("source_file_name", src_name),
+            ("input_path", str(file_path)),
+            ("sample_rate_hz", int(sr)),
+            ("n_samples", n_samples),
+            ("duration_s", duration_s),
+            ("digital_silence_input", True),
+            ("eligibility_exclusion_reason", "digital_silence"),
+            ("valid_for_primary_statistics", False),
+            ("qc_status", "ineligible:digital_silence"),
+            ("f0_epistemic_status", "digital_silence_not_measured"),
+            ("acoustic_f0_status", "not_measured_digital_silence"),
+            ("f0_final_hz", float("nan")),
+            ("f0_used_for_density_hz", float("nan")),
+            ("f0_prior_note", note),
+            ("f0_prior_hz", nominal if np.isfinite(nominal) else float("nan")),
+            ("f0_prior_source", "filename_token_not_used_as_measurement"),
+            ("filename_note_fallback_applied_as_measurement", False),
+            ("weight_function", str(getattr(self, "weight_function", DENSITY_WEIGHT_FUNCTION_DEFAULT) or DENSITY_WEIGHT_FUNCTION_DEFAULT)),
+            ("n_fft", int(getattr(self, "n_fft", DEFAULT_N_FFT) or DEFAULT_N_FFT)),
+            ("hop_length", int(getattr(self, "hop_length", DEFAULT_HOP_LENGTH) or DEFAULT_HOP_LENGTH)),
+            ("window", str(getattr(self, "window", DEFAULT_WINDOW) or DEFAULT_WINDOW)),
+            ("analysis_version", str(getattr(self, "analysis_version", "") or "")),
+            ("package_version", str(getattr(self, "package_version", "") or "")),
+            ("code_commit", str(getattr(self, "code_commit", "") or "")),
+            ("missing_metric_policy_version", "nan_not_zero_v1"),
+        ]
+        with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
+            empty_spectrum.to_excel(writer, sheet_name="Harmonic Spectrum", index=False)
+            empty_spectrum.to_excel(writer, sheet_name="Inharmonic Spectrum", index=False)
+            empty_spectrum.to_excel(writer, sheet_name="Sub-bass band", index=False)
+            metrics.to_excel(writer, sheet_name="Metrics", index=False)
+            pd.DataFrame(meta_rows, columns=["Parameter", "Value"]).to_excel(
+                writer, sheet_name="Analysis_Metadata", index=False
+            )
+            metrics.to_excel(writer, sheet_name="Per_Note_Processing_Metadata", index=False)
+        self.logger.info(
+            "Digital-silence ineligible workbook written for %s (%s); "
+            "acoustic metrics left undefined (NaN).",
+            note,
+            src_name,
+        )
+        return excel_path
+
     def save_results(self, output_folder: Union[str, Path], note: str) -> None:
         output_folder = Path(output_folder)
         output_folder.mkdir(exist_ok=True, parents=True)
@@ -14353,6 +14499,11 @@ class AudioProcessor:
             _pub_df(pd.DataFrame(processing_metadata)).to_excel(writer, sheet_name="Processing Metadata", index=False)
             log.debug("Processing Metadata sheet saved")
 
+        except RuntimeError:
+            # Schema-guard failures must reach save_results so the partial
+            # workbook is unlinked. Swallowing them left incomplete silence
+            # (or other failed) workbooks on disk that then blocked Stage 2.
+            raise
         except Exception as e:
             log.error(f"Error in _save_spectral_data_to_excel: {e}", exc_info=True)
             try:
