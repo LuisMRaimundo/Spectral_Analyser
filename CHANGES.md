@@ -1,3 +1,33 @@
+# Silence eligibility, family-scope B, and mathematical reference
+
+Schema-complete digital-silence workbooks, filename metadata for
+string-family B eligibility, GUI font/queue readability, and a
+source-faithful mathematical reference. Package version remains **4.8.0**.
+Existing research corpus analyses were **not** regenerated.
+
+- Digital silence (`|y| ≤ 10^{-7}` on every sample) is a valid input identity
+  but not a measurement. Stage 1 writes a schema-complete workbook with NaN
+  `f0_final` / density metrics, `valid_for_primary_statistics=False`, and
+  `eligibility_exclusion_reason=digital_silence`. Filename-note fallback is
+  recorded as a prior only (`filename_note_fallback_applied_as_measurement=False`).
+  Mixed silent/valid folders continue; genuinely stale workbooks still fail
+  the schema guard. Schema-validation `RuntimeError` is re-raised after
+  removing a partial workbook.
+- Stage 1 now stamps `source_file_name` before family-scope mapping so
+  tokens such as `cello_A2.wav` can publish physical `B`, while named
+  non-string sources (`clarinet_A2.wav`) keep `inharmonicity_coefficient_B`
+  as NaN and export the same number as `spectral_stretch_coefficient`.
+  Filename-note fallback for *non-silent* rejected fits remains intentional.
+- GUI: named Tk/ttk fonts prefer an installed UI face; queue label stays
+  `Queue: N folders` after clear. Production defaults unchanged: weight
+  `log`, window `blackmanharris`, fixed FFT `8192` / hop `1024` / zp `2`.
+- `docs/Spectral_Analyser_math_formula.md` records executed algebra (M/L
+  entries) against the source files in the same commit.
+
+Tests: `tests/phase_30/test_digital_silence_corpus.py`;
+`tests/phase_11/test_ground_truth_accuracy.py` (`cello_A2` / `clarinet_A2`).
+No real-recording corpus recompute.
+
 ACD FFT-tier tolerance updated 0.04 → 0.05 by the unchanged round-3 rule applied to the regenerated cache measurement; not a gate loosening.
 
 # v4.8.0 — unified main

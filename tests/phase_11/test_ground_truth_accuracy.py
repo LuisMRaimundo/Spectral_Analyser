@@ -135,17 +135,23 @@ def test_harmonic_amplitude_ratios_recovered(tmp_path: Path) -> None:
 
 @pytest.mark.slow
 def test_no_false_inharmonicity_on_pure_harmonic(tmp_path: Path) -> None:
-    """A perfectly harmonic signal must NOT be reported as inharmonic (B ≈ 0)."""
+    """A perfectly harmonic string-family signal must NOT be reported as inharmonic (B ≈ 0).
+
+    Family scope is supplied through the normal filename path (``cello_A2``).
+    The estimator must run; B is a physical claim only inside string family.
+    """
     f0 = 110.0  # A2, perfectly harmonic
     n_max = 14
     partials = [n * f0 for n in range(1, n_max + 1)]
     amps = [1.0 / (n ** 0.25) for n in range(1, n_max + 1)]
-    wb = _run(tmp_path, "A2", partials, amps, n_fft=16384)
+    wb = _run(tmp_path, "cello_A2", partials, amps, n_fft=16384)
     xls = pd.ExcelFile(wb)
     assert "Inharmonicity_Fit" in xls.sheet_names, "Inharmonicity_Fit sheet missing"
     fit = xls.parse("Inharmonicity_Fit").iloc[0]
     status = str(fit.get("inharmonicity_fit_status", fit.get("fit_status", "")))
     b_est = float(pd.to_numeric(fit.get("inharmonicity_coefficient_B"), errors="coerce"))
+    scope = str(fit.get("inharmonicity_model_scope", "") or "")
+    assert scope == "string_family", f"scope={scope!r}"
     assert status == "ok", f"fit_status={status!r}"
     assert np.isfinite(b_est)
     assert abs(b_est) < 5.0e-5, f"false inharmonicity on pure-harmonic signal: B_est={b_est:.2e}"
@@ -154,22 +160,51 @@ def test_no_false_inharmonicity_on_pure_harmonic(tmp_path: Path) -> None:
 @pytest.mark.slow
 def test_inharmonicity_B_recovered_end_to_end(tmp_path: Path) -> None:
     """Stiff-string synthetic with known B, recovered through the full pipeline
-    via the joint (f0, B) fit. Complements the phase_4 isolated-fit unit test."""
+    via the joint (f0, B) fit. Complements the phase_4 isolated-fit unit test.
+
+    Filename ``cello_A2`` is the normal Stage 1 path for string-family scope.
+    """
     f0 = 110.0  # A2
     b_true = 3.0e-4
     n_max = 14
     orders = np.arange(1, n_max + 1, dtype=float)
     partials = (orders * f0 * np.sqrt(1.0 + b_true * orders**2)).tolist()
     amps = [1.0 / (n ** 0.25) for n in range(1, n_max + 1)]
-    wb = _run(tmp_path, "A2", partials, amps, n_fft=16384)
+    wb = _run(tmp_path, "cello_A2", partials, amps, n_fft=16384)
     xls = pd.ExcelFile(wb)
     assert "Inharmonicity_Fit" in xls.sheet_names, "Inharmonicity_Fit sheet missing"
     fit = xls.parse("Inharmonicity_Fit").iloc[0]
     status = str(fit.get("inharmonicity_fit_status", fit.get("fit_status", "")))
     b_est = float(pd.to_numeric(fit.get("inharmonicity_coefficient_B"), errors="coerce"))
+    scope = str(fit.get("inharmonicity_model_scope", "") or "")
+    assert scope == "string_family", f"scope={scope!r}"
     assert status == "ok", f"fit_status={status!r}"
     assert np.isfinite(b_est)
     # Joint fit recovers the magnitude end-to-end: within [0.4x, 2.5x] of true B.
     assert 0.4 * b_true <= b_est <= 2.5 * b_true, (
         f"B_est={b_est:.2e} not within [0.4x, 2.5x] of B_true={b_true:.2e}"
     )
+
+
+@pytest.mark.slow
+def test_out_of_family_exports_nan_physical_B(tmp_path: Path) -> None:
+    """A named non-string source keeps the documented NaN physical-B policy.
+
+    Filename ``clarinet_A2`` is the normal Stage 1 path. The numerical fit
+    may still be exported as spectral stretch; stiff-string B stays undefined.
+    Completely absent metadata is covered by
+    ``test_family_scope_string_vs_wind`` (``out_of_family_unspecified``).
+    """
+    f0 = 110.0
+    n_max = 14
+    partials = [n * f0 for n in range(1, n_max + 1)]
+    amps = [1.0 / (n ** 0.25) for n in range(1, n_max + 1)]
+    wb = _run(tmp_path, "clarinet_A2", partials, amps, n_fft=16384)
+    xls = pd.ExcelFile(wb)
+    fit = xls.parse("Inharmonicity_Fit").iloc[0]
+    b_est = float(pd.to_numeric(fit.get("inharmonicity_coefficient_B"), errors="coerce"))
+    stretch = float(pd.to_numeric(fit.get("spectral_stretch_coefficient"), errors="coerce"))
+    scope = str(fit.get("inharmonicity_model_scope", "") or "")
+    assert scope == "out_of_family", f"scope={scope!r}"
+    assert not np.isfinite(b_est)
+    assert np.isfinite(stretch)

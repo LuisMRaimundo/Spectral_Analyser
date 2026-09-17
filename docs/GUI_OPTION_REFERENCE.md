@@ -28,7 +28,7 @@ This document covers visible options in:
 Notes:
 
 - Primary comparable profile is operationally `wf=log`, threshold `-45 dB`, ceiling `body-ceiling Hz`.
-- GUI defaults are not fully primary-comparable by default (`wf` default is first combo label).
+- Amplitude weighting default is **Logarithmic** (`log`) via `display_label_for_weight_key("log")`, matching `DENSITY_WEIGHT_FUNCTION_DEFAULT` and the CLI `--weight-function` default.
 
 ## A2. STFT and filtering controls
 
@@ -37,8 +37,8 @@ Notes:
 | Window type | `win` | `blackmanharris` | `hann`, `hamming`, `blackmanharris`, `bartlett`, `kaiser`, `gaussian` | STFT pipeline | modifies leakage/resolution tradeoff | Stage 1 |
 | Kaiser beta | `kaiser_beta` | `6.5` | float | window constructor | shape parameter for Kaiser window | Stage 1 |
 | Gaussian std | `gaussian_std` | auto | float or auto | window constructor | Gaussian width parameter | Stage 1 |
-| 90-tier granular clustering | `smart` | `True` | bool | tier policy | enables tier-dependent STFT regime | Stage 1 |
-| N_FFT (fixed mode) | fixed-mode `n_fft` | `4096` | int > 0 | STFT | FFT length when `smart=False` | Stage 1 |
+| 90-tier granular clustering | `smart` | `False` | bool | tier policy | enables legacy per-f0 FFT table; off by default so fixed 8192/1024 applies | Stage 1 |
+| N_FFT (fixed mode) | fixed-mode `n_fft` | `8192` | int > 0 | STFT | FFT length when `smart=False` | Stage 1 |
 | Hop length (fixed mode) | fixed-mode `hop_length` | `1024` | int > 0 | STFT | frame stride when `smart=False` | Stage 1 |
 | Zero padding (fixed mode) | fixed-mode `zero_padding` | `2` | int >= 0 | FFT prep | zero-padding multiplier when fixed mode | Stage 1 |
 | Time averaging | `avg` | `mean` | `mean`, `median`, `max` | frame aggregation | affects frame-to-scalar collapse | Stage 1 |
@@ -52,7 +52,7 @@ Notes:
 | UI label | Internal parameter | Default | Allowed values | Used in | Effect | Scope |
 |---|---|---:|---|---|---|---|
 | Dissonance model | `diss` | `sethares` | listed model slugs and `ALL` options | dissonance path | selects dissonance scalar model | Stage 1 + export sheets |
-| Amplitude weighting function | `wf` | `Logarithmic` (`log`, PRIMARY profile) | UI labels mapped via `resolve_weight_key_from_user_label` | density sum transforms | selects $\phi(A)$ (linear/log/sqrt/etc.) | Stage 1 + Stage 2 comparability |
+| Amplitude weighting function | `wf` | `Logarithmic` (`log`, PRIMARY profile; `combo_weight` set from `display_label_for_weight_key("log")`) | UI labels mapped via `resolve_weight_key_from_user_label` | density sum transforms | selects $\phi(A)$ (linear/log/sqrt/etc.) | Stage 1 + Stage 2 comparability |
 | Auto-compile Stage 2 | `compile` | `True` | bool | orchestrator | triggers compile after Stage 1 | workflow |
 | Use t-SNE (advanced) | `use_tsne` | `False` | bool | compile stage | computes `TSNE1/TSNE2` when possible | Stage 2 exploratory |
 | Use UMAP (advanced) | `use_umap` | `False` | bool | compile stage | computes `UMAP1/UMAP2` when possible | Stage 2 exploratory |

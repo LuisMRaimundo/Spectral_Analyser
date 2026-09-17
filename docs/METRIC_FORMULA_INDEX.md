@@ -1,5 +1,11 @@
 # Metric Formula Index
 
+Executed algebra, line-accurate excerpts, and source-file hashes for the
+current implementation are in
+[`docs/Spectral_Analyser_math_formula.md`](Spectral_Analyser_math_formula.md).
+This index remains a compact catalogue (F-001 …). Where the two disagree,
+the mathematical reference follows the code.
+
 | Formula ID | Formula | Metric | Code function | Export column |
 |---|---|---|---|---|
 | F-001 | $X(k,t)=\sum_{n=0}^{N-1}x[n+tH]w[n]e^{-j2\pi kn/N}$ | STFT | `proc_audio.py` STFT path (`fft_analysis`) | upstream to many metrics |
