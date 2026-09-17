@@ -18,6 +18,14 @@ stretch; no stiff-string physical claim.
 A source is string-family when its instrument metadata (or, at Stage 1,
 `instrument` / `source_file_name` / `note`) contains any of:
 
+Stage 1 stamps `source_file_name` from the input path before the family-scope
+map runs. A filename such as `cello_A2.wav` is therefore eligible for
+physical `B` even when the `instrument` field is empty. A named non-string
+token such as `clarinet_A2.wav` is `out_of_family` (physical `B` is NaN).
+Completely absent tokens remain `out_of_family_unspecified`. Digital silence
+does not publish a measured `B`: metrics stay NaN and the filename note is
+a prior only.
+
 `cello`, `violoncello`, `violin`, `viola`, `double bass`, `doublebass`,
 `contrabass`, `bass`, `guitar`, `piano`, `harp`, `clavier`, `clavecin`,
 `harpsichord`, `lute`, `theorbo`, `banjo`, `mandolin`, `zither`,
